@@ -1,12 +1,6 @@
-// @ts-nocheck
-import { useState } from 'react'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 
-function Card({ title, children, right = null }) {
-  // component implementation
-}
-
-const [diagnostics, setDiagnostics] = useState<any[]>([]);
-
-setDepartureIcao(depIcao || "");
-
-setArrivalIcao(arrIcao || "");
+export default defineConfig({
+  plugins: [react()],
+});
