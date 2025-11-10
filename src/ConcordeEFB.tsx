@@ -263,7 +263,7 @@ async function fetchMetarByICAO(icao: string): Promise<MetarFetchResult> {
     const rawLine = (text.split(/\r?\n/)[0] || "").trim();
     if (rawLine) return { ok: true, raw: rawLine, source: "aviationweather" };
   } catch {
-    // Ignore and fall back to the secondary source below.
+    // Ignore and fall back to the secondary source below.f
   }
   try {
     const r2 = await fetch(fallback, { mode: "cors" });
@@ -706,8 +706,8 @@ const [airports, setAirports] = useState<AirportIndex>({});
         <div className="flex items-center gap-3">
           <span className="text-2xl">✈️</span>
           <div>
-            <h1 className="text-2xl font-bold">Concorde EFB <span className="text-sky-400">v0.7</span></h1>
-            <p className="text-xs text-slate-400">Canvas build — manual distance, revised fuel model, dep/arr feasibility.</p>
+            <h1 className="text-2xl font-bold">Concorde EFB <span className="text-sky-400">v0.82</span></h1>
+            <p className="text-xs text-slate-400">Your Concorde copilot for MSFS.</p>
           </div>
         </div>
         <div className="flex gap-2 items-center">
