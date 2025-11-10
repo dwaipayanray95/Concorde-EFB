@@ -71,3 +71,63 @@ This tool is for flight planning and educational use. Values are heuristic, indi
 ## 📄 License
 Copyright © 2025 Ray ([@theawesomeray](https://github.com/theawesomeray)).
 All rights reserved. Contact me for reuse or distribution.
+
+---
+
+## Changelog
+
+**v0.82 — 2025-11-10**
+- Updated README to include full changelog.
+- Uniform versioning and changelog tracking throughout the app. Easier for me I guess.
+
+**v0.81 — 2025-11-10**
+- Fix: White-screen from duplicate App export; introduced ErrorBoundary.
+- CI: GitHub Pages build stabilized (TypeScript strict fixes, Vite config).
+- Types: Moved papaparse ambient types into a proper .d.ts shim; removed inline module augmentation.
+- Polish: Minor UI and input validation tweaks.
+
+**v0.80 — 2025-11-10**
+- Repo bootstrap: Vite + React + TypeScript + Tailwind wired.
+- Added GitHub Actions workflow for Pages.
+
+**v0.79**
+- GitHub Pages deployment pipeline added (build → upload artifact → deploy).
+
+**v0.78**
+- App structure cleanup: single default export (ConcordeEFB) to avoid HMR/SSR collisions.
+- Dev server white-screen resolved; safer imports and state initialization.
+
+**v0.77**
+- Fix: Unbalanced JSX in “Planned Distance” card (missing closing tag).
+
+**v0.76**
+- Fix: SyntaxError: Unterminated regular expression by replacing newline split with /\r?\n/.
+
+**v0.75**
+- Logic: Departure feasibility now uses actual TOW (OEW + full pax + entered fuel) rather than always MTOW.
+- Fuel logic: Endurance check = ETE + reserves (contingency + final + alternate). Accounts for airborne fuel (block − taxi).
+- Performance: Added V1 / VR / V2 (takeoff) and VLS / VAPP (landing) via √weight scaling models.
+- Fuel panel: Added Trim Tank Fuel and Total Fuel Required = Block + Trim.
+- Alternate planning: ARR→ALT distance and alternate fuel integrated into block calculation.
+
+**v0.71**
+- Weather: METAR fetch with AviationWeather primary and VATSIM fallback.
+- Runway: Auto-select longest runway; compute headwind/crosswind components.
+
+**v0.70 — “Canvas” feature set**
+- Manual planned distance (NM) entry (no auto route expansion for accuracy).
+- Departure & landing feasibility with reasons (required vs available).
+- All units metric (kg, m). Crosswind/headwind shown.
+- Added diagnostics/self-tests (distance sanity, fuel monotonicity, feasibility, etc.).
+
+**v0.60**
+- Routing: Initial tokeniser for ICAO/NAVAID/lat-lon waypoints; later deprecated in favor of manual distance.
+
+**v0.40**
+- Core math: Great-circle distance, climb/descent heuristics, altitude-sensitive burn factor.
+
+**v0.20**
+- Prototype UI: Basic inputs for ICAO, FL, fuel; first pass block-fuel math.
+
+**v0.10**
+- Proof-of-concept commit: Project skeleton and initial calculations.
