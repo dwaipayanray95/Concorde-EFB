@@ -421,8 +421,6 @@ export default function ConcordePlannerCanvas(){
   const estLandingWeightKg = Math.max(tkoWeightKgAuto - tripKg, 0);
   const tkSpeeds = computeTakeoffSpeeds(tkoWeightKgAuto);
   const ldSpeeds = computeLandingSpeeds(estLandingWeightKg);
-  const tkSpeeds = computeTakeoffSpeeds(tkoWeightKgAuto);
-  const ldSpeeds = computeLandingSpeeds(estLandingWeightKg);
 
   const depRunway = depInfo?.runways.find(r => r.id === depRw);
   const arrRunway = arrInfo?.runways.find(r => r.id === arrRw);
@@ -592,20 +590,6 @@ export default function ConcordePlannerCanvas(){
           <div className="text-xs text-slate-400 mt-2">Speeds scale with √(weight/reference) and are indicative IAS; verify against the DC Designs manual & in-sim.</div>
         </Card>
 
-        <Card title="Takeoff & Landing Speeds (IAS)">
-          <Row cols={4}>
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">Computed TOW</div><div className="text-lg font-semibold">{Math.round(tkoWeightKgAuto).toLocaleString()} kg</div></div>
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">V1</div><div className="text-lg font-semibold">{tkSpeeds.V1} kt</div></div>
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">VR</div><div className="text-lg font-semibold">{tkSpeeds.VR} kt</div></div>
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">V2</div><div className="text-lg font-semibold">{tkSpeeds.V2} kt</div></div>
-          </Row>
-          <Row cols={4}>
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">Est. Landing WT</div><div className="text-lg font-semibold">{Math.round(estLandingWeightKg).toLocaleString()} kg</div></div>
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">VLS</div><div className="text-lg font-semibold">{ldSpeeds.VLS} kt</div></div>
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">VAPP</div><div className="text-lg font-semibold">{ldSpeeds.VAPP} kt</div></div>
-          </Row>
-          <div className="text-xs text-slate-400 mt-2">Speeds scale with √(weight/reference) and are indicative IAS; verify in-sim.</div>
-        </Card>
 
         <Card title="Weather & Runway Wind Components" right={<div className="text-xs text-slate-400">ILS intercept tip: ~15 NM / 5000 ft</div>}>
           {metarErr && <div className="text-xs text-rose-300 mb-2">METAR fetch error: {metarErr}</div>}
