@@ -7,7 +7,6 @@
 // • METAR fetch more robust: tries AviationWeather API, then VATSIM fallback.
 // • All units metric (kg, m); longest-runway autopick; crosswind/headwind components.
 // • Self-tests cover manual-distance sanity, fuel monotonicity, feasibility sanity.
-declare module 'papaparse' { const Papaparse: any; export default Papaparse; }
 import React, { useEffect, useMemo, useState } from "react";
 import type {
   ButtonHTMLAttributes,
