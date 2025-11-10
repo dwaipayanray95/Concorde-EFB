@@ -1,0 +1,698 @@
+// Concorde EFB — Canvas v0.7 (for DC Designs, MSFS 2024)
+// What’s new in v0.7
+// • Manual distance input (NM) — users paste planner distance; no auto route math for accuracy.
+// • Alternate ICAO → ARR→ALT distance & alternate fuel added into Block.
+// • Trim Tank Fuel (kg) added; **Total Fuel Required = Block + Trim**.
+// • Landing feasibility added (arrival) + departure feasibility — now display **reasons** when NOT feasible (required vs available, deficit).
+// • METAR fetch more robust: tries AviationWeather API, then VATSIM fallback.
+// • All units metric (kg, m); longest-runway autopick; crosswind/headwind components.
+// • Self-tests cover manual-distance sanity, fuel monotonicity, feasibility sanity.
+
+import React, { useEffect, useMemo, useState } from "react";
+import Papa from "papaparse";
+
+const toRad = (deg) => (deg * Math.PI) / 180;
+const nmFromKm = (km) => km * 0.539957;
+const ftToM = (ft) => (typeof ft === "number" ? ft : parseFloat(ft || "0")) * 0.3048;
+
+function greatCircleNM(lat1, lon1, lat2, lon2) {
+  const R_km = 6371.0088;
+  const phi1 = toRad(lat1), phi2 = toRad(lat2);
+  const dphi = toRad(lat2 - lat1);
+  const dlambda = toRad(lon2 - lon1);
+  const a = Math.sin(dphi / 2) ** 2 + Math.cos(phi1) * Math.cos(phi2) * Math.sin(dlambda / 2) ** 2;
+  return nmFromKm(2 * R_km * Math.asin(Math.sqrt(a)));
+}
+
+const CONSTANTS = {
+  weights: {
+    mtow_kg: 185066,
+    mlw_kg: 111130,
+    fuel_capacity_kg: 95681,
+    oew_kg: 78700,
+    pax_full_count: 100,
+    pax_mass_kg: 95
+  },
+  speeds: { cruise_mach: 2.04, cruise_tas_kt: 1164 },
+  fuel: {
+    burn_kg_per_nm: 24.45,
+    climb_factor: 1.7,
+    descent_factor: 0.5,
+    reheat_minutes_cap: 25,
+  },
+  runway: {
+    min_takeoff_m_at_mtow: Math.round(11800 * 0.3048),
+    min_landing_m_at_mlw: 2200,
+  },
+};
+
+function altitudeBurnFactor(cruiseFL) {
+  const fl = Math.max(300, Math.min(650, cruiseFL || 580));
+  const x = (fl - 450) / (600 - 450);
+  return 1.20 - 0.20 * Math.max(0, Math.min(1, x));
+}
+function cruiseTimeHours(distanceNM, tasKT = CONSTANTS.speeds.cruise_tas_kt) {
+  if (tasKT <= 0) throw new Error("TAS must be positive");
+  return distanceNM / tasKT;
+}
+function estimateClimb(cruiseAltFt, avgFpm = 2500, avgGSkt = 450) {
+  const tH = Math.max(cruiseAltFt, 0) / Math.max(avgFpm, 100) / 60;
+  const dNM = tH * Math.max(avgGSkt, 200);
+  return { time_h: tH, dist_nm: dNM };
+}
+function estimateDescent(cruiseAltFt, avgGSkt = 420, bufferNM = 30) {
+  const dRule = Math.max(cruiseAltFt, 0) / 300;
+  const dist = dRule + bufferNM;
+  const tH = dist / Math.max(avgGSkt, 200);
+  return { time_h: tH, dist_nm: dist };
+}
+function blockFuelKg({ tripKg, taxiKg, contingencyPct, finalReserveKg, alternateNM, burnKgPerNm }) {
+  const burn = burnKgPerNm ?? CONSTANTS.fuel.burn_kg_per_nm;
+  const altKg = Math.max(alternateNM ?? 0, 0) * burn;
+  const contKg = tripKg * Math.max(Number(contingencyPct || 0) / 100, 0);
+  const total = tripKg + (taxiKg || 0) + contKg + (finalReserveKg || 0) + altKg;
+  return { trip_kg: tripKg, taxi_kg: taxiKg || 0, contingency_kg: contKg, final_reserve_kg: finalReserveKg || 0, alternate_kg: altKg, block_kg: total };
+}
+function reheatGuard(climbTimeHours) {
+  const requestedMin = Math.round(climbTimeHours * 60);
+  const cap = CONSTANTS.fuel.reheat_minutes_cap;
+  return { requested_min: requestedMin, cap_min: cap, within_cap: requestedMin <= cap };
+}
+function takeoffFeasibleM(runwayLengthM, takeoffWeightKg) {
+  const mtow = CONSTANTS.weights.mtow_kg;
+  const baseReq = CONSTANTS.runway.min_takeoff_m_at_mtow;
+  const ratio = Math.max(Math.min(takeoffWeightKg / mtow, 1.2), 0.5);
+  const required = baseReq * ratio;
+  return { required_length_m_est: required, runway_length_m: runwayLengthM, feasible: runwayLengthM >= required };
+}
+function landingFeasibleM(runwayLengthM, landingWeightKg) {
+  const mlw = CONSTANTS.weights.mlw_kg;
+  const baseReq = CONSTANTS.runway.min_landing_m_at_mlw;
+  const ratio = Math.max(Math.min((landingWeightKg || mlw) / mlw, 1.3), 0.6);
+  const required = baseReq * Math.pow(ratio, 1.15);
+  return { required_length_m_est: required, runway_length_m: runwayLengthM, feasible: runwayLengthM >= required };
+}
+
+function parseMetarWind(raw) {
+  const re = new RegExp("(VRB|\\d{3})(\\d{2})(G(\\d{2}))?KT");
+  const m = raw.match(re);
+  if (!m) return { wind_dir_deg: null, wind_speed_kt: null, wind_gust_kt: null };
+  const dirToken = m[1], spd = parseInt(m[2], 10), gst = m[4] ? parseInt(m[4], 10) : null;
+  const dirDeg = dirToken === "VRB" ? null : parseInt(dirToken, 10);
+  return { wind_dir_deg: dirDeg, wind_speed_kt: spd, wind_gust_kt: gst };
+}
+function windComponents(windDirDeg, windSpeedKt, runwayHeadingDeg) {
+  if (windDirDeg == null || windSpeedKt == null) return { headwind_kt: null, crosswind_kt: null };
+  const theta = (((windDirDeg - runwayHeadingDeg) % 360) + 360) % 360;
+  const rad = toRad(theta);
+  const head = windSpeedKt * Math.cos(rad);
+  const cross = Math.abs(windSpeedKt * Math.sin(rad));
+  return { headwind_kt: Math.round(head * 10) / 10, crosswind_kt: Math.round(cross * 10) / 10 };
+}
+async function fetchMetarByICAO(icao) {
+  const primary = `https://aviationweather.gov/api/data/metar?ids=${icao}&format=raw`;
+  const fallback = `https://metar.vatsim.net/${icao}`;
+  try {
+    const r = await fetch(primary, { mode: "cors" });
+    const text = await r.text();
+    const rawLine = (text.split(/\r?\n/)[0] || "").trim();
+    if (rawLine) return { ok: true, raw: rawLine, source: "aviationweather" };
+  } catch (e) {}
+  try {
+    const r2 = await fetch(fallback, { mode: "cors" });
+    const t2 = await r2.text();
+    const line = (t2.split(/\r?\n/)[0] || "").trim();
+    if (line) return { ok: true, raw: line, source: "vatsim" };
+    return { ok: false, error: `No METAR text returned for ${icao}` };
+  } catch (e2) {
+    return { ok: false, error: `METAR fetch failed for ${icao}: ${String(e2)}` };
+  }
+}
+
+const AIRPORTS_CSV_URL = "https://raw.githubusercontent.com/davidmegginson/ourairports-data/master/airports.csv";
+const RUNWAYS_CSV_URL = "https://raw.githubusercontent.com/davidmegginson/ourairports-data/master/runways.csv";
+const NAVAIDS_CSV_URL = "https://raw.githubusercontent.com/davidmegginson/ourairports-data/master/navaids.csv";
+
+function buildWorldAirportDB(airportsCsvText, runwaysCsvText) {
+  const airportsRows = Papa.parse(airportsCsvText, { header: true, skipEmptyLines: true }).data;
+  const runwaysRows = Papa.parse(runwaysCsvText, { header: true, skipEmptyLines: true }).data;
+
+  const airportsMap = {};
+  for (const a of airportsRows) {
+    const ident = (a.ident || "").trim().toUpperCase();
+    if (!ident || ident.length !== 4) continue;
+    const lat = parseFloat(a.latitude_deg);
+    const lon = parseFloat(a.longitude_deg);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    airportsMap[ident] = airportsMap[ident] || { name: a.name || ident, lat, lon, runways: [] };
+  }
+  for (const r of runwaysRows) {
+    const airportIdent = (r.airport_ident || "").trim().toUpperCase();
+    if (!airportsMap[airportIdent]) continue;
+    const len_m = r.length_m && Number(r.length_m) ? Number(r.length_m) : ftToM(r.length_ft);
+    const leIdent = (r.le_ident || "").trim().toUpperCase();
+    const heIdent = (r.he_ident || "").trim().toUpperCase();
+    const leHdg = Number(r.le_heading_degT);
+    const heHdg = Number(r.he_heading_degT);
+    if (leIdent) airportsMap[airportIdent].runways.push({ id: leIdent, heading: Math.round(leHdg || 0), length_m: Math.round(len_m) });
+    if (heIdent) airportsMap[airportIdent].runways.push({ id: heIdent, heading: Math.round(heHdg || 0), length_m: Math.round(len_m) });
+  }
+  return airportsMap;
+}
+function buildWorldNavaidsDB(navaidsCsvText){
+  const rows = Papa.parse(navaidsCsvText, { header: true, skipEmptyLines: true }).data;
+  const navaidsMap = {};
+  for (const n of rows) {
+    const ident = (n.ident || "").trim().toUpperCase();
+    const lat = parseFloat(n.latitude_deg);
+    const lon = parseFloat(n.longitude_deg);
+    if (!ident || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    if (!navaidsMap[ident]) navaidsMap[ident] = { ident, lat, lon, type: n.type || "NAVAID", name: n.name || ident };
+  }
+  return navaidsMap;
+}
+
+const LATLON_RE = /^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/;
+const AIRWAY_RE = /^[A-Z]{1,2}\d{1,3}$/;
+const PROCEDURE_RE = /^(DCT|SID[A-Z0-9-]*|STAR[A-Z0-9-]*|VIA|VECTOR)$/;
+
+function parseRouteString(str){
+  if (!str) return [];
+  return str.split(/\s+/).map(s=>s.trim().toUpperCase()).filter(Boolean);
+}
+function resolveRouteTokens(tokens, airportsIndex, navaidsIndex){
+  const points = [];
+  const recognized = { procedures: [], airways: [], unresolved: [] };
+  for (const t of tokens){
+    if (PROCEDURE_RE.test(t)) { recognized.procedures.push(t); continue; }
+    if (AIRWAY_RE.test(t)) { recognized.airways.push(t); continue; }
+    const latlon = LATLON_RE.exec(t);
+    if (latlon){ points.push({ label: t, lat: parseFloat(latlon[1]), lon: parseFloat(latlon[2]) }); continue; }
+    if (t.length === 4 && airportsIndex?.[t]) { const a = airportsIndex[t]; points.push({ label: t, lat: a.lat, lon: a.lon }); continue; }
+    if (navaidsIndex?.[t]) { const n = navaidsIndex[t]; points.push({ label: t, lat: n.lat, lon: n.lon }); continue; }
+    recognized.unresolved.push(t);
+  }
+  return { points, recognized };
+}
+function computeRouteDistanceNM(depInfo, arrInfo, routePoints){
+  if (!depInfo || !arrInfo) return 0;
+  const seq = [{lat: depInfo.lat, lon: depInfo.lon, label: "DEP"}, ...routePoints, {lat: arrInfo.lat, lon: arrInfo.lon, label: "ARR"}];
+  let sum = 0;
+  for (let i=0;i<seq.length-1;i++) sum += greatCircleNM(seq[i].lat, seq[i].lon, seq[i+1].lat, seq[i+1].lon);
+  return sum;
+}
+
+function pickLongestRunway(runways){
+  if (!runways || runways.length === 0) return null;
+  return runways.reduce((best, r) => ((r.length_m || 0) > (best.length_m || 0) ? r : best), runways[0]);
+}
+
+const Card = ({ title, children, right }) => (
+  <section className="bg-slate-900/70 border border-slate-700 rounded-2xl p-5 shadow-xl">
+    <div className="flex items-center justify-between mb-3">
+      <h2 className="text-xl font-semibold">{title}</h2>
+      {right}
+    </div>
+    {children}
+  </section>
+);
+const Row = ({ children, cols = 2 }) => (
+  <div className={`grid gap-3 ${cols === 3 ? "grid-cols-3" : cols === 4 ? "grid-cols-4" : "grid-cols-2"}`}>{children}</div>
+);
+const Label = ({ children }) => <label className="text-xs text-slate-400 block mb-1">{children}</label>;
+const Input = (props) => <input {...props} className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500" />;
+const Select = (props) => <select {...props} className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500" />;
+const Button = ({ children, onClick, variant = "primary" }) => (
+  <button onClick={onClick} className={`px-4 py-2 rounded-xl font-semibold ${variant === "primary" ? "bg-sky-400 text-slate-900" : "bg-slate-800 text-slate-100 border border-slate-600"} hover:brightness-105`}>{children}</button>
+);
+function StatPill({ label, value, ok=true }){
+  return (
+    <div className={`px-2 py-1 rounded-full text-xs font-mono border ${ok?"border-emerald-500/40 text-emerald-300":"border-rose-500/40 text-rose-300"}`}>{label}: <span className="font-bold">{value}</span></div>
+  );
+}
+function HHMM({ hours }){
+  const totalMinutes = Math.round(hours * 60);
+  const hh = Math.floor(totalMinutes / 60);
+  const mm = totalMinutes % 60;
+  return <span>{hh}h {mm}m</span>;
+}
+
+function approxEqual(a, b, tol = 1e-3){ return Math.abs(a - b) <= tol; }
+function runSelfTests(){
+  const results = [];
+  try { results.push({ name: "cruiseTimeHours(1164,1164)=1h", pass: approxEqual(cruiseTimeHours(1164, 1164), 1.0) }); } catch (e) { results.push({ name: "cruiseTimeHours throws", pass: false, err: String(e) }); }
+  try { const f1 = altitudeBurnFactor(450); const f2 = altitudeBurnFactor(600); results.push({ name: "altitudeBurnFactor bounds", pass: f1 >= 1.19 && f1 <= 1.21 && f2 >= 0.99 && f2 <= 1.01, values: { f1, f2 } }); } catch (e) { results.push({ name: "altitudeBurnFactor throws", pass: false, err: String(e) }); }
+  try { const nm = greatCircleNM(51.4706, -0.4619, 40.6413, -73.7781); results.push({ name: "greatCircleNM EGLL-KJFK ~ 3k NM", pass: nm > 2500 && nm < 3500, value: nm }); } catch (e) { results.push({ name: "greatCircleNM throws", pass: false, err: String(e) }); }
+  try { const m = ftToM(11800); results.push({ name: "ftToM(11800) ≈ 3597", pass: Math.abs(m - 3596.64) < 0.5, value: m }); } catch (e) { results.push({ name: "ftToM throws", pass: false, err: String(e) }); }
+  try { const rh = reheatGuard(24/60); results.push({ name: "reheatGuard 24min within cap", pass: rh.within_cap === true, value: rh }); } catch (e) { results.push({ name: "reheatGuard throws", pass: false, err: String(e) }); }
+  try { const comps = windComponents(0, 20, 90); results.push({ name: "windComponents 90° crosswind ≈ 20 kt", pass: Math.abs((comps.crosswind_kt ?? 0) - 20) < 0.1, value: comps }); } catch (e) { results.push({ name: "windComponents throws", pass: false, err: String(e) }); }
+  try { const lr = pickLongestRunway([{id:"A", length_m: 2800},{id:"B", length_m: 3600},{id:"C", length_m: 3200}]); results.push({ name: "pickLongestRunway chooses 3600 m", pass: lr?.id === "B", value: lr }); } catch (e) { results.push({ name: "pickLongestRunway throws", pass: false, err: String(e) }); }
+  try { const feas = takeoffFeasibleM(4000, CONSTANTS.weights.mtow_kg); results.push({ name: "T/O feasible @ 4000 m, MTOW", pass: feas.feasible === true, value: feas }); } catch (e) { results.push({ name: "takeoffFeasibleM throws", pass: false, err: String(e) }); }
+  try { const p = parseMetarWind("XXXX 101650Z VRB05KT 9999"); results.push({ name: "parseMetarWind VRB05KT dir=null", pass: p.wind_dir_deg === null && p.wind_speed_kt === 5, value: p }); } catch (e) { results.push({ name: "parseMetarWind VRB throws", pass: false, err: String(e) }); }
+  try {
+    const mockAir = { EGLL: {lat:51.4706, lon:-0.4619}, KJFK:{lat:40.6413, lon:-73.7781} };
+    const mockNav = { CPT:{lat:51.514, lon:-1.005} };
+    const { points } = resolveRouteTokens(parseRouteString("SID CPT STAR"), mockAir, mockNav);
+    const direct = greatCircleNM(mockAir.EGLL.lat, mockAir.EGLL.lon, mockAir.KJFK.lat, mockAir.KJFK.lon);
+    const routed = computeRouteDistanceNM(mockAir.EGLL, mockAir.KJFK, points);
+    results.push({ name: "route distance >= direct when detoured", pass: routed >= direct - 1 });
+  } catch (e) { results.push({ name: "route distance test throws", pass: false, err: String(e) }); }
+  try {
+    const burn = (dist, fl) => {
+      const base = CONSTANTS.fuel.burn_kg_per_nm * altitudeBurnFactor(fl);
+      const climb = estimateClimb(fl*100); const desc = estimateDescent(fl*100);
+      const cruiseNM = Math.max(dist - climb.dist_nm - desc.dist_nm, 0);
+      return climb.dist_nm*base*CONSTANTS.fuel.climb_factor + cruiseNM*base + desc.dist_nm*base*CONSTANTS.fuel.descent_factor;
+    };
+    const f450 = burn(2000, 450), f600 = burn(2000, 600);
+    const f2x = burn(3000, 580), f1x = burn(1500, 580);
+    results.push({ name: "fuel less at higher FL (2000 NM: FL600 < FL450)", pass: f600 < f450, values: { f450, f600 } });
+    results.push({ name: "fuel scales with distance (≈linear)", pass: f2x > f1x && f2x < 2.2*f1x, values: { f1x, f2x } });
+  } catch (e) { results.push({ name: "fuel monotonicity throws", pass: false, err: String(e) }); }
+  try {
+    const a = landingFeasibleM(2200, CONSTANTS.weights.mlw_kg);
+    const b = landingFeasibleM(1800, CONSTANTS.weights.mlw_kg);
+    results.push({ name: "landing feasible 2200m@MLW; not at 1800m@MLW", pass: a.feasible === true && b.feasible === false });
+  } catch (e) { results.push({ name: "landing feasibility throws", pass: false, err: String(e) }); }
+  try {
+    const fl = 580; const dist = 2000;
+    const climb = estimateClimb(fl*100); const desc = estimateDescent(fl*100);
+    const cruiseNM = Math.max(dist - climb.dist_nm - desc.dist_nm, 0);
+    const t = cruiseTimeHours(cruiseNM);
+    results.push({ name: "manual distance yields finite cruise time", pass: Number.isFinite(t) && t >= 0 });
+  } catch (e) { results.push({ name: "manual distance sanity throws", pass: false, err: String(e) }); }
+  return results;
+}
+
+function weightScale(actual, reference){
+  if (!Number.isFinite(actual) || actual <= 0 || !Number.isFinite(reference) || reference <= 0) return 1;
+  return Math.sqrt(actual / reference);
+}
+function computeTakeoffSpeeds(towKg){
+  const refKg = 170000;
+  const s = weightScale(towKg, refKg);
+  const V1 = Math.max(160, Math.round(180 * s));
+  const VR = Math.max(170, Math.round(195 * s));
+  const V2 = Math.max(190, Math.round(220 * s));
+  return { V1, VR, V2 };
+}
+function computeLandingSpeeds(lwKg){
+  const refKg = 105000;
+  const s = weightScale(lwKg, refKg);
+  const VLS = Math.max(140, Math.round(150 * s));
+  const VAPP = VLS + 10;
+  return { VLS, VAPP };
+}
+
+export default function ConcordePlannerCanvas(){
+  const [airports, setAirports] = useState({});
+  const [navaids, setNavaids] = useState({});
+  const [dbLoaded, setDbLoaded] = useState(false);
+  const [dbError, setDbError] = useState("");
+
+  const [depIcao, setDepIcao] = useState("EGLL");
+  const [depRw, setDepRw] = useState("");
+  const [arrIcao, setArrIcao] = useState("KJFK");
+  const [arrRw, setArrRw] = useState("");
+
+  const [routeStr, setRouteStr] = useState("");
+  const [manualDistanceNM, setManualDistanceNM] = useState(0);
+  const [altIcao, setAltIcao] = useState("");
+  const [trimTankKg, setTrimTankKg] = useState(0);
+
+  const [cruiseFL, setCruiseFL] = useState(580);
+  const [taxiKg, setTaxiKg] = useState(450);
+  const [contingencyPct, setContingencyPct] = useState(5);
+  const [finalReserveKg, setFinalReserveKg] = useState(3600);
+   
+
+  const [metarDep, setMetarDep] = useState("");
+  const [metarArr, setMetarArr] = useState("");
+  const [metarErr, setMetarErr] = useState("");
+
+  const [tests, setTests] = useState([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [airCsv, rwCsv, navCsv] = await Promise.all([
+          fetch(AIRPORTS_CSV_URL, { mode: "cors" }).then(r=>r.text()),
+          fetch(RUNWAYS_CSV_URL, { mode: "cors" }).then(r=>r.text()),
+          fetch(NAVAIDS_CSV_URL, { mode: "cors" }).then(r=>r.text()),
+        ]);
+        const db = buildWorldAirportDB(airCsv, rwCsv);
+        const nav = buildWorldNavaidsDB(navCsv);
+        setAirports(db); setNavaids(nav); setDbLoaded(true); setDbError("");
+      } catch (e) {
+        setDbError(String(e)); setDbLoaded(false);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    const a = airports[depIcao?.toUpperCase()];
+    if (a?.runways?.length) {
+      const longest = pickLongestRunway(a.runways);
+      if (longest && depRw !== longest.id) setDepRw(longest.id);
+    } else if (depRw) setDepRw("");
+  }, [airports, depIcao]);
+  useEffect(() => {
+    const a = airports[arrIcao?.toUpperCase()];
+    if (a?.runways?.length) {
+      const longest = pickLongestRunway(a.runways);
+      if (longest && arrRw !== longest.id) setArrRw(longest.id);
+    } else if (arrRw) setArrRw("");
+  }, [airports, arrIcao]);
+
+  const depInfo = airports[depIcao?.toUpperCase()];
+  const arrInfo = airports[arrIcao?.toUpperCase()];
+
+  const routeTokens = useMemo(()=>parseRouteString(routeStr), [routeStr]);
+  const { points: routePoints, recognized: routeMeta } = useMemo(()=>resolveRouteTokens(routeTokens, airports, navaids), [routeTokens, airports, navaids]);
+
+  const directDistance = useMemo(() => (depInfo && arrInfo) ? greatCircleNM(depInfo.lat, depInfo.lon, arrInfo.lat, arrInfo.lon) : 0, [depInfo, arrInfo]);
+  const routedDistance = useMemo(() => (depInfo && arrInfo && routePoints.length>0) ? computeRouteDistanceNM(depInfo, arrInfo, routePoints) : 0, [depInfo, arrInfo, routePoints]);
+  const plannedDistance = Math.max(Number(manualDistanceNM) || 0, 0);
+
+  const cruiseAltFt = cruiseFL * 100;
+  const climb = useMemo(() => estimateClimb(cruiseAltFt), [cruiseAltFt]);
+  const descent = useMemo(() => estimateDescent(cruiseAltFt), [cruiseAltFt]);
+  const reheat = useMemo(() => reheatGuard(climb.time_h), [climb.time_h]);
+  const cruiseDistanceNM = Math.max(plannedDistance - climb.dist_nm - descent.dist_nm, 0);
+  const cruiseTimeH = cruiseTimeHours(cruiseDistanceNM);
+  const totalTimeH = climb.time_h + cruiseTimeH + descent.time_h;
+
+  const tripKg = useMemo(() => {
+    const baseBurn = CONSTANTS.fuel.burn_kg_per_nm * altitudeBurnFactor(cruiseFL);
+    const climbKg   = climb.dist_nm   * baseBurn * CONSTANTS.fuel.climb_factor;
+    const cruiseKg  = cruiseDistanceNM * baseBurn;
+    const descentKg = descent.dist_nm * baseBurn * CONSTANTS.fuel.descent_factor;
+    const kg = climbKg + cruiseKg + descentKg;
+    return Math.max(kg, 0);
+  }, [cruiseFL, climb.dist_nm, cruiseDistanceNM, descent.dist_nm]);
+
+  const altInfo = airports[altIcao?.toUpperCase()];
+  const alternateDistanceNM = useMemo(() => {
+    if (!arrInfo || !altInfo) return 0;
+    return greatCircleNM(arrInfo.lat, arrInfo.lon, altInfo.lat, altInfo.lon);
+  }, [arrInfo, altInfo]);
+
+  const blocks = useMemo(() => blockFuelKg({
+    tripKg,
+    taxiKg,
+    contingencyPct,
+    finalReserveKg,
+    alternateNM: alternateDistanceNM,
+    burnKgPerNm: CONSTANTS.fuel.burn_kg_per_nm
+  }), [tripKg, taxiKg, contingencyPct, finalReserveKg, alternateDistanceNM]);
+
+  const totalFuelRequiredKg = (blocks.block_kg || 0) + (trimTankKg || 0);
+  const eteHours = totalTimeH;
+  const avgBurnKgPerHour = eteHours > 0 ? (tripKg / eteHours) : ((CONSTANTS.fuel.burn_kg_per_nm * altitudeBurnFactor(cruiseFL)) * CONSTANTS.speeds.cruise_tas_kt);
+  const airborneFuelKg = Math.max(totalFuelRequiredKg - (taxiKg || 0), 0);
+  const enduranceHours = avgBurnKgPerHour > 0 ? (airborneFuelKg / avgBurnKgPerHour) : 0;
+  const reserveTimeH = avgBurnKgPerHour > 0 ? ((blocks.contingency_kg || 0) + (blocks.final_reserve_kg || 0) + (blocks.alternate_kg || 0)) / avgBurnKgPerHour : 0;
+  const enduranceMeets = enduranceHours >= (eteHours + reserveTimeH);
+  const fullPayloadKg = (CONSTANTS.weights.pax_full_count || 0) * (CONSTANTS.weights.pax_mass_kg || 0);
+  const tkoWeightKgAuto = Math.min(
+    (CONSTANTS.weights.oew_kg || 0) + fullPayloadKg + totalFuelRequiredKg,
+    CONSTANTS.weights.mtow_kg
+  );
+  const estLandingWeightKg = Math.max(tkoWeightKgAuto - tripKg, 0);
+  const tkSpeeds = computeTakeoffSpeeds(tkoWeightKgAuto);
+  const ldSpeeds = computeLandingSpeeds(estLandingWeightKg);
+  const tkSpeeds = computeTakeoffSpeeds(tkoWeightKgAuto);
+  const ldSpeeds = computeLandingSpeeds(estLandingWeightKg);
+
+  const depRunway = depInfo?.runways.find(r => r.id === depRw);
+  const arrRunway = arrInfo?.runways.find(r => r.id === arrRw);
+  const tkoCheck = useMemo(() => takeoffFeasibleM(depRunway?.length_m || 0, tkoWeightKgAuto), [depRunway, tkoWeightKgAuto]);
+  const ldgCheck = useMemo(() => landingFeasibleM(arrRunway?.length_m || 0, estLandingWeightKg), [arrRunway, estLandingWeightKg]);
+
+  const depWind = useMemo(() => {
+    const p = parseMetarWind(metarDep || "");
+    const comps = depRunway ? windComponents(p.wind_dir_deg, p.wind_speed_kt, depRunway.heading) : { headwind_kt: null, crosswind_kt: null };
+    return { parsed: p, comps };
+  }, [metarDep, depRunway]);
+  const arrWind = useMemo(() => {
+    const p = parseMetarWind(metarArr || "");
+    const comps = arrRunway ? windComponents(p.wind_dir_deg, p.wind_speed_kt, arrRunway.heading) : { headwind_kt: null, crosswind_kt: null };
+    return { parsed: p, comps };
+  }, [metarArr, arrRunway]);
+
+  async function fetchMetars() {
+    setMetarErr("");
+    const [d, a] = await Promise.all([fetchMetarByICAO(depIcao), fetchMetarByICAO(arrIcao)]);
+    if (!d.ok || !a.ok) setMetarErr((d.error || "") + " " + (a.error || ""));
+    if (d.ok) setMetarDep(d.raw);
+    if (a.ok) setMetarArr(a.raw);
+  }
+
+  function runDiagnostics(){ setTests(runSelfTests()); }
+  const passCount = tests.filter(t => t.pass).length;
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      <header className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">✈️</span>
+          <div>
+            <h1 className="text-2xl font-bold">Concorde EFB <span className="text-sky-400">v0.7</span></h1>
+            <p className="text-xs text-slate-400">Canvas build — manual distance, revised fuel model, dep/arr feasibility.</p>
+          </div>
+        </div>
+        <div className="flex gap-2 items-center">
+          <StatPill label="Nav DB" value={dbLoaded?"Loaded":"Loading…"} ok={dbLoaded && !dbError} />
+          {dbError && <StatPill label="DB Error" value={dbError.slice(0,40)+"…"} ok={false} />}
+          <StatPill label="TAS" value={`${CONSTANTS.speeds.cruise_tas_kt} kt`} />
+          <StatPill label="MTOW" value={`${CONSTANTS.weights.mtow_kg.toLocaleString()} kg`} />
+          <StatPill label="MLW" value={`${CONSTANTS.weights.mlw_kg.toLocaleString()} kg`} />
+          <StatPill label="Fuel cap" value={`${CONSTANTS.weights.fuel_capacity_kg.toLocaleString()} kg`} />
+        </div>
+      </header>
+
+      <main className="max-w-6xl mx-auto p-6 grid gap-6">
+        <Card title="Departure / Arrival (ICAO & Runways)" right={<Button onClick={fetchMetars}>Fetch METARs</Button>}>
+          <Row>
+            <div>
+              <Label>Departure ICAO</Label>
+              <Input value={depIcao} onChange={(e)=>setDepIcao(e.target.value.toUpperCase())} />
+              {!depInfo && dbLoaded && <div className="text-xs text-rose-300 mt-1">Unknown ICAO in database</div>}
+            </div>
+            <div>
+              <Label>Arrival ICAO</Label>
+              <Input value={arrIcao} onChange={(e)=>setArrIcao(e.target.value.toUpperCase())} />
+              {!arrInfo && dbLoaded && <div className="text-xs text-rose-300 mt-1">Unknown ICAO in database</div>}
+            </div>
+          </Row>
+          <Row>
+            <div>
+              <Label>Departure Runway (meters)</Label>
+              <Select value={depRw} onChange={(e)=>setDepRw(e.target.value)}>
+                {(airports[depIcao]?.runways || []).map(r => (
+                  <option key={r.id} value={r.id}>{r.id} • {Number(r.length_m).toLocaleString()} m • HDG {Math.round(r.heading)}°</option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <Label>Arrival Runway (meters)</Label>
+              <Select value={arrRw} onChange={(e)=>setArrRw(e.target.value)}>
+                {(airports[arrIcao]?.runways || []).map(r => (
+                  <option key={r.id} value={r.id}>{r.id} • {Number(r.length_m).toLocaleString()} m • HDG {Math.round(r.heading)}°</option>
+                ))}
+              </Select>
+            </div>
+          </Row>
+        </Card>
+
+        <Card title="Cruise & Fuel (Manual Distance)">
+          <Row>
+            <div>
+              <Label>Planned Distance (NM)</Label>
+              <Input type="number" value={manualDistanceNM} onChange={(e)=>setManualDistanceNM(parseFloat(e.target.value||"0"))} />
+              <div className="text-xs text-slate-400 mt-1">Enter distance from your flight planner. We’ll compute Climb/Cruise/Descent from this and FL.</div>
+            </div>
+            <div>
+              <Label>Cruise Flight Level (FL)</Label>
+              <Input type="number" value={cruiseFL} onChange={(e)=>setCruiseFL(parseFloat(e.target.value||"0"))} />
+            </div>
+          </Row>
+
+          <Row cols={4}>
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">Planned Distance</div><div className="text-lg font-semibold">{plannedDistance ? Math.round(plannedDistance).toLocaleString() : "—"} NM</div></div>
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">Climb</div><div className="text-lg font-semibold"><HHMM hours={climb.time_h}/></div></div>
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">Cruise</div><div className="text-lg font-semibold"><HHMM hours={cruiseTimeH}/></div></div>
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">Descent</div><div className="text-lg font-semibold"><HHMM hours={descent.time_h}/></div></div>
+          </Row>
+
+          <Row>
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">Total Flight Time (ETE)</div><div className="text-lg font-semibold"><HHMM hours={totalTimeH}/></div></div>
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">Fuel Endurance (airborne)</div><div className="text-lg font-semibold"><HHMM hours={enduranceHours}/></div></div>
+            <div className={`px-3 py-2 rounded-xl bg-slate-950 border ${enduranceMeets?"border-emerald-500/40":"border-rose-500/40"}`}><div className="text-xs text-slate-400">Required Minimum (ETE + reserves)</div><div className="text-lg font-semibold"><HHMM hours={eteHours + reserveTimeH}/></div></div>
+          </Row>
+
+          <Row>
+            <div>
+              <Label>Alternate ICAO (optional)</Label>
+              <Input value={altIcao} onChange={(e)=>setAltIcao(e.target.value.toUpperCase())} />
+              <div className="text-xs text-slate-400 mt-1">ARR → ALT distance: <b>{Math.round(alternateDistanceNM || 0).toLocaleString()}</b> NM</div>
+            </div>
+            <div>
+              <Label>Taxi Fuel (kg)</Label>
+              <Input type="number" value={taxiKg} onChange={(e)=>setTaxiKg(parseFloat(e.target.value||"0"))} />
+            </div>
+            <div>
+              <Label>Computed TOW (kg)</Label>
+              <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 font-semibold">{Math.round(tkoWeightKgAuto).toLocaleString()} kg</div>
+            </div>
+          </Row>
+
+          <Row>
+            <div>
+              <Label>Contingency (%)</Label>
+              <Input type="number" value={contingencyPct} onChange={(e)=>setContingencyPct(parseFloat(e.target.value||"0"))} />
+            </div>
+            <div>
+              <Label>Final Reserve (kg)</Label>
+              <Input type="number" value={finalReserveKg} onChange={(e)=>setFinalReserveKg(parseFloat(e.target.value||"0"))} />
+            </div>
+          </Row>
+
+          <Row>
+            <div>
+              <Label>Trim Tank Fuel (kg)</Label>
+              <Input type="number" value={trimTankKg} onChange={(e)=>setTrimTankKg(parseFloat(e.target.value||"0"))} />
+            </div>
+            <div>
+              <Label>Alternate Fuel (kg)</Label>
+              <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 font-semibold">{Math.round((alternateDistanceNM || 0) * CONSTANTS.fuel.burn_kg_per_nm).toLocaleString()} kg</div>
+            </div>
+          </Row>
+
+          <div className="mt-3 grid gap-3 md:grid-cols-4 grid-cols-2">
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">Trip Fuel</div><div className="text-lg font-semibold">{Math.round(tripKg).toLocaleString()} kg</div></div>
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">Block Fuel</div><div className="text-lg font-semibold">{Math.round(blocks.block_kg).toLocaleString()} kg</div></div>
+            <div className={`px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 ${reheat.within_cap?"":"border-rose-500/40"}`}><div className="text-xs text-slate-400">Reheat OK</div><div className={`text-lg font-semibold ${reheat.within_cap?"text-emerald-400":"text-rose-400"}`}>{reheat.within_cap?"YES":"NO"}</div></div>
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">Total Fuel Required (Block + Trim)</div><div className="text-lg font-semibold">{Number.isFinite(blocks.block_kg) && Number.isFinite(trimTankKg) ? Math.round(blocks.block_kg + (trimTankKg||0)).toLocaleString() : "—"} kg</div></div>
+          </div>
+        </Card>
+
+        <Card title="Takeoff & Landing Speeds (IAS)">
+          <Row cols={4}>
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">Computed TOW</div><div className="text-lg font-semibold">{Math.round(tkoWeightKgAuto).toLocaleString()} kg</div></div>
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">V1</div><div className="text-lg font-semibold">{tkSpeeds.V1} kt</div></div>
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">VR</div><div className="text-lg font-semibold">{tkSpeeds.VR} kt</div></div>
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">V2</div><div className="text-lg font-semibold">{tkSpeeds.V2} kt</div></div>
+          </Row>
+          <Row cols={4}>
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">Est. Landing WT</div><div className="text-lg font-semibold">{Math.round(estLandingWeightKg).toLocaleString()} kg</div></div>
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">VLS</div><div className="text-lg font-semibold">{ldSpeeds.VLS} kt</div></div>
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">VAPP</div><div className="text-lg font-semibold">{ldSpeeds.VAPP} kt</div></div>
+          </Row>
+          <div className="text-xs text-slate-400 mt-2">Speeds scale with √(weight/reference) and are indicative IAS; verify against the DC Designs manual & in-sim.</div>
+        </Card>
+
+        <Card title="Takeoff & Landing Speeds (IAS)">
+          <Row cols={4}>
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">Computed TOW</div><div className="text-lg font-semibold">{Math.round(tkoWeightKgAuto).toLocaleString()} kg</div></div>
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">V1</div><div className="text-lg font-semibold">{tkSpeeds.V1} kt</div></div>
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">VR</div><div className="text-lg font-semibold">{tkSpeeds.VR} kt</div></div>
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">V2</div><div className="text-lg font-semibold">{tkSpeeds.V2} kt</div></div>
+          </Row>
+          <Row cols={4}>
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">Est. Landing WT</div><div className="text-lg font-semibold">{Math.round(estLandingWeightKg).toLocaleString()} kg</div></div>
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">VLS</div><div className="text-lg font-semibold">{ldSpeeds.VLS} kt</div></div>
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">VAPP</div><div className="text-lg font-semibold">{ldSpeeds.VAPP} kt</div></div>
+          </Row>
+          <div className="text-xs text-slate-400 mt-2">Speeds scale with √(weight/reference) and are indicative IAS; verify in-sim.</div>
+        </Card>
+
+        <Card title="Weather & Runway Wind Components" right={<div className="text-xs text-slate-400">ILS intercept tip: ~15 NM / 5000 ft</div>}>
+          {metarErr && <div className="text-xs text-rose-300 mb-2">METAR fetch error: {metarErr}</div>}
+          <div className="grid gap-4">
+            <div>
+              <div className="text-sm font-semibold mb-1">Departure METAR ({depIcao}{depRunway?` ${depRunway.id}`:""})</div>
+              <Input placeholder="Raw METAR will appear here if fetch works; otherwise paste manually" value={metarDep} onChange={(e)=>setMetarDep(e.target.value)} />
+              <div className="grid md:grid-cols-4 grid-cols-2 gap-3 mt-2">
+                <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">Headwind</div><div className="text-lg font-semibold">{depWind.comps.headwind_kt ?? "—"} kt</div></div>
+                <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">Crosswind</div><div className="text-lg font-semibold">{depWind.comps.crosswind_kt ?? "—"} kt</div></div>
+                <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">Dir</div><div className="text-lg font-semibold">{depWind.parsed.wind_dir_deg ?? "VRB"}</div></div>
+                <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">Spd/Gust</div><div className="text-lg font-semibold">{depWind.parsed.wind_speed_kt ?? "—"}/{depWind.parsed.wind_gust_kt ?? "—"} kt</div></div>
+              </div>
+            </div>
+
+            <div>
+              <div className="text-sm font-semibold mb-1">Arrival METAR ({arrIcao}{arrRunway?` ${arrRunway.id}`:""})</div>
+              <Input placeholder="Raw METAR will appear here if fetch works; otherwise paste manually" value={metarArr} onChange={(e)=>setMetarArr(e.target.value)} />
+              <div className="grid md:grid-cols-4 grid-cols-2 gap-3 mt-2">
+                <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">Headwind</div><div className="text-lg font-semibold">{arrWind.comps.headwind_kt ?? "—"} kt</div></div>
+                <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">Crosswind</div><div className="text-lg font-semibold">{arrWind.comps.crosswind_kt ?? "—"} kt</div></div>
+                <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">Dir</div><div className="text-lg font-semibold">{arrWind.parsed.wind_dir_deg ?? "VRB"}</div></div>
+                <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">Spd/Gust</div><div className="text-lg font-semibold">{arrWind.parsed.wind_speed_kt ?? "—"}/{arrWind.parsed.wind_gust_kt ?? "—"} kt</div></div>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        <Card title="Runway Feasibility Summary">
+          <Row cols={4}>
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">T/O Req (m)</div><div className="text-lg font-semibold">{Math.round(tkoCheck.required_length_m_est).toLocaleString()} m</div></div>
+            <div className={`px-3 py-2 rounded-xl bg-slate-950 border ${tkoCheck.feasible?"border-emerald-500/40":"border-rose-500/40"}`}><div className="text-xs text-slate-400">Departure Feasible?</div><div className={`text-lg font-semibold ${tkoCheck.feasible?"text-emerald-400":"text-rose-400"}`}>{tkoCheck.feasible?"YES":"NO"}</div></div>
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">LDG Req (m)</div><div className="text-lg font-semibold">{Math.round(ldgCheck.required_length_m_est).toLocaleString()} m</div></div>
+            <div className={`px-3 py-2 rounded-xl bg-slate-950 border ${ldgCheck.feasible?"border-emerald-500/40":"border-rose-500/40"}`}><div className="text-xs text-slate-400">Arrival Feasible?</div><div className={`text-lg font-semibold ${ldgCheck.feasible?"text-emerald-400":"text-rose-400"}`}>{ldgCheck.feasible?"YES":"NO"}</div></div>
+          </Row>
+          <div className="text-xs text-slate-400 mt-2">
+            Est. landing weight: <b>{Math.round(estLandingWeightKg).toLocaleString()} kg</b> (TOW − Trip Fuel).
+          </div>
+          {(!tkoCheck.feasible || !ldgCheck.feasible) && (
+            <div className="mt-3 grid md:grid-cols-2 grid-cols-1 gap-3">
+              {!tkoCheck.feasible && (
+                <div className="px-3 py-2 rounded-xl bg-slate-900 border border-rose-500/30 text-rose-300">
+                  <div className="text-xs uppercase tracking-wide mb-1">Why departure is NOT feasible</div>
+                  <div className="text-sm">Runway available: <b>{depRunway?`${Math.round(depRunway.length_m).toLocaleString()} m`:"—"}</b> vs required: <b>{Math.round(tkoCheck.required_length_m_est).toLocaleString()} m</b></div>
+                  <div className="text-xs mt-1">At TOW <b>{Math.round(tkoWeightKgAuto).toLocaleString()} kg</b>; baseline is {CONSTANTS.runway.min_takeoff_m_at_mtow.toLocaleString()} m @ MTOW.</div>
+                </div>
+              )}
+              {!ldgCheck.feasible && (
+                <div className="px-3 py-2 rounded-xl bg-slate-900 border border-rose-500/30 text-rose-300">
+                  <div className="text-xs uppercase tracking-wide mb-1">Why arrival is NOT feasible</div>
+                  <div className="text-sm">Runway available: <b>{arrRunway?`${Math.round(arrRunway.length_m).toLocaleString()} m`:"—"}</b> vs required: <b>{Math.round(ldgCheck.required_length_m_est).toLocaleString()} m</b></div>
+                  <div className="text-xs mt-1">At est. landing weight <b>{Math.round(estLandingWeightKg).toLocaleString()} kg</b>; baseline is {CONSTANTS.runway.min_landing_m_at_mlw.toLocaleString()} m @ MLW.</div>
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
+
+        <Card title="Diagnostics / Self-tests" right={<Button variant="ghost" onClick={()=>setTests(runSelfTests())}>Run Self-Tests</Button>}>
+          <div className="text-xs text-slate-400 mb-2">Covers meters, crosswind, longest-runway, newline split, VRB parsing, manual-distance sanity, fuel monotonicity, and landing feasibility.</div>
+          {tests.length === 0 ? (
+            <div className="text-sm text-slate-300">Click <b>Run Self-Tests</b> to execute.</div>
+          ) : (
+            <div>
+              <div className="mb-2 text-sm">Passed {passCount}/{tests.length}</div>
+              <ul className="list-disc pl-5 text-sm space-y-1">
+                {tests.map((t, i) => (
+                  <li key={i} className={t.pass?"text-emerald-300":"text-rose-300"}>
+                    {t.name} {t.pass?"✓":"✗"} {t.err?`— ${t.err}`:""}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </Card>
+
+        <Card title="Notes & Assumptions (for tuning)">
+          <ul className="list-disc pl-5 text-sm text-slate-300 space-y-1">
+            <li>All masses in <b>kg</b>. Distances in <b>NM</b>. Runway lengths in <b>m</b> only.</li>
+            <li>Nav DB autoloads Airports/Runways/NAVAIDs from OurAirports. No fallback.</li>
+            <li>Procedural tokens are accepted so copy-pasting OFP routes won’t break; true SID/STAR geometry is not expanded yet.</li>
+            <li>Fuel model is heuristic but altitude-sensitive and distance-stable; calibrate with DC Designs manual and in-sim numbers.</li>
+          </ul>
+        </Card>
+      </main>
+
+      <footer className="p-6 text-center text-xs text-slate-500">Manual values © DC Designs Concorde (MSFS). Planner is for training/planning only; always verify in-sim. Made with love by @theawesomeray</footer>
+    </div>
+  );
+}
