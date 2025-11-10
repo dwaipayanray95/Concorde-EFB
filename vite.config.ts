@@ -1,8 +1,12 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+// @ts-nocheck
+import { useState } from 'react'
 
-export default defineConfig({
-  plugins: [react()],
-  base: '/Concorde-EFB/',
-  server: { open: '/Concorde-EFB/' }
-})
+function Card({ title, children, right = null }) {
+  // component implementation
+}
+
+const [diagnostics, setDiagnostics] = useState<any[]>([]);
+
+setDepartureIcao(depIcao || "");
+
+setArrivalIcao(arrIcao || "");
