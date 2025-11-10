@@ -7,8 +7,8 @@
 // • METAR fetch more robust: tries AviationWeather API, then VATSIM fallback.
 // • All units metric (kg, m); longest-runway autopick; crosswind/headwind components.
 // • Self-tests cover manual-distance sanity, fuel monotonicity, feasibility sanity.
-
-import { useEffect, useMemo, useState } from "react";
+declare module 'papaparse' { const Papaparse: any; export default Papaparse; }
+import React, { useEffect, useMemo, useState } from "react";
 import type {
   ButtonHTMLAttributes,
   InputHTMLAttributes,
@@ -554,8 +554,8 @@ function computeLandingSpeeds(lwKg: number): LandingSpeeds {
   return { VLS, VAPP };
 }
 
-export default function ConcordePlannerCanvas() {
-  const [airports, setAirports] = useState<AirportIndex>({});
+function ConcordePlannerCanvas() {
+const [airports, setAirports] = useState<AirportIndex>({});
   const [dbLoaded, setDbLoaded] = useState(false);
   const [dbError, setDbError] = useState("");
 
@@ -930,5 +930,33 @@ export default function ConcordePlannerCanvas() {
 
       <footer className="p-6 text-center text-xs text-slate-500">Manual values © DC Designs Concorde (MSFS). Planner is for training/planning only; always verify in-sim. Made with love by @theawesomeray</footer>
     </div>
+  );
+}
+
+type EBState = { error: unknown | null };
+
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, EBState> {
+  state: EBState = { error: null };
+  static getDerivedStateFromError(error: unknown): EBState { return { error }; }
+  componentDidCatch(error: unknown, info: any) { console.error('Concorde EFB crashed:', error, info); }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 16 }}>
+          <h2>Something went wrong.</h2>
+          <p>Open the browser console for details.</p>
+          <pre style={{ whiteSpace: 'pre-wrap' }}>{String(this.state.error)}</pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export default function ConcordeEFB() {
+  return (
+    <ErrorBoundary>
+      <ConcordePlannerCanvas />
+    </ErrorBoundary>
   );
 }
