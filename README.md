@@ -1,10 +1,11 @@
 # Concorde EFB (MSFS 2020/2024 · DC Designs)
-
 A lightweight, browser-based electronic flight bag for planning DC Designs Concorde flights in Microsoft Flight Simulator 2020 and 2024.
+
+#Try it out here: (https://dwaipayanray95.github.io/Concorde-EFB/)
 
 I’m Ray, a flight enthusiast who loves the Concorde. I have no formal coding background — this app exists thanks to a frankly excruciating amount of late-night tinkering, trial-and-error, and stubborn curiosity. If you find it useful, show some love. 💙
 
-Made with love by [@theawesomeray](https://github.com/theawesomeray)
+Made with love by [@theawesomeray](https://instagram.com/theawesomeray)
 
 ---
 
