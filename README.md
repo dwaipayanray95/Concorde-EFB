@@ -77,7 +77,7 @@ All rights reserved. Contact me for reuse or distribution.
 
 ## Changelog
 
-**v0.82 — 2025-11-10**
+**v0.83 — 2025-12-08**
 - Updated README to include full changelog.
 - Uniform versioning and changelog tracking throughout the app. Easier for me I guess.
 
