@@ -546,10 +546,18 @@ function computeTakeoffSpeeds(towKg: number): TakeoffSpeeds {
   return { V1, VR, V2 };
 }
 function computeLandingSpeeds(lwKg: number): LandingSpeeds {
-  const refKg = 105000;
+  // Approximate Concorde landing performance:
+  // target VLS ≈ 170–190 kt over typical landing weights,
+  // with VAPP about 10–15 kt above VLS.
+  const refKg = 100000;
   const s = weightScale(lwKg, refKg);
-  const VLS = Math.max(140, Math.round(150 * s));
-  const VAPP = VLS + 10;
+
+  let VLS = Math.round(175 * s);
+  if (VLS < 170) VLS = 170; // never suggest unrealistically low approach speeds
+
+  let VAPP = VLS + 15;
+  if (VAPP < 185) VAPP = 185;
+
   return { VLS, VAPP };
 }
 
@@ -599,19 +607,31 @@ const [airports, setAirports] = useState<AirportIndex>({});
   }, []);
 
   useEffect(() => {
-    const a = depKey ? airports[depKey] : undefined;
-    if (a?.runways?.length) {
-      const longest = pickLongestRunway(a.runways);
-      if (longest && depRw !== longest.id) setDepRw(longest.id);
-    } else if (depRw) setDepRw("");
-  }, [airports, depKey, depRw]);
+  const a = depKey ? airports[depKey] : undefined;
+  if (a?.runways?.length) {
+    const longest = pickLongestRunway(a.runways);
+    const hasCurrent = a.runways.some((r) => r.id === depRw);
+    // Auto-pick longest only if there is no valid current selection
+    if ((!depRw || !hasCurrent) && longest && depRw !== longest.id) {
+      setDepRw(longest.id);
+    }
+  } else if (depRw) {
+    setDepRw("");
+  }
+}, [airports, depKey, depRw]);
   useEffect(() => {
-    const a = arrKey ? airports[arrKey] : undefined;
-    if (a?.runways?.length) {
-      const longest = pickLongestRunway(a.runways);
-      if (longest && arrRw !== longest.id) setArrRw(longest.id);
-    } else if (arrRw) setArrRw("");
-  }, [airports, arrKey, arrRw]);
+  const a = arrKey ? airports[arrKey] : undefined;
+  if (a?.runways?.length) {
+    const longest = pickLongestRunway(a.runways);
+    const hasCurrent = a.runways.some((r) => r.id === arrRw);
+    // Auto-pick longest only if there is no valid current selection
+    if ((!arrRw || !hasCurrent) && longest && arrRw !== longest.id) {
+      setArrRw(longest.id);
+    }
+  } else if (arrRw) {
+    setArrRw("");
+  }
+}, [airports, arrKey, arrRw]);
 
   const depInfo = depKey ? airports[depKey] : undefined;
   const arrInfo = arrKey ? airports[arrKey] : undefined;
@@ -656,8 +676,13 @@ const [airports, setAirports] = useState<AirportIndex>({});
   const airborneFuelKg = Math.max(totalFuelRequiredKg - (taxiKg || 0), 0);
   const enduranceHours = avgBurnKgPerHour > 0 ? (airborneFuelKg / avgBurnKgPerHour) : 0;
   const reserveTimeH = avgBurnKgPerHour > 0 ? ((blocks.contingency_kg || 0) + (blocks.final_reserve_kg || 0) + (blocks.alternate_kg || 0)) / avgBurnKgPerHour : 0;
-  const enduranceMeets = enduranceHours >= (eteHours + reserveTimeH);
-  const fullPayloadKg = (CONSTANTS.weights.pax_full_count || 0) * (CONSTANTS.weights.pax_mass_kg || 0);
+const enduranceMeets = enduranceHours >= (eteHours + reserveTimeH);
+
+const fuelCapacityKg = CONSTANTS.weights.fuel_capacity_kg;
+const fuelWithinCapacity = totalFuelRequiredKg <= fuelCapacityKg;
+const fuelExcessKg = Math.max(totalFuelRequiredKg - fuelCapacityKg, 0);
+
+const fullPayloadKg = (CONSTANTS.weights.pax_full_count || 0) * (CONSTANTS.weights.pax_mass_kg || 0);
   const tkoWeightKgAuto = Math.min(
     (CONSTANTS.weights.oew_kg || 0) + fullPayloadKg + totalFuelRequiredKg,
     CONSTANTS.weights.mtow_kg
@@ -824,6 +849,15 @@ const [airports, setAirports] = useState<AirportIndex>({});
             <div className={`px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 ${reheat.within_cap?"":"border-rose-500/40"}`}><div className="text-xs text-slate-400">Reheat OK</div><div className={`text-lg font-semibold ${reheat.within_cap?"text-emerald-400":"text-rose-400"}`}>{reheat.within_cap?"YES":"NO"}</div></div>
             <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800"><div className="text-xs text-slate-400">Total Fuel Required (Block + Trim)</div><div className="text-lg font-semibold">{Number.isFinite(blocks.block_kg) && Number.isFinite(trimTankKg) ? Math.round(blocks.block_kg + (trimTankKg||0)).toLocaleString() : "—"} kg</div></div>
           </div>
+          {!fuelWithinCapacity && (
+  <div className="mt-2 text-xs text-rose-300">
+    Warning: Total fuel{" "}
+    <b>{Math.round(totalFuelRequiredKg).toLocaleString()} kg</b> exceeds Concorde fuel capacity{" "}
+    <b>{Math.round(fuelCapacityKg).toLocaleString()} kg</b> by{" "}
+    <b>{Math.round(fuelExcessKg).toLocaleString()} kg</b>. Reduce block or trim fuel to stay within limits.
+  </div>
+)}
+
         </Card>
 
         <Card title="Takeoff & Landing Speeds (IAS)">
