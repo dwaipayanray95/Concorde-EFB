@@ -1,6 +1,6 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-// Concorde EFB — Canvas v0.84 (for DC Designs, MSFS 2024)
-// What’s new in v0.84
+// Concorde EFB — Canvas v0.85 (for DC Designs, MSFS 2024)
+// What’s new in v0.85
 // • Non-RVSM FL compliance warning (≥ FL410) with auto direction inference (DEP→ARR).
 // • Max cruise FL enforced at FL590 in logic & UI.
 // • Version label is now driven by state (no hardcoded string).
@@ -510,9 +510,72 @@ function runSelfTests() {
     results.push({ name: "Non-RVSM max FL test throws", pass: false, err: String(e) });
   }
 
+  // Recommend FL self-tests
+  try {
+    const maxFL = CONSTANTS?.speeds?.max_cruise_fl ?? 590;
+    const recShort = recommendCruiseFLForRoute(200, "E", maxFL);
+    const recLongW = recommendCruiseFLForRoute(3000, "W", maxFL);
+    const allowed = getNonRvsmAllowedFLs(maxFL);
+
+    results.push({
+      name: "Recommend FL short route stays below FL410",
+      pass: Number.isFinite(recShort) && recShort >= 300 && recShort <= 390,
+      value: recShort,
+    });
+
+    results.push({
+      name: "Recommend FL long westbound route is valid candidate",
+      pass:
+        Number.isFinite(recLongW) &&
+        (recLongW <= 390 || allowed.west.includes(recLongW)) &&
+        recLongW <= maxFL,
+      value: recLongW,
+    });
+  } catch (e) {
+    results.push({ name: "Recommend FL tests throw", pass: false, err: String(e) });
+  }
+
   return results;
 }
 
+function recommendCruiseFLForRoute(distanceNM, direction, maxFL = (CONSTANTS?.speeds?.max_cruise_fl ?? 590)) {
+  const dist = Number(distanceNM);
+  if (!Number.isFinite(dist) || dist <= 0) return 580;
+
+  const dir = (direction || "E").toUpperCase();
+  const allowedNonRvsm = getNonRvsmAllowedFLs(maxFL);
+  const nonRvsmList = dir === "W" ? allowedNonRvsm.west : allowedNonRvsm.east;
+
+  // Candidate FLs: 300–390 (step 10) + non-RVSM list (>=410)
+  const candidates = [];
+  for (let fl = 300; fl <= 390; fl += 10) candidates.push(fl);
+  for (const fl of nonRvsmList) candidates.push(fl);
+
+  // Objective: minimize estimated trip fuel for this distance.
+  let best = { fl: 580, tripKg: Number.POSITIVE_INFINITY };
+
+  for (const fl of candidates) {
+    const cruiseAltFt = fl * 100;
+    const climb = estimateClimb(cruiseAltFt);
+    const descent = estimateDescent(cruiseAltFt);
+    const cruiseDist = Math.max(dist - climb.dist_nm - descent.dist_nm, 0);
+
+    const baseBurn = CONSTANTS.fuel.burn_kg_per_nm * altitudeBurnFactor(fl);
+    const climbKg = climb.dist_nm * baseBurn * CONSTANTS.fuel.climb_factor;
+    const cruiseKg = cruiseDist * baseBurn;
+    const descentKg = descent.dist_nm * baseBurn * CONSTANTS.fuel.descent_factor;
+    const tripKg = Math.max(climbKg + cruiseKg + descentKg, 0);
+
+    if (tripKg < best.tripKg) best = { fl, tripKg };
+  }
+
+  // Clamp and sanity
+  if (best.fl > maxFL) return maxFL;
+  if (best.fl < 300) return 300;
+  return best.fl;
+}
+
+// Option B helpers: infer direction from DEP/ARR coordinates (shortest-path delta longitude)
 function ConcordePlannerCanvas() {
   const [airports, setAirports] = useState({});
   const [dbLoaded, setDbLoaded] = useState(false);
@@ -524,11 +587,12 @@ function ConcordePlannerCanvas() {
   const [arrRw, setArrRw] = useState("");
 
   const [manualDistanceNM, setManualDistanceNM] = useState(0);
-  const [version, setVersion] = useState("v0.84");
+  const [version, setVersion] = useState("v0.85");
 
   const [altIcao, setAltIcao] = useState("");
   const [trimTankKg, setTrimTankKg] = useState(0);
   const [cruiseFL, setCruiseFL] = useState(580);
+  const [autoCruiseFL, setAutoCruiseFL] = useState(true);
   const [taxiKg, setTaxiKg] = useState(450);
   const [contingencyPct, setContingencyPct] = useState(5);
   const [finalReserveKg, setFinalReserveKg] = useState(3600);
@@ -562,18 +626,32 @@ function ConcordePlannerCanvas() {
 
   useEffect(() => {
     const a = depKey ? airports[depKey] : undefined;
-    if (a?.runways?.length) {
-      const longest = pickLongestRunway(a.runways);
-      if (longest && depRw !== longest.id) setDepRw(longest.id);
-    } else if (depRw) setDepRw("");
+    const rws = a?.runways ?? [];
+
+    if (rws.length) {
+      const currentValid = depRw && rws.some((r) => r.id === depRw);
+      if (!currentValid) {
+        const longest = pickLongestRunway(rws);
+        if (longest) setDepRw(longest.id);
+      }
+    } else {
+      if (depRw) setDepRw("");
+    }
   }, [airports, depKey, depRw]);
 
   useEffect(() => {
     const a = arrKey ? airports[arrKey] : undefined;
-    if (a?.runways?.length) {
-      const longest = pickLongestRunway(a.runways);
-      if (longest && arrRw !== longest.id) setArrRw(longest.id);
-    } else if (arrRw) setArrRw("");
+    const rws = a?.runways ?? [];
+
+    if (rws.length) {
+      const currentValid = arrRw && rws.some((r) => r.id === arrRw);
+      if (!currentValid) {
+        const longest = pickLongestRunway(rws);
+        if (longest) setArrRw(longest.id);
+      }
+    } else {
+      if (arrRw) setArrRw("");
+    }
   }, [airports, arrKey, arrRw]);
 
   const depInfo = depKey ? airports[depKey] : undefined;
@@ -588,6 +666,17 @@ function ConcordePlannerCanvas() {
     () => validateNonRvsmFL(cruiseFL, inferredDirection),
     [cruiseFL, inferredDirection]
   );
+
+  useEffect(() => {
+    if (!autoCruiseFL) return;
+    if (!Number.isFinite(manualDistanceNM) || manualDistanceNM <= 0) return;
+
+    const rec = recommendCruiseFLForRoute(manualDistanceNM, inferredDirection);
+    // Avoid unnecessary state churn
+    if (Number.isFinite(rec) && Math.round(rec) !== Math.round(cruiseFL)) {
+      setCruiseFL(rec);
+    }
+  }, [autoCruiseFL, manualDistanceNM, inferredDirection]);
 
   const plannedDistance = Math.max(manualDistanceNM || 0, 0);
   const cruiseAltFt = cruiseFL * 100;
@@ -841,7 +930,10 @@ function ConcordePlannerCanvas() {
                       _jsx(Input, {
                         type: "number",
                         value: manualDistanceNM,
-                        onChange: (e) => setManualDistanceNM(parseFloat(e.target.value || "0")),
+                        onChange: (e) => {
+                          setManualDistanceNM(parseFloat(e.target.value || "0"));
+                          setAutoCruiseFL(true);
+                        },
                       }),
                       _jsx("div", {
                         className: "text-xs text-slate-400 mt-1",
@@ -857,7 +949,10 @@ function ConcordePlannerCanvas() {
                       _jsx(Input, {
                         type: "number",
                         value: cruiseFL,
-                        onChange: (e) => setCruiseFL(parseFloat(e.target.value || "0")),
+                        onChange: (e) => {
+                          setCruiseFL(parseFloat(e.target.value || "0"));
+                          setAutoCruiseFL(false);
+                        },
                       }),
                       _jsxs("div", {
                         className: "text-xs text-slate-400 mt-1",
@@ -865,6 +960,10 @@ function ConcordePlannerCanvas() {
                           "Direction inferred from route: ",
                           _jsx("b", { children: inferredDirection === "W" ? "Westbound" : "Eastbound" }),
                         ],
+                      }),
+                      _jsx("div", {
+                        className: "text-[11px] text-slate-500 mt-1",
+                        children: autoCruiseFL ? "Auto FL: ON (distance-driven)" : "Auto FL: OFF (manual override)",
                       }),
 
                       !flCompliance.ok && cruiseFL >= 410 && _jsxs("div", {
