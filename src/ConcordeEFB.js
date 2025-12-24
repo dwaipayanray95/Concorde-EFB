@@ -7,6 +7,8 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import React, { useEffect, useMemo, useState } from "react";
 import Papa from "papaparse";
 
+const APP_VERSION = "v0.85";
+
 const toRad = (deg) => (deg * Math.PI) / 180;
 const nmFromKm = (km) => km * 0.539957;
 
@@ -579,7 +581,7 @@ function recommendCruiseFLForRoute(distanceNM, direction, maxFL = (CONSTANTS?.sp
 function ConcordePlannerCanvas() {
   const [airports, setAirports] = useState({});
   const [dbLoaded, setDbLoaded] = useState(false);
-  const [dbError, setDbError] = useState("Error loading database");
+  const [dbError, setDbError] = useState("");
 
   const [depIcao, setDepIcao] = useState("EGLL");
   const [depRw, setDepRw] = useState("");
@@ -587,7 +589,6 @@ function ConcordePlannerCanvas() {
   const [arrRw, setArrRw] = useState("");
 
   const [manualDistanceNM, setManualDistanceNM] = useState(0);
-  const [version, setVersion] = useState("v0.85");
 
   const [altIcao, setAltIcao] = useState("");
   const [trimTankKg, setTrimTankKg] = useState(0);
@@ -595,7 +596,7 @@ function ConcordePlannerCanvas() {
   const [autoCruiseFL, setAutoCruiseFL] = useState(true);
   const MAX_CRUISE_FL = (CONSTANTS?.speeds?.max_cruise_fl ?? 590);
   const [flClampNotice, setFlClampNotice] = useState("");
-  const [taxiKg, setTaxiKg] = useState(450);
+  const [taxiKg, setTaxiKg] = useState(2500);
   const [contingencyPct, setContingencyPct] = useState(5);
   const [finalReserveKg, setFinalReserveKg] = useState(3600);
 
@@ -814,7 +815,7 @@ function ConcordePlannerCanvas() {
                     className: "text-2xl font-bold",
                     children: [
                       "Concorde EFB ",
-                      _jsx("span", { className: "text-sky-400", children: version }),
+                      _jsx("span", { className: "text-sky-400", children: APP_VERSION }),
                     ],
                   }),
                   _jsx("p", {
@@ -951,25 +952,33 @@ function ConcordePlannerCanvas() {
                   _jsxs("div", {
                     children: [
                       _jsx(Label, { children: "Cruise Flight Level (FL)" }),
-                      _jsx(Input, {
-                        type: "number",
-                        value: cruiseFL,
-                        max: MAX_CRUISE_FL,
-                        onChange: (e) => {
-                          const raw = parseFloat(e.target.value || "0");
-                          const v = Number.isFinite(raw) ? raw : 0;
-                          const clamped = Math.min(v, MAX_CRUISE_FL);
+                  _jsx(Input, {
+                    type: "number",
+                    value: cruiseFL,
+                    min: 300,
+                    max: MAX_CRUISE_FL,
+                    step: 10,
+                    onChange: (e) => {
+                      const raw = parseFloat(e.target.value || "0");
+                      const v = Number.isFinite(raw) ? raw : 0;
+                      const clamped = Math.min(v, MAX_CRUISE_FL);
+                      const rounded = Math.round(clamped);
 
-                          if (v > MAX_CRUISE_FL) {
-                            setFlClampNotice(`Clamped to FL${MAX_CRUISE_FL} (Concorde max cruise).`);
-                          } else {
-                            setFlClampNotice("");
-                          }
+                      if (v > MAX_CRUISE_FL) {
+                        setFlClampNotice(`Clamped to FL${MAX_CRUISE_FL} (Concorde max cruise).`);
+                      } else {
+                        setFlClampNotice("");
+                      }
 
-                          setCruiseFL(clamped);
-                          setAutoCruiseFL(false);
-                        },
-                      }),
+                      setCruiseFL(rounded);
+                      setAutoCruiseFL(false);
+                    },
+                    onBlur: () => {
+                      // Force the displayed value to de-zero-pad and stay within bounds
+                      const clamped = Math.min(Number(cruiseFL) || 0, MAX_CRUISE_FL);
+                      setCruiseFL(Math.round(clamped));
+                    },
+                  }),
                       _jsxs("div", {
                         className: "text-xs text-slate-400 mt-1",
                         children: [
