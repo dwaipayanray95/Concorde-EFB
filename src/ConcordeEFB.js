@@ -593,6 +593,8 @@ function ConcordePlannerCanvas() {
   const [trimTankKg, setTrimTankKg] = useState(0);
   const [cruiseFL, setCruiseFL] = useState(580);
   const [autoCruiseFL, setAutoCruiseFL] = useState(true);
+  const MAX_CRUISE_FL = (CONSTANTS?.speeds?.max_cruise_fl ?? 590);
+  const [flClampNotice, setFlClampNotice] = useState("");
   const [taxiKg, setTaxiKg] = useState(450);
   const [contingencyPct, setContingencyPct] = useState(5);
   const [finalReserveKg, setFinalReserveKg] = useState(3600);
@@ -671,12 +673,15 @@ function ConcordePlannerCanvas() {
     if (!autoCruiseFL) return;
     if (!Number.isFinite(manualDistanceNM) || manualDistanceNM <= 0) return;
 
-    const rec = recommendCruiseFLForRoute(manualDistanceNM, inferredDirection);
+    const rec = recommendCruiseFLForRoute(manualDistanceNM, inferredDirection, MAX_CRUISE_FL);
+    const safe = Math.min(Number.isFinite(rec) ? rec : 580, MAX_CRUISE_FL);
+
     // Avoid unnecessary state churn
-    if (Number.isFinite(rec) && Math.round(rec) !== Math.round(cruiseFL)) {
-      setCruiseFL(rec);
+    if (Number.isFinite(safe) && Math.round(safe) !== Math.round(cruiseFL)) {
+      setCruiseFL(safe);
+      setFlClampNotice("");
     }
-  }, [autoCruiseFL, manualDistanceNM, inferredDirection]);
+  }, [autoCruiseFL, manualDistanceNM, inferredDirection, MAX_CRUISE_FL]);
 
   const plannedDistance = Math.max(manualDistanceNM || 0, 0);
   const cruiseAltFt = cruiseFL * 100;
@@ -949,8 +954,19 @@ function ConcordePlannerCanvas() {
                       _jsx(Input, {
                         type: "number",
                         value: cruiseFL,
+                        max: MAX_CRUISE_FL,
                         onChange: (e) => {
-                          setCruiseFL(parseFloat(e.target.value || "0"));
+                          const raw = parseFloat(e.target.value || "0");
+                          const v = Number.isFinite(raw) ? raw : 0;
+                          const clamped = Math.min(v, MAX_CRUISE_FL);
+
+                          if (v > MAX_CRUISE_FL) {
+                            setFlClampNotice(`Clamped to FL${MAX_CRUISE_FL} (Concorde max cruise).`);
+                          } else {
+                            setFlClampNotice("");
+                          }
+
+                          setCruiseFL(clamped);
                           setAutoCruiseFL(false);
                         },
                       }),
@@ -965,6 +981,11 @@ function ConcordePlannerCanvas() {
                         className: "text-[11px] text-slate-500 mt-1",
                         children: autoCruiseFL ? "Auto FL: ON (distance-driven)" : "Auto FL: OFF (manual override)",
                       }),
+                      flClampNotice &&
+                        _jsx("div", {
+                          className: "text-xs text-amber-300 mt-1",
+                          children: flClampNotice,
+                        }),
 
                       !flCompliance.ok && cruiseFL >= 410 && _jsxs("div", {
                         className: "text-xs text-rose-300 mt-2",
