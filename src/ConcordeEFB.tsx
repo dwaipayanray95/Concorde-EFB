@@ -18,9 +18,12 @@ import Papa from "papaparse";
 
 const APP_VERSION = "0.85";
 
-// Concorde operational guardrails
-const MIN_CONCORDE_FL = 300;
+// User should be able to enter FL below 300 (e.g. low-level segments), but Concorde max is still capped.
+const MIN_CONCORDE_FL = 0;
 const MAX_CONCORDE_FL = 590;
+
+// Non-RVSM flight levels for Concorde above FL410 (user-provided rule-of-thumb)
+const NON_RVSM_MIN_FL = 410;
 
 function clampNumber(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -28,7 +31,67 @@ function clampNumber(value: number, min: number, max: number): number {
 
 function clampCruiseFL(input: number): number {
   const v = Number.isFinite(input) ? input : 0;
+  // Allow entry below 300 by clamping only to [0..MAX]
   return clampNumber(Math.round(v), MIN_CONCORDE_FL, MAX_CONCORDE_FL);
+}
+
+type DirectionEW = "E" | "W";
+
+function initialBearingDeg(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  // https://www.movable-type.co.uk/scripts/latlong.html (standard formula)
+  const φ1 = toRad(lat1);
+  const φ2 = toRad(lat2);
+  const Δλ = toRad(lon2 - lon1);
+  const y = Math.sin(Δλ) * Math.cos(φ2);
+  const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+  const θ = Math.atan2(y, x);
+  // Normalize to [0..360)
+  return (θ * 180) / Math.PI >= 0 ? ((θ * 180) / Math.PI) % 360 : (((θ * 180) / Math.PI) % 360) + 360;
+}
+
+function inferDirectionEW(dep: AirportInfo | undefined, arr: AirportInfo | undefined): DirectionEW | null {
+  if (!dep || !arr) return null;
+  const brg = initialBearingDeg(dep.lat, dep.lon, arr.lat, arr.lon);
+  // Eastbound roughly 000-179, Westbound 180-359
+  return brg < 180 ? "E" : "W";
+}
+
+function nonRvsmValidFLs(direction: DirectionEW): number[] {
+  // Pattern provided by user:
+  // East: 410, 450, 490, 530, 570
+  // West: 430, 470, 510, 550, 590
+  const start = direction === "E" ? 410 : 430;
+  const levels: number[] = [];
+  for (let fl = start; fl <= MAX_CONCORDE_FL; fl += 40) levels.push(fl);
+  return levels;
+}
+
+function snapToNonRvsm(fl: number, direction: DirectionEW): { snapped: number; changed: boolean } {
+  if (!Number.isFinite(fl)) return { snapped: NON_RVSM_MIN_FL, changed: true };
+  const clamped = clampCruiseFL(fl);
+  if (clamped < NON_RVSM_MIN_FL) return { snapped: clamped, changed: clamped !== fl };
+
+  const valid = nonRvsmValidFLs(direction);
+  if (valid.includes(clamped)) return { snapped: clamped, changed: clamped !== fl };
+
+  // Snap to nearest valid level
+  let best = valid[0];
+  let bestDiff = Math.abs(valid[0] - clamped);
+  for (const v of valid) {
+    const d = Math.abs(v - clamped);
+    if (d < bestDiff) {
+      best = v;
+      bestDiff = d;
+    }
+  }
+  return { snapped: best, changed: true };
+}
+
+function recommendedCruiseFL(direction: DirectionEW): number {
+  // Keep the app’s original intent (high cruise) but make it compliant.
+  const target = 580;
+  const { snapped } = snapToNonRvsm(target, direction);
+  return snapped;
 }
 
 type RunwayInfo = {
@@ -199,7 +262,7 @@ const CONSTANTS = {
 } as const;
 
 function altitudeBurnFactor(cruiseFL: number): number {
-  const fl = clampNumber(cruiseFL || 580, 300, MAX_CONCORDE_FL);
+  const fl = clampNumber(cruiseFL || 580, MIN_CONCORDE_FL, MAX_CONCORDE_FL);
   const x = (fl - 450) / (600 - 450);
   return 1.2 - 0.2 * Math.max(0, Math.min(1, x));
 }
@@ -747,9 +810,21 @@ function runSelfTests(): SelfTestResult[] {
     const c1 = clampCruiseFL(610);
     const c2 = clampCruiseFL(100);
     results.push({ name: "clampCruiseFL clamps 610→590", pass: c1 === 590, value: c1 });
-    results.push({ name: "clampCruiseFL clamps 100→300", pass: c2 === 300, value: c2 });
+    results.push({ name: "clampCruiseFL allows 100 (no min clamp)", pass: c2 === 100, value: c2 });
   } catch (e) {
     results.push({ name: "clampCruiseFL throws", pass: false, err: String(e) });
+  }
+
+  // New tests: Non-RVSM snapping
+  try {
+    const e = snapToNonRvsm(580, "E");
+    const w = snapToNonRvsm(580, "W");
+    results.push({ name: "Non-RVSM: FL580 east snaps to FL570", pass: e.snapped === 570, value: e });
+    results.push({ name: "Non-RVSM: FL580 west snaps to FL590", pass: w.snapped === 590, value: w });
+    const low = snapToNonRvsm(250, "E");
+    results.push({ name: "Non-RVSM: below FL410 unchanged", pass: low.snapped === 250, value: low });
+  } catch (e) {
+    results.push({ name: "Non-RVSM snapping throws", pass: false, err: String(e) });
   }
 
   return results;
@@ -798,7 +873,9 @@ function ConcordePlannerCanvas() {
   const [trimTankKg, setTrimTankKg] = useState(0);
 
   const [cruiseFL, setCruiseFL] = useState(580);
+  const [cruiseFLText, setCruiseFLText] = useState<string>("580");
   const [cruiseFLNotice, setCruiseFLNotice] = useState<string>("");
+  const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
   const [taxiKg, setTaxiKg] = useState(2500);
   const [contingencyPct, setContingencyPct] = useState(5);
   const [finalReserveKg, setFinalReserveKg] = useState(3600);
@@ -859,6 +936,18 @@ function ConcordePlannerCanvas() {
 
   const depInfo = depKey ? airports[depKey] : undefined;
   const arrInfo = arrKey ? airports[arrKey] : undefined;
+
+  const directionEW = useMemo(() => inferDirectionEW(depInfo, arrInfo), [depInfo, arrInfo]);
+
+  // Auto-pick a compliant cruise level when route changes (unless user has manually touched the field).
+  useEffect(() => {
+    if (!directionEW) return;
+    if (cruiseFLTouched) return;
+    const rec = recommendedCruiseFL(directionEW);
+    setCruiseFL(rec);
+    setCruiseFLText(String(rec));
+    setCruiseFLNotice(`Auto-selected Non-RVSM cruise FL${rec} (${directionEW === "E" ? "Eastbound" : "Westbound"}).`);
+  }, [directionEW, cruiseFLTouched]);
 
   const plannedDistance = Math.max(manualDistanceNM || 0, 0);
 
@@ -1038,22 +1127,59 @@ function ConcordePlannerCanvas() {
               <Label>Cruise Flight Level (FL)</Label>
               <Input
                 type="number"
-                value={cruiseFL}
+                value={cruiseFLText}
                 min={MIN_CONCORDE_FL}
                 max={MAX_CONCORDE_FL}
                 step={10}
                 onChange={(e) => {
-                  const raw = Number(e.target.value || 0);
-                  const clamped = clampCruiseFL(raw);
-                  setCruiseFL(clamped);
+                  const next = e.target.value;
+                  setCruiseFLTouched(true);
+                  setCruiseFLText(next);
 
-                  if (raw !== clamped) {
-                    setCruiseFLNotice(`Clamped FL to ${clamped} (Concorde max FL${MAX_CONCORDE_FL}).`);
-                  } else {
-                    setCruiseFLNotice("");
+                  // Update calculations live when parsable, but don't snap while typing.
+                  const n = Number(next);
+                  if (Number.isFinite(n)) setCruiseFL(n);
+                }}
+                onBlur={() => {
+                  const n = Number(cruiseFLText);
+                  if (!Number.isFinite(n)) {
+                    setCruiseFLNotice("Invalid FL value.");
+                    return;
                   }
+
+                  // 1) Clamp to Concorde max
+                  let clamped = clampCruiseFL(n);
+                  let noticeParts: string[] = [];
+
+                  if (n !== clamped) {
+                    noticeParts.push(`Clamped to FL${clamped} (max FL${MAX_CONCORDE_FL}).`);
+                  }
+
+                  // 2) Apply Non-RVSM snapping above FL410 when direction is known
+                  if (directionEW && clamped >= NON_RVSM_MIN_FL) {
+                    const { snapped, changed } = snapToNonRvsm(clamped, directionEW);
+                    if (changed) {
+                      noticeParts.push(
+                        `Adjusted to Non-RVSM FL${snapped} (${directionEW === "E" ? "Eastbound" : "Westbound"}).`
+                      );
+                      clamped = snapped;
+                    }
+                  }
+
+                  setCruiseFL(clamped);
+                  setCruiseFLText(String(clamped));
+                  setCruiseFLNotice(noticeParts.join(" "));
                 }}
               />
+              <div className="text-xs text-slate-400 mt-1">
+                {directionEW ? (
+                  <span>
+                    Direction (auto): <b>{directionEW === "E" ? "Eastbound" : "Westbound"}</b>. Above FL410 we snap to Non-RVSM levels.
+                  </span>
+                ) : (
+                  <span>Direction: <b>unknown</b> (enter valid DEP/ARR ICAO to enable Non-RVSM snapping).</span>
+                )}
+              </div>
               {cruiseFLNotice && <div className="text-xs text-rose-300 mt-1">{cruiseFLNotice}</div>}
             </div>
           </Row>
