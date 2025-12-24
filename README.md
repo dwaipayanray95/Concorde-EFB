@@ -56,9 +56,8 @@ Ping me on Discord: **@theawesomeray**. I’m always up for improving this!
 
 ## 🙏 Support the project
 If this helped you plan a slick supersonic hop, consider buying me a coffee:
-- UPI: `upi://pay?pa=YOUR_UPI_ID_HERE&pn=Ray&cu=INR`
+- UPI: `upi://pay?pa=dwaipayanray95@okaxis`
 
-(Replace `YOUR_UPI_ID_HERE` with your actual UPI handle.)
 
 Every bit of support keeps me motivated to keep polishing this for the Concorde community. ✈️💙
 
@@ -70,22 +69,45 @@ This tool is for flight planning and educational use. Values are heuristic, indi
 ---
 
 ## 📄 License
-Copyright © 2025 Ray ([@theawesomeray](https://github.com/theawesomeray)).
+Copyright © 2025 Ray ([@theawesomeray](https://github.com/theawesomeray)). Coded with the help of ChatGPT. 
 All rights reserved. Contact me for reuse or distribution.
 
 ---
 
 ## Changelog
+## Current version
+Current version: v0.85
 
-**v0.83 — 2025-12-08**
+## Changelog
+
+### In the Pipeline
+- Auto FL after distance input
+- Distance calculation by directly pasting in the route
+
+### v0.85
+- Auto cruise FL recommendation based on inferred eastbound/westbound direction (DEP→ARR).
+- Non-RVSM cruise FL validation/snapping above FL410 (e.g., FL410E / FL430W … up to FL590).
+- Enforce Concorde cruise ceiling (max FL590) with clearer clamping behavior.
+
+### v0.84
+- Infer eastbound/westbound direction from route bearing and validate Non-RVSM cruise FLs.
+
+### v0.83
+- Runway selection fixes so users can select the ATC-assigned runway from dropdowns.
+- Add fuel capacity warning when requested fuel exceeds Concorde tank capacity.
+- Update landing speed heuristics (VLS/VAPP) to be more Concorde-appropriate.
 - Updated README to include full changelog.
 - Uniform versioning and changelog tracking throughout the app. Easier for me I guess.
+
+**v0.82
+- README refresh and initial public changelog.
 
 **v0.81 — 2025-11-10**
 - Fix: White-screen from duplicate App export; introduced ErrorBoundary.
 - CI: GitHub Pages build stabilized (TypeScript strict fixes, Vite config).
 - Types: Moved papaparse ambient types into a proper .d.ts shim; removed inline module augmentation.
 - Polish: Minor UI and input validation tweaks.
+
 
 **v0.80 — 2025-11-10**
 - Repo bootstrap: Vite + React + TypeScript + Tailwind wired.
