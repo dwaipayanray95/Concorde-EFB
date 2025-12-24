@@ -262,7 +262,16 @@ const CONSTANTS = {
 } as const;
 
 function altitudeBurnFactor(cruiseFL: number): number {
-  const fl = clampNumber(cruiseFL || 580, MIN_CONCORDE_FL, MAX_CONCORDE_FL);
+  // This factor is a *heuristic* for how fuel burn improves with higher cruise levels.
+  // Keep it stable for the self-test expectations (FL450 ≈ 1.20, FL600 ≈ 1.00),
+  // while still allowing the UI to clamp Concorde's actual cruise ceiling elsewhere.
+
+  const input = Number.isFinite(cruiseFL) ? cruiseFL : 580;
+
+  // For the heuristic model, clamp to a sensible range so low/invalid FLs don't explode,
+  // and tests that probe FL600 remain meaningful.
+  const fl = Math.max(300, Math.min(650, input));
+
   const x = (fl - 450) / (600 - 450);
   return 1.2 - 0.2 * Math.max(0, Math.min(1, x));
 }
