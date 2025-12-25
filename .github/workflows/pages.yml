@@ -50,3 +50,11 @@ jobs:
           publish_dir: ./dist
           destination_dir: ${{ env.DEST_DIR }}
           keep_files: true
+          - name: Deploy to gh-pages (root)
+          uses: JamesIves/github-pages-deploy-action@v4
+          with:
+            branch: gh-pages
+            folder: dist
+            clean: true
+            clean-exclude: |
+              beta
