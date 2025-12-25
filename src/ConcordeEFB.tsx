@@ -18,11 +18,18 @@ import Papa from "papaparse";
 
 const APP_VERSION = "0.85";
 
-// Simple global opens counter (counts page loads while online)
-// Uses CountAPI (public) and shows the current value in the UI.
-// NOTE: CountAPI keys must NOT contain slashes; use an underscore key.
-const COUNTAPI_NAMESPACE = "dwaipayanray95.github.io";
-const COUNTAPI_KEY = "Concorde-EFB_opens";
+// Public, no-auth “opens” counter via an SVG badge.
+// The badge request itself increments the counter, so every app open updates it.
+// (This is intentionally simple and works on GitHub Pages without CORS issues.)
+const OPENS_COUNTER_PATH = "https://dwaipayanray95.github.io/Concorde-EFB/";
+const OPENS_BADGE_SRC =
+  "https://api.visitorbadge.io/api/visitors" +
+  `?path=${encodeURIComponent(OPENS_COUNTER_PATH)}` +
+  "&label=OPENS" +
+  "&labelColor=%23111a2b" +
+  "&countColor=%230ea5e9" +
+  "&style=flat" +
+  "&labelStyle=upper";
 
 // User should be able to enter FL below 300 (e.g. low-level segments), but Concorde max is still capped.
 const MIN_CONCORDE_FL = 0;
@@ -901,38 +908,11 @@ function ConcordePlannerCanvas() {
 
   const [tests, setTests] = useState<SelfTestResult[]>([]);
 
-  // Global usage counter (CountAPI)
-  const [globalOpens, setGlobalOpens] = useState<number | null>(null);
-  const [globalOpensErr, setGlobalOpensErr] = useState<string>("");
 
   const depKey = (depIcao || "").toUpperCase();
   const arrKey = (arrIcao || "").toUpperCase();
   const altKey = (altIcao || "").toUpperCase();
 
-  // Count a launch on GitHub Pages; in local dev, just read the current value.
-  useEffect(() => {
-    try {
-      const isProd = typeof window !== "undefined" && window.location.hostname.includes("github.io");
-      const mode = isProd ? "hit" : "get";
-      const url = `https://api.countapi.xyz/${mode}/${encodeURIComponent(COUNTAPI_NAMESPACE)}/${encodeURIComponent(COUNTAPI_KEY)}`;
-
-      fetch(url)
-        .then((r) => r.json())
-        .then((j) => {
-          if (typeof j?.value === "number") {
-            setGlobalOpens(j.value);
-            setGlobalOpensErr("");
-          } else {
-            throw new Error("Unexpected counter response");
-          }
-        })
-        .catch((e) => {
-          setGlobalOpensErr(String(e));
-        });
-    } catch (e) {
-      setGlobalOpensErr(String(e));
-    }
-  }, []);
 
   useEffect(() => {
     (async () => {
@@ -1500,20 +1480,21 @@ function ConcordePlannerCanvas() {
         Manual values © DC Designs Concorde (MSFS). Planner is for training/planning only; always verify in-sim. Made with love by @theawesomeray
       </footer>
 
-      {/* Global usage counter (bottom-right) */}
-      <div className="fixed bottom-3 right-3 z-50 pointer-events-none">
-        <div className="max-w-[220px] px-3 py-2 rounded-xl bg-slate-950/80 border border-slate-700 text-xs text-slate-200 backdrop-blur overflow-hidden">
-          <div className="text-[10px] uppercase tracking-wider text-slate-400">Global opens</div>
-          <div className="font-mono font-semibold text-sm">
-            {globalOpens != null ? globalOpens.toLocaleString() : "…"}
-          </div>
-          {globalOpensErr ? (
-            <div className="text-[10px] text-rose-300 truncate" title={globalOpensErr}>
-              counter error
-            </div>
-          ) : null}
-        </div>
-      </div>
+      {/* Opens counter badge (bottom-right) */}
+      <a
+        className="fixed bottom-3 right-3 z-50"
+        href={OPENS_COUNTER_PATH}
+        target="_blank"
+        rel="noreferrer"
+        title="Total opens (counts every app load)"
+      >
+        <img
+          src={OPENS_BADGE_SRC}
+          alt="Opens counter"
+          className="h-6 w-auto rounded-md border border-slate-700 bg-slate-950/70 backdrop-blur"
+          loading="lazy"
+        />
+      </a>
     </div>
   );
 }
