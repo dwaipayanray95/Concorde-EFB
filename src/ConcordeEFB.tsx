@@ -25,7 +25,7 @@ const OPENS_COUNTER_PATH = "https://dwaipayanray95.github.io/Concorde-EFB/";
 const OPENS_BADGE_SRC =
   "https://api.visitorbadge.io/api/visitors" +
   `?path=${encodeURIComponent(OPENS_COUNTER_PATH)}` +
-  "&label=OPENS" +
+  "&label=SITE%20VISITS" +
   "&labelColor=%23111a2b" +
   "&countColor=%230ea5e9" +
   "&style=flat" +
@@ -1204,7 +1204,15 @@ function ConcordePlannerCanvas() {
                   <span>Direction: <b>unknown</b> (enter valid DEP/ARR ICAO to enable Non-RVSM snapping).</span>
                 )}
               </div>
-              {cruiseFLNotice && <div className="text-xs text-rose-300 mt-1">{cruiseFLNotice}</div>}
+              {cruiseFLNotice && (
+                <div
+                  className={`text-xs mt-1 ${
+                    cruiseFLNotice.startsWith("Auto-selected") ? "text-emerald-300" : "text-rose-300"
+                  }`}
+                >
+                  {cruiseFLNotice}
+                </div>
+              )}
             </div>
           </Row>
 
@@ -1486,11 +1494,11 @@ function ConcordePlannerCanvas() {
         href={OPENS_COUNTER_PATH}
         target="_blank"
         rel="noreferrer"
-        title="Total opens (counts every app load)"
+        title="Site visits (counts every app load)"
       >
         <img
           src={OPENS_BADGE_SRC}
-          alt="Opens counter"
+          alt="Site visits counter"
           className="h-6 w-auto rounded-md border border-slate-700 bg-slate-950/70 backdrop-blur"
           loading="lazy"
         />
