@@ -1,42 +1,52 @@
 {
-  "name": "concorde-efb",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview",
-    "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+  "build": {
+    "beforeBuildCommand": "",
+    "beforeDevCommand": "",
+    "devPath": "../dist",
+    "distDir": "../dist"
   },
-  "dependencies": {
-    "@tauri-apps/api": "^2.9.1",
-    "papaparse": "^5.5.3",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+  "package": {
+    "productName": "concorde-efb",
+    "version": "0.0.0"
   },
-  "devDependencies": {
-    "@eslint/js": "^9.39.1",
-    "@tauri-apps/cli": "^2.9.6",
-    "@types/node": "^24.10.0",
-    "@types/react": "^19.2.2",
-    "@types/react-dom": "^19.2.2",
-    "@vitejs/plugin-react": "^5.1.0",
-    "autoprefixer": "^10.4.21",
-    "eslint": "^9.39.1",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-react-refresh": "^0.4.24",
-    "globals": "^16.5.0",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.13",
-    "typescript": "~5.9.3",
-    "typescript-eslint": "^8.46.3",
-    "vite": "npm:rolldown-vite@7.2.2"
-  },
-  "overrides": {
-    "vite": "npm:rolldown-vite@7.2.2"
+  "tauri": {
+    "bundle": {
+      "active": true,
+      "category": "Utility",
+      "identifier": "io.github.dwaipayanray95.concordeefb",
+      "icon": [
+        "icons/32x32.png",
+        "icons/128x128.png",
+        "icons/128x128@2x.png"
+      ],
+      "resources": [],
+      "targets": [
+        "all"
+      ],
+      "windows": [
+        {
+          "certificateThumbprint": null,
+          "digestAlgorithm": "sha256",
+          "timestampUrl": "http://timestamp.digicert.com"
+        }
+      ]
+    },
+    "allowlist": {
+      "all": true
+    },
+    "updater": {
+      "active": false,
+      "dialog": false,
+      "endpoints": []
+    },
+    "windows": [
+      {
+        "title": "concorde-efb",
+        "width": 800,
+        "height": 600,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ]
   }
 }
