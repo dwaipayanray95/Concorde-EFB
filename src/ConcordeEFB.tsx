@@ -1052,6 +1052,143 @@ function ConcordePlannerCanvas() {
   const depInfo = depKey ? airports[depKey] : undefined;
   const arrInfo = arrKey ? airports[arrKey] : undefined;
 
+  const altInfo = altKey ? airports[altKey] : undefined;
+
+  const directionEW = useMemo(() => inferDirectionEW(depInfo, arrInfo), [depInfo, arrInfo]);
+
+  const plannedDistance = useMemo(() => {
+    const v = Number(manualDistanceNM);
+    return Number.isFinite(v) && v > 0 ? v : 0;
+  }, [manualDistanceNM]);
+
+  const climb = useMemo(() => estimateClimb(Math.max(cruiseFL, 0) * 100), [cruiseFL]);
+  const descent = useMemo(() => estimateDescent(Math.max(cruiseFL, 0) * 100), [cruiseFL]);
+
+  const reheat = useMemo(() => reheatGuard(climb.time_h), [climb.time_h]);
+
+  const burnKgPerNmAdj = useMemo(
+    () => CONSTANTS.fuel.burn_kg_per_nm * altitudeBurnFactor(cruiseFL),
+    [cruiseFL]
+  );
+
+  const cruiseNM = useMemo(() => {
+    const nm = plannedDistance - (climb.dist_nm + descent.dist_nm);
+    return Math.max(nm, 0);
+  }, [plannedDistance, climb.dist_nm, descent.dist_nm]);
+
+  const cruiseTimeH = useMemo(() => {
+    try {
+      return cruiseTimeHours(cruiseNM);
+    } catch {
+      return 0;
+    }
+  }, [cruiseNM]);
+
+  const totalTimeH = useMemo(
+    () => (climb.time_h || 0) + (cruiseTimeH || 0) + (descent.time_h || 0),
+    [climb.time_h, cruiseTimeH, descent.time_h]
+  );
+
+  const eteHours = totalTimeH;
+
+  const burnKgPerHour = useMemo(
+    () => Math.max(burnKgPerNmAdj * CONSTANTS.speeds.cruise_tas_kt, 1),
+    [burnKgPerNmAdj]
+  );
+
+  const reserveTimeH = useMemo(() => {
+    const fr = Number(finalReserveKg);
+    if (!Number.isFinite(fr) || fr <= 0) return 0;
+    return fr / burnKgPerHour;
+  }, [finalReserveKg, burnKgPerHour]);
+
+  const enduranceHours = useMemo(() => {
+    return CONSTANTS.weights.fuel_capacity_kg / burnKgPerHour;
+  }, [burnKgPerHour]);
+
+  const enduranceMeets = enduranceHours >= eteHours + reserveTimeH;
+
+  const alternateDistanceNM = useMemo(() => {
+    if (!arrInfo || !altInfo) return 0;
+    return greatCircleNM(arrInfo.lat, arrInfo.lon, altInfo.lat, altInfo.lon);
+  }, [arrInfo, altInfo]);
+
+  const tripKg = useMemo(() => {
+    // Heuristic: climb burns more, descent burns less
+    const climbKg = climb.dist_nm * burnKgPerNmAdj * CONSTANTS.fuel.climb_factor;
+    const cruiseKg = cruiseNM * burnKgPerNmAdj;
+    const descKg = descent.dist_nm * burnKgPerNmAdj * CONSTANTS.fuel.descent_factor;
+    return Math.max(climbKg + cruiseKg + descKg, 0);
+  }, [climb.dist_nm, cruiseNM, descent.dist_nm, burnKgPerNmAdj]);
+
+  const blocks = useMemo(() => {
+    return blockFuelKg({
+      tripKg,
+      taxiKg,
+      contingencyPct,
+      finalReserveKg,
+      alternateNM: alternateDistanceNM,
+      burnKgPerNm: burnKgPerNmAdj,
+    });
+  }, [tripKg, taxiKg, contingencyPct, finalReserveKg, alternateDistanceNM, burnKgPerNmAdj]);
+
+  const totalFuelRequiredKg = useMemo(() => {
+    const t = Number(trimTankKg) || 0;
+    return (blocks.block_kg || 0) + t;
+  }, [blocks.block_kg, trimTankKg]);
+
+  const fuelCapacityKg = CONSTANTS.weights.fuel_capacity_kg;
+  const fuelWithinCapacity = totalFuelRequiredKg <= fuelCapacityKg;
+  const fuelExcessKg = Math.max(totalFuelRequiredKg - fuelCapacityKg, 0);
+
+  const paxKg = CONSTANTS.weights.pax_full_count * CONSTANTS.weights.pax_mass_kg;
+  const tkoWeightKgAuto = useMemo(() => {
+    return CONSTANTS.weights.oew_kg + paxKg + totalFuelRequiredKg;
+  }, [paxKg, totalFuelRequiredKg]);
+
+  const tkSpeeds = useMemo(() => computeTakeoffSpeeds(tkoWeightKgAuto), [tkoWeightKgAuto]);
+
+  const estLandingWeightKg = useMemo(() => {
+    const lw = tkoWeightKgAuto - tripKg;
+    return Math.max(lw, 0);
+  }, [tkoWeightKgAuto, tripKg]);
+
+  const ldSpeeds = useMemo(() => computeLandingSpeeds(estLandingWeightKg), [estLandingWeightKg]);
+
+  const depRunway = useMemo(() => {
+    if (!depInfo || !depRw) return null;
+    return depInfo.runways.find((r) => r.id === depRw) ?? null;
+  }, [depInfo, depRw]);
+
+  const arrRunway = useMemo(() => {
+    if (!arrInfo || !arrRw) return null;
+    return arrInfo.runways.find((r) => r.id === arrRw) ?? null;
+  }, [arrInfo, arrRw]);
+
+  const depWind = useMemo(() => {
+    const parsed = parseMetarWind(metarDep || "");
+    const comps = windComponents(parsed.wind_dir_deg, parsed.wind_speed_kt, depRunway?.heading ?? 0);
+    return { parsed, comps };
+  }, [metarDep, depRunway?.heading]);
+
+  const arrWind = useMemo(() => {
+    const parsed = parseMetarWind(metarArr || "");
+    const comps = windComponents(parsed.wind_dir_deg, parsed.wind_speed_kt, arrRunway?.heading ?? 0);
+    return { parsed, comps };
+  }, [metarArr, arrRunway?.heading]);
+
+  const tkoCheck = useMemo(() => {
+    const len = depRunway?.length_m ?? 0;
+    return takeoffFeasibleM(len, tkoWeightKgAuto);
+  }, [depRunway?.length_m, tkoWeightKgAuto]);
+
+  const ldgCheck = useMemo(() => {
+    const len = arrRunway?.length_m ?? 0;
+    return landingFeasibleM(len, estLandingWeightKg);
+  }, [arrRunway?.length_m, estLandingWeightKg]);
+
+  const passCount = useMemo(() => tests.filter((t) => t.pass).length, [tests]);
+
   function computeRouteDistanceFromText(text: string): {
     distanceNM: number;
     resolution: RouteResolution;
@@ -1077,7 +1214,7 @@ function ConcordePlannerCanvas() {
     return { distanceNM, resolution, depFromRoute, arrFromRoute };
   }
 
-  function applyRouteDistance() {
+function applyRouteDistance() {
     setRouteNotice("");
 
     if (!routeText.trim()) {
@@ -1118,8 +1255,158 @@ function ConcordePlannerCanvas() {
     setRouteNotice(parts.join(" "));
   }
 
->
-</Card>
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      <header className="max-w-6xl mx-auto p-6 pb-0 flex items-start justify-between gap-4">
+        <div>
+          <div className="text-3xl font-bold">Concorde EFB v{APP_VERSION}</div>
+          <div className="text-sm text-slate-400">Your Concorde copilot for MSFS.</div>
+        </div>
+        <div className="flex flex-wrap gap-2 justify-end">
+          <StatPill label="Nav DB" value={dbLoaded ? "Loaded" : "Loading"} ok={dbLoaded} />
+          <StatPill label="TAS" value={`${CONSTANTS.speeds.cruise_tas_kt} kt`} />
+          <StatPill label="MTOW" value={`${CONSTANTS.weights.mtow_kg.toLocaleString()} kg`} />
+          <StatPill label="MLW" value={`${CONSTANTS.weights.mlw_kg.toLocaleString()} kg`} />
+          <StatPill
+            label="Fuel cap"
+            value={`${CONSTANTS.weights.fuel_capacity_kg.toLocaleString()} kg`}
+          />
+        </div>
+      </header>
+
+      <main className="max-w-6xl mx-auto p-6 space-y-6">
+        {dbError && (
+          <div className="text-xs text-rose-300">Nav DB load error: {dbError}</div>
+        )}
+
+        <Card
+          title="Route (paste from SimBrief / OFP)"
+          right={
+            <Button variant="ghost" onClick={applyRouteDistance}>
+              Compute &amp; Apply Distance
+            </Button>
+          }
+        >
+          <div className="text-sm text-slate-300 mb-2">
+            Paste your route string (tokens separated by spaces). We’ll estimate distance using airports + OurAirports navaids.
+            Planned Distance below will stay editable — override anytime.
+          </div>
+
+          <textarea
+            className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            rows={3}
+            placeholder="Example: EGLL CPT DCT KJFK"
+            value={routeText}
+            onChange={(e) => setRouteText(e.target.value)}
+          />
+
+          <div className="mt-3 grid gap-3 md:grid-cols-3 grid-cols-1">
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
+              <div className="text-xs text-slate-400">Estimated Route Distance</div>
+              <div className="text-lg font-semibold">
+                {routeDistanceNM != null
+                  ? `${Math.round(routeDistanceNM).toLocaleString()} NM`
+                  : "—"}
+              </div>
+            </div>
+
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
+              <div className="text-xs text-slate-400">Recognized</div>
+              <div className="text-lg font-semibold">
+                Procedures: {routeInfo?.recognized.procedures.length ?? 0} • Airway: {routeInfo?.recognized.airways.length ?? 0} • Points: {routeInfo?.points.length ?? 0}
+              </div>
+            </div>
+
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
+              <div className="text-xs text-slate-400">Unresolved Tokens</div>
+              <div className="text-lg font-semibold">
+                {routeInfo?.recognized.unresolved.length ?? 0}
+              </div>
+            </div>
+          </div>
+
+          {routeNotice && (
+            <div className="mt-2 text-xs text-slate-400">{routeNotice}</div>
+          )}
+        </Card>
+
+        <Card
+          title="Departure / Arrival (ICAO & Runways)"
+          right={
+            <Button
+              onClick={async () => {
+                setMetarErr("");
+                const dep = depKey;
+                const arr = arrKey;
+
+                if (!dep || dep.length !== 4 || !arr || arr.length !== 4) {
+                  setMetarErr("Enter valid DEP and ARR ICAOs first.");
+                  return;
+                }
+
+                const [d, a] = await Promise.all([
+                  fetchMetarByICAO(dep),
+                  fetchMetarByICAO(arr),
+                ]);
+
+                const errs: string[] = [];
+                if (d.ok) setMetarDep(d.raw);
+                else errs.push(d.error);
+
+                if (a.ok) setMetarArr(a.raw);
+                else errs.push(a.error);
+
+                if (errs.length) setMetarErr(errs.join(" | "));
+              }}
+            >
+              Fetch METARs
+            </Button>
+          }
+        >
+          <Row>
+            <div>
+              <Label>Departure ICAO</Label>
+              <Input
+                value={depIcao}
+                onChange={(e) => setDepIcao(e.target.value.toUpperCase())}
+              />
+            </div>
+            <div>
+              <Label>Arrival ICAO</Label>
+              <Input
+                value={arrIcao}
+                onChange={(e) => setArrIcao(e.target.value.toUpperCase())}
+              />
+            </div>
+          </Row>
+
+          <Row>
+            <div>
+              <Label>Departure Runway (meters)</Label>
+              <Select value={depRw} onChange={(e) => setDepRw(e.target.value)}>
+                <option value="">—</option>
+                {(depInfo?.runways ?? []).map((r) => (
+                  <option key={`dep-${r.id}`} value={r.id}>
+                    {r.id} • {r.length_m.toLocaleString()} m • HDG {r.heading}°
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <div>
+              <Label>Arrival Runway (meters)</Label>
+              <Select value={arrRw} onChange={(e) => setArrRw(e.target.value)}>
+                <option value="">—</option>
+                {(arrInfo?.runways ?? []).map((r) => (
+                  <option key={`arr-${r.id}`} value={r.id}>
+                    {r.id} • {r.length_m.toLocaleString()} m • HDG {r.heading}°
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </Row>
+        </Card>
+
         <Card title="Cruise & Fuel (Manual Distance)">
           <Row>
             <div>
