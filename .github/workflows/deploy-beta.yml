@@ -1,0 +1,36 @@
+name: Deploy Beta (beta) to gh-pages/beta
+
+on:
+  push:
+    branches: [ beta ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build (beta base)
+        run: npm run build:beta
+
+      - name: Deploy to gh-pages /beta
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: dist
+          target-folder: beta
+          clean: true
