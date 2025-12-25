@@ -130,6 +130,17 @@ type NavaidInfo = {
   name: string;
 };
 
+
+type FixInfo = {
+  ident: string;
+  lat: number;
+  lon: number;
+  region?: string;
+  type?: string;
+};
+
+type FixIndex = Record<string, FixInfo>;
+
 type NavaidIndex = Record<string, NavaidInfo>;
 
 type RoutePoint = {
@@ -429,6 +440,9 @@ const RUNWAYS_CSV_URL =
   "https://raw.githubusercontent.com/davidmegginson/ourairports-data/master/runways.csv";
 const NAVAIDS_CSV_URL =
   "https://raw.githubusercontent.com/davidmegginson/ourairports-data/master/navaids.csv";
+// Optional Fix DB (X-Plane format). If present at this path, we can resolve 5-letter fixes from SimBrief routes.
+// Add the file at: public/navdata/earth_fix.dat
+const FIXES_DAT_URL = "/navdata/earth_fix.dat";
 type AirportCsvRow = {
   ident?: string;
   latitude_deg?: string;
@@ -543,13 +557,66 @@ function buildNavaidsDB(navaidsCsvText: string): NavaidIndex {
   return navaids;
 }
 
+function buildFixesDBFromEarthFixDat(text: string): FixIndex {
+  const fixes: FixIndex = {};
+
+  const lines = (text || "").split(/\r?\n/);
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+
+    // Skip header / metadata / comments.
+    // Typical earth_fix.dat starts with a few header lines (e.g. 'I', version strings).
+    if (
+      line.startsWith("#") ||
+      line.startsWith("I ") ||
+      line.startsWith("I\t") ||
+      line === "I" ||
+      /Version/i.test(line) ||
+      /^\d{3,4}\s+Version/i.test(line)
+    ) {
+      continue;
+    }
+
+    // Expected (robust) parsing: lat lon ident [region] [airport] [type]
+    const parts = line.split(/\s+/);
+    if (parts.length < 3) continue;
+
+    const lat = Number(parts[0]);
+    const lon = Number(parts[1]);
+    const ident = (parts[2] || "").trim().toUpperCase();
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
+    // Most fixes are 5 letters; keep this broad but avoid garbage.
+    if (!ident || ident.length < 3 || ident.length > 8) continue;
+
+    if (fixes[ident]) continue;
+
+    fixes[ident] = {
+      ident,
+      lat,
+      lon,
+      region: parts[3] ? String(parts[3]).toUpperCase() : undefined,
+      type: parts[parts.length - 1] ? String(parts[parts.length - 1]).toUpperCase() : undefined,
+    };
+  }
+
+  return fixes;
+}
+
 const LATLON_RE = /^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/;
 const AIRWAY_RE = /^[A-Z]{1,2}\d{1,3}$/;
-const PROCEDURE_RE = /^(DCT|SID[A-Z0-9-]*|STAR[A-Z0-9-]*|VIA|VECTOR)$/;
+// SimBrief often includes SID/STAR tokens like SURA6A, IMPE3C, etc.
+// We treat these as procedure tokens (accepted but not expanded into geometry).
+const PROCEDURE_RE = /^(DCT|VIA|VECTOR|SID[A-Z0-9-]*|STAR[A-Z0-9-]*|[A-Z]{3,6}\d[A-Z0-9]{0,2})$/;
 
 function parseRouteString(str: string): string[] {
   if (!str) return [];
   return str
+    .replace(/[\r\n,]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
     .split(/\s+/)
     .map((s) => s.trim().toUpperCase())
     .filter(Boolean);
@@ -557,7 +624,8 @@ function parseRouteString(str: string): string[] {
 function resolveRouteTokens(
   tokens: string[],
   airportsIndex: AirportIndex,
-  navaidsIndex: NavaidIndex
+  navaidsIndex: NavaidIndex,
+  fixesIndex: FixIndex
 ): RouteResolution {
   const points: RoutePoint[] = [];
   const recognized: RouteResolution["recognized"] = {
@@ -588,11 +656,20 @@ function resolveRouteTokens(
       points.push({ label: t, lat: a.lat, lon: a.lon });
       continue;
     }
-    if (navaidsIndex?.[t]) {
+    // Navaids are usually 3-letter; avoid resolving very short idents that can map to unrelated records.
+    if (t.length >= 3 && navaidsIndex?.[t]) {
       const n = navaidsIndex[t];
       points.push({ label: t, lat: n.lat, lon: n.lon });
       continue;
     }
+
+    // Fixes (typically 5-letter waypoints) from optional earth_fix.dat
+    if (fixesIndex?.[t]) {
+      const f = fixesIndex[t];
+      points.push({ label: t, lat: f.lat, lon: f.lon });
+      continue;
+    }
+
     recognized.unresolved.push(t);
   }
   return { points, recognized };
@@ -926,6 +1003,8 @@ function ConcordePlannerCanvas() {
   const [dbLoaded, setDbLoaded] = useState(false);
   const [dbError, setDbError] = useState("");
   const [navaids, setNavaids] = useState<NavaidIndex>({});
+  const [fixes, setFixes] = useState<FixIndex>({});
+  const [fixDbLoaded, setFixDbLoaded] = useState(false);
 
   const [depIcao, setDepIcao] = useState("EGLL");
   const [depRw, setDepRw] = useState("");
@@ -962,11 +1041,18 @@ function ConcordePlannerCanvas() {
   useEffect(() => {
     (async () => {
       try {
-        const [airCsv, rwCsv, navCsv] = await Promise.all([
+        const settled = await Promise.allSettled([
           fetch(AIRPORTS_CSV_URL, { mode: "cors" }).then((r) => r.text()),
           fetch(RUNWAYS_CSV_URL, { mode: "cors" }).then((r) => r.text()),
           fetch(NAVAIDS_CSV_URL, { mode: "cors" }).then((r) => r.text()),
+          // Optional fixes DB (local file). If missing, we just fall back to airports+navaids.
+          fetch(FIXES_DAT_URL, { mode: "cors" }).then((r) => (r.ok ? r.text() : "")),
         ]);
+
+        const airCsv = settled[0].status === "fulfilled" ? settled[0].value : "";
+        const rwCsv = settled[1].status === "fulfilled" ? settled[1].value : "";
+        const navCsv = settled[2].status === "fulfilled" ? settled[2].value : "";
+        const fixDat = settled[3].status === "fulfilled" ? settled[3].value : "";
 
         const airportsDb = buildWorldAirportDB(airCsv, rwCsv);
         const navaidsDb = buildNavaidsDB(navCsv);
@@ -975,6 +1061,20 @@ function ConcordePlannerCanvas() {
         setNavaids(navaidsDb);
         setDbLoaded(true);
         setDbError("");
+
+        if (fixDat && fixDat.trim().length > 0) {
+          try {
+            const fixesDb = buildFixesDBFromEarthFixDat(fixDat);
+            setFixes(fixesDb);
+            setFixDbLoaded(Object.keys(fixesDb).length > 0);
+          } catch {
+            setFixes({});
+            setFixDbLoaded(false);
+          }
+        } else {
+          setFixes({});
+          setFixDbLoaded(false);
+        }
       } catch (e) {
         setDbError(String(e));
         setDbLoaded(false);
@@ -1017,7 +1117,7 @@ function ConcordePlannerCanvas() {
   } | null {
     if (!depInfo || !arrInfo) return null;
     const tokens = parseRouteString(text);
-    const resolution = resolveRouteTokens(tokens, airports, navaids);
+    const resolution = resolveRouteTokens(tokens, airports, navaids, fixes);
     const distanceNM = computeRouteDistanceNM(depInfo, arrInfo, resolution.points);
     return { distanceNM, resolution };
   }
@@ -1191,6 +1291,7 @@ function ConcordePlannerCanvas() {
         </div>
         <div className="flex gap-2 items-center">
           <StatPill label="Nav DB" value={dbLoaded ? "Loaded" : "Loading…"} ok={dbLoaded && !dbError} />
+          <StatPill label="Fix DB" value={fixDbLoaded ? "Loaded" : "—"} ok={true} />
           {dbError && <StatPill label="DB Error" value={dbError.slice(0, 40) + "…"} ok={false} />}
           <StatPill label="TAS" value={`${CONSTANTS.speeds.cruise_tas_kt} kt`} />
           <StatPill label="MTOW" value={`${CONSTANTS.weights.mtow_kg.toLocaleString()} kg`} />
