@@ -1,15 +1,21 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 
-// Vite reads vite.config.ts by default. If you keep this filename (vite.config-Concorde-EFB.ts),
-// ensure your build uses: vite build --config vite.config-Concorde-EFB.ts, or rename this file to vite.config.ts.
+// IMPORTANT:
+// - GitHub Pages needs an absolute base that matches the repo name.
+// - Tauri (desktop) needs a relative base, otherwise assets resolve to a non-existent /Concorde-EFB/... path and you get a white screen.
+const isTauriBuild =
+  Boolean(process.env.TAURI_PLATFORM) ||
+  Boolean(process.env.TAURI_ARCH) ||
+  Boolean(process.env.TAURI_FAMILY) ||
+  process.env.TAURI === "true" ||
+  process.env.TAURI === "1";
 
-// IMPORTANT: This must match https://dwaipayanray95.github.io/Concorde-EFB/
 export default defineConfig({
-  base: '/Concorde-EFB/',
+  base: isTauriBuild ? "./" : "/Concorde-EFB/",
   plugins: [react()],
   build: {
-    outDir: 'dist',
+    outDir: "dist",
     sourcemap: true,
   },
-})
+});
