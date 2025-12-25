@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "CONCORDE EFB",
+  "productName": "CONCORDE EFB - v1.0.0 by @theawesomeray",
   "version": "0.9.0",
   "identifier": "com.dwaipayanray.concordeefb",
   "build": {
@@ -11,7 +11,7 @@
   },
   "app": {
     "windows": [
-      { "title": "CONCORDE EFB", "width": 1280, "height": 800, "resizable": true, "devtools": true }
+      { "title": "CONCORDE EFB - v1.0.0 by @theawesomeray", "width": 1280, "height": 800, "resizable": true, "devtools": true }
     ],
     "security": { "csp": null }
   },

@@ -16,7 +16,7 @@ import type {
 } from "react";
 import Papa from "papaparse";
 
-const APP_VERSION = "0.85";
+const APP_VERSION = "1.0.0";
 
 // Public, no-auth “opens” counter via an SVG badge.
 // The badge request itself increments the counter, so every app open updates it.
