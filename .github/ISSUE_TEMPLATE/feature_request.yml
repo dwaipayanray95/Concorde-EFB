@@ -1,6 +1,6 @@
 name: Feature request
 description: Suggest an idea for Concorde EFB
-title: "[Feature]: "
+title: "Feature request"
 labels: ["feature-request"]
 body:
   - type: markdown
@@ -17,34 +17,12 @@ body:
     validations:
       required: true
 
-  - type: dropdown
-    id: platform
-    attributes:
-      label: Platform
-      options:
-        - Web (GitHub Pages)
-        - PWA (Installed)
-        - Windows
-        - Android
-        - iOS
-        - Other
-    validations:
-      required: true
-
   - type: textarea
     id: request
     attributes:
       label: What do you want added/changed?
       description: Explain the feature as if you're briefing a developer.
       placeholder: I want a button that...
-    validations:
-      required: true
-
-  - type: textarea
-    id: why
-    attributes:
-      label: Why is this useful?
-      placeholder: This helps because...
     validations:
       required: true
 
