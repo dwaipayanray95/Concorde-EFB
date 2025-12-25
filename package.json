@@ -1,52 +1,24 @@
 {
-  "build": {
-    "beforeBuildCommand": "",
-    "beforeDevCommand": "",
-    "devPath": "../dist",
-    "distDir": "../dist"
+  "name": "concorde-efb",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -b",
+    "tauri": "tauri"
   },
-  "package": {
-    "productName": "concorde-efb",
-    "version": "0.0.0"
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
-  "tauri": {
-    "bundle": {
-      "active": true,
-      "category": "Utility",
-      "identifier": "io.github.dwaipayanray95.concordeefb",
-      "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png"
-      ],
-      "resources": [],
-      "targets": [
-        "all"
-      ],
-      "windows": [
-        {
-          "certificateThumbprint": null,
-          "digestAlgorithm": "sha256",
-          "timestampUrl": "http://timestamp.digicert.com"
-        }
-      ]
-    },
-    "allowlist": {
-      "all": true
-    },
-    "updater": {
-      "active": false,
-      "dialog": false,
-      "endpoints": []
-    },
-    "windows": [
-      {
-        "title": "concorde-efb",
-        "width": 800,
-        "height": 600,
-        "resizable": true,
-        "fullscreen": false
-      }
-    ]
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@vitejs/plugin-react": "^4.2.0",
+    "typescript": "^5.6.0",
+    "vite": "^5.4.0"
   }
 }
