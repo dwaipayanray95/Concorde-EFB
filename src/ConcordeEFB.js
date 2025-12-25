@@ -10,7 +10,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 // • Self-tests cover manual-distance sanity, fuel monotonicity, feasibility sanity.
 import React, { useEffect, useMemo, useState } from "react";
 import Papa from "papaparse";
-const APP_VERSION = "0.85";
+const APP_VERSION = "1.0.0";
 // Public, no-auth “opens” counter via an SVG badge.
 // The badge request itself increments the counter, so every app open updates it.
 // (This is intentionally simple and works on GitHub Pages without CORS issues.)
