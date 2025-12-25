@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build:beta": "vite build --base=/Concorde-EFB/beta/"
+    "build:beta": "vite build --base=/Concorde-EFB/beta/",
     "lint": "eslint .",
     "preview": "vite preview"
   },
