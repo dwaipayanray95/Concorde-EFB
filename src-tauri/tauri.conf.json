@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "CONCORDE EFB - v1.0.0 by @theawesomeray",
+  "productName": "CONCORDE EFB",
   "version": "0.9.0",
   "identifier": "com.dwaipayanray.concordeefb",
   "build": {
