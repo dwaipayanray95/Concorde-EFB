@@ -427,6 +427,8 @@ const AIRPORTS_CSV_URL =
   "https://raw.githubusercontent.com/davidmegginson/ourairports-data/master/airports.csv";
 const RUNWAYS_CSV_URL =
   "https://raw.githubusercontent.com/davidmegginson/ourairports-data/master/runways.csv";
+const NAVAIDS_CSV_URL =
+  "https://raw.githubusercontent.com/davidmegginson/ourairports-data/master/navaids.csv";
 type AirportCsvRow = {
   ident?: string;
   latitude_deg?: string;
@@ -442,6 +444,14 @@ type RunwayCsvRow = {
   he_ident?: string;
   le_heading_degT?: string;
   he_heading_degT?: string;
+};
+
+type NavaidCsvRow = {
+  ident?: string;
+  latitude_deg?: string;
+  longitude_deg?: string;
+  type?: string;
+  name?: string;
 };
 
 function buildWorldAirportDB(
@@ -500,6 +510,37 @@ function buildWorldAirportDB(
       });
   }
   return airportsMap;
+}
+
+function buildNavaidsDB(navaidsCsvText: string): NavaidIndex {
+  const rows = Papa.parse<NavaidCsvRow>(navaidsCsvText, {
+    header: true,
+    skipEmptyLines: true,
+  }).data;
+
+  const navaids: NavaidIndex = {};
+
+  for (const r of rows) {
+    const ident = (r?.ident || "").trim().toUpperCase();
+    if (!ident) continue;
+
+    const lat = parseFloat(r?.latitude_deg ?? "");
+    const lon = parseFloat(r?.longitude_deg ?? "");
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
+    // OurAirports has duplicates for some idents; keep the first one we see.
+    if (navaids[ident]) continue;
+
+    navaids[ident] = {
+      ident,
+      lat,
+      lon,
+      type: (r?.type || "NAVAID").toString(),
+      name: (r?.name || ident).toString(),
+    };
+  }
+
+  return navaids;
 }
 
 const LATLON_RE = /^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/;
@@ -884,6 +925,7 @@ function ConcordePlannerCanvas() {
   const [airports, setAirports] = useState<AirportIndex>({});
   const [dbLoaded, setDbLoaded] = useState(false);
   const [dbError, setDbError] = useState("");
+  const [navaids, setNavaids] = useState<NavaidIndex>({});
 
   const [depIcao, setDepIcao] = useState("EGLL");
   const [depRw, setDepRw] = useState("");
@@ -891,6 +933,10 @@ function ConcordePlannerCanvas() {
   const [arrRw, setArrRw] = useState("");
 
   const [manualDistanceNM, setManualDistanceNM] = useState(0);
+  const [routeText, setRouteText] = useState<string>("");
+  const [routeDistanceNM, setRouteDistanceNM] = useState<number | null>(null);
+  const [routeInfo, setRouteInfo] = useState<RouteResolution | null>(null);
+  const [routeNotice, setRouteNotice] = useState<string>("");
   const [altIcao, setAltIcao] = useState("");
   const [trimTankKg, setTrimTankKg] = useState(0);
 
@@ -913,16 +959,20 @@ function ConcordePlannerCanvas() {
   const arrKey = (arrIcao || "").toUpperCase();
   const altKey = (altIcao || "").toUpperCase();
 
-
   useEffect(() => {
     (async () => {
       try {
-        const [airCsv, rwCsv] = await Promise.all([
+        const [airCsv, rwCsv, navCsv] = await Promise.all([
           fetch(AIRPORTS_CSV_URL, { mode: "cors" }).then((r) => r.text()),
           fetch(RUNWAYS_CSV_URL, { mode: "cors" }).then((r) => r.text()),
+          fetch(NAVAIDS_CSV_URL, { mode: "cors" }).then((r) => r.text()),
         ]);
-        const db = buildWorldAirportDB(airCsv, rwCsv);
-        setAirports(db);
+
+        const airportsDb = buildWorldAirportDB(airCsv, rwCsv);
+        const navaidsDb = buildNavaidsDB(navCsv);
+
+        setAirports(airportsDb);
+        setNavaids(navaidsDb);
         setDbLoaded(true);
         setDbError("");
       } catch (e) {
@@ -960,6 +1010,55 @@ function ConcordePlannerCanvas() {
 
   const depInfo = depKey ? airports[depKey] : undefined;
   const arrInfo = arrKey ? airports[arrKey] : undefined;
+
+  function computeRouteDistanceFromText(text: string): {
+    distanceNM: number;
+    resolution: RouteResolution;
+  } | null {
+    if (!depInfo || !arrInfo) return null;
+    const tokens = parseRouteString(text);
+    const resolution = resolveRouteTokens(tokens, airports, navaids);
+    const distanceNM = computeRouteDistanceNM(depInfo, arrInfo, resolution.points);
+    return { distanceNM, resolution };
+  }
+
+  function applyRouteDistance() {
+    setRouteNotice("");
+
+    if (!depInfo || !arrInfo) {
+      setRouteNotice("Enter valid DEP/ARR ICAO first (so we know where the route starts/ends).");
+      return;
+    }
+
+    if (!routeText.trim()) {
+      setRouteNotice("Paste a route string first.");
+      return;
+    }
+
+    const out = computeRouteDistanceFromText(routeText);
+    if (!out) {
+      setRouteNotice("Could not compute route distance.");
+      return;
+    }
+
+    const rounded = Math.round(out.distanceNM);
+    setRouteDistanceNM(out.distanceNM);
+    setRouteInfo(out.resolution);
+
+    // Auto-fill Planned Distance, but keep it editable (user can override)
+    setManualDistanceNM(rounded);
+
+    const unresolved = out.resolution.recognized.unresolved.length;
+    const proc = out.resolution.recognized.procedures.length;
+    const airways = out.resolution.recognized.airways.length;
+
+    const parts: string[] = [`Route distance set to ${rounded.toLocaleString()} NM.`];
+    if (proc > 0) parts.push(`${proc} procedure tokens ignored.`);
+    if (airways > 0) parts.push(`${airways} airway tokens ignored.`);
+    if (unresolved > 0) parts.push(`${unresolved} unresolved tokens ignored (likely fixes/waypoints not in this DB).`);
+
+    setRouteNotice(parts.join(" "));
+  }
 
   const directionEW = useMemo(() => inferDirectionEW(depInfo, arrInfo), [depInfo, arrInfo]);
 
@@ -1538,3 +1637,55 @@ export default function ConcordeEFB() {
     </ErrorBoundary>
   );
 }
+        <Card
+          title="Route (paste from SimBrief / OFP)"
+          right={<Button variant="ghost" onClick={applyRouteDistance}>Compute & Apply Distance</Button>}
+        >
+          <div className="text-xs text-slate-400 mb-2">
+            Paste your route string (tokens separated by spaces). We’ll estimate distance using airports + OurAirports navaids.
+            SID/STAR/airway tokens are accepted but not expanded into real geometry yet.
+          </div>
+
+          <textarea
+            value={routeText}
+            onChange={(e) => setRouteText(e.target.value)}
+            placeholder="Example: EGLL CPT UL9 STU DCT ... KJFK"
+            className="w-full min-h-[110px] px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+          />
+
+          <div className="mt-3 grid gap-3 md:grid-cols-3 grid-cols-1">
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
+              <div className="text-xs text-slate-400">Estimated Route Distance</div>
+              <div className="text-lg font-semibold">
+                {routeDistanceNM == null ? "—" : `${Math.round(routeDistanceNM).toLocaleString()} NM`}
+              </div>
+            </div>
+
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
+              <div className="text-xs text-slate-400">Recognized</div>
+              <div className="text-sm text-slate-200">
+                Procedures: <b>{routeInfo?.recognized.procedures.length ?? 0}</b> • Airway: <b>{routeInfo?.recognized.airways.length ?? 0}</b> • Points: <b>{routeInfo?.points.length ?? 0}</b>
+              </div>
+            </div>
+
+            <div className={`px-3 py-2 rounded-xl bg-slate-950 border ${routeInfo && (routeInfo.recognized.unresolved.length ?? 0) === 0 ? "border-emerald-500/40" : "border-slate-800"}`}>
+              <div className="text-xs text-slate-400">Unresolved Tokens</div>
+              <div className="text-sm text-slate-200">
+                <b>{routeInfo?.recognized.unresolved.length ?? 0}</b>
+              </div>
+            </div>
+          </div>
+
+          {routeNotice && <div className="mt-2 text-xs text-slate-300">{routeNotice}</div>}
+
+          {routeInfo && (routeInfo.recognized.unresolved.length ?? 0) > 0 && (
+            <div className="mt-2 text-xs text-slate-400">
+              Unresolved examples: <span className="font-mono">{routeInfo.recognized.unresolved.slice(0, 8).join(" ")}</span>
+              {routeInfo.recognized.unresolved.length > 8 ? " …" : ""}
+            </div>
+          )}
+
+          <div className="mt-2 text-xs text-slate-400">
+            Note: the <b>Planned Distance (NM)</b> field below stays editable — you can override anytime.
+          </div>
+        </Card>
