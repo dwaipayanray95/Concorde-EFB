@@ -1,8 +1,8 @@
-name: Deploy (beta) to GitHub Pages
+name: Deploy (stable) to GitHub Pages
 
 on:
   push:
-    branches: [ beta ]
+    branches: [ main ]
   workflow_dispatch:
 
 permissions:
@@ -30,10 +30,9 @@ jobs:
       - name: Disable Jekyll
         run: touch dist/.nojekyll
 
-      - name: Deploy (beta into /beta)
+      - name: Deploy (stable)
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
-          destination_dir: beta
           keep_files: true
