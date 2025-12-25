@@ -5,7 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+
+    "build": "npm run build:tauri",
+    "build:web": "tsc -b && vite build --base=/Concorde-EFB/",
+    "build:beta": "tsc -b && vite build --base=/Concorde-EFB/beta/",
+    "build:tauri": "tsc -b && vite build --base=./",
+
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "tauri": "tauri"
@@ -17,7 +22,7 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
-  "@tauri-apps/cli": "^2.0.0",
+    "@tauri-apps/cli": "^2.0.0",
     "@types/papaparse": "^5.3.14",
     "@types/react": "^18.3.27",
     "@types/react-dom": "^18.3.7",

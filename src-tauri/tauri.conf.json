@@ -5,13 +5,13 @@
   "identifier": "com.dwaipayanray.concordeefb",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "npm run build:tauri",
     "devUrl": "http://localhost:5173",
     "frontendDist": "../dist"
   },
   "app": {
     "windows": [
-      { "title": "CONCORDE EFB", "width": 1280, "height": 800, "resizable": true }
+      { "title": "CONCORDE EFB", "width": 1280, "height": 800, "resizable": true, "devtools": true }
     ],
     "security": { "csp": null }
   },
