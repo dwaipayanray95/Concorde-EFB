@@ -1079,12 +1079,12 @@ function ConcordePlannerCanvas() {
 
   function applyRouteDistance() {
     setRouteNotice("");
-  
+
     if (!routeText.trim()) {
       setRouteNotice("Paste a route string first.");
       return;
     }
-  
+
     const out = computeRouteDistanceFromText(routeText);
     if (!out) {
       setRouteNotice(
@@ -1092,7 +1092,7 @@ function ConcordePlannerCanvas() {
       );
       return;
     }
-  
+
     if (out.depFromRoute && out.arrFromRoute) {
       if (out.depFromRoute !== depKey) {
         setDepIcao(out.depFromRoute);
@@ -1103,74 +1103,22 @@ function ConcordePlannerCanvas() {
         setArrRw("");
       }
     }
-  
+
     const rounded = Math.round(out.distanceNM);
     setRouteDistanceNM(out.distanceNM);
     setRouteInfo(out.resolution);
     setManualDistanceNM(rounded);
-  
+
     const unresolved = out.resolution.recognized.unresolved.length;
     const parts: string[] = [`Planned Distance set to ${rounded.toLocaleString()} NM.`];
-    if (out.depFromRoute && out.arrFromRoute) parts.push(`Derived DEP/ARR: ${out.depFromRoute} → ${out.arrFromRoute}.`);
+    if (out.depFromRoute && out.arrFromRoute) {
+      parts.push(`Derived DEP/ARR: ${out.depFromRoute} → ${out.arrFromRoute}.`);
+    }
     if (unresolved > 0) parts.push("Some waypoints couldn’t be resolved; distance is approximate.");
     setRouteNotice(parts.join(" "));
-  }  }
+  }
+
 >
-  <div className="text-xs text-slate-400 mb-2">
-    Paste your route string (tokens separated by spaces). We’ll estimate distance using airports + OurAirports navaids.
-    SID/STAR/airway tokens are accepted but not expanded into real geometry yet.
-  </div>
-
-  <textarea
-    value={routeText}
-    onChange={(e) => setRouteText(e.target.value)}
-    placeholder="Example: CPT UL9 STU DCT ..."
-    className="w-full min-h-[110px] px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-  />
-
-  <div className="mt-3 grid gap-3 md:grid-cols-3 grid-cols-1">
-    <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-      <div className="text-xs text-slate-400">Estimated Route Distance</div>
-      <div className="text-lg font-semibold">
-        {routeDistanceNM == null ? "—" : `${Math.round(routeDistanceNM).toLocaleString()} NM`}
-      </div>
-    </div>
-
-    <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-      <div className="text-xs text-slate-400">Recognized</div>
-      <div className="text-sm text-slate-200">
-        Procedures: <b>{routeInfo?.recognized.procedures.length ?? 0}</b> • Airway:{" "}
-        <b>{routeInfo?.recognized.airways.length ?? 0}</b> • Points: <b>{routeInfo?.points.length ?? 0}</b>
-      </div>
-    </div>
-
-    <div
-      className={`px-3 py-2 rounded-xl bg-slate-950 border ${
-        routeInfo && (routeInfo.recognized.unresolved.length ?? 0) === 0
-          ? "border-emerald-500/40"
-          : "border-slate-800"
-      }`}
-    >
-      <div className="text-xs text-slate-400">Unresolved Tokens</div>
-      <div className="text-sm text-slate-200">
-        <b>{routeInfo?.recognized.unresolved.length ?? 0}</b>
-      </div>
-    </div>
-  </div>
-
-  {routeNotice && <div className="mt-2 text-xs text-slate-300">{routeNotice}</div>}
-
-  {routeInfo && (routeInfo.recognized.unresolved.length ?? 0) > 0 && (
-    <div className="mt-2 text-xs text-slate-400">
-      Unresolved examples:{" "}
-      <span className="font-mono">{routeInfo.recognized.unresolved.slice(0, 8).join(" ")}</span>
-      {routeInfo.recognized.unresolved.length > 8 ? " …" : ""}
-    </div>
-  )}
-
-  <div className="mt-2 text-xs text-slate-400">
-    Note: the <b>Planned Distance (NM)</b> field below stays editable — you can override anytime.
-  </div>
 </Card>
         <Card title="Cruise & Fuel (Manual Distance)">
           <Row>
