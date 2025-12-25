@@ -1283,3 +1283,4 @@ class ErrorBoundary extends React.Component {
 export default function ConcordeEFB() {
   return _jsx(ErrorBoundary, { children: _jsx(ConcordePlannerCanvas, {}) });
 }
+export { default } from "./ConcordeEFB.tsx";
