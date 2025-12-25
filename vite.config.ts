@@ -6,7 +6,9 @@ import react from '@vitejs/plugin-react'
 
 // IMPORTANT: This must match https://dwaipayanray95.github.io/Concorde-EFB/
 export default defineConfig({
-  base: '/Concorde-EFB/',
+  bbase: process.env.VITE_BASE ?? '/Concorde-EFB/',
+  prod build uses default /Concorde-EFB/
+  beta build sets VITE_BASE=/Concorde-EFB/beta/
   plugins: [react()],
   build: {
     outDir: 'dist',
