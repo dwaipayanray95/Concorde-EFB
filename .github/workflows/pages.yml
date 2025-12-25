@@ -1,19 +1,15 @@
-name: Deploy to GitHub Pages (main + beta)
+name: Deploy (stable) to GitHub Pages
 
 on:
   push:
-    branches: [main, beta]
+    branches: [ main ]
   workflow_dispatch:
 
 permissions:
   contents: write
 
-concurrency:
-  group: gh-pages-deploy
-  cancel-in-progress: false
-
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -28,33 +24,15 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Decide base + destination
-        shell: bash
-        run: |
-          if [ "${GITHUB_REF_NAME}" = "beta" ]; then
-            echo "BASE_PATH=/Concorde-EFB/beta/" >> $GITHUB_ENV
-            echo "DEST_DIR=beta" >> $GITHUB_ENV
-          else
-            echo "BASE_PATH=/Concorde-EFB/" >> $GITHUB_ENV
-            echo "DEST_DIR=." >> $GITHUB_ENV
-          fi
+      - name: Build
+        run: npm run build
 
-      - name: Build (Vite)
-        run: npm run build -- --base="${BASE_PATH}"
+      - name: Disable Jekyll
+        run: touch dist/.nojekyll
 
-      - name: Deploy to gh-pages (root for main, /beta for beta)
+      - name: Deploy (stable)
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: gh-pages
           publish_dir: ./dist
-          destination_dir: ${{ env.DEST_DIR }}
           keep_files: true
-          - name: Deploy to gh-pages (root)
-          uses: JamesIves/github-pages-deploy-action@v4
-          with:
-            branch: gh-pages
-            folder: dist
-            clean: true
-            clean-exclude: |
-              beta
