@@ -1,6 +1,5 @@
 name: Bug / Feature request
 description: Report a bug or suggest an improvement for Concorde EFB
-title: "Bug/Feature: "
 labels: ["triage"]
 body:
   - type: markdown
