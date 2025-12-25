@@ -1,0 +1,110 @@
+name: Bug / Feature request
+description: Report a bug or suggest an improvement for Concorde EFB
+title: "Bug/Feature: "
+labels: ["triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve **Concorde EFB**!
+
+        Pick the type (Bug or Feature) and fill out what you can. If you’re not sure, choose **Bug**.
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type
+      description: What are you submitting?
+      options:
+        - Bug
+        - Feature request
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: What version are you on? (e.g., v0.85)
+      placeholder: v0.85
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Describe the bug or the feature request in 1–3 sentences.
+      placeholder: When I..., the app... / I want the app to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment (if relevant)
+      description: Helps a lot for bugs.
+      placeholder: Windows 11 / macOS / iOS / Android, Browser (Chrome/Safari), PWA/Desktop, MSFS 2020 or 2024, DC Designs Concorde version, etc.
+    validations:
+      required: false
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce (Bug)
+      description: If this is a bug, list exact steps.
+      placeholder: |
+        1) Go to...
+        2) Enter...
+        3) Click...
+        4) See...
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior (Bug)
+      placeholder: It should...
+    validations:
+      required: false
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior (Bug)
+      placeholder: Instead it...
+    validations:
+      required: false
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution / behavior (Feature)
+      description: If this is a feature request, describe how it should work.
+      placeholder: |
+        User story: As a Concorde pilot, I want...
+        Acceptance criteria:
+        - When...
+        - Then...
+    validations:
+      required: false
+
+  - type: textarea
+    id: references
+    attributes:
+      label: Extra details / references
+      description: Manual page refs, screenshots, links, numbers, videos, console logs, etc.
+      placeholder: DC Designs manual page..., screenshot..., link..., etc.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues to make sure this hasn’t already been reported.
+          required: true
+        - label: I’m okay with follow-up questions if more details are needed.
+          required: false
