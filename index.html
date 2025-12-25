@@ -6,9 +6,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CONCORDE EFB v0.85</title>
   </head>
+  <script data-goatcounter="https://theawesomeray.goatcounter.com/count"
+        async src="https://gc.zgo.at/count.js"></script>
+
+<script>
+  window.addEventListener('load', function () {
+    if (window.goatcounter && typeof window.goatcounter.visit_count === 'function') {
+      window.goatcounter.visit_count({
+        append: '#gc-counter',
+        type: 'svg',
+        no_branding: true,
+        attr: { width: '92', height: '30' },
+
+        // Optional: force one single global counter for your GH Pages app:
+        // path: '/Concorde-EFB/'
+      });
+    }
+  });
+</script>
   <body>
     <noscript>This app requires JavaScript to run.</noscript>
     <div id="root"></div>
+    <div id="gc-counter"
+  style="position:fixed; right:12px; bottom:12px; z-index:9999; opacity:.85; pointer-events:none;">
+</div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
