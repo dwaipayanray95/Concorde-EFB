@@ -4,9 +4,10 @@ on:
   workflow_dispatch:
   push:
     tags:
-      - "v*.*.*"          # stable semver tags (v0.9.0)
-      - "v*rc*"           # RC tags like v0.9rc1
-      - "v*.*.*-rc.*"     # RC semver tags like v0.9.0-rc.1
+     - "v*"
+      #- "v*.*.*"          # stable semver tags (v0.9.0)
+      #- "v*rc*"           # RC tags like v0.9rc1
+      #- "v*.*.*-rc.*"     # RC semver tags like v0.9.0-rc.1
 
 jobs:
   build-windows:
