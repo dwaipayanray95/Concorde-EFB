@@ -18,7 +18,7 @@ import Papa from "papaparse";
 
 const APP_VERSION = "1.1.1-beta";
 const BUILD_MARKER = "TSX_FL_AUTOPICK_FIX_2025-12-26";
-const DEBUG_FL_AUTOPICK = true;
+const DEBUG_FL_AUTOPICK = false;
 // App icon
 // IMPORTANT: We want this to work on GitHub Pages (non-root base path) and inside Tauri.
 // Using `new URL(..., import.meta.url)` makes Vite bundle the PNG and generate a correct URL
@@ -2130,48 +2130,6 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                   }`}
                 >
                   {cruiseFLNotice}
-                </div>
-              )}
-              {DEBUG_FL_AUTOPICK && (
-                <div className="mt-2 text-[11px] text-slate-400 space-y-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      className="h-8 px-3 text-xs"
-                      onClick={() => {
-                        // Re-enable auto FL logic
-                        setCruiseFLTouched(false);
-                        setCruiseFLNotice("Auto-FL unlocked.");
-                      }}
-                      type="button"
-                    >
-                      Unlock Auto-FL
-                    </Button>
-
-                    <Button
-                      variant="ghost"
-                      className="h-8 px-3 text-xs"
-                      onClick={() => {
-                        // Force apply the current recommendation (if any)
-                        if (!autoFLRec) {
-                          setCruiseFLNotice("Auto-FL: no recommendation (check Planned Distance).");
-                          return;
-                        }
-                        setCruiseFLTouched(false);
-                        applyCruiseFL(autoFLRec.fl, autoFLRec.note);
-                      }}
-                      type="button"
-                    >
-                      Apply Auto-FL Now
-                    </Button>
-                  </div>
-
-                  <div className="font-mono text-[10px] leading-snug">
-                    <div>plannedDistance: <b>{plannedDistance || 0}</b> NM</div>
-                    <div>distanceSource: <b>{distanceSource}</b> | manualDistanceNM: <b>{manualDistanceNM}</b> | routeDistanceNM: <b>{routeDistanceNM ?? "—"}</b></div>
-                    <div>directionEW: <b>{directionEW ?? "—"}</b> | cruiseFLTouched: <b>{String(cruiseFLTouched)}</b> | isEditingFL: <b>{String(cruiseFLFocusValueRef.current !== null)}</b></div>
-                    <div>autoFLRec: <b>{autoFLRec ? `FL${autoFLRec.fl}` : "—"}</b></div>
-                  </div>
                 </div>
               )}
             </div>
