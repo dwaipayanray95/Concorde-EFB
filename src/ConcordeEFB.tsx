@@ -2098,14 +2098,17 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
 
               {/* Row 1: SimBrief details (shows after a successful import) */}
               <div className="hidden sm:block sm:col-span-6">
-                <div className="h-12 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 flex items-center">
-                  <div className="grid grid-cols-2 gap-3 w-full min-w-0">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="h-12 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 flex items-center min-w-0">
                     <div className="min-w-0">
                       <div className="text-[10px] text-slate-400">Call Sign</div>
                       <div className="text-sm font-semibold truncate">
                         {simbriefImported ? (simbriefCallSign || "—") : "—"}
                       </div>
                     </div>
+                  </div>
+
+                  <div className="h-12 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 flex items-center min-w-0">
                     <div className="min-w-0">
                       <div className="text-[10px] text-slate-400">Registration</div>
                       <div className="text-sm font-semibold truncate">
