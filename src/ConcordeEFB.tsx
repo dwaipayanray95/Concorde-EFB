@@ -150,6 +150,7 @@ type RouteResolution = {
 type SimbriefExtract = {
   originIcao?: string;
   destIcao?: string;
+  alternateIcao?: string;
   route?: string;
   distanceNm?: number;
   raw?: unknown;
@@ -180,6 +181,17 @@ function extractSimbrief(data: any): SimbriefExtract {
     normalizeIcao4(ofp?.general?.destination_icao) ??
     normalizeIcao4(ofp?.general?.arr_icao);
 
+  const alternateIcao =
+    normalizeIcao4(ofp?.alternate?.icao_code) ??
+    normalizeIcao4(ofp?.alternate?.icao) ??
+    normalizeIcao4(ofp?.alternate?.alt_icao) ??
+    normalizeIcao4(ofp?.general?.alternate_icao) ??
+    normalizeIcao4(ofp?.general?.alternate) ??
+    normalizeIcao4(ofp?.general?.alt_icao) ??
+    normalizeIcao4(ofp?.general?.altn_icao) ??
+    normalizeIcao4(ofp?.general?.alternate1_icao) ??
+    normalizeIcao4(ofp?.general?.alternate2_icao);
+
   const routeRaw =
     ofp?.atc?.route ??
     ofp?.general?.route ??
@@ -196,7 +208,7 @@ function extractSimbrief(data: any): SimbriefExtract {
     toNumberOrUndefined(ofp?.general?.air_distance) ??
     toNumberOrUndefined(ofp?.general?.air_distance_nm);
 
-  return { originIcao, destIcao, route, distanceNm: dist, raw: data };
+  return { originIcao, destIcao, alternateIcao, route, distanceNm: dist, raw: data };
 }
 
 async function fetchSimbrief(usernameOrId: string): Promise<SimbriefExtract> {
@@ -1365,6 +1377,9 @@ function ConcordePlannerCanvas() {
         setArrIcao(extracted.destIcao);
         setArrRw("");
       }
+      if (extracted.alternateIcao) {
+        setAltIcao(extracted.alternateIcao);
+      }
 
       const hasSimbriefDistance = typeof extracted.distanceNm === "number" && extracted.distanceNm > 0;
 
@@ -1390,7 +1405,8 @@ function ConcordePlannerCanvas() {
 
       const dep = extracted.originIcao ? ` ${extracted.originIcao}` : "";
       const arr = extracted.destIcao ? ` → ${extracted.destIcao}` : "";
-      setSimbriefNotice(`Imported SimBrief OFP${dep}${arr}.`);
+      const alt = extracted.alternateIcao ? ` (ALT ${extracted.alternateIcao})` : "";
+      setSimbriefNotice(`Imported SimBrief OFP${dep}${arr}${alt}.`);
     } catch (e) {
       setSimbriefNotice(String(e));
     } finally {
