@@ -1507,86 +1507,100 @@ function ConcordePlannerCanvas() {
         <Card
           title="Route (paste from SimBrief / OFP)"
         >
-          <div className="mb-3">
+          <div className="space-y-3">
             <Label>SimBrief Username / ID (optional)</Label>
 
-            <div className="flex items-end gap-2 flex-wrap">
-              <div className="w-full sm:w-auto sm:max-w-xs">
+            <div className="grid gap-3 sm:grid-cols-12 items-start">
+              {/* Row 1: SimBrief ID + Import */}
+              <div className="sm:col-span-4">
                 <Input
-                  className="py-1.5 text-sm"
+                  className="h-12 py-0 text-sm"
                   value={simbriefUser}
                   placeholder="SimBrief username"
                   onChange={(e) => setSimbriefUser(e.target.value)}
                 />
               </div>
 
-              <Button
-                className="px-3 py-1.5 text-sm whitespace-nowrap"
-                onClick={importFromSimbrief}
-                disabled={simbriefLoading}
-              >
-                <span className="inline-flex items-center gap-2">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    className="h-4 w-4"
-                    aria-hidden="true"
+              <div className="sm:col-span-2">
+                <Button
+                  className="h-12 px-4 text-sm w-full whitespace-nowrap"
+                  onClick={importFromSimbrief}
+                  disabled={simbriefLoading}
+                >
+                  <span className="inline-flex items-center justify-center gap-2 w-full">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      className="h-4 w-4"
+                      aria-hidden="true"
+                    >
+                      <path d="M12 3a1 1 0 0 1 1 1v8.586l2.293-2.293a1 1 0 1 1 1.414 1.414l-4.007 4.007a1 1 0 0 1-1.4.012l-4.02-4.02a1 1 0 1 1 1.414-1.414L11 12.586V4a1 1 0 0 1 1-1Z" />
+                      <path d="M5 20a1 1 0 0 1-1-1v-2a1 1 0 1 1 2 0v1h12v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H5Z" />
+                    </svg>
+                    {simbriefLoading ? "Importing…" : "Import"}
+                  </span>
+                </Button>
+              </div>
+
+              {/* Row 1 spacer to keep a clean grid on wide screens */}
+              <div className="hidden sm:block sm:col-span-6" />
+
+              {/* Row 2: Route box (left) + distance (right) */}
+              <div className="sm:col-span-9">
+                <textarea
+                  className="w-full h-12 px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 text-xs leading-tight resize-none overflow-y-auto"
+                  placeholder="Route will auto-fill from SimBrief (or paste here)"
+                  value={routeText}
+                  onChange={(e) => {
+                    // user is manually editing/pasting; distance becomes an auto-estimate
+                    setDistanceSource("auto");
+                    setRouteText(e.target.value);
+                  }}
+                />
+
+                {/* SimBrief success/error should live under the route box */}
+                {simbriefNotice && (
+                  <div
+                    className={`mt-2 text-xs ${
+                      simbriefNotice.startsWith("Imported")
+                        ? "text-emerald-400"
+                        : "text-rose-300"
+                    }`}
                   >
-                    <path d="M12 3a1 1 0 0 1 1 1v8.586l2.293-2.293a1 1 0 1 1 1.414 1.414l-4.007 4.007a1 1 0 0 1-1.4.012l-4.02-4.02a1 1 0 1 1 1.414-1.414L11 12.586V4a1 1 0 0 1 1-1Z" />
-                    <path d="M5 20a1 1 0 0 1-1-1v-2a1 1 0 1 1 2 0v1h12v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H5Z" />
-                  </svg>
-                  {simbriefLoading ? "Importing…" : "Import"}
-                </span>
-              </Button>
-            </div>
-          </div>
+                    {simbriefNotice}
+                  </div>
+                )}
+              </div>
 
-          {simbriefNotice && (
-            <div
-              className={`mb-2 text-xs ${
-                simbriefNotice.startsWith("Imported") ? "text-emerald-400" : "text-rose-300"
-              }`}
-            >
-              {simbriefNotice}
-            </div>
-          )}
+              <div className="sm:col-span-3">
+                <div className="px-3 py-2 h-12 flex flex-col justify-center rounded-xl bg-slate-950 border border-slate-800">
+                  <div className="text-[10px] text-slate-400">Estimated Route Distance</div>
+                  <div className="text-sm font-semibold">
+                    {routeDistanceNM != null
+                      ? `${Math.round(routeDistanceNM).toLocaleString()} NM`
+                      : "—"}
+                  </div>
+                </div>
 
-          <textarea
-            className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 text-xs leading-snug"
-            rows={1}
-            placeholder="Route will auto-fill from SimBrief (or paste here)"
-            value={routeText}
-            onChange={(e) => {
-              // user is manually editing/pasting; distance becomes an auto-estimate
-              setDistanceSource("auto");
-              setRouteText(e.target.value);
-            }}
-          />
-
-          {distanceSource === "simbrief" && (
-            <div className="mt-2 text-xs text-emerald-400">Imported from SimBrief</div>
-          )}
-          {distanceSource === "auto" && (
-            <div className="mt-2 text-xs text-yellow-400">
-              Auto-calculated route distance might not be accurate for now
-            </div>
-          )}
-
-          <div className="mt-3">
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 w-fit min-w-[200px]">
-              <div className="text-[11px] text-slate-400">Estimated Route Distance</div>
-              <div className="text-base font-semibold">
-                {routeDistanceNM != null
-                  ? `${Math.round(routeDistanceNM).toLocaleString()} NM`
-                  : "—"}
+                {/* Status should live under the distance box */}
+                {distanceSource === "simbrief" && (
+                  <div className="mt-2 text-xs text-emerald-400">
+                    Imported from SimBrief
+                  </div>
+                )}
+                {distanceSource === "auto" && (
+                  <div className="mt-2 text-xs text-yellow-400">
+                    Auto-calculated route distance might not be accurate for now
+                  </div>
+                )}
               </div>
             </div>
-          </div>
 
-          {routeNotice && (
-            <div className="mt-2 text-xs text-slate-400">{routeNotice}</div>
-          )}
+            {routeNotice && (
+              <div className="text-xs text-slate-400">{routeNotice}</div>
+            )}
+          </div>
         </Card>
 
         <Card
