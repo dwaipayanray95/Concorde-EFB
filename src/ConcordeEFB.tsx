@@ -7,7 +7,7 @@
 // • METAR fetch more robust: tries AviationWeather API, then VATSIM fallback.
 // • All units metric (kg, m); longest-runway autopick; crosswind/headwind components.
 // • Self-tests cover manual-distance sanity, fuel monotonicity, feasibility sanity.
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   ButtonHTMLAttributes,
   InputHTMLAttributes,
@@ -17,7 +17,8 @@ import type {
 import Papa from "papaparse";
 
 const APP_VERSION = "1.1.1-beta";
-
+const BUILD_MARKER = "TSX_FL_AUTOPICK_FIX_2025-12-26";
+const DEBUG_FL_AUTOPICK = true;
 // App icon
 // IMPORTANT: We want this to work on GitHub Pages (non-root base path) and inside Tauri.
 // Using `new URL(..., import.meta.url)` makes Vite bundle the PNG and generate a correct URL
@@ -109,11 +110,143 @@ function snapToNonRvsm(fl: number, direction: DirectionEW): { snapped: number; c
   return { snapped: best, changed: true };
 }
 
+const ALL_NON_RVSM_LEVELS: number[] = Array.from(
+  new Set([...nonRvsmValidFLs("E"), ...nonRvsmValidFLs("W")])
+).sort((a, b) => a - b);
+
+function normalizeCruiseFLByRules(fl: number, direction: DirectionEW | null): number {
+  // 1) Clamp to Concorde limits
+  let next = clampCruiseFL(fl);
+
+  // 2) Above FL410, snap to valid Non-RVSM levels.
+  // If direction is unknown, snap to the nearest level from the union set.
+  if (next >= NON_RVSM_MIN_FL) {
+    if (direction) {
+      next = snapToNonRvsm(next, direction).snapped;
+    } else {
+      // Snap to nearest in ALL_NON_RVSM_LEVELS; tie-break to the lower level.
+      let best = ALL_NON_RVSM_LEVELS[0];
+      let bestDiff = Math.abs(best - next);
+      for (const v of ALL_NON_RVSM_LEVELS) {
+        const d = Math.abs(v - next);
+        if (d < bestDiff || (d === bestDiff && v < best)) {
+          best = v;
+          bestDiff = d;
+        }
+      }
+      next = best;
+    }
+  }
+
+  return next;
+}
+
+
 function recommendedCruiseFL(direction: DirectionEW): number {
   // Keep the app’s original intent (high cruise) but make it compliant.
   const target = 580;
   const { snapped } = snapToNonRvsm(target, direction);
   return snapped;
+}
+
+// --- Cruise FL Recommendation Helper Types & Functions ---
+type CruiseFLRecommendation = {
+  fl: number;
+  cruiseMin: number;
+  cruiseNM: number;
+  climbNM: number;
+  descentNM: number;
+  meetsMinimum: boolean;
+  note: string;
+};
+
+function buildCandidateFLs(direction: DirectionEW | null): number[] {
+  const minAutoFL = 250;
+  const maxAutoFL = MAX_CONCORDE_FL;
+
+  const lows: number[] = [];
+  for (let fl = minAutoFL; fl < NON_RVSM_MIN_FL; fl += 10) lows.push(fl);
+
+  const highs: number[] = [];
+  if (direction) {
+    highs.push(...nonRvsmValidFLs(direction));
+  } else {
+    for (let fl = NON_RVSM_MIN_FL; fl <= maxAutoFL; fl += 10) highs.push(fl);
+  }
+
+  // Combine + sort descending (prefer highest FL that still gives enough cruise)
+  const all = Array.from(new Set([...highs, ...lows]))
+    .filter((fl) => fl >= minAutoFL && fl <= maxAutoFL)
+    .sort((a, b) => b - a);
+
+  return all;
+}
+
+function recommendCruiseFLForDistance(
+  plannedDistanceNM: number,
+  direction: DirectionEW | null,
+  opts?: { minCruiseMin?: number; targetCruiseMin?: number }
+): CruiseFLRecommendation | null {
+  const distance = Number(plannedDistanceNM);
+  if (!Number.isFinite(distance) || distance <= 0) return null;
+
+  const minCruiseMin = opts?.minCruiseMin ?? 15;
+  const targetCruiseMin = opts?.targetCruiseMin ?? 18;
+
+  const candidates = buildCandidateFLs(direction);
+
+  // Evaluate candidates and pick the highest FL that still yields >= min cruise.
+  let bestMeeting: CruiseFLRecommendation | null = null;
+  let bestOverall: CruiseFLRecommendation | null = null;
+
+  for (const fl of candidates) {
+    const climb = estimateClimb(fl * 100);
+    const descent = estimateDescent(fl * 100);
+
+    const climbNM = climb.dist_nm;
+    const descentNM = descent.dist_nm;
+    const cruiseNM = Math.max(distance - (climbNM + descentNM), 0);
+    const cruiseMin = cruiseTimeHours(cruiseNM) * 60;
+
+    const meets = cruiseMin >= minCruiseMin;
+
+    const rec: CruiseFLRecommendation = {
+      fl,
+      cruiseMin,
+      cruiseNM,
+      climbNM,
+      descentNM,
+      meetsMinimum: meets,
+      note: "",
+    };
+
+    if (!bestOverall || rec.cruiseMin > bestOverall.cruiseMin) {
+      bestOverall = rec;
+    }
+
+    if (meets) {
+      // Keep the first meeting candidate because the list is sorted descending.
+      bestMeeting = rec;
+      break;
+    }
+  }
+
+  const chosen = bestMeeting ?? bestOverall;
+  if (!chosen) return null;
+
+  // Ensure the recommended FL is always valid under Concorde + Non-RVSM rules.
+  chosen.fl = normalizeCruiseFLByRules(chosen.fl, direction);
+
+  const dirTxt = direction ? (direction === "E" ? "eastbound" : "westbound") : "";
+
+  if (bestMeeting) {
+    const targetTxt = chosen.cruiseMin >= targetCruiseMin ? "" : " (tight sector)";
+    chosen.note = `Auto-selected FL${chosen.fl}${dirTxt ? ` (${dirTxt})` : ""} to keep ~${Math.round(chosen.cruiseMin)} min cruise${targetTxt}.`;
+  } else {
+    chosen.note = `Short sector: even at FL${chosen.fl}${dirTxt ? ` (${dirTxt})` : ""}, cruise is only ~${Math.round(chosen.cruiseMin)} min.`;
+  }
+
+  return chosen;
 }
 
 type RunwayInfo = {
@@ -1097,16 +1230,22 @@ function ConcordePlannerCanvas() {
   });
   const [simbriefNotice, setSimbriefNotice] = useState<string>("");
   const [simbriefLoading, setSimbriefLoading] = useState(false);
+  const [simbriefImported, setSimbriefImported] = useState(false);
   const [distanceSource, setDistanceSource] = useState<"none" | "simbrief" | "auto">("none");
   const simbriefRouteSetRef = useRef(false);
   const lastAutoDistanceRef = useRef<number | null>(null);
+  const cruiseFLFocusValueRef = useRef<string | null>(null);
+  const cruiseFLEditedRef = useRef(false);
   const [altIcao, setAltIcao] = useState("");
   const [trimTankKg, setTrimTankKg] = useState(0);
 
-  const [cruiseFL, setCruiseFL] = useState(580);
-  const [cruiseFLText, setCruiseFLText] = useState<string>("580");
-  const [cruiseFLNotice, setCruiseFLNotice] = useState<string>("");
-  const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
+ // Start at a valid non-RVSM level (580 is NOT valid).
+const INITIAL_CRUISE_FL = 590;
+const [cruiseFL, setCruiseFL] = useState<number>(INITIAL_CRUISE_FL);
+const [cruiseFLText, setCruiseFLText] = useState<string>(String(INITIAL_CRUISE_FL));
+const [cruiseFLNotice, setCruiseFLNotice] = useState<string>("");
+// If true, user has overridden FL and we should not auto-change it from distance.
+const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
   const [taxiKg, setTaxiKg] = useState(2500);
   const [contingencyPct, setContingencyPct] = useState(5);
   const [finalReserveKg, setFinalReserveKg] = useState(3600);
@@ -1117,6 +1256,11 @@ function ConcordePlannerCanvas() {
 
   const [tests, setTests] = useState<SelfTestResult[]>([]);
   const [appIconMode, setAppIconMode] = useState<"primary" | "fallback" | "none">("primary");
+
+  useEffect(() => {
+    console.log(`[ConcordeEFB.tsx] ${BUILD_MARKER} v${APP_VERSION}`);
+    document.title = `Concorde EFB v${APP_VERSION} • ${BUILD_MARKER}`;
+  }, []);
 
 
   const depKey = (depIcao || "").toUpperCase();
@@ -1187,18 +1331,134 @@ function ConcordePlannerCanvas() {
 
   const directionEW = useMemo(() => inferDirectionEW(depInfo, arrInfo), [depInfo, arrInfo]);
 
+  const applyCruiseFL = useCallback(
+    (raw: number, note?: string) => {
+      const next = normalizeCruiseFLByRules(raw, directionEW);
+
+      // Keep both numeric + text states in sync.
+      if (next !== cruiseFL) setCruiseFL(next);
+      const nextText = String(next);
+      if (nextText !== cruiseFLText) setCruiseFLText(nextText);
+
+      if (typeof note === "string" && note.trim()) setCruiseFLNotice(note);
+    },
+    [directionEW, cruiseFL, cruiseFLText]
+  );
+
   const plannedDistance = useMemo(() => {
+    // Source of truth for calculations:
+    // - If SimBrief provided a distance, use that (keeps FL + fuel consistent with OFP).
+    // - Otherwise fall back to the manual Planned Distance input.
+    const sb = Number(routeDistanceNM);
+    if (distanceSource === "simbrief" && Number.isFinite(sb) && sb > 0) return sb;
+
     const v = Number(manualDistanceNM);
     return Number.isFinite(v) && v > 0 ? v : 0;
-  }, [manualDistanceNM]);
+  }, [manualDistanceNM, routeDistanceNM, distanceSource]);
 
-  const climb = useMemo(() => estimateClimb(Math.max(cruiseFL, 0) * 100), [cruiseFL]);
-  const descent = useMemo(() => estimateDescent(Math.max(cruiseFL, 0) * 100), [cruiseFL]);
+  // If SimBrief import succeeded, lock manual Planned Distance edits so the OFP/route distance stays the source of truth.
+  const simbriefDistanceLocked = simbriefImported;
+
+  // --- Auto cruise FL from Planned Distance ---
+  // Planned Distance drives the FL recommendation. We only auto-set FL when the user
+  // hasn't explicitly overridden it (cruiseFLTouched === false).
+  // Also: do not fight the user while they're typing in the FL box.
+  const lastAppliedAutoFLRef = useRef<number | null>(null);
+
+  const autoFLRec = useMemo(() => {
+    if (!Number.isFinite(plannedDistance) || plannedDistance <= 0) return null;
+
+    const rec = recommendCruiseFLForDistance(plannedDistance, directionEW, {
+      minCruiseMin: 15,
+      targetCruiseMin: 20,
+    });
+
+    if (!rec) return null;
+
+    const fl = normalizeCruiseFLByRules(rec.fl, directionEW);
+    return { fl, note: rec.note };
+  }, [plannedDistance, directionEW]);
+
+  useEffect(() => {
+    // Don't fight the user while they're typing.
+    if (cruiseFLFocusValueRef.current !== null) return;
+
+    // Respect manual override.
+    if (cruiseFLTouched) return;
+
+    if (!autoFLRec) return;
+
+    const next = autoFLRec.fl;
+    const nextText = String(next);
+
+    // Guard against loops / no-op updates.
+    if (
+      lastAppliedAutoFLRef.current === next &&
+      cruiseFL === next &&
+      cruiseFLText === nextText
+    ) {
+      return;
+    }
+
+    lastAppliedAutoFLRef.current = next;
+    setCruiseFL(next);
+    setCruiseFLText(nextText);
+    setCruiseFLNotice(autoFLRec.note);
+
+    console.log("[CruiseFL:auto] applied", {
+      plannedDistance,
+      directionEW,
+      next,
+      note: autoFLRec.note,
+    });
+  }, [autoFLRec, plannedDistance, directionEW, cruiseFLTouched, cruiseFL, cruiseFLText]);
+
+  useEffect(() => {
+    if (!DEBUG_FL_AUTOPICK) return;
+
+    // Log only when inputs that should affect Auto-FL change.
+    console.log("[CruiseFL:dbg]", {
+      plannedDistance,
+      distanceSource,
+      manualDistanceNM,
+      routeDistanceNM,
+      directionEW,
+      cruiseFLTouched,
+      isEditingFL: cruiseFLFocusValueRef.current !== null,
+      autoFL: autoFLRec ? { fl: autoFLRec.fl, note: autoFLRec.note } : null,
+      current: { cruiseFL, cruiseFLText },
+    });
+  }, [
+    plannedDistance,
+    distanceSource,
+    manualDistanceNM,
+    routeDistanceNM,
+    directionEW,
+    cruiseFLTouched,
+    cruiseFL,
+    cruiseFLText,
+    autoFLRec,
+  ]);
+
+  useEffect(() => {
+    // Always keep cruiseFL valid (clamp + Non-RVSM snap) when not typing.
+    if (cruiseFLFocusValueRef.current !== null) return;
+
+    const base = Number.isFinite(cruiseFL) ? cruiseFL : Number(cruiseFLText);
+    const next = normalizeCruiseFLByRules(base, directionEW);
+    const nextText = String(next);
+
+    if (next !== cruiseFL) setCruiseFL(next);
+    if (nextText !== cruiseFLText) setCruiseFLText(nextText);
+  }, [directionEW, cruiseFL, cruiseFLText]);
+
+  const climb = useMemo(() => estimateClimb(Math.max(clampCruiseFL(cruiseFL), 0) * 100), [cruiseFL]);
+  const descent = useMemo(() => estimateDescent(Math.max(clampCruiseFL(cruiseFL), 0) * 100), [cruiseFL]);
 
   const reheat = useMemo(() => reheatGuard(climb.time_h), [climb.time_h]);
 
   const burnKgPerNmAdj = useMemo(
-    () => CONSTANTS.fuel.burn_kg_per_nm * altitudeBurnFactor(cruiseFL),
+    () => CONSTANTS.fuel.burn_kg_per_nm * altitudeBurnFactor(clampCruiseFL(cruiseFL)),
     [cruiseFL]
   );
 
@@ -1366,6 +1626,7 @@ function ConcordePlannerCanvas() {
   // SimBrief import handler moved out of applyRouteDistance.
   const importFromSimbrief = async () => {
     setSimbriefNotice("");
+    setSimbriefImported(false);
 
     const u = simbriefUser.trim();
     if (!u) {
@@ -1407,11 +1668,24 @@ function ConcordePlannerCanvas() {
         setRouteNotice("");
         setDistanceSource("simbrief");
         lastAutoDistanceRef.current = null;
+
+        // IMPORTANT: SimBrief distance should drive auto-FL again.
+        setCruiseFLTouched(false);
+        setCruiseFLNotice("");
       } else {
-        // No distance in the SimBrief JSON; we'll try auto-estimating from the route string.
-        setDistanceSource("none");
+        // No distance in the SimBrief JSON; we'll auto-estimate from the route string.
+        // Keep the estimated distance visible and let Planned Distance be re-derived from it.
+        setDistanceSource("auto");
         setRouteNotice("");
+        setManualDistanceNM(0);
+        lastAutoDistanceRef.current = null;
+
+        // IMPORTANT: allow auto-FL to re-run once Planned Distance is derived.
+        setCruiseFLTouched(false);
+        setCruiseFLNotice("");
       }
+
+      setSimbriefImported(true);
 
       const dep = extracted.originIcao ? ` ${extracted.originIcao}` : "";
       const arr = extracted.destIcao ? ` → ${extracted.destIcao}` : "";
@@ -1542,6 +1816,7 @@ function ConcordePlannerCanvas() {
           <div>
             <div className="text-3xl font-bold">Concorde EFB v{APP_VERSION}</div>
             <div className="text-sm text-slate-400">Your Concorde copilot for MSFS.</div>
+            <div className="text-[10px] text-slate-500 mt-1">Build: {BUILD_MARKER}</div>
           </div>
         </div>
         <div className="flex flex-wrap gap-2 justify-end">
@@ -1741,9 +2016,35 @@ function ConcordePlannerCanvas() {
           <Row>
             <div>
               <Label>Planned Distance (NM)</Label>
-              <Input type="number" value={manualDistanceNM} onChange={(e) => setManualDistanceNM(parseFloat(e.target.value || "0"))} />
+              <Input
+                type="number"
+                value={manualDistanceNM}
+                disabled={simbriefDistanceLocked}
+                title={
+                  simbriefDistanceLocked
+                    ? "Locked: distance imported from SimBrief"
+                    : undefined
+                }
+                onChange={(e) => {
+                  // If SimBrief import succeeded, lock Planned Distance so it can't fight the imported/estimated distance.
+                  if (simbriefDistanceLocked) return;
+
+                  // User override: use this value for calculations, but do NOT wipe the estimated route distance display.
+                  setDistanceSource("none");
+                  lastAutoDistanceRef.current = null;
+
+                  const next = parseFloat(e.target.value || "0");
+                  setManualDistanceNM(Number.isFinite(next) ? next : 0);
+
+                  // Re-enable auto-FL (it should recompute from the new Planned Distance).
+                  setCruiseFLTouched(false);
+                  setCruiseFLNotice("");
+                }}
+              />
               <div className="text-xs text-slate-400 mt-1">
-                Enter distance from your flight planner. We’ll compute Climb/Cruise/Descent from this and FL.
+                {simbriefDistanceLocked
+                  ? "Locked: SimBrief import is active. Planned Distance is derived from the imported/estimated route distance."
+                  : "Enter distance from your flight planner. We’ll compute Climb/Cruise/Descent from this and FL."}
               </div>
             </div>
             <div>
@@ -1756,42 +2057,52 @@ function ConcordePlannerCanvas() {
                 step={10}
                 onChange={(e) => {
                   const next = e.target.value;
-                  setCruiseFLTouched(true);
                   setCruiseFLText(next);
+
+                  // Track whether the user actually changed the value during this focus session.
+                  if (cruiseFLFocusValueRef.current !== null && next !== cruiseFLFocusValueRef.current) {
+                    cruiseFLEditedRef.current = true;
+                  }
 
                   // Update calculations live when parsable, but don't snap while typing.
                   const n = Number(next);
                   if (Number.isFinite(n)) setCruiseFL(n);
                 }}
+                onFocus={() => {
+                  cruiseFLFocusValueRef.current = cruiseFLText;
+                  cruiseFLEditedRef.current = false;
+                }}
                 onBlur={() => {
                   const n = Number(cruiseFLText);
                   if (!Number.isFinite(n)) {
                     setCruiseFLNotice("Invalid FL value.");
+                    // Reset focus tracking.
+                    cruiseFLFocusValueRef.current = null;
+                    cruiseFLEditedRef.current = false;
                     return;
                   }
 
-                  // 1) Clamp to Concorde max
-                  let clamped = clampCruiseFL(n);
-                  let noticeParts: string[] = [];
+                  const next = normalizeCruiseFLByRules(n, directionEW);
 
-                  if (n !== clamped) {
-                    noticeParts.push(`Clamped to FL${clamped} (max FL${MAX_CONCORDE_FL}).`);
+                  // Build a helpful notice (only if we changed what the user typed)
+                  if (next !== Math.round(n)) {
+                    const dirMsg = directionEW
+                      ? ` (${directionEW === "E" ? "Eastbound" : "Westbound"})`
+                      : " (direction unknown)";
+                    setCruiseFLNotice(`Adjusted to valid FL${next}${dirMsg}.`);
+                  } else {
+                    setCruiseFLNotice("");
                   }
 
-                  // 2) Apply Non-RVSM snapping above FL410 when direction is known
-                  if (directionEW && clamped >= NON_RVSM_MIN_FL) {
-                    const { snapped, changed } = snapToNonRvsm(clamped, directionEW);
-                    if (changed) {
-                      noticeParts.push(
-                        `Adjusted to Non-RVSM FL${snapped} (${directionEW === "E" ? "Eastbound" : "Westbound"}).`
-                      );
-                      clamped = snapped;
-                    }
-                  }
+                  setCruiseFL(next);
+                  setCruiseFLText(String(next));
 
-                  setCruiseFL(clamped);
-                  setCruiseFLText(String(clamped));
-                  setCruiseFLNotice(noticeParts.join(" "));
+                  // Only mark as touched if they actually edited during this focus.
+                  if (cruiseFLEditedRef.current) setCruiseFLTouched(true);
+
+                  // Reset focus tracking.
+                  cruiseFLFocusValueRef.current = null;
+                  cruiseFLEditedRef.current = false;
                 }}
               />
               <div className="text-xs text-slate-400 mt-1">
@@ -1806,10 +2117,58 @@ function ConcordePlannerCanvas() {
               {cruiseFLNotice && (
                 <div
                   className={`text-xs mt-1 ${
-                    cruiseFLNotice.startsWith("Auto-selected") ? "text-emerald-300" : "text-rose-300"
+                    cruiseFLNotice.startsWith("Auto-selected")
+                      ? "text-emerald-300"
+                      : cruiseFLNotice.startsWith("Adjusted")
+                      ? "text-amber-300"
+                      : cruiseFLNotice.startsWith("Invalid")
+                      ? "text-rose-300"
+                      : "text-slate-300"
                   }`}
                 >
                   {cruiseFLNotice}
+                </div>
+              )}
+              {DEBUG_FL_AUTOPICK && (
+                <div className="mt-2 text-[11px] text-slate-400 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      className="h-8 px-3 text-xs"
+                      onClick={() => {
+                        // Re-enable auto FL logic
+                        setCruiseFLTouched(false);
+                        setCruiseFLNotice("Auto-FL unlocked.");
+                      }}
+                      type="button"
+                    >
+                      Unlock Auto-FL
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      className="h-8 px-3 text-xs"
+                      onClick={() => {
+                        // Force apply the current recommendation (if any)
+                        if (!autoFLRec) {
+                          setCruiseFLNotice("Auto-FL: no recommendation (check Planned Distance).");
+                          return;
+                        }
+                        setCruiseFLTouched(false);
+                        applyCruiseFL(autoFLRec.fl, autoFLRec.note);
+                      }}
+                      type="button"
+                    >
+                      Apply Auto-FL Now
+                    </Button>
+                  </div>
+
+                  <div className="font-mono text-[10px] leading-snug">
+                    <div>plannedDistance: <b>{plannedDistance || 0}</b> NM</div>
+                    <div>distanceSource: <b>{distanceSource}</b> | manualDistanceNM: <b>{manualDistanceNM}</b> | routeDistanceNM: <b>{routeDistanceNM ?? "—"}</b></div>
+                    <div>directionEW: <b>{directionEW ?? "—"}</b> | cruiseFLTouched: <b>{String(cruiseFLTouched)}</b> | isEditingFL: <b>{String(cruiseFLFocusValueRef.current !== null)}</b></div>
+                    <div>autoFLRec: <b>{autoFLRec ? `FL${autoFLRec.fl}` : "—"}</b></div>
+                  </div>
                 </div>
               )}
             </div>
