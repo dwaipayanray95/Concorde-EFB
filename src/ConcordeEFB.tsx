@@ -7,7 +7,7 @@
 // • METAR fetch more robust: tries AviationWeather API, then VATSIM fallback.
 // • All units metric (kg, m); longest-runway autopick; crosswind/headwind components.
 // • Self-tests cover manual-distance sanity, fuel monotonicity, feasibility sanity.
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import type {
   ButtonHTMLAttributes,
   InputHTMLAttributes,
@@ -1076,6 +1076,9 @@ function ConcordePlannerCanvas() {
   });
   const [simbriefNotice, setSimbriefNotice] = useState<string>("");
   const [simbriefLoading, setSimbriefLoading] = useState(false);
+  const [distanceSource, setDistanceSource] = useState<"none" | "simbrief" | "auto">("none");
+  const simbriefRouteSetRef = useRef(false);
+  const lastAutoDistanceRef = useRef<number | null>(null);
   const [altIcao, setAltIcao] = useState("");
   const [trimTankKg, setTrimTankKg] = useState(0);
 
@@ -1362,20 +1365,27 @@ function ConcordePlannerCanvas() {
         setArrIcao(extracted.destIcao);
         setArrRw("");
       }
+
+      const hasSimbriefDistance = typeof extracted.distanceNm === "number" && extracted.distanceNm > 0;
+
       if (extracted.route) {
+        // If SimBrief provided a distance, we will trust it and avoid auto-recomputing once.
+        if (hasSimbriefDistance) simbriefRouteSetRef.current = true;
         setRouteText(extracted.route);
       }
 
-      if (typeof extracted.distanceNm === "number" && extracted.distanceNm > 0) {
-        const rounded = Math.round(extracted.distanceNm);
+      if (hasSimbriefDistance) {
+        const rounded = Math.round(extracted.distanceNm!);
         setManualDistanceNM(rounded);
-        setRouteDistanceNM(extracted.distanceNm);
+        setRouteDistanceNM(extracted.distanceNm!);
         setRouteInfo(null);
-        setRouteNotice(`Imported from SimBrief: ${rounded.toLocaleString()} NM.`);
+        setRouteNotice("");
+        setDistanceSource("simbrief");
+        lastAutoDistanceRef.current = null;
       } else {
-        setRouteNotice(
-          "Imported from SimBrief. Distance not found in JSON; you can still click Compute & Apply Distance."
-        );
+        // No distance in the SimBrief JSON; we'll try auto-estimating from the route string.
+        setDistanceSource("none");
+        setRouteNotice("");
       }
 
       const dep = extracted.originIcao ? ` ${extracted.originIcao}` : "";
@@ -1387,6 +1397,40 @@ function ConcordePlannerCanvas() {
       setSimbriefLoading(false);
     }
   };
+  useEffect(() => {
+    const text = (routeText || "").trim();
+    if (!text) {
+      setRouteDistanceNM(null);
+      if (distanceSource === "auto") setDistanceSource("none");
+      return;
+    }
+
+    const t = window.setTimeout(() => {
+      // Skip one auto-calc right after a SimBrief import that already set a distance.
+      if (simbriefRouteSetRef.current) {
+        simbriefRouteSetRef.current = false;
+        return;
+      }
+
+      const out = computeRouteDistanceFromText(text);
+      if (!out) {
+        setRouteDistanceNM(null);
+        return;
+      }
+
+      setRouteDistanceNM(out.distanceNM);
+      setDistanceSource("auto");
+
+      // Only auto-update Planned Distance if the user hasn't overridden it manually.
+      const rounded = Math.round(out.distanceNM);
+      if (manualDistanceNM === 0 || manualDistanceNM === (lastAutoDistanceRef.current ?? -1)) {
+        setManualDistanceNM(rounded);
+        lastAutoDistanceRef.current = rounded;
+      }
+    }, 300);
+
+    return () => window.clearTimeout(t);
+  }, [routeText, airports, navaids, depInfo, arrInfo, manualDistanceNM, distanceSource]);
 
   function applyRouteDistance() {
     setRouteNotice("");
@@ -1462,73 +1506,80 @@ function ConcordePlannerCanvas() {
 
         <Card
           title="Route (paste from SimBrief / OFP)"
-          right={
-            <Button variant="ghost" onClick={applyRouteDistance}>
-              Compute &amp; Apply Distance
-            </Button>
-          }
         >
-          <div className="text-sm text-slate-300 mb-2">
-            Paste your route string (tokens separated by spaces). We’ll estimate distance using airports + OurAirports navaids.
-            Planned Distance below will stay editable — override anytime.
-          </div>
+          <div className="mb-3">
+            <Label>SimBrief Username / ID (optional)</Label>
 
-          <div className="grid gap-3 md:grid-cols-3 grid-cols-1 mb-3">
-            <div className="md:col-span-2">
-              <Label>SimBrief Username / ID (optional)</Label>
-              <Input
-                value={simbriefUser}
-                placeholder="e.g. theawesomeray"
-                onChange={(e) => setSimbriefUser(e.target.value)}
-              />
-              <div className="text-xs text-slate-400 mt-1">
-                This pulls your latest OFP from SimBrief and auto-fills DEP/ARR/route + planned distance.
+            <div className="flex items-end gap-2 flex-wrap">
+              <div className="w-full sm:w-auto sm:max-w-xs">
+                <Input
+                  className="py-1.5 text-sm"
+                  value={simbriefUser}
+                  placeholder="SimBrief username"
+                  onChange={(e) => setSimbriefUser(e.target.value)}
+                />
               </div>
-            </div>
-            <div className="flex items-end">
+
               <Button
-                className="w-full"
+                className="px-3 py-1.5 text-sm whitespace-nowrap"
                 onClick={importFromSimbrief}
                 disabled={simbriefLoading}
               >
-                {simbriefLoading ? "Importing…" : "Import from SimBrief"}
+                <span className="inline-flex items-center gap-2">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    className="h-4 w-4"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 3a1 1 0 0 1 1 1v8.586l2.293-2.293a1 1 0 1 1 1.414 1.414l-4.007 4.007a1 1 0 0 1-1.4.012l-4.02-4.02a1 1 0 1 1 1.414-1.414L11 12.586V4a1 1 0 0 1 1-1Z" />
+                    <path d="M5 20a1 1 0 0 1-1-1v-2a1 1 0 1 1 2 0v1h12v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H5Z" />
+                  </svg>
+                  {simbriefLoading ? "Importing…" : "Import"}
+                </span>
               </Button>
             </div>
           </div>
 
           {simbriefNotice && (
-            <div className="mb-2 text-xs text-slate-400">{simbriefNotice}</div>
+            <div
+              className={`mb-2 text-xs ${
+                simbriefNotice.startsWith("Imported") ? "text-emerald-400" : "text-rose-300"
+              }`}
+            >
+              {simbriefNotice}
+            </div>
           )}
 
           <textarea
-            className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-            rows={3}
-            placeholder="Example: EGLL CPT DCT KJFK"
+            className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 text-xs leading-snug"
+            rows={1}
+            placeholder="Route will auto-fill from SimBrief (or paste here)"
             value={routeText}
-            onChange={(e) => setRouteText(e.target.value)}
+            onChange={(e) => {
+              // user is manually editing/pasting; distance becomes an auto-estimate
+              setDistanceSource("auto");
+              setRouteText(e.target.value);
+            }}
           />
 
-          <div className="mt-3 grid gap-3 md:grid-cols-3 grid-cols-1">
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-              <div className="text-xs text-slate-400">Estimated Route Distance</div>
-              <div className="text-lg font-semibold">
+          {distanceSource === "simbrief" && (
+            <div className="mt-2 text-xs text-emerald-400">Imported from SimBrief</div>
+          )}
+          {distanceSource === "auto" && (
+            <div className="mt-2 text-xs text-yellow-400">
+              Auto-calculated route distance might not be accurate for now
+            </div>
+          )}
+
+          <div className="mt-3">
+            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 w-fit min-w-[200px]">
+              <div className="text-[11px] text-slate-400">Estimated Route Distance</div>
+              <div className="text-base font-semibold">
                 {routeDistanceNM != null
                   ? `${Math.round(routeDistanceNM).toLocaleString()} NM`
                   : "—"}
-              </div>
-            </div>
-
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-              <div className="text-xs text-slate-400">Recognized</div>
-              <div className="text-lg font-semibold">
-                Procedures: {routeInfo?.recognized.procedures.length ?? 0} • Airway: {routeInfo?.recognized.airways.length ?? 0} • Points: {routeInfo?.points.length ?? 0}
-              </div>
-            </div>
-
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-              <div className="text-xs text-slate-400">Unresolved Tokens</div>
-              <div className="text-lg font-semibold">
-                {routeInfo?.recognized.unresolved.length ?? 0}
               </div>
             </div>
           </div>
