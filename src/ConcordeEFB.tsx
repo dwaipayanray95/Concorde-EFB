@@ -1231,7 +1231,8 @@ function ConcordePlannerCanvas() {
   const [simbriefNotice, setSimbriefNotice] = useState<string>("");
   const [simbriefLoading, setSimbriefLoading] = useState(false);
   const [simbriefImported, setSimbriefImported] = useState(false);
-  const [distanceSource, setDistanceSource] = useState<"none" | "simbrief" | "auto">("none");
+  const [plannedDistanceOverridden, setPlannedDistanceOverridden] = useState(false);
+  const [distanceSource, setDistanceSource] = useState<"none" | "simbrief" | "auto" | "manual">("none");
   const simbriefRouteSetRef = useRef(false);
   const lastAutoDistanceRef = useRef<number | null>(null);
   const cruiseFLFocusValueRef = useRef<string | null>(null);
@@ -1347,17 +1348,21 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
 
   const plannedDistance = useMemo(() => {
     // Source of truth for calculations:
-    // - If SimBrief provided a distance, use that (keeps FL + fuel consistent with OFP).
+    // - If user explicitly overrides the Planned Distance, use that.
+    // - Else if SimBrief provided a distance and we're using SimBrief distance, use that.
     // - Otherwise fall back to the manual Planned Distance input.
+
+    const manual = Number(manualDistanceNM);
+    if (distanceSource === "manual") {
+      return Number.isFinite(manual) && manual > 0 ? manual : 0;
+    }
+
     const sb = Number(routeDistanceNM);
     if (distanceSource === "simbrief" && Number.isFinite(sb) && sb > 0) return sb;
 
-    const v = Number(manualDistanceNM);
-    return Number.isFinite(v) && v > 0 ? v : 0;
+    return Number.isFinite(manual) && manual > 0 ? manual : 0;
   }, [manualDistanceNM, routeDistanceNM, distanceSource]);
 
-  // If SimBrief import succeeded, lock manual Planned Distance edits so the OFP/route distance stays the source of truth.
-  const simbriefDistanceLocked = simbriefImported;
 
   // --- Auto cruise FL from Planned Distance ---
   // Planned Distance drives the FL recommendation. We only auto-set FL when the user
@@ -1667,6 +1672,7 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
         setRouteInfo(null);
         setRouteNotice("");
         setDistanceSource("simbrief");
+        setPlannedDistanceOverridden(false);
         lastAutoDistanceRef.current = null;
 
         // IMPORTANT: SimBrief distance should drive auto-FL again.
@@ -1676,6 +1682,7 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
         // No distance in the SimBrief JSON; we'll auto-estimate from the route string.
         // Keep the estimated distance visible and let Planned Distance be re-derived from it.
         setDistanceSource("auto");
+        setPlannedDistanceOverridden(false);
         setRouteNotice("");
         setManualDistanceNM(0);
         lastAutoDistanceRef.current = null;
@@ -1704,6 +1711,10 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
       if (distanceSource === "auto") setDistanceSource("none");
       return;
     }
+
+    // Only auto-compute route distance when we're explicitly in auto mode.
+    // This prevents manual Planned Distance edits from overwriting the imported/estimated route distance.
+    if (distanceSource !== "auto") return;
 
     const t = window.setTimeout(() => {
       // Skip one auto-calc right after a SimBrief import that already set a distance.
@@ -1887,6 +1898,7 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                   onChange={(e) => {
                     // user is manually editing/pasting; distance becomes an auto-estimate
                     setDistanceSource("auto");
+                    setPlannedDistanceOverridden(false);
                     setRouteText(e.target.value);
                   }}
                 />
@@ -1916,15 +1928,14 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                 </div>
 
                 {/* Status should live under the distance box */}
-                {distanceSource === "simbrief" && (
-                  <div className="mt-2 text-xs text-emerald-400">
-                    Imported from SimBrief
-                  </div>
+                {simbriefImported && distanceSource === "simbrief" && (
+                  <div className="mt-2 text-xs text-emerald-400">Imported from SimBrief</div>
                 )}
-                {distanceSource === "auto" && (
-                  <div className="mt-2 text-xs text-yellow-400">
-                    Auto-calculated route distance might not be accurate for now
-                  </div>
+                {simbriefImported && distanceSource !== "simbrief" && plannedDistanceOverridden && (
+                  <div className="mt-2 text-xs text-amber-300">Imported from SimBrief • Planned Distance overridden</div>
+                )}
+                {distanceSource === "manual" && !simbriefImported && (
+                  <div className="mt-2 text-xs text-amber-300">Using manual Planned Distance</div>
                 )}
               </div>
             </div>
@@ -2019,18 +2030,10 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
               <Input
                 type="number"
                 value={manualDistanceNM}
-                disabled={simbriefDistanceLocked}
-                title={
-                  simbriefDistanceLocked
-                    ? "Locked: distance imported from SimBrief"
-                    : undefined
-                }
                 onChange={(e) => {
-                  // If SimBrief import succeeded, lock Planned Distance so it can't fight the imported/estimated distance.
-                  if (simbriefDistanceLocked) return;
-
-                  // User override: use this value for calculations, but do NOT wipe the estimated route distance display.
-                  setDistanceSource("none");
+                  // User override: use this value for calculations, but do NOT change the SimBrief/route distance display.
+                  setDistanceSource("manual");
+                  if (simbriefImported) setPlannedDistanceOverridden(true);
                   lastAutoDistanceRef.current = null;
 
                   const next = parseFloat(e.target.value || "0");
@@ -2042,8 +2045,8 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                 }}
               />
               <div className="text-xs text-slate-400 mt-1">
-                {simbriefDistanceLocked
-                  ? "Locked: SimBrief import is active. Planned Distance is derived from the imported/estimated route distance."
+                {simbriefImported
+                  ? "SimBrief imported: you can override Planned Distance manually (this won’t change the imported route distance shown above)."
                   : "Enter distance from your flight planner. We’ll compute Climb/Cruise/Descent from this and FL."}
               </div>
             </div>
