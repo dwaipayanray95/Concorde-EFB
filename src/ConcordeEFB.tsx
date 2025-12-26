@@ -295,6 +295,7 @@ type SimbriefExtract = {
   alternateIcao?: string;
   route?: string;
   distanceNm?: number;
+  cruiseFL?: number;
   raw?: unknown;
 };
 
@@ -306,6 +307,31 @@ function normalizeIcao4(v: unknown): string | undefined {
 function toNumberOrUndefined(v: unknown): number | undefined {
   const n = typeof v === "number" ? v : Number(String(v ?? "").trim());
   return Number.isFinite(n) ? n : undefined;
+}
+function parseSimbriefCruiseFL(v: unknown): number | undefined {
+  if (v == null) return undefined;
+
+  // Common SimBrief patterns: "FL590", "590", "59000" (ft), 59000 (ft)
+  if (typeof v === "string") {
+    const s = v.trim().toUpperCase();
+    const m = /^FL\s*(\d{2,3})$/.exec(s);
+    if (m) {
+      const fl = Number(m[1]);
+      return Number.isFinite(fl) ? fl : undefined;
+    }
+    const asNum = toNumberOrUndefined(s);
+    if (asNum == null) return undefined;
+    if (asNum >= 1000) return Math.round(asNum / 100); // feet -> FL
+    return Math.round(asNum); // treat as FL
+  }
+
+  if (typeof v === "number") {
+    if (!Number.isFinite(v)) return undefined;
+    if (v >= 1000) return Math.round(v / 100); // feet -> FL
+    return Math.round(v);
+  }
+
+  return undefined;
 }
 
 function extractSimbrief(data: any): SimbriefExtract {
@@ -350,7 +376,14 @@ function extractSimbrief(data: any): SimbriefExtract {
     toNumberOrUndefined(ofp?.general?.air_distance) ??
     toNumberOrUndefined(ofp?.general?.air_distance_nm);
 
-  return { originIcao, destIcao, alternateIcao, route, distanceNm: dist, raw: data };
+    const cruiseFL =
+    parseSimbriefCruiseFL(ofp?.general?.cruise_altitude) ??
+    parseSimbriefCruiseFL(ofp?.general?.cruise_altitude_ft) ??
+    parseSimbriefCruiseFL(ofp?.general?.crz_alt) ??
+    parseSimbriefCruiseFL(ofp?.general?.initial_altitude) ??
+    parseSimbriefCruiseFL(ofp?.general?.initial_altitude_ft);
+
+  return { originIcao, destIcao, alternateIcao, route, distanceNm: dist, cruiseFL, raw: data };
 }
 
 async function fetchSimbrief(usernameOrId: string): Promise<SimbriefExtract> {
@@ -1233,6 +1266,7 @@ function ConcordePlannerCanvas() {
   const [simbriefImported, setSimbriefImported] = useState(false);
   const [plannedDistanceOverridden, setPlannedDistanceOverridden] = useState(false);
   const [distanceSource, setDistanceSource] = useState<"none" | "simbrief" | "auto" | "manual">("none");
+  const [simbriefCruiseFL, setSimbriefCruiseFL] = useState<number | null>(null);
   const simbriefRouteSetRef = useRef(false);
   const lastAutoDistanceRef = useRef<number | null>(null);
   const cruiseFLFocusValueRef = useRef<string | null>(null);
@@ -1347,21 +1381,11 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
   );
 
   const plannedDistance = useMemo(() => {
-    // Source of truth for calculations:
-    // - If user explicitly overrides the Planned Distance, use that.
-    // - Else if SimBrief provided a distance and we're using SimBrief distance, use that.
-    // - Otherwise fall back to the manual Planned Distance input.
-
+    // Source of truth for *all* calculations is the Planned Distance input.
+    // SimBrief/route distance is displayed separately and must never override this value.
     const manual = Number(manualDistanceNM);
-    if (distanceSource === "manual") {
-      return Number.isFinite(manual) && manual > 0 ? manual : 0;
-    }
-
-    const sb = Number(routeDistanceNM);
-    if (distanceSource === "simbrief" && Number.isFinite(sb) && sb > 0) return sb;
-
     return Number.isFinite(manual) && manual > 0 ? manual : 0;
-  }, [manualDistanceNM, routeDistanceNM, distanceSource]);
+  }, [manualDistanceNM]);
 
 
   // --- Auto cruise FL from Planned Distance ---
@@ -1380,9 +1404,19 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
 
     if (!rec) return null;
 
-    const fl = normalizeCruiseFLByRules(rec.fl, directionEW);
-    return { fl, note: rec.note };
-  }, [plannedDistance, directionEW]);
+    // Default: our model-driven recommendation
+    let fl = normalizeCruiseFLByRules(rec.fl, directionEW);
+    let note = rec.note;
+
+    // Short-sector fallback: if we cannot meet minimum cruise time, prefer SimBrief cruise FL (if available).
+    if (!rec.meetsMinimum && simbriefImported && Number.isFinite(simbriefCruiseFL ?? NaN)) {
+      const sb = normalizeCruiseFLByRules(simbriefCruiseFL as number, directionEW);
+      fl = sb;
+      note = `Warning: short sector — unable to guarantee ≥15 min cruise with our profile model. Using SimBrief cruise FL${sb}.`;
+    }
+
+    return { fl, note };
+  }, [plannedDistance, directionEW, simbriefImported, simbriefCruiseFL]);
 
   useEffect(() => {
     // Don't fight the user while they're typing.
@@ -1644,6 +1678,7 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
       const extracted = await fetchSimbrief(u);
       // For debugging in case SimBrief changes fields.
       console.log("SimBrief raw JSON:", extracted.raw);
+      setSimbriefCruiseFL(Number.isFinite(extracted.cruiseFL as number) ? (extracted.cruiseFL as number) : null);
 
       if (extracted.originIcao) {
         setDepIcao(extracted.originIcao);
@@ -1928,14 +1963,13 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                 </div>
 
                 {/* Status should live under the distance box */}
-                {simbriefImported && distanceSource === "simbrief" && (
+                {simbriefImported && !plannedDistanceOverridden && distanceSource === "simbrief" && (
                   <div className="mt-2 text-xs text-emerald-400">Imported from SimBrief</div>
                 )}
-                {simbriefImported && distanceSource !== "simbrief" && plannedDistanceOverridden && (
-                  <div className="mt-2 text-xs text-amber-300">Imported from SimBrief • Planned Distance overridden</div>
-                )}
-                {distanceSource === "manual" && !simbriefImported && (
-                  <div className="mt-2 text-xs text-amber-300">Using manual Planned Distance</div>
+                {simbriefImported && plannedDistanceOverridden && (
+                  <div className="mt-2 text-xs text-amber-300">
+                    Imported from SimBrief • Planned Distance overridden
+                  </div>
                 )}
               </div>
             </div>
@@ -2032,7 +2066,6 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                 value={manualDistanceNM}
                 onChange={(e) => {
                   // User override: use this value for calculations, but do NOT change the SimBrief/route distance display.
-                  setDistanceSource("manual");
                   if (simbriefImported) setPlannedDistanceOverridden(true);
                   lastAutoDistanceRef.current = null;
 
@@ -2120,8 +2153,10 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
               {cruiseFLNotice && (
                 <div
                   className={`text-xs mt-1 ${
-                    cruiseFLNotice.startsWith("Auto-selected")
-                      ? "text-emerald-300"
+                    cruiseFLNotice.startsWith("Warning")
+                      ? "text-amber-300"
+                      : cruiseFLNotice.startsWith("Adjusted")
+                      ? "text-amber-300"
                       : cruiseFLNotice.startsWith("Adjusted")
                       ? "text-amber-300"
                       : cruiseFLNotice.startsWith("Invalid")
