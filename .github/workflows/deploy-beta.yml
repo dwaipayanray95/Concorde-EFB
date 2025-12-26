@@ -21,8 +21,16 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Versions
+        run: |
+          node -v
+          npm -v
+
+      # NOTE: Using `npm install` here makes the beta deploy resilient if package-lock
+      # drifts during rapid iteration. If you want fully reproducible CI builds,
+      # switch back to `npm ci` after you commit an updated package-lock.json.
       - name: Install deps
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Build (beta base)
         run: npm run build:beta
