@@ -296,6 +296,8 @@ type SimbriefExtract = {
   route?: string;
   distanceNm?: number;
   cruiseFL?: number;
+  depMetar?: string;
+  arrMetar?: string;
   raw?: unknown;
 };
 
@@ -307,6 +309,11 @@ function normalizeIcao4(v: unknown): string | undefined {
 function toNumberOrUndefined(v: unknown): number | undefined {
   const n = typeof v === "number" ? v : Number(String(v ?? "").trim());
   return Number.isFinite(n) ? n : undefined;
+}
+function toMetarLineOrUndefined(v: unknown): string | undefined {
+  if (typeof v !== "string") return undefined;
+  const line = (v.split(/\r?\n/)[0] || "").trim();
+  return line ? line : undefined;
 }
 function parseSimbriefCruiseFL(v: unknown): number | undefined {
   if (v == null) return undefined;
@@ -368,6 +375,25 @@ function extractSimbrief(data: any): SimbriefExtract {
 
   const route = typeof routeRaw === "string" ? routeRaw.trim() : undefined;
 
+  // METARs (SimBrief often includes these; if present, we can auto-fill wind components without needing a fetch)
+  const depMetar =
+    toMetarLineOrUndefined(ofp?.origin?.metar) ??
+    toMetarLineOrUndefined(ofp?.origin?.metar_raw) ??
+    toMetarLineOrUndefined(ofp?.weather?.origin_metar) ??
+    toMetarLineOrUndefined(ofp?.weather?.orig_metar) ??
+    toMetarLineOrUndefined(ofp?.weather?.departure_metar) ??
+    toMetarLineOrUndefined(ofp?.wx?.origin_metar) ??
+    toMetarLineOrUndefined(ofp?.wx?.dep_metar);
+
+  const arrMetar =
+    toMetarLineOrUndefined(ofp?.destination?.metar) ??
+    toMetarLineOrUndefined(ofp?.destination?.metar_raw) ??
+    toMetarLineOrUndefined(ofp?.weather?.destination_metar) ??
+    toMetarLineOrUndefined(ofp?.weather?.dest_metar) ??
+    toMetarLineOrUndefined(ofp?.weather?.arrival_metar) ??
+    toMetarLineOrUndefined(ofp?.wx?.destination_metar) ??
+    toMetarLineOrUndefined(ofp?.wx?.arr_metar);
+
   // Distance keys can vary across SimBrief formats.
   const dist =
     toNumberOrUndefined(ofp?.general?.route_distance) ??
@@ -376,14 +402,24 @@ function extractSimbrief(data: any): SimbriefExtract {
     toNumberOrUndefined(ofp?.general?.air_distance) ??
     toNumberOrUndefined(ofp?.general?.air_distance_nm);
 
-    const cruiseFL =
+  const cruiseFL =
     parseSimbriefCruiseFL(ofp?.general?.cruise_altitude) ??
     parseSimbriefCruiseFL(ofp?.general?.cruise_altitude_ft) ??
     parseSimbriefCruiseFL(ofp?.general?.crz_alt) ??
     parseSimbriefCruiseFL(ofp?.general?.initial_altitude) ??
     parseSimbriefCruiseFL(ofp?.general?.initial_altitude_ft);
 
-  return { originIcao, destIcao, alternateIcao, route, distanceNm: dist, cruiseFL, raw: data };
+  return {
+    originIcao,
+    destIcao,
+    alternateIcao,
+    route,
+    distanceNm: dist,
+    cruiseFL,
+    depMetar,
+    arrMetar,
+    raw: data,
+  };
 }
 
 async function fetchSimbrief(usernameOrId: string): Promise<SimbriefExtract> {
@@ -1691,6 +1727,11 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
       if (extracted.alternateIcao) {
         setAltIcao(extracted.alternateIcao);
       }
+
+      // Auto-fill METARs from SimBrief (if available) so wind components populate immediately.
+      if (extracted.depMetar) setMetarDep(extracted.depMetar);
+      if (extracted.arrMetar) setMetarArr(extracted.arrMetar);
+      if (extracted.depMetar || extracted.arrMetar) setMetarErr("");
 
       const hasSimbriefDistance = typeof extracted.distanceNm === "number" && extracted.distanceNm > 0;
 
