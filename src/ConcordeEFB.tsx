@@ -7,7 +7,7 @@
 // • METAR fetch more robust: tries AviationWeather API, then VATSIM fallback.
 // • All units metric (kg, m); longest-runway autopick; crosswind/headwind components.
 // • Self-tests cover manual-distance sanity, fuel monotonicity, feasibility sanity.
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import type {
   ButtonHTMLAttributes,
   InputHTMLAttributes,
@@ -16,7 +16,7 @@ import type {
 } from "react";
 import Papa from "papaparse";
 
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "0.85-beta";
 
 // Public, no-auth “opens” counter via an SVG badge.
 // The badge request itself increments the counter, so every app open updates it.
@@ -130,7 +130,7 @@ type NavaidInfo = {
   name: string;
 };
 
-type NavaidIndex = Record<string, NavaidInfo>;
+type NavaidIndex = Record<string, NavaidInfo[]>;
 
 type RoutePoint = {
   label: string;
@@ -146,6 +146,90 @@ type RouteResolution = {
     unresolved: string[];
   };
 };
+
+type SimbriefExtract = {
+  originIcao?: string;
+  destIcao?: string;
+  alternateIcao?: string;
+  route?: string;
+  distanceNm?: number;
+  raw?: unknown;
+};
+
+function normalizeIcao4(v: unknown): string | undefined {
+  const s = String(v ?? "").trim().toUpperCase();
+  return /^[A-Z]{4}$/.test(s) ? s : undefined;
+}
+
+function toNumberOrUndefined(v: unknown): number | undefined {
+  const n = typeof v === "number" ? v : Number(String(v ?? "").trim());
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function extractSimbrief(data: any): SimbriefExtract {
+  const ofp = data?.ofp ?? data;
+
+  const originIcao =
+    normalizeIcao4(ofp?.origin?.icao_code) ??
+    normalizeIcao4(ofp?.origin?.icao) ??
+    normalizeIcao4(ofp?.general?.origin_icao) ??
+    normalizeIcao4(ofp?.general?.dep_icao);
+
+  const destIcao =
+    normalizeIcao4(ofp?.destination?.icao_code) ??
+    normalizeIcao4(ofp?.destination?.icao) ??
+    normalizeIcao4(ofp?.general?.destination_icao) ??
+    normalizeIcao4(ofp?.general?.arr_icao);
+
+  const alternateIcao =
+    normalizeIcao4(ofp?.alternate?.icao_code) ??
+    normalizeIcao4(ofp?.alternate?.icao) ??
+    normalizeIcao4(ofp?.alternate?.alt_icao) ??
+    normalizeIcao4(ofp?.general?.alternate_icao) ??
+    normalizeIcao4(ofp?.general?.alternate) ??
+    normalizeIcao4(ofp?.general?.alt_icao) ??
+    normalizeIcao4(ofp?.general?.altn_icao) ??
+    normalizeIcao4(ofp?.general?.alternate1_icao) ??
+    normalizeIcao4(ofp?.general?.alternate2_icao);
+
+  const routeRaw =
+    ofp?.atc?.route ??
+    ofp?.general?.route ??
+    ofp?.general?.route_string ??
+    ofp?.navlog?.route;
+
+  const route = typeof routeRaw === "string" ? routeRaw.trim() : undefined;
+
+  // Distance keys can vary across SimBrief formats.
+  const dist =
+    toNumberOrUndefined(ofp?.general?.route_distance) ??
+    toNumberOrUndefined(ofp?.general?.distance) ??
+    toNumberOrUndefined(ofp?.general?.dist_nm) ??
+    toNumberOrUndefined(ofp?.general?.air_distance) ??
+    toNumberOrUndefined(ofp?.general?.air_distance_nm);
+
+  return { originIcao, destIcao, alternateIcao, route, distanceNm: dist, raw: data };
+}
+
+async function fetchSimbrief(usernameOrId: string): Promise<SimbriefExtract> {
+  const u = String(usernameOrId ?? "").trim();
+  if (!u) throw new Error("Enter a SimBrief username/ID.");
+
+  // SimBrief JSON endpoint
+  const url = `https://www.simbrief.com/api/xml.fetcher.php?username=${encodeURIComponent(u)}&json=1`;
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`SimBrief fetch failed (${res.status}).`);
+
+  const data = await res.json();
+  const extracted = extractSimbrief(data);
+
+  // Helpful error if the payload is not what we expect.
+  if (!extracted.originIcao && !extracted.destIcao && !extracted.route && !extracted.distanceNm) {
+    throw new Error("SimBrief response parsed, but expected fields were not found. (Check console for raw JSON)");
+  }
+
+  return extracted;
+}
 
 type MetarParse = {
   wind_dir_deg: number | null;
@@ -427,6 +511,8 @@ const AIRPORTS_CSV_URL =
   "https://raw.githubusercontent.com/davidmegginson/ourairports-data/master/airports.csv";
 const RUNWAYS_CSV_URL =
   "https://raw.githubusercontent.com/davidmegginson/ourairports-data/master/runways.csv";
+const NAVAIDS_CSV_URL =
+  "https://raw.githubusercontent.com/davidmegginson/ourairports-data/master/navaids.csv";
 type AirportCsvRow = {
   ident?: string;
   latitude_deg?: string;
@@ -442,6 +528,14 @@ type RunwayCsvRow = {
   he_ident?: string;
   le_heading_degT?: string;
   he_heading_degT?: string;
+};
+
+type NavaidCsvRow = {
+  ident?: string;
+  latitude_deg?: string;
+  longitude_deg?: string;
+  type?: string;
+  name?: string;
 };
 
 function buildWorldAirportDB(
@@ -502,21 +596,105 @@ function buildWorldAirportDB(
   return airportsMap;
 }
 
+function buildNavaidsDB(navaidsCsvText: string): NavaidIndex {
+  const rows = Papa.parse<NavaidCsvRow>(navaidsCsvText, {
+    header: true,
+    skipEmptyLines: true,
+  }).data;
+
+  const navaids: NavaidIndex = {};
+
+  for (const r of rows) {
+    const ident = (r?.ident || "").trim().toUpperCase();
+    if (!ident) continue;
+
+    const lat = parseFloat(r?.latitude_deg ?? "");
+    const lon = parseFloat(r?.longitude_deg ?? "");
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
+    const entry: NavaidInfo = {
+      ident,
+      lat,
+      lon,
+      type: (r?.type || "NAVAID").toString(),
+      name: (r?.name || ident).toString(),
+    };
+
+    if (!navaids[ident]) navaids[ident] = [];
+    navaids[ident].push(entry);
+  }
+
+  return navaids;
+}
+
 const LATLON_RE = /^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/;
 const AIRWAY_RE = /^[A-Z]{1,2}\d{1,3}$/;
 const PROCEDURE_RE = /^(DCT|SID[A-Z0-9-]*|STAR[A-Z0-9-]*|VIA|VECTOR)$/;
+function pickBestNavaidForRoute(
+  ident: string,
+  candidates: NavaidInfo[] | undefined,
+  depInfo?: AirportInfo,
+  arrInfo?: AirportInfo
+): NavaidInfo | null {
+  if (!candidates || candidates.length === 0) return null;
+  if (!depInfo || !arrInfo) return candidates[0];
+
+  // Choose candidate closest to the DEP->ARR corridor (min extra detour distance)
+  const direct = greatCircleNM(depInfo.lat, depInfo.lon, arrInfo.lat, arrInfo.lon);
+
+  let best = candidates[0];
+  let bestExtra = Number.POSITIVE_INFINITY;
+
+  for (const c of candidates) {
+    const via =
+      greatCircleNM(depInfo.lat, depInfo.lon, c.lat, c.lon) +
+      greatCircleNM(c.lat, c.lon, arrInfo.lat, arrInfo.lon);
+    const extra = via - direct;
+
+    if (extra < bestExtra) {
+      bestExtra = extra;
+      best = c;
+    }
+  }
+  return best;
+}
+
+function extractRouteEndpoints(tokens: string[], airportsIndex: AirportIndex): { dep?: string; arr?: string } {
+  const airportTokens = tokens.filter((t) => t.length === 4 && airportsIndex?.[t]);
+  if (airportTokens.length >= 2) {
+    return { dep: airportTokens[0], arr: airportTokens[airportTokens.length - 1] };
+  }
+  return {};
+}
+function normalizeRouteToken(raw: string): string | null {
+  const t0 = (raw || "").trim().toUpperCase();
+  if (!t0) return null;
+
+  // Remove common punctuation that shows up in OFP strings.
+  const t = t0.replace(/[(),;]/g, "").replace(/\.+$/g, "");
+  if (!t) return null;
+
+  // Handle airport tokens with runway suffixes, e.g. "VIDP/27", "OMDB/30R".
+  // We want the ICAO to resolve DEP/ARR correctly.
+  const airportWithRw = /^([A-Z]{4})(?:\/[A-Z0-9]+)?$/;
+  const m = airportWithRw.exec(t);
+  if (m) return m[1];
+
+  return t;
+}
 
 function parseRouteString(str: string): string[] {
   if (!str) return [];
   return str
     .split(/\s+/)
-    .map((s) => s.trim().toUpperCase())
-    .filter(Boolean);
+    .map(normalizeRouteToken)
+    .filter((t): t is string => Boolean(t));
 }
 function resolveRouteTokens(
   tokens: string[],
   airportsIndex: AirportIndex,
-  navaidsIndex: NavaidIndex
+  navaidsIndex: NavaidIndex,
+  ctx?: { depInfo?: AirportInfo; arrInfo?: AirportInfo }
 ): RouteResolution {
   const points: RoutePoint[] = [];
   const recognized: RouteResolution["recognized"] = {
@@ -524,6 +702,7 @@ function resolveRouteTokens(
     airways: [],
     unresolved: [],
   };
+
   for (const t of tokens) {
     if (PROCEDURE_RE.test(t)) {
       recognized.procedures.push(t);
@@ -533,27 +712,31 @@ function resolveRouteTokens(
       recognized.airways.push(t);
       continue;
     }
+
     const latlon = LATLON_RE.exec(t);
     if (latlon) {
-      points.push({
-        label: t,
-        lat: parseFloat(latlon[1]),
-        lon: parseFloat(latlon[2]),
-      });
+      points.push({ label: t, lat: parseFloat(latlon[1]), lon: parseFloat(latlon[2]) });
       continue;
     }
+
     if (t.length === 4 && airportsIndex?.[t]) {
       const a = airportsIndex[t];
       points.push({ label: t, lat: a.lat, lon: a.lon });
       continue;
     }
-    if (navaidsIndex?.[t]) {
-      const n = navaidsIndex[t];
-      points.push({ label: t, lat: n.lat, lon: n.lon });
-      continue;
+
+    const candidates = navaidsIndex?.[t];
+    if (candidates && candidates.length > 0) {
+      const best = pickBestNavaidForRoute(t, candidates, ctx?.depInfo, ctx?.arrInfo);
+      if (best) {
+        points.push({ label: t, lat: best.lat, lon: best.lon });
+        continue;
+      }
     }
+
     recognized.unresolved.push(t);
   }
+
   return { points, recognized };
 }
 function computeRouteDistanceNM(
@@ -778,7 +961,7 @@ function runSelfTests(): SelfTestResult[] {
       KJFK: { name: "KJFK", lat: 40.6413, lon: -73.7781, runways: [] },
     };
     const mockNav: NavaidIndex = {
-      CPT: { ident: "CPT", lat: 51.514, lon: -1.005, type: "NAVAID", name: "CPT" },
+      CPT: [{ ident: "CPT", lat: 51.514, lon: -1.005, type: "NAVAID", name: "CPT" }],
     };
     const { points } = resolveRouteTokens(parseRouteString("SID CPT STAR"), mockAir, mockNav);
     const direct = greatCircleNM(mockAir.EGLL.lat, mockAir.EGLL.lon, mockAir.KJFK.lat, mockAir.KJFK.lon);
@@ -884,6 +1067,7 @@ function ConcordePlannerCanvas() {
   const [airports, setAirports] = useState<AirportIndex>({});
   const [dbLoaded, setDbLoaded] = useState(false);
   const [dbError, setDbError] = useState("");
+  const [navaids, setNavaids] = useState<NavaidIndex>({});
 
   const [depIcao, setDepIcao] = useState("EGLL");
   const [depRw, setDepRw] = useState("");
@@ -891,6 +1075,22 @@ function ConcordePlannerCanvas() {
   const [arrRw, setArrRw] = useState("");
 
   const [manualDistanceNM, setManualDistanceNM] = useState(0);
+  const [routeText, setRouteText] = useState<string>("");
+  const [routeDistanceNM, setRouteDistanceNM] = useState<number | null>(null);
+  const [routeInfo, setRouteInfo] = useState<RouteResolution | null>(null);
+  const [routeNotice, setRouteNotice] = useState<string>("");
+  const [simbriefUser, setSimbriefUser] = useState<string>(() => {
+    try {
+      return localStorage.getItem("simbrief_user") || "";
+    } catch {
+      return "";
+    }
+  });
+  const [simbriefNotice, setSimbriefNotice] = useState<string>("");
+  const [simbriefLoading, setSimbriefLoading] = useState(false);
+  const [distanceSource, setDistanceSource] = useState<"none" | "simbrief" | "auto">("none");
+  const simbriefRouteSetRef = useRef(false);
+  const lastAutoDistanceRef = useRef<number | null>(null);
   const [altIcao, setAltIcao] = useState("");
   const [trimTankKg, setTrimTankKg] = useState(0);
 
@@ -913,16 +1113,20 @@ function ConcordePlannerCanvas() {
   const arrKey = (arrIcao || "").toUpperCase();
   const altKey = (altIcao || "").toUpperCase();
 
-
   useEffect(() => {
     (async () => {
       try {
-        const [airCsv, rwCsv] = await Promise.all([
+        const [airCsv, rwCsv, navCsv] = await Promise.all([
           fetch(AIRPORTS_CSV_URL, { mode: "cors" }).then((r) => r.text()),
           fetch(RUNWAYS_CSV_URL, { mode: "cors" }).then((r) => r.text()),
+          fetch(NAVAIDS_CSV_URL, { mode: "cors" }).then((r) => r.text()),
         ]);
-        const db = buildWorldAirportDB(airCsv, rwCsv);
-        setAirports(db);
+
+        const airportsDb = buildWorldAirportDB(airCsv, rwCsv);
+        const navaidsDb = buildNavaidsDB(navCsv);
+
+        setAirports(airportsDb);
+        setNavaids(navaidsDb);
         setDbLoaded(true);
         setDbError("");
       } catch (e) {
@@ -931,6 +1135,14 @@ function ConcordePlannerCanvas() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("simbrief_user", simbriefUser);
+    } catch {
+      // ignore
+    }
+  }, [simbriefUser]);
 
   useEffect(() => {
     const a = depKey ? airports[depKey] : undefined;
@@ -961,176 +1173,522 @@ function ConcordePlannerCanvas() {
   const depInfo = depKey ? airports[depKey] : undefined;
   const arrInfo = arrKey ? airports[arrKey] : undefined;
 
+  const altInfo = altKey ? airports[altKey] : undefined;
+
   const directionEW = useMemo(() => inferDirectionEW(depInfo, arrInfo), [depInfo, arrInfo]);
 
-  // Auto-pick a compliant cruise level when route changes (unless user has manually touched the field).
-  useEffect(() => {
-    if (!directionEW) return;
-    if (cruiseFLTouched) return;
-    const rec = recommendedCruiseFL(directionEW);
-    setCruiseFL(rec);
-    setCruiseFLText(String(rec));
-    setCruiseFLNotice(`Auto-selected Non-RVSM cruise FL${rec} (${directionEW === "E" ? "Eastbound" : "Westbound"}).`);
-  }, [directionEW, cruiseFLTouched]);
+  const plannedDistance = useMemo(() => {
+    const v = Number(manualDistanceNM);
+    return Number.isFinite(v) && v > 0 ? v : 0;
+  }, [manualDistanceNM]);
 
-  const plannedDistance = Math.max(manualDistanceNM || 0, 0);
+  const climb = useMemo(() => estimateClimb(Math.max(cruiseFL, 0) * 100), [cruiseFL]);
+  const descent = useMemo(() => estimateDescent(Math.max(cruiseFL, 0) * 100), [cruiseFL]);
 
-  const cruiseAltFt = cruiseFL * 100;
-  const climb = useMemo(() => estimateClimb(cruiseAltFt), [cruiseAltFt]);
-  const descent = useMemo(() => estimateDescent(cruiseAltFt), [cruiseAltFt]);
   const reheat = useMemo(() => reheatGuard(climb.time_h), [climb.time_h]);
-  const cruiseDistanceNM = Math.max(plannedDistance - climb.dist_nm - descent.dist_nm, 0);
-  const cruiseTimeH = cruiseTimeHours(cruiseDistanceNM);
-  const totalTimeH = climb.time_h + cruiseTimeH + descent.time_h;
 
-  const tripKg = useMemo(() => {
-    const baseBurn = CONSTANTS.fuel.burn_kg_per_nm * altitudeBurnFactor(cruiseFL);
-    const climbKg = climb.dist_nm * baseBurn * CONSTANTS.fuel.climb_factor;
-    const cruiseKg = cruiseDistanceNM * baseBurn;
-    const descentKg = descent.dist_nm * baseBurn * CONSTANTS.fuel.descent_factor;
-    const kg = climbKg + cruiseKg + descentKg;
-    return Math.max(kg, 0);
-  }, [cruiseFL, climb.dist_nm, cruiseDistanceNM, descent.dist_nm]);
+  const burnKgPerNmAdj = useMemo(
+    () => CONSTANTS.fuel.burn_kg_per_nm * altitudeBurnFactor(cruiseFL),
+    [cruiseFL]
+  );
 
-  const altInfo = altKey ? airports[altKey] : undefined;
+  const cruiseNM = useMemo(() => {
+    const nm = plannedDistance - (climb.dist_nm + descent.dist_nm);
+    return Math.max(nm, 0);
+  }, [plannedDistance, climb.dist_nm, descent.dist_nm]);
+
+  const cruiseTimeH = useMemo(() => {
+    try {
+      return cruiseTimeHours(cruiseNM);
+    } catch {
+      return 0;
+    }
+  }, [cruiseNM]);
+
+  const totalTimeH = useMemo(
+    () => (climb.time_h || 0) + (cruiseTimeH || 0) + (descent.time_h || 0),
+    [climb.time_h, cruiseTimeH, descent.time_h]
+  );
+
+  const eteHours = totalTimeH;
+
+  const burnKgPerHour = useMemo(
+    () => Math.max(burnKgPerNmAdj * CONSTANTS.speeds.cruise_tas_kt, 1),
+    [burnKgPerNmAdj]
+  );
+
+  const reserveTimeH = useMemo(() => {
+    const fr = Number(finalReserveKg);
+    if (!Number.isFinite(fr) || fr <= 0) return 0;
+    return fr / burnKgPerHour;
+  }, [finalReserveKg, burnKgPerHour]);
+
+  const enduranceHours = useMemo(() => {
+    return CONSTANTS.weights.fuel_capacity_kg / burnKgPerHour;
+  }, [burnKgPerHour]);
+
+  const enduranceMeets = enduranceHours >= eteHours + reserveTimeH;
+
   const alternateDistanceNM = useMemo(() => {
     if (!arrInfo || !altInfo) return 0;
     return greatCircleNM(arrInfo.lat, arrInfo.lon, altInfo.lat, altInfo.lon);
   }, [arrInfo, altInfo]);
 
-  const blocks = useMemo(
-    () =>
-      blockFuelKg({
-        tripKg,
-        taxiKg,
-        contingencyPct,
-        finalReserveKg,
-        alternateNM: alternateDistanceNM,
-        burnKgPerNm: CONSTANTS.fuel.burn_kg_per_nm,
-      }),
-    [tripKg, taxiKg, contingencyPct, finalReserveKg, alternateDistanceNM]
-  );
+  const tripKg = useMemo(() => {
+    // Heuristic: climb burns more, descent burns less
+    const climbKg = climb.dist_nm * burnKgPerNmAdj * CONSTANTS.fuel.climb_factor;
+    const cruiseKg = cruiseNM * burnKgPerNmAdj;
+    const descKg = descent.dist_nm * burnKgPerNmAdj * CONSTANTS.fuel.descent_factor;
+    return Math.max(climbKg + cruiseKg + descKg, 0);
+  }, [climb.dist_nm, cruiseNM, descent.dist_nm, burnKgPerNmAdj]);
 
-  const totalFuelRequiredKg = (blocks.block_kg || 0) + (trimTankKg || 0);
-  const eteHours = totalTimeH;
-  const avgBurnKgPerHour =
-    eteHours > 0
-      ? tripKg / eteHours
-      : CONSTANTS.fuel.burn_kg_per_nm * altitudeBurnFactor(cruiseFL) * CONSTANTS.speeds.cruise_tas_kt;
+  const blocks = useMemo(() => {
+    return blockFuelKg({
+      tripKg,
+      taxiKg,
+      contingencyPct,
+      finalReserveKg,
+      alternateNM: alternateDistanceNM,
+      burnKgPerNm: burnKgPerNmAdj,
+    });
+  }, [tripKg, taxiKg, contingencyPct, finalReserveKg, alternateDistanceNM, burnKgPerNmAdj]);
 
-  const airborneFuelKg = Math.max(totalFuelRequiredKg - (taxiKg || 0), 0);
-  const enduranceHours = avgBurnKgPerHour > 0 ? airborneFuelKg / avgBurnKgPerHour : 0;
-  const reserveTimeH =
-    avgBurnKgPerHour > 0
-      ? ((blocks.contingency_kg || 0) + (blocks.final_reserve_kg || 0) + (blocks.alternate_kg || 0)) / avgBurnKgPerHour
-      : 0;
-
-  const enduranceMeets = enduranceHours >= eteHours + reserveTimeH;
+  const totalFuelRequiredKg = useMemo(() => {
+    const t = Number(trimTankKg) || 0;
+    return (blocks.block_kg || 0) + t;
+  }, [blocks.block_kg, trimTankKg]);
 
   const fuelCapacityKg = CONSTANTS.weights.fuel_capacity_kg;
   const fuelWithinCapacity = totalFuelRequiredKg <= fuelCapacityKg;
   const fuelExcessKg = Math.max(totalFuelRequiredKg - fuelCapacityKg, 0);
 
-  const fullPayloadKg = (CONSTANTS.weights.pax_full_count || 0) * (CONSTANTS.weights.pax_mass_kg || 0);
-  const tkoWeightKgAuto = Math.min(
-    (CONSTANTS.weights.oew_kg || 0) + fullPayloadKg + totalFuelRequiredKg,
-    CONSTANTS.weights.mtow_kg
-  );
+  const paxKg = CONSTANTS.weights.pax_full_count * CONSTANTS.weights.pax_mass_kg;
+  const tkoWeightKgAuto = useMemo(() => {
+    return CONSTANTS.weights.oew_kg + paxKg + totalFuelRequiredKg;
+  }, [paxKg, totalFuelRequiredKg]);
 
-  const estLandingWeightKg = Math.max(tkoWeightKgAuto - tripKg, 0);
-  const tkSpeeds = computeTakeoffSpeeds(tkoWeightKgAuto);
-  const ldSpeeds = computeLandingSpeeds(estLandingWeightKg);
+  const tkSpeeds = useMemo(() => computeTakeoffSpeeds(tkoWeightKgAuto), [tkoWeightKgAuto]);
 
-  const depRunways = depInfo?.runways ?? [];
-  const arrRunways = arrInfo?.runways ?? [];
-  const depRunway = depRunways.find((r) => r.id === depRw);
-  const arrRunway = arrRunways.find((r) => r.id === arrRw);
+  const estLandingWeightKg = useMemo(() => {
+    const lw = tkoWeightKgAuto - tripKg;
+    return Math.max(lw, 0);
+  }, [tkoWeightKgAuto, tripKg]);
 
-  const tkoCheck = useMemo(() => takeoffFeasibleM(depRunway?.length_m || 0, tkoWeightKgAuto), [depRunway, tkoWeightKgAuto]);
-  const ldgCheck = useMemo(() => landingFeasibleM(arrRunway?.length_m || 0, estLandingWeightKg), [arrRunway, estLandingWeightKg]);
+  const ldSpeeds = useMemo(() => computeLandingSpeeds(estLandingWeightKg), [estLandingWeightKg]);
+
+  const depRunway = useMemo(() => {
+    if (!depInfo || !depRw) return null;
+    return depInfo.runways.find((r) => r.id === depRw) ?? null;
+  }, [depInfo, depRw]);
+
+  const arrRunway = useMemo(() => {
+    if (!arrInfo || !arrRw) return null;
+    return arrInfo.runways.find((r) => r.id === arrRw) ?? null;
+  }, [arrInfo, arrRw]);
 
   const depWind = useMemo(() => {
-    const p = parseMetarWind(metarDep || "");
-    const comps = depRunway ? windComponents(p.wind_dir_deg, p.wind_speed_kt, depRunway.heading) : { headwind_kt: null, crosswind_kt: null };
-    return { parsed: p, comps };
-  }, [metarDep, depRunway]);
+    const parsed = parseMetarWind(metarDep || "");
+    const comps = windComponents(parsed.wind_dir_deg, parsed.wind_speed_kt, depRunway?.heading ?? 0);
+    return { parsed, comps };
+  }, [metarDep, depRunway?.heading]);
 
   const arrWind = useMemo(() => {
-    const p = parseMetarWind(metarArr || "");
-    const comps = arrRunway ? windComponents(p.wind_dir_deg, p.wind_speed_kt, arrRunway.heading) : { headwind_kt: null, crosswind_kt: null };
-    return { parsed: p, comps };
-  }, [metarArr, arrRunway]);
+    const parsed = parseMetarWind(metarArr || "");
+    const comps = windComponents(parsed.wind_dir_deg, parsed.wind_speed_kt, arrRunway?.heading ?? 0);
+    return { parsed, comps };
+  }, [metarArr, arrRunway?.heading]);
 
-  async function fetchMetars() {
-    const errors: string[] = [];
-    if (!depKey || !arrKey) {
-      setMetarErr("Both departure and arrival ICAO codes are required.");
-      return;
+  const tkoCheck = useMemo(() => {
+    const len = depRunway?.length_m ?? 0;
+    return takeoffFeasibleM(len, tkoWeightKgAuto);
+  }, [depRunway?.length_m, tkoWeightKgAuto]);
+
+  const ldgCheck = useMemo(() => {
+    const len = arrRunway?.length_m ?? 0;
+    return landingFeasibleM(len, estLandingWeightKg);
+  }, [arrRunway?.length_m, estLandingWeightKg]);
+
+  const passCount = useMemo(() => tests.filter((t) => t.pass).length, [tests]);
+
+  function computeRouteDistanceFromText(text: string): {
+    distanceNM: number;
+    distanceNM_raw: number;
+    detour_factor: number;
+    resolution: RouteResolution;
+    depFromRoute?: string;
+    arrFromRoute?: string;
+  } | null {
+    const tokens = parseRouteString(text);
+    const { dep: depFromRoute, arr: arrFromRoute } = extractRouteEndpoints(tokens, airports);
+
+    const depForCalc = (depFromRoute ? airports[depFromRoute] : depInfo) ?? undefined;
+    const arrForCalc = (arrFromRoute ? airports[arrFromRoute] : arrInfo) ?? undefined;
+    if (!depForCalc || !arrForCalc) return null;
+
+    // Remove endpoints from the middle so they don't get double-counted.
+    const filtered = tokens.filter((t) => t !== depFromRoute && t !== arrFromRoute);
+
+    const resolution = resolveRouteTokens(filtered, airports, navaids, {
+      depInfo: depForCalc,
+      arrInfo: arrForCalc,
+    });
+
+    const distanceNM_raw = computeRouteDistanceNM(depForCalc, arrForCalc, resolution.points);
+
+    // Fallback: if we couldn't resolve many actual waypoints (common when the DB lacks intersections),
+    // apply a small detour factor based on the number of airway/procedure tokens.
+    // This usually brings us closer to SimBrief's routed distance vs pure great-circle.
+    let detour_factor = 1;
+    const airwayCount = resolution.recognized.airways.length;
+    const procCount = resolution.recognized.procedures.length;
+    const resolvedPts = resolution.points.length;
+
+    if (resolvedPts <= 1 && (airwayCount > 0 || procCount > 0)) {
+      // 1% per airway token + 2% per procedure token, capped at +18%.
+      detour_factor = 1 + Math.min(0.18, 0.01 * airwayCount + 0.02 * procCount);
     }
-    setMetarErr("");
-    const [d, a] = await Promise.all([fetchMetarByICAO(depKey), fetchMetarByICAO(arrKey)]);
-    if (!d.ok) errors.push(d.error);
-    if (!a.ok) errors.push(a.error);
-    if (errors.length > 0) setMetarErr(errors.join(" ").trim());
-    if (d.ok) setMetarDep(d.raw);
-    if (a.ok) setMetarArr(a.raw);
+
+    const distanceNM = distanceNM_raw * detour_factor;
+
+    return { distanceNM, distanceNM_raw, detour_factor, resolution, depFromRoute, arrFromRoute };
   }
 
-  const passCount = tests.filter((t) => t.pass).length;
+  // SimBrief import handler moved out of applyRouteDistance.
+  const importFromSimbrief = async () => {
+    setSimbriefNotice("");
+
+    const u = simbriefUser.trim();
+    if (!u) {
+      setSimbriefNotice("Enter your SimBrief username/ID first.");
+      return;
+    }
+
+    setSimbriefLoading(true);
+    try {
+      const extracted = await fetchSimbrief(u);
+      // For debugging in case SimBrief changes fields.
+      console.log("SimBrief raw JSON:", extracted.raw);
+
+      if (extracted.originIcao) {
+        setDepIcao(extracted.originIcao);
+        setDepRw("");
+      }
+      if (extracted.destIcao) {
+        setArrIcao(extracted.destIcao);
+        setArrRw("");
+      }
+      if (extracted.alternateIcao) {
+        setAltIcao(extracted.alternateIcao);
+      }
+
+      const hasSimbriefDistance = typeof extracted.distanceNm === "number" && extracted.distanceNm > 0;
+
+      if (extracted.route) {
+        // If SimBrief provided a distance, we will trust it and avoid auto-recomputing once.
+        if (hasSimbriefDistance) simbriefRouteSetRef.current = true;
+        setRouteText(extracted.route);
+      }
+
+      if (hasSimbriefDistance) {
+        const rounded = Math.round(extracted.distanceNm!);
+        setManualDistanceNM(rounded);
+        setRouteDistanceNM(extracted.distanceNm!);
+        setRouteInfo(null);
+        setRouteNotice("");
+        setDistanceSource("simbrief");
+        lastAutoDistanceRef.current = null;
+      } else {
+        // No distance in the SimBrief JSON; we'll try auto-estimating from the route string.
+        setDistanceSource("none");
+        setRouteNotice("");
+      }
+
+      const dep = extracted.originIcao ? ` ${extracted.originIcao}` : "";
+      const arr = extracted.destIcao ? ` → ${extracted.destIcao}` : "";
+      const alt = extracted.alternateIcao ? ` (ALT ${extracted.alternateIcao})` : "";
+      setSimbriefNotice(`Imported SimBrief OFP${dep}${arr}${alt}.`);
+    } catch (e) {
+      setSimbriefNotice(String(e));
+    } finally {
+      setSimbriefLoading(false);
+    }
+  };
+  useEffect(() => {
+    const text = (routeText || "").trim();
+    if (!text) {
+      setRouteDistanceNM(null);
+      if (distanceSource === "auto") setDistanceSource("none");
+      return;
+    }
+
+    const t = window.setTimeout(() => {
+      // Skip one auto-calc right after a SimBrief import that already set a distance.
+      if (simbriefRouteSetRef.current) {
+        simbriefRouteSetRef.current = false;
+        return;
+      }
+
+      const out = computeRouteDistanceFromText(text);
+      if (!out) {
+        setRouteDistanceNM(null);
+        return;
+      }
+
+      setRouteDistanceNM(out.distanceNM);
+      setDistanceSource("auto");
+
+      // Only auto-update Planned Distance if the user hasn't overridden it manually.
+      const rounded = Math.round(out.distanceNM);
+      if (manualDistanceNM === 0 || manualDistanceNM === (lastAutoDistanceRef.current ?? -1)) {
+        setManualDistanceNM(rounded);
+        lastAutoDistanceRef.current = rounded;
+      }
+    }, 300);
+
+    return () => window.clearTimeout(t);
+  }, [routeText, airports, navaids, depInfo, arrInfo, manualDistanceNM, distanceSource]);
+
+  function applyRouteDistance() {
+    setRouteNotice("");
+
+    if (!routeText.trim()) {
+      setRouteNotice("Paste a route string first.");
+      return;
+    }
+
+    const out = computeRouteDistanceFromText(routeText);
+    if (!out) {
+      setRouteNotice(
+        "Could not compute route distance. Ensure Nav DB is loaded, and either set DEP/ARR or include airport ICAOs inside the route."
+      );
+      return;
+    }
+
+    if (out.depFromRoute && out.arrFromRoute) {
+      if (out.depFromRoute !== depKey) {
+        setDepIcao(out.depFromRoute);
+        setDepRw("");
+      }
+      if (out.arrFromRoute !== arrKey) {
+        setArrIcao(out.arrFromRoute);
+        setArrRw("");
+      }
+    }
+
+    const rounded = Math.round(out.distanceNM);
+    setRouteDistanceNM(out.distanceNM);
+    setRouteInfo(out.resolution);
+    setManualDistanceNM(rounded);
+
+    const unresolved = out.resolution.recognized.unresolved.length;
+    const parts: string[] = [`Planned Distance set to ${rounded.toLocaleString()} NM.`];
+
+    if (out.depFromRoute && out.arrFromRoute) {
+      parts.push(`Derived DEP/ARR: ${out.depFromRoute} → ${out.arrFromRoute}.`);
+    }
+
+    if (out.detour_factor > 1.001) {
+      const pct = Math.round((out.detour_factor - 1) * 100);
+      parts.push(`Applied airway detour factor (+${pct}%) due to limited waypoint resolution.`);
+    }
+
+    if (unresolved > 0) parts.push("Some waypoints couldn’t be resolved; distance is approximate.");
+    setRouteNotice(parts.join(" "));
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">✈️</span>
-          <div>
-            <h1 className="text-2xl font-bold">
-              Concorde EFB <span className="text-sky-400">v{APP_VERSION}</span>
-            </h1>
-            <p className="text-xs text-slate-400">Your Concorde copilot for MSFS.</p>
-          </div>
+      <header className="max-w-6xl mx-auto p-6 pb-0 flex items-start justify-between gap-4">
+        <div>
+          <div className="text-3xl font-bold">Concorde EFB v{APP_VERSION}</div>
+          <div className="text-sm text-slate-400">Your Concorde copilot for MSFS.</div>
         </div>
-        <div className="flex gap-2 items-center">
-          <StatPill label="Nav DB" value={dbLoaded ? "Loaded" : "Loading…"} ok={dbLoaded && !dbError} />
-          {dbError && <StatPill label="DB Error" value={dbError.slice(0, 40) + "…"} ok={false} />}
+        <div className="flex flex-wrap gap-2 justify-end">
+          <StatPill label="Nav DB" value={dbLoaded ? "Loaded" : "Loading"} ok={dbLoaded} />
           <StatPill label="TAS" value={`${CONSTANTS.speeds.cruise_tas_kt} kt`} />
           <StatPill label="MTOW" value={`${CONSTANTS.weights.mtow_kg.toLocaleString()} kg`} />
           <StatPill label="MLW" value={`${CONSTANTS.weights.mlw_kg.toLocaleString()} kg`} />
-          <StatPill label="Fuel cap" value={`${CONSTANTS.weights.fuel_capacity_kg.toLocaleString()} kg`} />
+          <StatPill
+            label="Fuel cap"
+            value={`${CONSTANTS.weights.fuel_capacity_kg.toLocaleString()} kg`}
+          />
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto p-6 grid gap-6">
-        <Card title="Departure / Arrival (ICAO & Runways)" right={<Button onClick={fetchMetars}>Fetch METARs</Button>}>
+      <main className="max-w-6xl mx-auto p-6 space-y-6">
+        {dbError && (
+          <div className="text-xs text-rose-300">Nav DB load error: {dbError}</div>
+        )}
+
+        <Card
+          title="Route (paste from SimBrief / OFP)"
+        >
+          <div className="space-y-3">
+            <Label>SimBrief Username / ID (optional)</Label>
+
+            <div className="grid gap-3 sm:grid-cols-12 items-start">
+              {/* Row 1: SimBrief ID + Import */}
+              <div className="sm:col-span-4">
+                <Input
+                  className="h-12 py-0 text-sm"
+                  value={simbriefUser}
+                  placeholder="SimBrief username"
+                  onChange={(e) => setSimbriefUser(e.target.value)}
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <Button
+                  className="h-12 px-4 text-sm w-full whitespace-nowrap"
+                  onClick={importFromSimbrief}
+                  disabled={simbriefLoading}
+                >
+                  <span className="inline-flex items-center justify-center gap-2 w-full">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      className="h-4 w-4"
+                      aria-hidden="true"
+                    >
+                      <path d="M12 3a1 1 0 0 1 1 1v8.586l2.293-2.293a1 1 0 1 1 1.414 1.414l-4.007 4.007a1 1 0 0 1-1.4.012l-4.02-4.02a1 1 0 1 1 1.414-1.414L11 12.586V4a1 1 0 0 1 1-1Z" />
+                      <path d="M5 20a1 1 0 0 1-1-1v-2a1 1 0 1 1 2 0v1h12v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H5Z" />
+                    </svg>
+                    {simbriefLoading ? "Importing…" : "Import"}
+                  </span>
+                </Button>
+              </div>
+
+              {/* Row 1 spacer to keep a clean grid on wide screens */}
+              <div className="hidden sm:block sm:col-span-6" />
+
+              {/* Row 2: Route box (left) + distance (right) */}
+              <div className="sm:col-span-9">
+                <textarea
+                  className="w-full h-12 px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 text-xs leading-tight resize-none overflow-y-auto"
+                  placeholder="Route will auto-fill from SimBrief (or paste here)"
+                  value={routeText}
+                  onChange={(e) => {
+                    // user is manually editing/pasting; distance becomes an auto-estimate
+                    setDistanceSource("auto");
+                    setRouteText(e.target.value);
+                  }}
+                />
+
+                {/* SimBrief success/error should live under the route box */}
+                {simbriefNotice && (
+                  <div
+                    className={`mt-2 text-xs ${
+                      simbriefNotice.startsWith("Imported")
+                        ? "text-emerald-400"
+                        : "text-rose-300"
+                    }`}
+                  >
+                    {simbriefNotice}
+                  </div>
+                )}
+              </div>
+
+              <div className="sm:col-span-3">
+                <div className="px-3 py-2 h-12 flex flex-col justify-center rounded-xl bg-slate-950 border border-slate-800">
+                  <div className="text-[10px] text-slate-400">Estimated Route Distance</div>
+                  <div className="text-sm font-semibold">
+                    {routeDistanceNM != null
+                      ? `${Math.round(routeDistanceNM).toLocaleString()} NM`
+                      : "—"}
+                  </div>
+                </div>
+
+                {/* Status should live under the distance box */}
+                {distanceSource === "simbrief" && (
+                  <div className="mt-2 text-xs text-emerald-400">
+                    Imported from SimBrief
+                  </div>
+                )}
+                {distanceSource === "auto" && (
+                  <div className="mt-2 text-xs text-yellow-400">
+                    Auto-calculated route distance might not be accurate for now
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {routeNotice && (
+              <div className="text-xs text-slate-400">{routeNotice}</div>
+            )}
+          </div>
+        </Card>
+
+        <Card
+          title="Departure / Arrival (ICAO & Runways)"
+          right={
+            <Button
+              onClick={async () => {
+                setMetarErr("");
+                const dep = depKey;
+                const arr = arrKey;
+
+                if (!dep || dep.length !== 4 || !arr || arr.length !== 4) {
+                  setMetarErr("Enter valid DEP and ARR ICAOs first.");
+                  return;
+                }
+
+                const [d, a] = await Promise.all([
+                  fetchMetarByICAO(dep),
+                  fetchMetarByICAO(arr),
+                ]);
+
+                const errs: string[] = [];
+                if (d.ok) setMetarDep(d.raw);
+                else errs.push(d.error);
+
+                if (a.ok) setMetarArr(a.raw);
+                else errs.push(a.error);
+
+                if (errs.length) setMetarErr(errs.join(" | "));
+              }}
+            >
+              Fetch METARs
+            </Button>
+          }
+        >
           <Row>
             <div>
               <Label>Departure ICAO</Label>
-              <Input value={depIcao} onChange={(e) => setDepIcao(e.target.value.toUpperCase())} />
-              {!depInfo && dbLoaded && <div className="text-xs text-rose-300 mt-1">Unknown ICAO in database</div>}
+              <Input
+                value={depIcao}
+                onChange={(e) => setDepIcao(e.target.value.toUpperCase())}
+              />
             </div>
             <div>
               <Label>Arrival ICAO</Label>
-              <Input value={arrIcao} onChange={(e) => setArrIcao(e.target.value.toUpperCase())} />
-              {!arrInfo && dbLoaded && <div className="text-xs text-rose-300 mt-1">Unknown ICAO in database</div>}
+              <Input
+                value={arrIcao}
+                onChange={(e) => setArrIcao(e.target.value.toUpperCase())}
+              />
             </div>
           </Row>
+
           <Row>
             <div>
               <Label>Departure Runway (meters)</Label>
               <Select value={depRw} onChange={(e) => setDepRw(e.target.value)}>
-                {depRunways.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.id} • {Number(r.length_m).toLocaleString()} m • HDG {Math.round(r.heading)}°
+                <option value="">—</option>
+                {(depInfo?.runways ?? []).map((r) => (
+                  <option key={`dep-${r.id}`} value={r.id}>
+                    {r.id} • {r.length_m.toLocaleString()} m • HDG {r.heading}°
                   </option>
                 ))}
               </Select>
             </div>
+
             <div>
               <Label>Arrival Runway (meters)</Label>
               <Select value={arrRw} onChange={(e) => setArrRw(e.target.value)}>
-                {arrRunways.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.id} • {Number(r.length_m).toLocaleString()} m • HDG {Math.round(r.heading)}°
+                <option value="">—</option>
+                {(arrInfo?.runways ?? []).map((r) => (
+                  <option key={`arr-${r.id}`} value={r.id}>
+                    {r.id} • {r.length_m.toLocaleString()} m • HDG {r.heading}°
                   </option>
                 ))}
               </Select>
@@ -1538,3 +2096,4 @@ export default function ConcordeEFB() {
     </ErrorBoundary>
   );
 }
+        

@@ -1,11 +1,16 @@
 name: Deploy (stable + beta) to GitHub Pages
 
+name: Deploy (stable + beta) to GitHub Pages
+
 on:
+  push:
+    branches: [ main, beta ]
   push:
     branches: [ main, beta ]
   workflow_dispatch:
 
 permissions:
+  contents: write
   contents: write
 
 concurrency:
@@ -16,6 +21,50 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc -b
+
+      - name: Build (stable)
+        if: github.ref_name == 'main'
+        run: npx vite build --base=/${{ github.event.repository.name }}/
+
+      - name: Build (beta)
+        if: github.ref_name == 'beta'
+        run: npx vite build --base=/${{ github.event.repository.name }}/beta/
+
+      - name: Disable Jekyll
+        run: touch dist/.nojekyll
+
+      - name: Deploy (stable)
+        if: github.ref_name == 'main'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./dist
+          keep_files: true
+
+      - name: Deploy (beta)
+        if: github.ref_name == 'beta'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./dist
+          destination_dir: beta
+          keep_files: true
       - name: Checkout
         uses: actions/checkout@v4
 
