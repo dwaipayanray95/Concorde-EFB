@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# Node / Vite
+node_modules/
+dist/
+*.log
+
+# Tauri / Rust generated
+src-tauri/target/
+src-tauri/gen/
