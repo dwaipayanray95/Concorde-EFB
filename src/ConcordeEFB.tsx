@@ -582,12 +582,29 @@ function extractRouteEndpoints(tokens: string[], airportsIndex: AirportIndex): {
   }
   return {};
 }
+function normalizeRouteToken(raw: string): string | null {
+  const t0 = (raw || "").trim().toUpperCase();
+  if (!t0) return null;
+
+  // Remove common punctuation that shows up in OFP strings.
+  const t = t0.replace(/[(),;]/g, "").replace(/\.+$/g, "");
+  if (!t) return null;
+
+  // Handle airport tokens with runway suffixes, e.g. "VIDP/27", "OMDB/30R".
+  // We want the ICAO to resolve DEP/ARR correctly.
+  const airportWithRw = /^([A-Z]{4})(?:\/[A-Z0-9]+)?$/;
+  const m = airportWithRw.exec(t);
+  if (m) return m[1];
+
+  return t;
+}
+
 function parseRouteString(str: string): string[] {
   if (!str) return [];
   return str
     .split(/\s+/)
-    .map((s) => s.trim().toUpperCase())
-    .filter(Boolean);
+    .map(normalizeRouteToken)
+    .filter((t): t is string => Boolean(t));
 }
 function resolveRouteTokens(
   tokens: string[],
@@ -1191,27 +1208,45 @@ function ConcordePlannerCanvas() {
 
   function computeRouteDistanceFromText(text: string): {
     distanceNM: number;
+    distanceNM_raw: number;
+    detour_factor: number;
     resolution: RouteResolution;
     depFromRoute?: string;
     arrFromRoute?: string;
   } | null {
     const tokens = parseRouteString(text);
     const { dep: depFromRoute, arr: arrFromRoute } = extractRouteEndpoints(tokens, airports);
-  
+
     const depForCalc = (depFromRoute ? airports[depFromRoute] : depInfo) ?? undefined;
     const arrForCalc = (arrFromRoute ? airports[arrFromRoute] : arrInfo) ?? undefined;
     if (!depForCalc || !arrForCalc) return null;
-  
-    // remove endpoints from the middle so they don't get double-counted
+
+    // Remove endpoints from the middle so they don't get double-counted.
     const filtered = tokens.filter((t) => t !== depFromRoute && t !== arrFromRoute);
-  
+
     const resolution = resolveRouteTokens(filtered, airports, navaids, {
       depInfo: depForCalc,
       arrInfo: arrForCalc,
     });
-  
-    const distanceNM = computeRouteDistanceNM(depForCalc, arrForCalc, resolution.points);
-    return { distanceNM, resolution, depFromRoute, arrFromRoute };
+
+    const distanceNM_raw = computeRouteDistanceNM(depForCalc, arrForCalc, resolution.points);
+
+    // Fallback: if we couldn't resolve many actual waypoints (common when the DB lacks intersections),
+    // apply a small detour factor based on the number of airway/procedure tokens.
+    // This usually brings us closer to SimBrief's routed distance vs pure great-circle.
+    let detour_factor = 1;
+    const airwayCount = resolution.recognized.airways.length;
+    const procCount = resolution.recognized.procedures.length;
+    const resolvedPts = resolution.points.length;
+
+    if (resolvedPts <= 1 && (airwayCount > 0 || procCount > 0)) {
+      // 1% per airway token + 2% per procedure token, capped at +18%.
+      detour_factor = 1 + Math.min(0.18, 0.01 * airwayCount + 0.02 * procCount);
+    }
+
+    const distanceNM = distanceNM_raw * detour_factor;
+
+    return { distanceNM, distanceNM_raw, detour_factor, resolution, depFromRoute, arrFromRoute };
   }
 
 function applyRouteDistance() {
@@ -1248,9 +1283,16 @@ function applyRouteDistance() {
 
     const unresolved = out.resolution.recognized.unresolved.length;
     const parts: string[] = [`Planned Distance set to ${rounded.toLocaleString()} NM.`];
+
     if (out.depFromRoute && out.arrFromRoute) {
       parts.push(`Derived DEP/ARR: ${out.depFromRoute} → ${out.arrFromRoute}.`);
     }
+
+    if (out.detour_factor > 1.001) {
+      const pct = Math.round((out.detour_factor - 1) * 100);
+      parts.push(`Applied airway detour factor (+${pct}%) due to limited waypoint resolution.`);
+    }
+
     if (unresolved > 0) parts.push("Some waypoints couldn’t be resolved; distance is approximate.");
     setRouteNotice(parts.join(" "));
   }
