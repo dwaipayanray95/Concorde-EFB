@@ -1,3 +1,3 @@
-import ConcordeEFB from "./ConcordeEFB";
+import ConcordeEFB from "./ConcordeEFB.tsx";
 const Root = () => <ConcordeEFB />;
 export default Root;
