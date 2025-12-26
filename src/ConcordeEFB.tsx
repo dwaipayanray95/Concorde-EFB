@@ -16,8 +16,8 @@ import type {
 } from "react";
 import Papa from "papaparse";
 
-const APP_VERSION = "1.1.2";
-const BUILD_MARKER = "2612251804";
+const APP_VERSION = "1.1.3";
+const BUILD_MARKER = "TO BE DECIDEDnpm";
 const DEBUG_FL_AUTOPICK = false;
 // App icon
 // IMPORTANT: We want this to work on GitHub Pages (non-root base path) and inside Tauri.
