@@ -292,6 +292,8 @@ type RouteResolution = {
 type SimbriefExtract = {
   originIcao?: string;
   destIcao?: string;
+  depRunway?: string;
+  arrRunway?: string;
   alternateIcao?: string;
   route?: string;
   distanceNm?: number;
@@ -304,6 +306,58 @@ type SimbriefExtract = {
 function normalizeIcao4(v: unknown): string | undefined {
   const s = String(v ?? "").trim().toUpperCase();
   return /^[A-Z]{4}$/.test(s) ? s : undefined;
+}
+
+function normalizeRunwayId(v: unknown): string | undefined {
+  const s = String(v ?? "").trim().toUpperCase();
+  // Allow: 27, 09, 30R, 04L, etc.
+  // Normalize leading zeros to two digits when present.
+  const m = /^(\d{1,2})([LRC])?$/.exec(s);
+  if (!m) return undefined;
+  const n = Number(m[1]);
+  if (!Number.isFinite(n) || n < 1 || n > 36) return undefined;
+  const num2 = String(n).padStart(2, "0");
+  return `${num2}${m[2] ?? ""}`;
+}
+
+function routeHasOriginToken(route: string, originIcao: string): boolean {
+  const r = route.trim().toUpperCase();
+  const o = originIcao.trim().toUpperCase();
+  return r.startsWith(o + " ") || r.startsWith(o + "/");
+}
+
+function routeHasDestToken(route: string, destIcao: string): boolean {
+  const r = route.trim().toUpperCase();
+  const d = destIcao.trim().toUpperCase();
+  // Accept: ... OMDB or ... OMDB/30R at the end
+  return new RegExp(`\\b${d}(?:\\/[A-Z0-9]+)?\\s*$`, "i").test(r);
+}
+
+function withRouteEndpoints(
+  route: string | undefined,
+  originIcao: string | undefined,
+  destIcao: string | undefined,
+  depRunway: string | undefined,
+  arrRunway: string | undefined
+): string | undefined {
+  const base = (route ?? "").trim();
+  if (!base && !originIcao && !destIcao) return undefined;
+
+  let r = base;
+
+  if (originIcao) {
+    const prefix = depRunway ? `${originIcao}/${depRunway}` : originIcao;
+    if (!r) r = prefix;
+    else if (!routeHasOriginToken(r, originIcao)) r = `${prefix} ${r}`.trim();
+  }
+
+  if (destIcao) {
+    const suffix = arrRunway ? `${destIcao}/${arrRunway}` : destIcao;
+    if (!r) r = suffix;
+    else if (!routeHasDestToken(r, destIcao)) r = `${r} ${suffix}`.trim();
+  }
+
+  return r || undefined;
 }
 
 function toNumberOrUndefined(v: unknown): number | undefined {
@@ -356,6 +410,22 @@ function extractSimbrief(data: any): SimbriefExtract {
     normalizeIcao4(ofp?.general?.destination_icao) ??
     normalizeIcao4(ofp?.general?.arr_icao);
 
+  const depRunway =
+    normalizeRunwayId(ofp?.origin?.plan_rwy) ??
+    normalizeRunwayId(ofp?.origin?.planned_runway) ??
+    normalizeRunwayId(ofp?.origin?.runway) ??
+    normalizeRunwayId(ofp?.general?.dep_rwy) ??
+    normalizeRunwayId(ofp?.general?.departure_runway) ??
+    normalizeRunwayId(ofp?.general?.rwy_dep);
+
+  const arrRunway =
+    normalizeRunwayId(ofp?.destination?.plan_rwy) ??
+    normalizeRunwayId(ofp?.destination?.planned_runway) ??
+    normalizeRunwayId(ofp?.destination?.runway) ??
+    normalizeRunwayId(ofp?.general?.arr_rwy) ??
+    normalizeRunwayId(ofp?.general?.arrival_runway) ??
+    normalizeRunwayId(ofp?.general?.rwy_arr);
+
   const alternateIcao =
     normalizeIcao4(ofp?.alternate?.icao_code) ??
     normalizeIcao4(ofp?.alternate?.icao) ??
@@ -373,7 +443,8 @@ function extractSimbrief(data: any): SimbriefExtract {
     ofp?.general?.route_string ??
     ofp?.navlog?.route;
 
-  const route = typeof routeRaw === "string" ? routeRaw.trim() : undefined;
+  const routeBase = typeof routeRaw === "string" ? routeRaw.trim() : undefined;
+  const route = withRouteEndpoints(routeBase, originIcao, destIcao, depRunway, arrRunway);
 
   // METARs (SimBrief often includes these; if present, we can auto-fill wind components without needing a fetch)
   const depMetar =
@@ -412,6 +483,8 @@ function extractSimbrief(data: any): SimbriefExtract {
   return {
     originIcao,
     destIcao,
+    depRunway,
+    arrRunway,
     alternateIcao,
     route,
     distanceNm: dist,
@@ -1727,6 +1800,12 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
       if (extracted.alternateIcao) {
         setAltIcao(extracted.alternateIcao);
       }
+
+      // If SimBrief provides planned runways, try to apply them.
+      // (If our runway DB doesn't contain the exact ID, the dropdown may stay blank —
+      // but the route string will still show the runway suffixes.)
+      if (extracted.depRunway) setDepRw(extracted.depRunway);
+      if (extracted.arrRunway) setArrRw(extracted.arrRunway);
 
       // Auto-fill METARs from SimBrief (if available) so wind components populate immediately.
       if (extracted.depMetar) setMetarDep(extracted.depMetar);
