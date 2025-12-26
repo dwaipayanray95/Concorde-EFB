@@ -16,7 +16,10 @@ import type {
 } from "react";
 import Papa from "papaparse";
 
-const APP_VERSION = "1.1";
+const APP_VERSION = "1.1.1-beta";
+// Prefer app-icon.png (repo/root/public). Fallback to icon.png.
+const APP_ICON_SRC_PRIMARY = `${import.meta.env.BASE_URL}app-icon.png`;
+const APP_ICON_SRC_FALLBACK = `${import.meta.env.BASE_URL}icon.png`;
 
 // Public, no-auth “opens” counter via an SVG badge.
 // The badge request itself increments the counter, so every app open updates it.
@@ -1107,6 +1110,7 @@ function ConcordePlannerCanvas() {
   const [metarErr, setMetarErr] = useState("");
 
   const [tests, setTests] = useState<SelfTestResult[]>([]);
+  const [appIconFailed, setAppIconFailed] = useState(false);
 
 
   const depKey = (depIcao || "").toUpperCase();
@@ -1499,9 +1503,41 @@ function ConcordePlannerCanvas() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <header className="max-w-6xl mx-auto p-6 pb-0 flex items-start justify-between gap-4">
-        <div>
-          <div className="text-3xl font-bold">Concorde EFB v{APP_VERSION}</div>
-          <div className="text-sm text-slate-400">Your Concorde copilot for MSFS.</div>
+        <div className="flex items-center gap-4">
+          {!appIconFailed ? (
+            <img
+              src={appIconFailed ? APP_ICON_SRC_FALLBACK : APP_ICON_SRC_PRIMARY}
+              alt="Concorde EFB"
+              className="h-16 w-16 object-contain shrink-0"
+              onError={(e) => {
+                // First failure: try fallback icon.png. Second failure: show SVG placeholder.
+                const img = e.currentTarget;
+                if (!appIconFailed && img.src.endsWith("/app-icon.png")) {
+                  img.src = APP_ICON_SRC_FALLBACK;
+                  return;
+                }
+                setAppIconFailed(true);
+              }}
+              draggable={false}
+            />
+          ) : (
+            <div className="h-16 w-16 flex items-center justify-center shrink-0">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="h-8 w-8 text-slate-200"
+                aria-hidden="true"
+              >
+                <path d="M21.5 13.5c.3 0 .5.2.5.5v1a1 1 0 0 1-1 1H14l-2.2 3.6a1 1 0 0 1-1.8-.5V16H6l-1.2 1.2a1 1 0 0 1-1.7-.7V15a1 1 0 0 1 .3-.7L6 12 3.4 9.7a1 1 0 0 1-.3-.7V7.5a1 1 0 0 1 1.7-.7L6 8h3.9V4.4a1 1 0 0 1 1.8-.5L14 7.5h7a1 1 0 0 1 1 1v1c0 .3-.2.5-.5.5H14v3.5h7Z" />
+              </svg>
+            </div>
+          )}
+
+          <div>
+            <div className="text-3xl font-bold">Concorde EFB v{APP_VERSION}</div>
+            <div className="text-sm text-slate-400">Your Concorde copilot for MSFS.</div>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2 justify-end">
           <StatPill label="Nav DB" value={dbLoaded ? "Loaded" : "Loading"} ok={dbLoaded} />
