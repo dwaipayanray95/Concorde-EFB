@@ -17,9 +17,14 @@ import type {
 import Papa from "papaparse";
 
 const APP_VERSION = "1.1.1-beta";
-// Prefer app-icon.png (must exist in Vite's /public so it is copied into dist).
-// Fallback to icon.png.
-const APP_ICON_SRC_PRIMARY = `${import.meta.env.BASE_URL}app-icon.png`;
+
+// App icon
+// IMPORTANT: We want this to work on GitHub Pages (non-root base path) and inside Tauri.
+// Using `new URL(..., import.meta.url)` makes Vite bundle the PNG and generate a correct URL
+// regardless of the deployed base.
+const APP_ICON_SRC_PRIMARY = new URL("../app-icon.png", import.meta.url).href;
+
+// Fallback to `/icon.png` (from Vite /public) if present; otherwise we fall back to the SVG.
 const APP_ICON_SRC_FALLBACK = `${import.meta.env.BASE_URL}icon.png`;
 
 // Public, no-auth “opens” counter via an SVG badge.
@@ -1510,7 +1515,10 @@ function ConcordePlannerCanvas() {
               src={appIconMode === "primary" ? APP_ICON_SRC_PRIMARY : APP_ICON_SRC_FALLBACK}
               alt="Concorde EFB"
               className="h-24 w-24 object-contain shrink-0"
-              onError={() => {
+              onError={(e) => {
+                const failedSrc = (e.currentTarget as HTMLImageElement).src;
+                console.warn("App icon failed to load:", failedSrc);
+
                 // 1st failure: switch to fallback icon.png
                 // 2nd failure: show the simple SVG placeholder
                 setAppIconMode((prev) => (prev === "primary" ? "fallback" : "none"));
