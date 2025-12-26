@@ -15,7 +15,7 @@
     ],
     "security": { "csp": null }
   },
-  "bundle": {
+  "bundle": { "active": true, "targets": ["msi"], ... }
     "active": true,
     "targets": "all",
     "icon": [
