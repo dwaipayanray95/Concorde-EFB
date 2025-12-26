@@ -301,6 +301,8 @@ type SimbriefExtract = {
   depMetar?: string;
   arrMetar?: string;
   raw?: unknown;
+  callSign?: string;
+  registration?: string;
 };
 
 function normalizeIcao4(v: unknown): string | undefined {
@@ -319,6 +321,31 @@ function normalizeRunwayId(v: unknown): string | undefined {
   const num2 = String(n).padStart(2, "0");
   return `${num2}${m[2] ?? ""}`;
 }
+
+
+function normalizeCallsign(v: unknown): string | undefined {
+  const s = String(v ?? "").trim().toUpperCase();
+  if (!s) return undefined;
+  // Keep alnum + dashes, typical callsign length.
+  const cleaned = s.replace(/[^A-Z0-9-]/g, "");
+  return cleaned && cleaned.length >= 2 ? cleaned : undefined;
+}
+
+function normalizeRegistration(v: unknown): string | undefined {
+  const s = String(v ?? "").trim().toUpperCase();
+  if (!s) return undefined;
+
+  // Keep typical aircraft registration/tail formats (e.g., G-BOAC, VT-ABC, N123AB)
+  const cleaned = s.replace(/[^A-Z0-9-]/g, "");
+  if (!cleaned) return undefined;
+
+  // Basic sanity: at least 3 chars, no trailing/leading dashes
+  if (cleaned.length < 3) return undefined;
+  if (cleaned.startsWith("-") || cleaned.endsWith("-")) return undefined;
+
+  return cleaned;
+}
+
 
 function routeHasOriginToken(route: string, originIcao: string): boolean {
   const r = route.trim().toUpperCase();
@@ -397,6 +424,25 @@ function parseSimbriefCruiseFL(v: unknown): number | undefined {
 
 function extractSimbrief(data: any): SimbriefExtract {
   const ofp = data?.ofp ?? data;
+
+  const callSign =
+    normalizeCallsign(ofp?.general?.callsign) ??
+    normalizeCallsign(ofp?.general?.atc_callsign) ??
+    normalizeCallsign(ofp?.general?.call_sign) ??
+    normalizeCallsign(ofp?.general?.flight_callsign) ??
+    normalizeCallsign(ofp?.atc?.callsign) ??
+    normalizeCallsign(ofp?.atc?.call_sign);
+
+  const registration =
+    normalizeRegistration(ofp?.aircraft?.registration) ??
+    normalizeRegistration(ofp?.aircraft?.reg) ??
+    normalizeRegistration(ofp?.aircraft?.aircraft_reg) ??
+    normalizeRegistration(ofp?.general?.registration) ??
+    normalizeRegistration(ofp?.general?.reg) ??
+    normalizeRegistration(ofp?.general?.aircraft_reg) ??
+    normalizeRegistration(ofp?.general?.tail_number) ??
+    normalizeRegistration(ofp?.general?.tail) ??
+    normalizeRegistration(ofp?.atc?.registration);
 
   const originIcao =
     normalizeIcao4(ofp?.origin?.icao_code) ??
@@ -492,6 +538,8 @@ function extractSimbrief(data: any): SimbriefExtract {
     depMetar,
     arrMetar,
     raw: data,
+    callSign,
+    registration,
   };
 }
 
@@ -1371,6 +1419,8 @@ function ConcordePlannerCanvas() {
     }
   });
   const [simbriefNotice, setSimbriefNotice] = useState<string>("");
+  const [simbriefCallSign, setSimbriefCallSign] = useState<string>("");
+  const [simbriefRegistration, setSimbriefRegistration] = useState<string>("");
   const [simbriefLoading, setSimbriefLoading] = useState(false);
   const [simbriefImported, setSimbriefImported] = useState(false);
   const [plannedDistanceOverridden, setPlannedDistanceOverridden] = useState(false);
@@ -1775,6 +1825,8 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
   const importFromSimbrief = async () => {
     setSimbriefNotice("");
     setSimbriefImported(false);
+    setSimbriefCallSign("");
+    setSimbriefRegistration("");
 
     const u = simbriefUser.trim();
     if (!u) {
@@ -1788,6 +1840,9 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
       // For debugging in case SimBrief changes fields.
       console.log("SimBrief raw JSON:", extracted.raw);
       setSimbriefCruiseFL(Number.isFinite(extracted.cruiseFL as number) ? (extracted.cruiseFL as number) : null);
+
+      if (extracted.callSign) setSimbriefCallSign(extracted.callSign);
+      if (extracted.registration) setSimbriefRegistration(extracted.registration);
 
       if (extracted.originIcao) {
         setDepIcao(extracted.originIcao);
@@ -2041,8 +2096,25 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                 </Button>
               </div>
 
-              {/* Row 1 spacer to keep a clean grid on wide screens */}
-              <div className="hidden sm:block sm:col-span-6" />
+              {/* Row 1: SimBrief details (shows after a successful import) */}
+              <div className="hidden sm:block sm:col-span-6">
+                <div className="h-12 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 flex items-center">
+                  <div className="grid grid-cols-2 gap-3 w-full min-w-0">
+                    <div className="min-w-0">
+                      <div className="text-[10px] text-slate-400">Call Sign</div>
+                      <div className="text-sm font-semibold truncate">
+                        {simbriefImported ? (simbriefCallSign || "—") : "—"}
+                      </div>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-[10px] text-slate-400">Registration</div>
+                      <div className="text-sm font-semibold truncate">
+                        {simbriefImported ? (simbriefRegistration || "—") : "—"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               {/* Row 2: Route box (left) + distance (right) */}
               <div className="sm:col-span-9">
