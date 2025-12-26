@@ -2100,13 +2100,13 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
               <div className="hidden sm:block sm:col-span-6">
                 <div className="grid grid-cols-2 gap-3">
                   <div
-                    className={`h-12 px-3 py-2 rounded-xl border flex items-center min-w-0 ${
+                    className={`h-12 px-3 py-2 rounded-xl border flex items-center justify-center min-w-0 text-center ${
                       simbriefImported
                         ? "bg-emerald-500/10 border-emerald-500/40"
                         : "bg-slate-950 border-slate-800"
                     }`}
                   >
-                    <div className="min-w-0">
+                    <div className="min-w-0 text-center">
                       <div className="text-[10px] text-slate-400">Call Sign</div>
                       <div
                         className={`text-sm font-semibold truncate ${
@@ -2119,13 +2119,13 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                   </div>
 
                   <div
-                    className={`h-12 px-3 py-2 rounded-xl border flex items-center min-w-0 ${
+                    className={`h-12 px-3 py-2 rounded-xl border flex items-center justify-center min-w-0 text-center ${
                       simbriefImported
                         ? "bg-amber-500/10 border-amber-500/40"
                         : "bg-slate-950 border-slate-800"
                     }`}
                   >
-                    <div className="min-w-0">
+                    <div className="min-w-0 text-center">
                       <div className="text-[10px] text-slate-400">Registration</div>
                       <div
                         className={`text-sm font-semibold truncate ${
