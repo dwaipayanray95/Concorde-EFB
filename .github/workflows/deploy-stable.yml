@@ -33,3 +33,7 @@ jobs:
           branch: gh-pages
           folder: dist
           clean: true
+clean-exclude: |
+  beta
+  CNAME
+  .nojekyll
