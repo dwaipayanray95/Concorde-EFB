@@ -2383,19 +2383,15 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                       <HHMM hours={eteHours + reserveTimeH} />
                     </div>
                   </div>
-                  <div className={`efb-metric ${reheat.within_cap ? "" : "border-rose-500/40"}`}>
-                    <div className={`${metricLabel} flex items-center gap-2`}>
-                      Reheat OK
-                      <span
-                        className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-white/10 text-[10px] text-white/60 cursor-help"
-                        title={`Reheat minutes based on climb vs cap (${CONSTANTS.fuel.reheat_minutes_cap} min).`}
-                        aria-label={`Reheat minutes based on climb vs cap (${CONSTANTS.fuel.reheat_minutes_cap} min).`}
-                      >
-                        i
-                      </span>
+                  <div className={`efb-metric ${enduranceMeets ? "border-emerald-500/30" : "border-rose-500/40"}`}>
+                    <div className={metricLabel}>ETE + Reserves</div>
+                    <div className={metricValue}>
+                      <HHMM hours={eteHours + reserveTimeH} />
                     </div>
-                    <div className={`text-lg font-semibold ${reheat.within_cap ? "text-emerald-300" : "text-rose-300"}`}>{reheat.within_cap ? "YES" : "NO"}</div>
                   </div>
+                </div>
+                <div className={`text-xs ${reheat.within_cap ? "text-white/45" : "text-rose-300"}`}>
+                  Reheat safety: climb reheat within {CONSTANTS.fuel.reheat_minutes_cap} min cap.
                 </div>
                 {!enduranceMeets && (
                   <div className="text-xs text-rose-300">
