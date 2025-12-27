@@ -2082,7 +2082,7 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
             </div>
           )}
 
-          <Card title="Flight Route">
+          <Card title="IMPORT FLIGHT PLAN">
             <div className="space-y-6">
               <Label>SimBrief Username / ID (optional)</Label>
               <div className="grid gap-6 sm:grid-cols-12 items-start">
@@ -2122,7 +2122,7 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                     <div
                       className={`h-12 px-4 rounded-2xl border flex items-center justify-center min-w-0 text-center ${
                         simbriefImported
-                          ? "bg-emerald-500/10 border-emerald-500/40"
+                          ? "bg-[#348939]/45 border-[#348939] shadow-[0_0_30px_rgba(52,137,57,0.55)]"
                           : "bg-white/5 border-white/10"
                       }`}
                     >
@@ -2132,7 +2132,7 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                         </div>
                         <div
                           className={`text-sm font-semibold truncate ${
-                            simbriefImported ? "text-emerald-100" : "text-white/90"
+                            simbriefImported ? "text-white" : "text-white/90"
                           }`}
                         >
                           {simbriefImported ? (simbriefCallSign || "—") : "—"}
@@ -2143,7 +2143,7 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                     <div
                       className={`h-12 px-4 rounded-2xl border flex items-center justify-center min-w-0 text-center ${
                         simbriefImported
-                          ? "bg-amber-500/10 border-amber-500/40"
+                          ? "bg-[#FDBF02]/45 border-[#FDBF02] shadow-[0_0_30px_rgba(253,191,2,0.55)]"
                           : "bg-white/5 border-white/10"
                       }`}
                     >
@@ -2153,7 +2153,7 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                         </div>
                         <div
                           className={`text-sm font-semibold truncate ${
-                            simbriefImported ? "text-amber-100" : "text-white/90"
+                            simbriefImported ? "text-white" : "text-white/90"
                           }`}
                         >
                           {simbriefImported ? (simbriefRegistration || "—") : "—"}
@@ -2175,17 +2175,6 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                     }}
                   />
 
-                  {simbriefNotice && (
-                    <div
-                      className={`mt-2 text-xs ${
-                        simbriefNotice.startsWith("Imported")
-                          ? "text-emerald-300"
-                          : "text-rose-300"
-                      }`}
-                    >
-                      {simbriefNotice}
-                    </div>
-                  )}
                 </div>
 
                 <div className="sm:col-span-3">
@@ -2198,11 +2187,29 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                     </div>
                   </div>
 
+                </div>
+              </div>
+
+              <div className="grid grid-cols-12 gap-6 -mt-2">
+                <div className="col-span-12 sm:col-span-9">
+                  {simbriefNotice && (
+                    <div
+                      className={`text-xs ${
+                        simbriefNotice.startsWith("Imported")
+                          ? "text-emerald-300"
+                          : "text-rose-300"
+                      }`}
+                    >
+                      {simbriefNotice}
+                    </div>
+                  )}
+                </div>
+                <div className="col-span-12 sm:col-span-3 text-left sm:text-right">
                   {simbriefImported && !plannedDistanceOverridden && distanceSource === "simbrief" && (
-                    <div className="mt-2 text-xs text-emerald-300">Imported from SimBrief</div>
+                    <div className="text-xs text-emerald-300">Imported from SimBrief</div>
                   )}
                   {simbriefImported && plannedDistanceOverridden && (
-                    <div className="mt-2 text-xs text-amber-200">
+                    <div className="text-xs text-amber-200">
                       Imported from SimBrief • Planned Distance overridden
                     </div>
                   )}
