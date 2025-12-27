@@ -1,3 +1,64 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    /* Premium dark background with a subtle gradient mesh */
+    @apply bg-[#050507] text-slate-200 antialiased;
+    background-image:
+      radial-gradient(circle at 20% 0%, rgba(24, 38, 54, 0.45) 0%, transparent 55%),
+      radial-gradient(circle at 80% 20%, rgba(16, 120, 160, 0.2) 0%, transparent 50%),
+      linear-gradient(180deg, rgba(7, 10, 16, 0.98) 0%, rgba(5, 5, 7, 1) 55%, rgba(4, 4, 6, 1) 100%);
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-attachment: fixed;
+    min-height: 100vh;
+    font-family: "SF Pro Display", "SF Pro Text", "Helvetica Neue", "Segoe UI", sans-serif;
+    overflow-y: auto;
+  }
+
+  ::selection {
+    background: rgba(14, 165, 233, 0.25);
+    color: #f8fafc;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #050507;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #2a2a33;
+    border-radius: 999px;
+  }
+}
+
+@layer components {
+  .efb-surface {
+    @apply rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_30px_80px_-45px_rgba(0,0,0,0.85)];
+  }
+
+  .efb-input {
+    @apply w-full rounded-2xl bg-black/30 border border-white/10 px-4 py-3 text-sm text-white/90 placeholder-white/25 shadow-inner transition focus:outline-none focus:ring-4 focus:ring-sky-500/15 focus:border-sky-500/40;
+  }
+
+  .efb-label {
+    @apply text-[10px] uppercase tracking-[0.28em] text-white/45;
+  }
+
+  .efb-metric {
+    @apply rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white/90;
+  }
+}
