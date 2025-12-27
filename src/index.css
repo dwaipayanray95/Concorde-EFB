@@ -17,9 +17,12 @@
     /* Premium dark background with a subtle gradient mesh */
     @apply bg-[#050507] text-slate-200 antialiased;
     background-image:
-      radial-gradient(circle at 20% 0%, rgba(51, 65, 85, 0.35) 0%, transparent 45%),
-      radial-gradient(circle at 80% 20%, rgba(14, 165, 233, 0.18) 0%, transparent 40%),
-      radial-gradient(circle at 50% 0%, #1a1a2e 0%, #050507 60%);
+      radial-gradient(circle at 20% 0%, rgba(24, 38, 54, 0.45) 0%, transparent 55%),
+      radial-gradient(circle at 80% 20%, rgba(16, 120, 160, 0.2) 0%, transparent 50%),
+      linear-gradient(180deg, rgba(7, 10, 16, 0.98) 0%, rgba(5, 5, 7, 1) 55%, rgba(4, 4, 6, 1) 100%);
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-attachment: fixed;
     min-height: 100vh;
     font-family: "SF Pro Display", "SF Pro Text", "Helvetica Neue", "Segoe UI", sans-serif;
     overflow-y: auto;
