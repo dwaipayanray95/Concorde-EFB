@@ -16,8 +16,8 @@ import type {
 } from "react";
 import Papa from "papaparse";
 
-const APP_VERSION = "1.1.2";
-const BUILD_MARKER = "2612251804";
+const APP_VERSION = "2.0.1";
+const BUILD_MARKER = "281225-RC6";
 const DEBUG_FL_AUTOPICK = false;
 // App icon
 // IMPORTANT: We want this to work on GitHub Pages (non-root base path) and inside Tauri.
@@ -292,11 +292,17 @@ type RouteResolution = {
 type SimbriefExtract = {
   originIcao?: string;
   destIcao?: string;
+  depRunway?: string;
+  arrRunway?: string;
   alternateIcao?: string;
   route?: string;
   distanceNm?: number;
   cruiseFL?: number;
+  depMetar?: string;
+  arrMetar?: string;
   raw?: unknown;
+  callSign?: string;
+  registration?: string;
 };
 
 function normalizeIcao4(v: unknown): string | undefined {
@@ -304,9 +310,91 @@ function normalizeIcao4(v: unknown): string | undefined {
   return /^[A-Z]{4}$/.test(s) ? s : undefined;
 }
 
+function normalizeRunwayId(v: unknown): string | undefined {
+  const s = String(v ?? "").trim().toUpperCase();
+  // Allow: 27, 09, 30R, 04L, etc.
+  // Normalize leading zeros to two digits when present.
+  const m = /^(\d{1,2})([LRC])?$/.exec(s);
+  if (!m) return undefined;
+  const n = Number(m[1]);
+  if (!Number.isFinite(n) || n < 1 || n > 36) return undefined;
+  const num2 = String(n).padStart(2, "0");
+  return `${num2}${m[2] ?? ""}`;
+}
+
+
+function normalizeCallsign(v: unknown): string | undefined {
+  const s = String(v ?? "").trim().toUpperCase();
+  if (!s) return undefined;
+  // Keep alnum + dashes, typical callsign length.
+  const cleaned = s.replace(/[^A-Z0-9-]/g, "");
+  return cleaned && cleaned.length >= 2 ? cleaned : undefined;
+}
+
+function normalizeRegistration(v: unknown): string | undefined {
+  const s = String(v ?? "").trim().toUpperCase();
+  if (!s) return undefined;
+
+  // Keep typical aircraft registration/tail formats (e.g., G-BOAC, VT-ABC, N123AB)
+  const cleaned = s.replace(/[^A-Z0-9-]/g, "");
+  if (!cleaned) return undefined;
+
+  // Basic sanity: at least 3 chars, no trailing/leading dashes
+  if (cleaned.length < 3) return undefined;
+  if (cleaned.startsWith("-") || cleaned.endsWith("-")) return undefined;
+
+  return cleaned;
+}
+
+
+function routeHasOriginToken(route: string, originIcao: string): boolean {
+  const r = route.trim().toUpperCase();
+  const o = originIcao.trim().toUpperCase();
+  return r.startsWith(o + " ") || r.startsWith(o + "/");
+}
+
+function routeHasDestToken(route: string, destIcao: string): boolean {
+  const r = route.trim().toUpperCase();
+  const d = destIcao.trim().toUpperCase();
+  // Accept: ... OMDB or ... OMDB/30R at the end
+  return new RegExp(`\\b${d}(?:\\/[A-Z0-9]+)?\\s*$`, "i").test(r);
+}
+
+function withRouteEndpoints(
+  route: string | undefined,
+  originIcao: string | undefined,
+  destIcao: string | undefined,
+  depRunway: string | undefined,
+  arrRunway: string | undefined
+): string | undefined {
+  const base = (route ?? "").trim();
+  if (!base && !originIcao && !destIcao) return undefined;
+
+  let r = base;
+
+  if (originIcao) {
+    const prefix = depRunway ? `${originIcao}/${depRunway}` : originIcao;
+    if (!r) r = prefix;
+    else if (!routeHasOriginToken(r, originIcao)) r = `${prefix} ${r}`.trim();
+  }
+
+  if (destIcao) {
+    const suffix = arrRunway ? `${destIcao}/${arrRunway}` : destIcao;
+    if (!r) r = suffix;
+    else if (!routeHasDestToken(r, destIcao)) r = `${r} ${suffix}`.trim();
+  }
+
+  return r || undefined;
+}
+
 function toNumberOrUndefined(v: unknown): number | undefined {
   const n = typeof v === "number" ? v : Number(String(v ?? "").trim());
   return Number.isFinite(n) ? n : undefined;
+}
+function toMetarLineOrUndefined(v: unknown): string | undefined {
+  if (typeof v !== "string") return undefined;
+  const line = (v.split(/\r?\n/)[0] || "").trim();
+  return line ? line : undefined;
 }
 function parseSimbriefCruiseFL(v: unknown): number | undefined {
   if (v == null) return undefined;
@@ -337,6 +425,25 @@ function parseSimbriefCruiseFL(v: unknown): number | undefined {
 function extractSimbrief(data: any): SimbriefExtract {
   const ofp = data?.ofp ?? data;
 
+  const callSign =
+    normalizeCallsign(ofp?.general?.callsign) ??
+    normalizeCallsign(ofp?.general?.atc_callsign) ??
+    normalizeCallsign(ofp?.general?.call_sign) ??
+    normalizeCallsign(ofp?.general?.flight_callsign) ??
+    normalizeCallsign(ofp?.atc?.callsign) ??
+    normalizeCallsign(ofp?.atc?.call_sign);
+
+  const registration =
+    normalizeRegistration(ofp?.aircraft?.registration) ??
+    normalizeRegistration(ofp?.aircraft?.reg) ??
+    normalizeRegistration(ofp?.aircraft?.aircraft_reg) ??
+    normalizeRegistration(ofp?.general?.registration) ??
+    normalizeRegistration(ofp?.general?.reg) ??
+    normalizeRegistration(ofp?.general?.aircraft_reg) ??
+    normalizeRegistration(ofp?.general?.tail_number) ??
+    normalizeRegistration(ofp?.general?.tail) ??
+    normalizeRegistration(ofp?.atc?.registration);
+
   const originIcao =
     normalizeIcao4(ofp?.origin?.icao_code) ??
     normalizeIcao4(ofp?.origin?.icao) ??
@@ -348,6 +455,22 @@ function extractSimbrief(data: any): SimbriefExtract {
     normalizeIcao4(ofp?.destination?.icao) ??
     normalizeIcao4(ofp?.general?.destination_icao) ??
     normalizeIcao4(ofp?.general?.arr_icao);
+
+  const depRunway =
+    normalizeRunwayId(ofp?.origin?.plan_rwy) ??
+    normalizeRunwayId(ofp?.origin?.planned_runway) ??
+    normalizeRunwayId(ofp?.origin?.runway) ??
+    normalizeRunwayId(ofp?.general?.dep_rwy) ??
+    normalizeRunwayId(ofp?.general?.departure_runway) ??
+    normalizeRunwayId(ofp?.general?.rwy_dep);
+
+  const arrRunway =
+    normalizeRunwayId(ofp?.destination?.plan_rwy) ??
+    normalizeRunwayId(ofp?.destination?.planned_runway) ??
+    normalizeRunwayId(ofp?.destination?.runway) ??
+    normalizeRunwayId(ofp?.general?.arr_rwy) ??
+    normalizeRunwayId(ofp?.general?.arrival_runway) ??
+    normalizeRunwayId(ofp?.general?.rwy_arr);
 
   const alternateIcao =
     normalizeIcao4(ofp?.alternate?.icao_code) ??
@@ -366,7 +489,27 @@ function extractSimbrief(data: any): SimbriefExtract {
     ofp?.general?.route_string ??
     ofp?.navlog?.route;
 
-  const route = typeof routeRaw === "string" ? routeRaw.trim() : undefined;
+  const routeBase = typeof routeRaw === "string" ? routeRaw.trim() : undefined;
+  const route = withRouteEndpoints(routeBase, originIcao, destIcao, depRunway, arrRunway);
+
+  // METARs (SimBrief often includes these; if present, we can auto-fill wind components without needing a fetch)
+  const depMetar =
+    toMetarLineOrUndefined(ofp?.origin?.metar) ??
+    toMetarLineOrUndefined(ofp?.origin?.metar_raw) ??
+    toMetarLineOrUndefined(ofp?.weather?.origin_metar) ??
+    toMetarLineOrUndefined(ofp?.weather?.orig_metar) ??
+    toMetarLineOrUndefined(ofp?.weather?.departure_metar) ??
+    toMetarLineOrUndefined(ofp?.wx?.origin_metar) ??
+    toMetarLineOrUndefined(ofp?.wx?.dep_metar);
+
+  const arrMetar =
+    toMetarLineOrUndefined(ofp?.destination?.metar) ??
+    toMetarLineOrUndefined(ofp?.destination?.metar_raw) ??
+    toMetarLineOrUndefined(ofp?.weather?.destination_metar) ??
+    toMetarLineOrUndefined(ofp?.weather?.dest_metar) ??
+    toMetarLineOrUndefined(ofp?.weather?.arrival_metar) ??
+    toMetarLineOrUndefined(ofp?.wx?.destination_metar) ??
+    toMetarLineOrUndefined(ofp?.wx?.arr_metar);
 
   // Distance keys can vary across SimBrief formats.
   const dist =
@@ -376,14 +519,28 @@ function extractSimbrief(data: any): SimbriefExtract {
     toNumberOrUndefined(ofp?.general?.air_distance) ??
     toNumberOrUndefined(ofp?.general?.air_distance_nm);
 
-    const cruiseFL =
+  const cruiseFL =
     parseSimbriefCruiseFL(ofp?.general?.cruise_altitude) ??
     parseSimbriefCruiseFL(ofp?.general?.cruise_altitude_ft) ??
     parseSimbriefCruiseFL(ofp?.general?.crz_alt) ??
     parseSimbriefCruiseFL(ofp?.general?.initial_altitude) ??
     parseSimbriefCruiseFL(ofp?.general?.initial_altitude_ft);
 
-  return { originIcao, destIcao, alternateIcao, route, distanceNm: dist, cruiseFL, raw: data };
+  return {
+    originIcao,
+    destIcao,
+    depRunway,
+    arrRunway,
+    alternateIcao,
+    route,
+    distanceNm: dist,
+    cruiseFL,
+    depMetar,
+    arrMetar,
+    raw: data,
+    callSign,
+    registration,
+  };
 }
 
 async function fetchSimbrief(usernameOrId: string): Promise<SimbriefExtract> {
@@ -946,9 +1103,9 @@ type CardProps = {
 };
 
 const Card = ({ title, children, right }: CardProps) => (
-  <section className="bg-slate-900/70 border border-slate-700 rounded-2xl p-5 shadow-xl">
-    <div className="flex items-center justify-between mb-3">
-      <h2 className="text-xl font-semibold">{title}</h2>
+  <section className="efb-surface p-6 transition-colors duration-500 hover:bg-white/10">
+    <div className="flex items-center justify-between mb-5">
+      <h2 className="text-lg font-semibold text-white/90">{title}</h2>
       {right}
     </div>
     {children}
@@ -962,8 +1119,12 @@ type RowProps = {
 
 const Row = ({ children, cols = 2 }: RowProps) => (
   <div
-    className={`grid gap-3 ${
-      cols === 3 ? "grid-cols-3" : cols === 4 ? "grid-cols-4" : "grid-cols-2"
+    className={`grid gap-6 ${
+      cols === 3
+        ? "grid-cols-1 md:grid-cols-3"
+        : cols === 4
+          ? "grid-cols-2 lg:grid-cols-4"
+          : "grid-cols-1 md:grid-cols-2"
     }`}
   >
     {children}
@@ -975,17 +1136,21 @@ type LabelProps = {
 };
 
 const Label = ({ children }: LabelProps) => (
-  <label className="text-xs text-slate-400 block mb-1">{children}</label>
+  <label className="efb-label block mb-2 ml-1">{children}</label>
 );
+
+const SectionHeader = ({ children }: { children: ReactNode }) => (
+  <div className="text-sm font-semibold text-white/80 mt-4 mb-2">{children}</div>
+);
+
+const Divider = () => <div className="h-px bg-white/10 my-4" />;
 
 type InputProps = InputHTMLAttributes<HTMLInputElement>;
 
 const Input = ({ className, ...props }: InputProps) => (
   <input
     {...props}
-    className={`w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 ${
-      className ?? ""
-    }`.trim()}
+    className={`efb-input ${className ?? ""}`.trim()}
   />
 );
 
@@ -994,9 +1159,7 @@ type SelectProps = SelectHTMLAttributes<HTMLSelectElement>;
 const Select = ({ className, ...props }: SelectProps) => (
   <select
     {...props}
-    className={`w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 ${
-      className ?? ""
-    }`.trim()}
+    className={`efb-input appearance-none ${className ?? ""}`.trim()}
   />
 );
 
@@ -1007,15 +1170,50 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 const Button = ({ children, variant = "primary", className, ...props }: ButtonProps) => (
   <button
     {...props}
-    className={`px-4 py-2 rounded-xl font-semibold ${
+    className={`rounded-2xl px-5 py-2.5 text-sm font-medium transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none ${
       variant === "primary"
-        ? "bg-sky-400 text-slate-900"
-        : "bg-slate-800 text-slate-100 border border-slate-600"
-    } hover:brightness-105 ${className ?? ""}`.trim()}
+        ? "bg-[#0a84ff] text-white shadow-[0_14px_30px_-12px_rgba(10,132,255,0.9)] hover:bg-[#0c8fff]"
+        : "bg-white/5 text-white/80 border border-white/10 hover:bg-white/10"
+    } ${className ?? ""}`.trim()}
   >
     {children}
   </button>
 );
+
+type ThemeMode = "dark" | "light";
+
+type ThemeToggleProps = {
+  theme: ThemeMode;
+  onToggle: () => void;
+};
+
+const ThemeToggle = ({ theme, onToggle }: ThemeToggleProps) => {
+  const isLight = theme === "light";
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={isLight}
+      aria-label={`Switch to ${isLight ? "dark" : "light"} mode`}
+      className="theme-toggle group relative inline-flex h-7 w-28 items-center rounded-full border border-white/10 bg-white/5 p-1 text-[9px] font-semibold uppercase tracking-[0.24em] text-white/60 transition hover:bg-white/10"
+    >
+      <span className="pointer-events-none relative z-10 grid w-full grid-cols-2 text-center">
+        <span className={`transition ${!isLight ? "text-white/90" : "text-white/50"}`}>
+          Dark
+        </span>
+        <span className={`transition ${isLight ? "text-white/90" : "text-white/50"}`}>
+          Light
+        </span>
+      </span>
+      <span
+        aria-hidden="true"
+        className={`theme-toggle-thumb absolute left-1 top-1 bottom-1 w-[calc(50%-4px)] rounded-full border border-white/10 bg-white/10 shadow transition ${
+          isLight ? "translate-x-full" : "translate-x-0"
+        }`}
+      />
+    </button>
+  );
+};
 
 type StatPillProps = {
   label: string;
@@ -1023,16 +1221,16 @@ type StatPillProps = {
   ok?: boolean;
 };
 
-function StatPill({ label, value, ok = true }: StatPillProps) {
+function StatPill({ label, value, ok }: StatPillProps) {
+  const valueClass =
+    ok === undefined ? "text-white/90" : ok ? "text-emerald-300" : "text-rose-300";
+
   return (
-    <div
-      className={`px-2 py-1 rounded-full text-xs font-mono border ${
-        ok
-          ? "border-emerald-500/40 text-emerald-300"
-          : "border-rose-500/40 text-rose-300"
-      }`}
-    >
-      {label}: <span className="font-bold">{value}</span>
+    <div className="flex flex-col items-end">
+      <span className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/35">
+        {label}
+      </span>
+      <span className={`text-sm font-medium ${valueClass}`}>{value}</span>
     </div>
   );
 }
@@ -1047,7 +1245,9 @@ function HHMM({ hours }: HHMMProps) {
   const mm = totalMinutes % 60;
   return (
     <span>
-      {hh}h {mm}m
+      {hh}
+      <span className="text-xs text-white/40">h</span> {mm}
+      <span className="text-xs text-white/40">m</span>
     </span>
   );
 }
@@ -1238,6 +1438,21 @@ function computeLandingSpeeds(lwKg: number): LandingSpeeds {
   return { VLS, VAPP };
 }
 
+function readStoredTheme(): ThemeMode | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = localStorage.getItem("efb-theme");
+    if (stored === "light" || stored === "dark") return stored;
+  } catch {
+    // Ignore storage access failures.
+  }
+  return null;
+}
+
+function resolveInitialTheme(): ThemeMode {
+  return readStoredTheme() ?? "dark";
+}
+
 function ConcordePlannerCanvas() {
   const [airports, setAirports] = useState<AirportIndex>({});
   const [dbLoaded, setDbLoaded] = useState(false);
@@ -1262,6 +1477,8 @@ function ConcordePlannerCanvas() {
     }
   });
   const [simbriefNotice, setSimbriefNotice] = useState<string>("");
+  const [simbriefCallSign, setSimbriefCallSign] = useState<string>("");
+  const [simbriefRegistration, setSimbriefRegistration] = useState<string>("");
   const [simbriefLoading, setSimbriefLoading] = useState(false);
   const [simbriefImported, setSimbriefImported] = useState(false);
   const [plannedDistanceOverridden, setPlannedDistanceOverridden] = useState(false);
@@ -1290,12 +1507,28 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
   const [metarErr, setMetarErr] = useState("");
 
   const [tests, setTests] = useState<SelfTestResult[]>([]);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [appIconMode, setAppIconMode] = useState<"primary" | "fallback" | "none">("primary");
+  const [theme, setTheme] = useState<ThemeMode>(resolveInitialTheme);
+  const [themeStored, setThemeStored] = useState<boolean>(() => readStoredTheme() !== null);
 
   useEffect(() => {
     console.log(`[ConcordeEFB.tsx] ${BUILD_MARKER} v${APP_VERSION}`);
     document.title = `Concorde EFB v${APP_VERSION} • ${BUILD_MARKER}`;
   }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.dataset.theme = theme;
+    document.body.dataset.theme = theme;
+    if (themeStored) {
+      try {
+        localStorage.setItem("efb-theme", theme);
+      } catch {
+        // Ignore storage access failures.
+      }
+    }
+  }, [theme, themeStored]);
 
 
   const depKey = (depIcao || "").toUpperCase();
@@ -1618,6 +1851,7 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
   }, [arrRunway?.length_m, estLandingWeightKg]);
 
   const passCount = useMemo(() => tests.filter((t) => t.pass).length, [tests]);
+  const failedTests = useMemo(() => tests.filter((t) => !t.pass), [tests]);
 
   function computeRouteDistanceFromText(text: string): {
     distanceNM: number;
@@ -1666,6 +1900,8 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
   const importFromSimbrief = async () => {
     setSimbriefNotice("");
     setSimbriefImported(false);
+    setSimbriefCallSign("");
+    setSimbriefRegistration("");
 
     const u = simbriefUser.trim();
     if (!u) {
@@ -1680,6 +1916,9 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
       console.log("SimBrief raw JSON:", extracted.raw);
       setSimbriefCruiseFL(Number.isFinite(extracted.cruiseFL as number) ? (extracted.cruiseFL as number) : null);
 
+      if (extracted.callSign) setSimbriefCallSign(extracted.callSign);
+      if (extracted.registration) setSimbriefRegistration(extracted.registration);
+
       if (extracted.originIcao) {
         setDepIcao(extracted.originIcao);
         setDepRw("");
@@ -1691,6 +1930,17 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
       if (extracted.alternateIcao) {
         setAltIcao(extracted.alternateIcao);
       }
+
+      // If SimBrief provides planned runways, try to apply them.
+      // (If our runway DB doesn't contain the exact ID, the dropdown may stay blank —
+      // but the route string will still show the runway suffixes.)
+      if (extracted.depRunway) setDepRw(extracted.depRunway);
+      if (extracted.arrRunway) setArrRw(extracted.arrRunway);
+
+      // Auto-fill METARs from SimBrief (if available) so wind components populate immediately.
+      if (extracted.depMetar) setMetarDep(extracted.depMetar);
+      if (extracted.arrMetar) setMetarArr(extracted.arrMetar);
+      if (extracted.depMetar || extracted.arrMetar) setMetarErr("");
 
       const hasSimbriefDistance = typeof extracted.distanceNm === "number" && extracted.distanceNm > 0;
 
@@ -1826,625 +2076,738 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
     setRouteNotice(parts.join(" "));
   }
 
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="max-w-6xl mx-auto p-6 pb-0 flex items-start justify-between gap-4">
-        <div className="flex items-center gap-4">
-          {appIconMode !== "none" ? (
-            <img
-              src={appIconMode === "primary" ? APP_ICON_SRC_PRIMARY : APP_ICON_SRC_FALLBACK}
-              alt="Concorde EFB"
-              className="h-24 w-24 object-contain shrink-0"
-              onError={(e) => {
-                const failedSrc = (e.currentTarget as HTMLImageElement).src;
-                console.warn("App icon failed to load:", failedSrc);
+  const metricBox = "efb-metric flex flex-col justify-center";
+  const metricLabel = "text-[10px] uppercase tracking-[0.24em] text-white/40";
+  const metricValue = "text-lg font-semibold text-white/90 tabular-nums";
 
-                // 1st failure: switch to fallback icon.png
-                // 2nd failure: show the simple SVG placeholder
-                setAppIconMode((prev) => (prev === "primary" ? "fallback" : "none"));
+  return (
+    <div className="relative min-h-screen text-slate-100">
+      <div className="pointer-events-none fixed inset-0 -z-10">
+        <div className="absolute -top-24 left-1/2 h-72 w-[52rem] -translate-x-1/2 rounded-full bg-sky-500/10 blur-[140px]" />
+        <div className="absolute top-1/3 left-8 h-60 w-60 rounded-full bg-cyan-400/10 blur-[120px]" />
+        <div className="absolute bottom-24 right-8 h-64 w-64 rounded-full bg-slate-500/20 blur-[140px]" />
+      </div>
+
+      <div className="mx-auto max-w-7xl px-6 pb-16 pt-8 space-y-8">
+        <header className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-4">
+            {appIconMode !== "none" ? (
+              <img
+                src={appIconMode === "primary" ? APP_ICON_SRC_PRIMARY : APP_ICON_SRC_FALLBACK}
+                alt="Concorde EFB"
+                className="h-20 w-20 object-contain shrink-0 rounded-2xl border border-white/10 bg-white/5 p-2 shadow-[0_12px_30px_-18px_rgba(0,0,0,0.8)]"
+                onError={(e) => {
+                  const failedSrc = (e.currentTarget as HTMLImageElement).src;
+                  console.warn("App icon failed to load:", failedSrc);
+
+                  // 1st failure: switch to fallback icon.png
+                  // 2nd failure: show the simple SVG placeholder
+                  setAppIconMode((prev) => (prev === "primary" ? "fallback" : "none"));
+                }}
+                draggable={false}
+              />
+            ) : (
+              <div className="h-20 w-20 flex items-center justify-center shrink-0 rounded-2xl border border-white/10 bg-white/5">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  className="h-8 w-8 text-white/80"
+                  aria-hidden="true"
+                >
+                  <path d="M21.5 13.5c.3 0 .5.2.5.5v1a1 1 0 0 1-1 1H14l-2.2 3.6a1 1 0 0 1-1.8-.5V16H6l-1.2 1.2a1 1 0 0 1-1.7-.7V15a1 1 0 0 1 .3-.7L6 12 3.4 9.7a1 1 0 0 1-.3-.7V7.5a1 1 0 0 1 1.7-.7L6 8h3.9V4.4a1 1 0 0 1 1.8-.5L14 7.5h7a1 1 0 0 1 1 1v1c0 .3-.2.5-.5.5H14v3.5h7Z" />
+                </svg>
+              </div>
+            )}
+
+            <div>
+              <div className="text-3xl font-semibold tracking-tight text-white">Concorde EFB</div>
+              <div className="text-sm text-white/45">Flight planning & performance for MSFS.</div>
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-white/35">
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                  v{APP_VERSION}
+                </span>
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                  Build {BUILD_MARKER}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col items-end gap-3">
+            <ThemeToggle
+              theme={theme}
+              onToggle={() => {
+                setThemeStored(true);
+                setTheme(theme === "light" ? "dark" : "light");
               }}
-              draggable={false}
             />
-          ) : (
-            <div className="h-24 w-24 flex items-center justify-center shrink-0">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="h-10 w-10 text-slate-200"
-                aria-hidden="true"
-              >
-                <path d="M21.5 13.5c.3 0 .5.2.5.5v1a1 1 0 0 1-1 1H14l-2.2 3.6a1 1 0 0 1-1.8-.5V16H6l-1.2 1.2a1 1 0 0 1-1.7-.7V15a1 1 0 0 1 .3-.7L6 12 3.4 9.7a1 1 0 0 1-.3-.7V7.5a1 1 0 0 1 1.7-.7L6 8h3.9V4.4a1 1 0 0 1 1.8-.5L14 7.5h7a1 1 0 0 1 1 1v1c0 .3-.2.5-.5.5H14v3.5h7Z" />
-              </svg>
+            <div className="flex flex-wrap justify-end gap-6">
+              <StatPill label="Nav DB" value={dbLoaded ? "Loaded" : "Loading"} ok={dbLoaded} />
+              <StatPill label="TAS" value={`${CONSTANTS.speeds.cruise_tas_kt} kt`} />
+              <StatPill label="MTOW" value={`${CONSTANTS.weights.mtow_kg.toLocaleString()} kg`} />
+              <StatPill label="MLW" value={`${CONSTANTS.weights.mlw_kg.toLocaleString()} kg`} />
+              <StatPill label="Fuel cap" value={`${CONSTANTS.weights.fuel_capacity_kg.toLocaleString()} kg`} />
+            </div>
+          </div>
+        </header>
+
+        <main className="space-y-8">
+          {dbError && (
+            <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-xs text-rose-200">
+              Nav DB load error: {dbError}
             </div>
           )}
 
-          <div>
-            <div className="text-3xl font-bold">Concorde EFB v{APP_VERSION}</div>
-            <div className="text-sm text-slate-400">Your Concorde copilot for MSFS.</div>
-            <div className="text-[10px] text-slate-500 mt-1">Build: {BUILD_MARKER}</div>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2 justify-end">
-          <StatPill label="Nav DB" value={dbLoaded ? "Loaded" : "Loading"} ok={dbLoaded} />
-          <StatPill label="TAS" value={`${CONSTANTS.speeds.cruise_tas_kt} kt`} />
-          <StatPill label="MTOW" value={`${CONSTANTS.weights.mtow_kg.toLocaleString()} kg`} />
-          <StatPill label="MLW" value={`${CONSTANTS.weights.mlw_kg.toLocaleString()} kg`} />
-          <StatPill
-            label="Fuel cap"
-            value={`${CONSTANTS.weights.fuel_capacity_kg.toLocaleString()} kg`}
-          />
-        </div>
-      </header>
+          <Card title="FLIGHT PLAN">
+            <div className="space-y-6">
+              <Label>SimBrief Username / ID (optional)</Label>
+              <div className="grid gap-6 sm:grid-cols-12 items-start">
+                <div className="sm:col-span-4">
+                  <Input
+                    className="h-12 text-sm"
+                    value={simbriefUser}
+                    placeholder="SimBrief username"
+                    onChange={(e) => setSimbriefUser(e.target.value)}
+                  />
+                </div>
 
-      <main className="max-w-6xl mx-auto p-6 space-y-6">
-        {dbError && (
-          <div className="text-xs text-rose-300">Nav DB load error: {dbError}</div>
-        )}
-
-        <Card
-          title="Route (paste from SimBrief / OFP)"
-        >
-          <div className="space-y-3">
-            <Label>SimBrief Username / ID (optional)</Label>
-
-            <div className="grid gap-3 sm:grid-cols-12 items-start">
-              {/* Row 1: SimBrief ID + Import */}
-              <div className="sm:col-span-4">
-                <Input
-                  className="h-12 py-0 text-sm"
-                  value={simbriefUser}
-                  placeholder="SimBrief username"
-                  onChange={(e) => setSimbriefUser(e.target.value)}
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <Button
-                  className="h-12 px-4 text-sm w-full whitespace-nowrap"
-                  onClick={importFromSimbrief}
-                  disabled={simbriefLoading}
-                >
-                  <span className="inline-flex items-center justify-center gap-2 w-full">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                      className="h-4 w-4"
-                      aria-hidden="true"
-                    >
-                      <path d="M12 3a1 1 0 0 1 1 1v8.586l2.293-2.293a1 1 0 1 1 1.414 1.414l-4.007 4.007a1 1 0 0 1-1.4.012l-4.02-4.02a1 1 0 1 1 1.414-1.414L11 12.586V4a1 1 0 0 1 1-1Z" />
-                      <path d="M5 20a1 1 0 0 1-1-1v-2a1 1 0 1 1 2 0v1h12v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H5Z" />
-                    </svg>
-                    {simbriefLoading ? "Importing…" : "Import"}
-                  </span>
-                </Button>
-              </div>
-
-              {/* Row 1 spacer to keep a clean grid on wide screens */}
-              <div className="hidden sm:block sm:col-span-6" />
-
-              {/* Row 2: Route box (left) + distance (right) */}
-              <div className="sm:col-span-9">
-                <textarea
-                  className="w-full h-12 px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 text-xs leading-tight resize-none overflow-y-auto"
-                  placeholder="Route will auto-fill from SimBrief (or paste here)"
-                  value={routeText}
-                  onChange={(e) => {
-                    // user is manually editing/pasting; distance becomes an auto-estimate
-                    setDistanceSource("auto");
-                    setPlannedDistanceOverridden(false);
-                    setRouteText(e.target.value);
-                  }}
-                />
-
-                {/* SimBrief success/error should live under the route box */}
-                {simbriefNotice && (
-                  <div
-                    className={`mt-2 text-xs ${
-                      simbriefNotice.startsWith("Imported")
-                        ? "text-emerald-400"
-                        : "text-rose-300"
-                    }`}
+                <div className="sm:col-span-2">
+                  <Button
+                    className="h-12 px-4 text-sm w-full whitespace-nowrap"
+                    onClick={importFromSimbrief}
+                    disabled={simbriefLoading}
                   >
-                    {simbriefNotice}
-                  </div>
-                )}
-              </div>
+                    <span className="inline-flex items-center justify-center gap-2 w-full">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        className="h-4 w-4"
+                        aria-hidden="true"
+                      >
+                        <path d="M12 3a1 1 0 0 1 1 1v8.586l2.293-2.293a1 1 0 1 1 1.414 1.414l-4.007 4.007a1 1 0 0 1-1.4.012l-4.02-4.02a1 1 0 1 1 1.414-1.414L11 12.586V4a1 1 0 0 1 1-1Z" />
+                        <path d="M5 20a1 1 0 0 1-1-1v-2a1 1 0 1 1 2 0v1h12v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H5Z" />
+                      </svg>
+                      {simbriefLoading ? "Importing…" : "Import"}
+                    </span>
+                  </Button>
+                </div>
 
-              <div className="sm:col-span-3">
-                <div className="px-3 py-2 h-12 flex flex-col justify-center rounded-xl bg-slate-950 border border-slate-800">
-                  <div className="text-[10px] text-slate-400">Estimated Route Distance</div>
-                  <div className="text-sm font-semibold">
-                    {routeDistanceNM != null
-                      ? `${Math.round(routeDistanceNM).toLocaleString()} NM`
-                      : "—"}
+                <div className="hidden sm:block sm:col-span-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div
+                      className={`h-12 px-4 rounded-2xl border flex items-center justify-center min-w-0 text-center ${
+                        simbriefImported
+                          ? "bg-[#348939]/45 border-[#348939] shadow-[0_0_30px_rgba(52,137,57,0.55)]"
+                          : "bg-white/5 border-white/10"
+                      }`}
+                    >
+                      <div className="min-w-0 text-center">
+                        <div className="text-[10px] uppercase tracking-[0.28em] text-white/40">
+                          Call Sign
+                        </div>
+                        <div
+                          className={`text-sm font-semibold truncate ${
+                            simbriefImported ? "text-white" : "text-white/90"
+                          }`}
+                        >
+                          {simbriefImported ? (simbriefCallSign || "—") : "—"}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div
+                      className={`h-12 px-4 rounded-2xl border flex items-center justify-center min-w-0 text-center ${
+                        simbriefImported
+                          ? "bg-[#FDBF02]/45 border-[#FDBF02] shadow-[0_0_30px_rgba(253,191,2,0.55)]"
+                          : "bg-white/5 border-white/10"
+                      }`}
+                    >
+                      <div className="min-w-0 text-center">
+                        <div className="text-[10px] uppercase tracking-[0.28em] text-white/40">
+                          Registration
+                        </div>
+                        <div
+                          className={`text-sm font-semibold truncate ${
+                            simbriefImported ? "text-white" : "text-white/90"
+                          }`}
+                        >
+                          {simbriefImported ? (simbriefRegistration || "—") : "—"}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Status should live under the distance box */}
-                {simbriefImported && !plannedDistanceOverridden && distanceSource === "simbrief" && (
-                  <div className="mt-2 text-xs text-emerald-400">Imported from SimBrief</div>
-                )}
-                {simbriefImported && plannedDistanceOverridden && (
-                  <div className="mt-2 text-xs text-amber-300">
-                    Imported from SimBrief • Planned Distance overridden
+                <div className="sm:col-span-9">
+                  <textarea
+                    className="efb-input h-12 text-xs leading-tight resize-none overflow-y-auto"
+                    placeholder="Route will auto-fill from SimBrief (or paste here)"
+                    value={routeText}
+                    onChange={(e) => {
+                      setDistanceSource("auto");
+                      setPlannedDistanceOverridden(false);
+                      setRouteText(e.target.value);
+                    }}
+                  />
+
+                </div>
+
+                <div className="sm:col-span-3">
+                  <div className={`${metricBox} h-12`}>
+                    <div className={metricLabel}>Estimated Route Distance</div>
+                    <div className="text-sm font-semibold text-white/90 tabular-nums">
+                      {routeDistanceNM != null
+                        ? `${Math.round(routeDistanceNM).toLocaleString()} NM`
+                        : "—"}
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              <div className="grid grid-cols-12 gap-6 -mt-2">
+                <div className="col-span-12 sm:col-span-9">
+                  {simbriefNotice && (
+                    <div
+                      className={`text-xs ${
+                        simbriefNotice.startsWith("Imported")
+                          ? "text-emerald-300"
+                          : "text-rose-300"
+                      }`}
+                    >
+                      {simbriefNotice}
+                    </div>
+                  )}
+                </div>
+                <div className="col-span-12 sm:col-span-3 text-left sm:text-right">
+                  {simbriefImported && !plannedDistanceOverridden && distanceSource === "simbrief" && (
+                    <div className="text-xs text-emerald-300">Imported from SimBrief</div>
+                  )}
+                  {simbriefImported && plannedDistanceOverridden && (
+                    <div className="text-xs text-amber-200">
+                      Imported from SimBrief • Planned Distance overridden
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {routeNotice && (
+                <div className="text-xs text-white/45">{routeNotice}</div>
+              )}
+            </div>
+          </Card>
+
+          <Card title="CRUISE & FUEL MANAGEMENT">
+            <Row>
+              <div>
+                <Label>Planned Distance (NM)</Label>
+                <Input
+                  type="number"
+                  value={manualDistanceNM}
+                  onChange={(e) => {
+                    if (simbriefImported) setPlannedDistanceOverridden(true);
+                    lastAutoDistanceRef.current = null;
+
+                    const next = parseFloat(e.target.value || "0");
+                    setManualDistanceNM(Number.isFinite(next) ? next : 0);
+                    setCruiseFLTouched(false);
+                    setCruiseFLNotice("");
+                  }}
+                />
+                <div className="text-xs text-white/45 mt-2">
+                  {simbriefImported
+                    ? "SimBrief imported: you can override Planned Distance manually (this won’t change the imported route distance shown above)."
+                    : "Enter distance from your flight planner. We’ll compute Climb/Cruise/Descent from this and FL."}
+                </div>
+              </div>
+              <div>
+                <Label>Cruise Flight Level (FL)</Label>
+                <Input
+                  type="number"
+                  value={cruiseFLText}
+                  min={MIN_CONCORDE_FL}
+                  max={MAX_CONCORDE_FL}
+                  step={10}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setCruiseFLText(next);
+
+                    if (cruiseFLFocusValueRef.current !== null && next !== cruiseFLFocusValueRef.current) {
+                      cruiseFLEditedRef.current = true;
+                    }
+
+                    const n = Number(next);
+                    if (Number.isFinite(n)) setCruiseFL(n);
+                  }}
+                  onFocus={() => {
+                    cruiseFLFocusValueRef.current = cruiseFLText;
+                    cruiseFLEditedRef.current = false;
+                  }}
+                  onBlur={() => {
+                    const n = Number(cruiseFLText);
+                    if (!Number.isFinite(n)) {
+                      setCruiseFLNotice("Invalid FL value.");
+                      setCruiseFLText(String(cruiseFL));
+                      cruiseFLFocusValueRef.current = null;
+                      return;
+                    }
+                    applyCruiseFL(n);
+                    cruiseFLFocusValueRef.current = null;
+                    if (cruiseFLEditedRef.current) setCruiseFLTouched(true);
+                  }}
+                />
+                <div className="text-xs text-white/45 mt-2">
+                  {directionEW ? (
+                    <span>
+                      Direction (auto): <b>{directionEW === "E" ? "Eastbound" : "Westbound"}</b>. Above FL410 we snap to Non-RVSM levels.
+                    </span>
+                  ) : (
+                    <span>Direction: <b>unknown</b> (enter valid DEP/ARR ICAO to enable Non-RVSM snapping).</span>
+                  )}
+                </div>
+                {cruiseFLNotice && (
+                  <div
+                    className={`text-xs mt-1 ${
+                      cruiseFLNotice.startsWith("Invalid")
+                        ? "text-rose-300"
+                        : cruiseFLNotice.startsWith("Adjusted")
+                        ? "text-amber-200"
+                        : "text-white/50"
+                    }`}
+                  >
+                    {cruiseFLNotice}
                   </div>
                 )}
               </div>
-            </div>
+            </Row>
 
-            {routeNotice && (
-              <div className="text-xs text-slate-400">{routeNotice}</div>
-            )}
-          </div>
-        </Card>
-
-        <Card
-          title="Departure / Arrival (ICAO & Runways)"
-          right={
-            <Button
-              onClick={async () => {
-                setMetarErr("");
-                const dep = depKey;
-                const arr = arrKey;
-
-                if (!dep || dep.length !== 4 || !arr || arr.length !== 4) {
-                  setMetarErr("Enter valid DEP and ARR ICAOs first.");
-                  return;
-                }
-
-                const [d, a] = await Promise.all([
-                  fetchMetarByICAO(dep),
-                  fetchMetarByICAO(arr),
-                ]);
-
-                const errs: string[] = [];
-                if (d.ok) setMetarDep(d.raw);
-                else errs.push(d.error);
-
-                if (a.ok) setMetarArr(a.raw);
-                else errs.push(a.error);
-
-                if (errs.length) setMetarErr(errs.join(" | "));
-              }}
-            >
-              Fetch METARs
-            </Button>
-          }
-        >
-          <Row>
-            <div>
-              <Label>Departure ICAO</Label>
-              <Input
-                value={depIcao}
-                onChange={(e) => setDepIcao(e.target.value.toUpperCase())}
-              />
-            </div>
-            <div>
-              <Label>Arrival ICAO</Label>
-              <Input
-                value={arrIcao}
-                onChange={(e) => setArrIcao(e.target.value.toUpperCase())}
-              />
-            </div>
-          </Row>
-
-          <Row>
-            <div>
-              <Label>Departure Runway (meters)</Label>
-              <Select value={depRw} onChange={(e) => setDepRw(e.target.value)}>
-                <option value="">—</option>
-                {(depInfo?.runways ?? []).map((r) => (
-                  <option key={`dep-${r.id}`} value={r.id}>
-                    {r.id} • {r.length_m.toLocaleString()} m • HDG {r.heading}°
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            <div>
-              <Label>Arrival Runway (meters)</Label>
-              <Select value={arrRw} onChange={(e) => setArrRw(e.target.value)}>
-                <option value="">—</option>
-                {(arrInfo?.runways ?? []).map((r) => (
-                  <option key={`arr-${r.id}`} value={r.id}>
-                    {r.id} • {r.length_m.toLocaleString()} m • HDG {r.heading}°
-                  </option>
-                ))}
-              </Select>
-            </div>
-          </Row>
-        </Card>
-
-        <Card title="Cruise & Fuel (Manual Distance)">
-          <Row>
-            <div>
-              <Label>Planned Distance (NM)</Label>
-              <Input
-                type="number"
-                value={manualDistanceNM}
-                onChange={(e) => {
-                  // User override: use this value for calculations, but do NOT change the SimBrief/route distance display.
-                  if (simbriefImported) setPlannedDistanceOverridden(true);
-                  lastAutoDistanceRef.current = null;
-
-                  const next = parseFloat(e.target.value || "0");
-                  setManualDistanceNM(Number.isFinite(next) ? next : 0);
-
-                  // Re-enable auto-FL (it should recompute from the new Planned Distance).
-                  setCruiseFLTouched(false);
-                  setCruiseFLNotice("");
-                }}
-              />
-              <div className="text-xs text-slate-400 mt-1">
-                {simbriefImported
-                  ? "SimBrief imported: you can override Planned Distance manually (this won’t change the imported route distance shown above)."
-                  : "Enter distance from your flight planner. We’ll compute Climb/Cruise/Descent from this and FL."}
+            <div className="mt-6 grid gap-4 lg:grid-cols-[1.1fr_2fr]">
+              <div className={`${metricBox} lg:border-r lg:border-white/10`}>
+                <div className={metricLabel}>Total Flight Time</div>
+                <div className={metricValue}>
+                  <HHMM hours={totalTimeH} />
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className={metricBox}>
+                  <div className={metricLabel}>Climb</div>
+                  <div className={metricValue}>
+                    <HHMM hours={climb.time_h} />
+                  </div>
+                </div>
+                <div className={metricBox}>
+                  <div className={metricLabel}>Cruise</div>
+                  <div className={metricValue}>
+                    <HHMM hours={cruiseTimeH} />
+                  </div>
+                </div>
+                <div className={metricBox}>
+                  <div className={metricLabel}>Descent</div>
+                  <div className={metricValue}>
+                    <HHMM hours={descent.time_h} />
+                  </div>
+                </div>
               </div>
             </div>
-            <div>
-              <Label>Cruise Flight Level (FL)</Label>
-              <Input
-                type="number"
-                value={cruiseFLText}
-                min={MIN_CONCORDE_FL}
-                max={MAX_CONCORDE_FL}
-                step={10}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  setCruiseFLText(next);
 
-                  // Track whether the user actually changed the value during this focus session.
-                  if (cruiseFLFocusValueRef.current !== null && next !== cruiseFLFocusValueRef.current) {
-                    cruiseFLEditedRef.current = true;
-                  }
+            <div className="mt-6 grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
+              <div className="space-y-6">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label>Taxi Fuel (kg)</Label>
+                    <Input type="number" value={taxiKg} onChange={(e) => setTaxiKg(parseFloat(e.target.value || "0"))} />
+                  </div>
+                  <div>
+                    <Label>Contingency (%)</Label>
+                    <Input type="number" value={contingencyPct} onChange={(e) => setContingencyPct(parseFloat(e.target.value || "0"))} />
+                  </div>
+                  <div>
+                    <Label>Final Reserve (kg)</Label>
+                    <Input type="number" value={finalReserveKg} onChange={(e) => setFinalReserveKg(parseFloat(e.target.value || "0"))} />
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <Label>Trim Tank Fuel (kg)</Label>
+                      <Input type="number" value={trimTankKg} onChange={(e) => setTrimTankKg(parseFloat(e.target.value || "0"))} />
+                    </div>
+                    <div className="h-px bg-white/10" />
+                    <div>
+                      <Label>Alternate ICAO</Label>
+                      <Input value={altIcao} onChange={(e) => setAltIcao(e.target.value.toUpperCase())} />
+                      <div className="text-xs text-white/45 mt-2">
+                        ARR → ALT distance: <b>{Math.round(alternateDistanceNM || 0).toLocaleString()}</b> NM
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-                  // Update calculations live when parsable, but don't snap while typing.
-                  const n = Number(next);
-                  if (Number.isFinite(n)) setCruiseFL(n);
-                }}
-                onFocus={() => {
-                  cruiseFLFocusValueRef.current = cruiseFLText;
-                  cruiseFLEditedRef.current = false;
-                }}
-                onBlur={() => {
-                  const n = Number(cruiseFLText);
-                  if (!Number.isFinite(n)) {
-                    setCruiseFLNotice("Invalid FL value.");
-                    // Reset focus tracking.
-                    cruiseFLFocusValueRef.current = null;
-                    cruiseFLEditedRef.current = false;
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className={metricBox}>
+                    <div className={metricLabel}>Computed TOW</div>
+                    <div className={metricValue}>{Math.round(tkoWeightKgAuto).toLocaleString()} kg</div>
+                  </div>
+                  <div className={`efb-metric flex flex-col justify-center ${enduranceMeets ? "" : "border-rose-500/40"}`}>
+                    <div className={metricLabel}>Fuel Endurance</div>
+                    <div className={metricValue}>
+                      <HHMM hours={enduranceHours} />
+                    </div>
+                  </div>
+                  <div className={`efb-metric ${enduranceMeets ? "border-emerald-500/30" : "border-rose-500/40"}`}>
+                    <div className={metricLabel}>ETE + Reserves</div>
+                    <div className={metricValue}>
+                      <HHMM hours={eteHours + reserveTimeH} />
+                    </div>
+                  </div>
+                  <div className={`efb-metric ${enduranceMeets ? "border-emerald-500/30" : "border-rose-500/40"}`}>
+                    <div className={metricLabel}>ETE + Reserves</div>
+                    <div className={metricValue}>
+                      <HHMM hours={eteHours + reserveTimeH} />
+                    </div>
+                  </div>
+                </div>
+                <div className={`text-xs ${reheat.within_cap ? "text-white/45" : "text-rose-300"}`}>
+                  Reheat safety: climb reheat within {CONSTANTS.fuel.reheat_minutes_cap} min cap.
+                </div>
+                {!enduranceMeets && (
+                  <div className="text-xs text-rose-300">
+                    Fuel endurance is less than required ETE + reserves.
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-3xl border border-white/10 bg-black/30 p-5 space-y-3">
+                <div className="flex justify-between items-center py-1 border-b border-white/10">
+                  <span className="text-sm text-white/70">Trip Fuel</span>
+                  <span className="text-xl font-mono text-white/95">{Math.round(tripKg).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-white/10">
+                  <span className="text-sm text-white/50">Taxi Fuel</span>
+                  <span className="text-base font-mono text-white/85">{Math.round(taxiKg || 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-white/10">
+                  <span className="text-sm text-white/50">Contingency</span>
+                  <span className="text-base font-mono text-white/85">{Math.round(blocks.contingency_kg || 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-white/10">
+                  <span className="text-sm text-white/50">Trim Fuel</span>
+                  <span className="text-base font-mono text-white/85">{Math.round(trimTankKg || 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-white/10">
+                  <span className="text-sm text-white/50">Alt Fuel ({Math.round(alternateDistanceNM || 0)} NM)</span>
+                  <span className="text-base font-mono text-white/85">{Math.round((alternateDistanceNM || 0) * CONSTANTS.fuel.burn_kg_per_nm).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-white/10">
+                  <span className="text-sm text-white/70 font-medium">Block Fuel</span>
+                  <span className="text-xl font-mono text-white">{Math.round(blocks.block_kg).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center py-1 pt-3">
+                  <div className="flex flex-col">
+                    <span className="text-sm text-white/70 font-medium">Total Required</span>
+                    <span className="text-[10px] text-white/40">Block + Trim ({trimTankKg} kg)</span>
+                  </div>
+                  <div className="text-right">
+                    <span className={`text-2xl font-mono ${fuelWithinCapacity ? "text-emerald-400" : "text-rose-400"}`}>
+                      {Number.isFinite(blocks.block_kg) ? Math.round(blocks.block_kg + (trimTankKg || 0)).toLocaleString() : "—"}
+                    </span>
+                    <span className="text-sm text-white/50 ml-1">kg</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {!fuelWithinCapacity && (
+              <div className="mt-3 text-xs text-rose-300">
+                Warning: Total fuel <b>{Math.round(totalFuelRequiredKg).toLocaleString()} kg</b> exceeds Concorde fuel capacity{" "}
+                <b>{Math.round(fuelCapacityKg).toLocaleString()} kg</b> by <b>{Math.round(fuelExcessKg).toLocaleString()} kg</b>. Reduce block or trim fuel to stay within limits.
+              </div>
+            )}
+          </Card>
+
+          <Card
+            title="PERFORMANCE CALCULATOR"
+            right={
+              <Button
+                onClick={async () => {
+                  setMetarErr("");
+                  const dep = depKey;
+                  const arr = arrKey;
+
+                  if (!dep || dep.length !== 4 || !arr || arr.length !== 4) {
+                    setMetarErr("Enter valid DEP and ARR ICAOs first.");
                     return;
                   }
 
-                  const next = normalizeCruiseFLByRules(n, directionEW);
+                  const [d, a] = await Promise.all([fetchMetarByICAO(dep), fetchMetarByICAO(arr)]);
 
-                  // Build a helpful notice (only if we changed what the user typed)
-                  if (next !== Math.round(n)) {
-                    const dirMsg = directionEW
-                      ? ` (${directionEW === "E" ? "Eastbound" : "Westbound"})`
-                      : " (direction unknown)";
-                    setCruiseFLNotice(`Adjusted to valid FL${next}${dirMsg}.`);
-                  } else {
-                    setCruiseFLNotice("");
-                  }
+                  const errs: string[] = [];
+                  if (d.ok) setMetarDep(d.raw);
+                  else errs.push(d.error);
 
-                  setCruiseFL(next);
-                  setCruiseFLText(String(next));
+                  if (a.ok) setMetarArr(a.raw);
+                  else errs.push(a.error);
 
-                  // Only mark as touched if they actually edited during this focus.
-                  if (cruiseFLEditedRef.current) setCruiseFLTouched(true);
-
-                  // Reset focus tracking.
-                  cruiseFLFocusValueRef.current = null;
-                  cruiseFLEditedRef.current = false;
+                  if (errs.length) setMetarErr(errs.join(" | "));
                 }}
-              />
-              <div className="text-xs text-slate-400 mt-1">
-                {directionEW ? (
-                  <span>
-                    Direction (auto): <b>{directionEW === "E" ? "Eastbound" : "Westbound"}</b>. Above FL410 we snap to Non-RVSM levels.
-                  </span>
-                ) : (
-                  <span>Direction: <b>unknown</b> (enter valid DEP/ARR ICAO to enable Non-RVSM snapping).</span>
-                )}
-              </div>
-              {cruiseFLNotice && (
-                <div
-                  className={`text-xs mt-1 ${
-                    cruiseFLNotice.startsWith("Warning")
-                      ? "text-amber-300"
-                      : cruiseFLNotice.startsWith("Adjusted")
-                      ? "text-amber-300"
-                      : cruiseFLNotice.startsWith("Adjusted")
-                      ? "text-amber-300"
-                      : cruiseFLNotice.startsWith("Invalid")
-                      ? "text-rose-300"
-                      : "text-slate-300"
-                  }`}
-                >
-                  {cruiseFLNotice}
+              >
+                Fetch METARs
+              </Button>
+            }
+          >
+            <SectionHeader>Airports & Runways</SectionHeader>
+            {metarErr && <div className="text-xs text-rose-300 mt-2">METAR fetch error: {metarErr}</div>}
+            <div className="grid gap-5 lg:grid-cols-2">
+              <div className="space-y-3">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <Label>Departure ICAO</Label>
+                    <Input
+                      value={depIcao}
+                      onChange={(e) => setDepIcao(e.target.value.toUpperCase())}
+                    />
+                  </div>
+                  <div>
+                    <Label>Departure Runway</Label>
+                    <Select value={depRw} onChange={(e) => setDepRw(e.target.value)}>
+                      <option value="">—</option>
+                      {(depInfo?.runways ?? []).map((r) => (
+                        <option key={`dep-${r.id}`} value={r.id}>
+                          {`RWY ${r.id} • ${Number(r.length_m || 0).toLocaleString()} m • ${Math.round(
+                            Number(r.heading || 0)
+                          )}°`}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
                 </div>
+                <div className={`rounded-2xl border px-4 py-3 ${
+                  depWind.parsed.wind_gust_kt
+                    ? "border-amber-400/40 bg-amber-500/10"
+                    : "border-emerald-400/30 bg-emerald-500/10"
+                }`}>
+                  <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.28em] text-white/60">
+                    <span>DEP METAR</span>
+                    <span className="text-white/60">{depIcao}{depRunway ? ` ${depRunway.id}` : ""}</span>
+                  </div>
+                  <div className="mt-2 text-xs text-white/90 font-mono break-words">
+                    {metarDep || "—"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <Label>Arrival ICAO</Label>
+                    <Input
+                      value={arrIcao}
+                      onChange={(e) => setArrIcao(e.target.value.toUpperCase())}
+                    />
+                  </div>
+                  <div>
+                    <Label>Arrival Runway</Label>
+                    <Select value={arrRw} onChange={(e) => setArrRw(e.target.value)}>
+                      <option value="">—</option>
+                      {(arrInfo?.runways ?? []).map((r) => (
+                        <option key={`arr-${r.id}`} value={r.id}>
+                          {`RWY ${r.id} • ${Number(r.length_m || 0).toLocaleString()} m • ${Math.round(
+                            Number(r.heading || 0)
+                          )}°`}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                </div>
+                <div className={`rounded-2xl border px-4 py-3 ${
+                  arrWind.parsed.wind_gust_kt
+                    ? "border-amber-400/40 bg-amber-500/10"
+                    : "border-emerald-400/30 bg-emerald-500/10"
+                }`}>
+                  <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.28em] text-white/60">
+                    <span>ARR METAR</span>
+                    <span className="text-white/60">{arrIcao}{arrRunway ? ` ${arrRunway.id}` : ""}</span>
+                  </div>
+                  <div className="mt-2 text-xs text-white/90 font-mono break-words">
+                    {metarArr || "—"}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Divider />
+
+            <div className="grid gap-6 lg:grid-cols-2">
+              {/*
+                Landing limits are based on runway length and MLW.
+                Keep the visual treatment in sync with the computed feasibility.
+              */}
+              {/**/}
+              <div className={`rounded-3xl border p-5 space-y-4 ${
+                tkoCheck.feasible
+                  ? "border-white/10 bg-black/30"
+                  : "border-rose-500/60 bg-rose-500/15 shadow-[0_0_45px_rgba(244,63,94,0.35)]"
+              }`}>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-[0.28em] text-white/70">TAKEOFF PERFORMANCE</div>
+                    <div className="text-2xl font-semibold text-white/90 mt-2">
+                      {Math.round(tkoWeightKgAuto).toLocaleString()}
+                      <span className="text-sm text-white/40"> kg</span>
+                    </div>
+                  </div>
+                  <div
+                    className={`text-[11px] font-semibold px-3 py-1 rounded-full border ${
+                      tkoCheck.feasible
+                        ? "border-emerald-400/40 text-emerald-300 bg-emerald-500/10"
+                        : "border-rose-400/40 text-rose-300 bg-rose-500/10"
+                    }`}
+                  >
+                    {tkoCheck.feasible ? "WITHIN LIMITS" : "RUNWAY TOO SHORT"}
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className={metricBox}>
+                    <div className={metricLabel}>V1</div>
+                    <div className={metricValue}>{tkSpeeds.V1}</div>
+                  </div>
+                  <div className={metricBox}>
+                    <div className={metricLabel}>VR</div>
+                    <div className={metricValue}>{tkSpeeds.VR}</div>
+                  </div>
+                  <div className={metricBox}>
+                    <div className={metricLabel}>V2</div>
+                    <div className={metricValue}>{tkSpeeds.V2}</div>
+                  </div>
+                </div>
+                <div className="text-xs text-white/45">
+                  Runway required: <b>{Math.round(tkoCheck.required_length_m_est).toLocaleString()} m</b>
+                </div>
+              </div>
+
+              <div className={`rounded-3xl border p-5 space-y-4 ${
+                ldgCheck.feasible && estLandingWeightKg <= CONSTANTS.weights.mlw_kg
+                  ? "border-white/10 bg-black/30"
+                  : "border-rose-500/60 bg-rose-500/15 shadow-[0_0_45px_rgba(244,63,94,0.35)]"
+              }`}>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-[0.28em] text-white/70">LANDING PERFORMANCE</div>
+                    <div className="text-2xl font-semibold text-white/90 mt-2">
+                      {Math.round(estLandingWeightKg).toLocaleString()}
+                      <span className="text-sm text-white/40"> kg</span>
+                    </div>
+                  </div>
+                  <div
+                    className={`text-[11px] font-semibold px-3 py-1 rounded-full border ${
+                      ldgCheck.feasible && estLandingWeightKg <= CONSTANTS.weights.mlw_kg
+                        ? "border-emerald-400/40 text-emerald-300 bg-emerald-500/10"
+                        : "border-rose-400/40 text-rose-300 bg-rose-500/10"
+                    }`}
+                  >
+                    {ldgCheck.feasible && estLandingWeightKg <= CONSTANTS.weights.mlw_kg
+                      ? "WITHIN LIMITS"
+                      : estLandingWeightKg > CONSTANTS.weights.mlw_kg
+                      ? "OVER MLW"
+                      : "RUNWAY TOO SHORT"}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className={metricBox}>
+                    <div className={metricLabel}>VLS</div>
+                    <div className={metricValue}>{ldSpeeds.VLS}</div>
+                  </div>
+                  <div className={metricBox}>
+                    <div className={metricLabel}>VAPP</div>
+                    <div className={metricValue}>{ldSpeeds.VAPP}</div>
+                  </div>
+                </div>
+                <div className="text-xs text-white/45">
+                  Runway required: <b>{Math.round(ldgCheck.required_length_m_est).toLocaleString()} m</b>
+                </div>
+              </div>
+            </div>
+            <div className="text-xs text-white/45 mt-3">
+              Speeds scale with √(weight/reference) and are indicative IAS; verify against the DC Designs manual & in-sim.
+            </div>
+          </Card>
+
+          <Card title="Notes & Assumptions">
+            <ul className="list-disc pl-5 text-sm text-white/70 space-y-2">
+              <li>All masses in <b>kg</b>. Distances in <b>NM</b>. Runway lengths in <b>m</b> only.</li>
+              <li>Nav DB loads Airports/Runways/NAVAIDs from OurAirports at runtime.</li>
+              <li>Routes accept SID/STAR tokens but do not expand full procedure geometry.</li>
+              <li>SimBrief import drives DEP/ARR, route, alternates, and METAR when available.</li>
+              <li>Fuel model is heuristic and altitude-sensitive; verify against DC Designs data and in‑sim results.</li>
+              <li>Reheat safety is a climb-time cap check; it does not change calculations.</li>
+            </ul>
+          </Card>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-xs text-white/60">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="ghost"
+                className="h-8 px-3 text-xs"
+                onClick={() => {
+                  setTests(runSelfTests());
+                  setShowDiagnostics(true);
+                }}
+              >
+                Run Self-Tests
+              </Button>
+              {tests.length > 0 && (
+                <span className="text-white/70">
+                  Diagnostics: {passCount}/{tests.length} passed
+                </span>
+              )}
+              {failedTests.length > 0 && (
+                <Button
+                  variant="ghost"
+                  className="h-8 px-3 text-xs"
+                  onClick={() => setShowDiagnostics((prev) => !prev)}
+                >
+                  {showDiagnostics ? "Hide Details" : "Show Details"}
+                </Button>
               )}
             </div>
-          </Row>
-
-          <Row cols={4}>
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-              <div className="text-xs text-slate-400">Planned Distance</div>
-              <div className="text-lg font-semibold">{plannedDistance ? Math.round(plannedDistance).toLocaleString() : "—"} NM</div>
-            </div>
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-              <div className="text-xs text-slate-400">Climb</div>
-              <div className="text-lg font-semibold">
-                <HHMM hours={climb.time_h} />
-              </div>
-            </div>
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-              <div className="text-xs text-slate-400">Cruise</div>
-              <div className="text-lg font-semibold">
-                <HHMM hours={cruiseTimeH} />
-              </div>
-            </div>
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-              <div className="text-xs text-slate-400">Descent</div>
-              <div className="text-lg font-semibold">
-                <HHMM hours={descent.time_h} />
-              </div>
-            </div>
-          </Row>
-
-          <Row>
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-              <div className="text-xs text-slate-400">Total Flight Time (ETE)</div>
-              <div className="text-lg font-semibold">
-                <HHMM hours={totalTimeH} />
-              </div>
-            </div>
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-              <div className="text-xs text-slate-400">Fuel Endurance (airborne)</div>
-              <div className="text-lg font-semibold">
-                <HHMM hours={enduranceHours} />
-              </div>
-            </div>
-            <div className={`px-3 py-2 rounded-xl bg-slate-950 border ${enduranceMeets ? "border-emerald-500/40" : "border-rose-500/40"}`}>
-              <div className="text-xs text-slate-400">Required Minimum (ETE + reserves)</div>
-              <div className="text-lg font-semibold">
-                <HHMM hours={eteHours + reserveTimeH} />
-              </div>
-            </div>
-          </Row>
-
-          <Row>
-            <div>
-              <Label>Alternate ICAO (optional)</Label>
-              <Input value={altIcao} onChange={(e) => setAltIcao(e.target.value.toUpperCase())} />
-              <div className="text-xs text-slate-400 mt-1">
-                ARR → ALT distance: <b>{Math.round(alternateDistanceNM || 0).toLocaleString()}</b> NM
-              </div>
-            </div>
-            <div>
-              <Label>Taxi Fuel (kg)</Label>
-              <Input type="number" value={taxiKg} onChange={(e) => setTaxiKg(parseFloat(e.target.value || "0"))} />
-            </div>
-            <div>
-              <Label>Computed TOW (kg)</Label>
-              <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 font-semibold">
-                {Math.round(tkoWeightKgAuto).toLocaleString()} kg
-              </div>
-            </div>
-          </Row>
-
-          <Row>
-            <div>
-              <Label>Contingency (%)</Label>
-              <Input type="number" value={contingencyPct} onChange={(e) => setContingencyPct(parseFloat(e.target.value || "0"))} />
-            </div>
-            <div>
-              <Label>Final Reserve (kg)</Label>
-              <Input type="number" value={finalReserveKg} onChange={(e) => setFinalReserveKg(parseFloat(e.target.value || "0"))} />
-            </div>
-          </Row>
-
-          <Row>
-            <div>
-              <Label>Trim Tank Fuel (kg)</Label>
-              <Input type="number" value={trimTankKg} onChange={(e) => setTrimTankKg(parseFloat(e.target.value || "0"))} />
-            </div>
-            <div>
-              <Label>Alternate Fuel (kg)</Label>
-              <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 font-semibold">
-                {Math.round((alternateDistanceNM || 0) * CONSTANTS.fuel.burn_kg_per_nm).toLocaleString()} kg
-              </div>
-            </div>
-          </Row>
-
-          <div className="mt-3 grid gap-3 md:grid-cols-4 grid-cols-2">
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-              <div className="text-xs text-slate-400">Trip Fuel</div>
-              <div className="text-lg font-semibold">{Math.round(tripKg).toLocaleString()} kg</div>
-            </div>
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-              <div className="text-xs text-slate-400">Block Fuel</div>
-              <div className="text-lg font-semibold">{Math.round(blocks.block_kg).toLocaleString()} kg</div>
-            </div>
-            <div className={`px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 ${reheat.within_cap ? "" : "border-rose-500/40"}`}>
-              <div className="text-xs text-slate-400">Reheat OK</div>
-              <div className={`text-lg font-semibold ${reheat.within_cap ? "text-emerald-400" : "text-rose-400"}`}>{reheat.within_cap ? "YES" : "NO"}</div>
-            </div>
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-              <div className="text-xs text-slate-400">Total Fuel Required (Block + Trim)</div>
-              <div className="text-lg font-semibold">
-                {Number.isFinite(blocks.block_kg) && Number.isFinite(trimTankKg) ? Math.round(blocks.block_kg + (trimTankKg || 0)).toLocaleString() : "—"} kg
-              </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="ghost" className="h-8 px-3 text-xs" disabled title="Provide Donate URL">
+                Donate
+              </Button>
+              <Button variant="ghost" className="h-8 px-3 text-xs" disabled title="Provide feedback URL">
+                Bug / Feature
+              </Button>
+              <Button variant="ghost" className="h-8 px-3 text-xs" disabled title="Provide GitHub URL">
+                GitHub
+              </Button>
+              <Button variant="ghost" className="h-8 px-3 text-xs" disabled title="Coming soon">
+                View Changelog
+              </Button>
+              <Button variant="ghost" className="h-8 px-3 text-xs" disabled title="Coming soon">
+                Download Latest
+              </Button>
             </div>
           </div>
-
-          {!fuelWithinCapacity && (
-            <div className="mt-2 text-xs text-rose-300">
-              Warning: Total fuel <b>{Math.round(totalFuelRequiredKg).toLocaleString()} kg</b> exceeds Concorde fuel capacity{" "}
-              <b>{Math.round(fuelCapacityKg).toLocaleString()} kg</b> by <b>{Math.round(fuelExcessKg).toLocaleString()} kg</b>. Reduce block or trim fuel to stay within limits.
+          {showDiagnostics && failedTests.length > 0 && (
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              {failedTests.map((t, i) => (
+                <div
+                  key={`fail-${i}`}
+                  className="text-[10px] px-2 py-1 rounded border border-rose-500/30 text-rose-300 bg-rose-500/5"
+                >
+                  {t.name} {t.err ? `— ${t.err}` : ""}
+                </div>
+              ))}
             </div>
           )}
-        </Card>
+        </main>
 
-        <Card title="Takeoff & Landing Speeds (IAS)">
-          <Row cols={4}>
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-              <div className="text-xs text-slate-400">Computed TOW</div>
-              <div className="text-lg font-semibold">{Math.round(tkoWeightKgAuto).toLocaleString()} kg</div>
-            </div>
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-              <div className="text-xs text-slate-400">V1</div>
-              <div className="text-lg font-semibold">{tkSpeeds.V1} kt</div>
-            </div>
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-              <div className="text-xs text-slate-400">VR</div>
-              <div className="text-lg font-semibold">{tkSpeeds.VR} kt</div>
-            </div>
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-              <div className="text-xs text-slate-400">V2</div>
-              <div className="text-lg font-semibold">{tkSpeeds.V2} kt</div>
-            </div>
-          </Row>
-          <Row cols={4}>
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-              <div className="text-xs text-slate-400">Est. Landing WT</div>
-              <div className="text-lg font-semibold">{Math.round(estLandingWeightKg).toLocaleString()} kg</div>
-            </div>
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-              <div className="text-xs text-slate-400">VLS</div>
-              <div className="text-lg font-semibold">{ldSpeeds.VLS} kt</div>
-            </div>
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-              <div className="text-xs text-slate-400">VAPP</div>
-              <div className="text-lg font-semibold">{ldSpeeds.VAPP} kt</div>
-            </div>
-          </Row>
-          <div className="text-xs text-slate-400 mt-2">
-            Speeds scale with √(weight/reference) and are indicative IAS; verify against the DC Designs manual & in-sim.
-          </div>
-        </Card>
+        <footer className="pt-6 text-center text-xs text-white/45">
+          Manual values © DC Designs Concorde (MSFS). Planner is for training/planning only; always verify in-sim. Made with love by @theawesomeray
+        </footer>
+      </div>
 
-        <Card title="Weather & Runway Wind Components" right={<div className="text-xs text-slate-400">ILS intercept tip: ~15 NM / 5000 ft</div>}>
-          {metarErr && <div className="text-xs text-rose-300 mb-2">METAR fetch error: {metarErr}</div>}
-          <div className="grid gap-4">
-            <div>
-              <div className="text-sm font-semibold mb-1">Departure METAR ({depIcao}{depRunway ? ` ${depRunway.id}` : ""})</div>
-              <Input placeholder="Raw METAR will appear here if fetch works; otherwise paste manually" value={metarDep} onChange={(e) => setMetarDep(e.target.value)} />
-              <div className="grid md:grid-cols-4 grid-cols-2 gap-3 mt-2">
-                <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-                  <div className="text-xs text-slate-400">Headwind</div>
-                  <div className="text-lg font-semibold">{depWind.comps.headwind_kt ?? "—"} kt</div>
-                </div>
-                <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-                  <div className="text-xs text-slate-400">Crosswind</div>
-                  <div className="text-lg font-semibold">{depWind.comps.crosswind_kt ?? "—"} kt</div>
-                </div>
-                <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-                  <div className="text-xs text-slate-400">Dir</div>
-                  <div className="text-lg font-semibold">{depWind.parsed.wind_dir_deg ?? "VRB"}</div>
-                </div>
-                <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-                  <div className="text-xs text-slate-400">Spd/Gust</div>
-                  <div className="text-lg font-semibold">
-                    {depWind.parsed.wind_speed_kt ?? "—"}/{depWind.parsed.wind_gust_kt ?? "—"} kt
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <div className="text-sm font-semibold mb-1">Arrival METAR ({arrIcao}{arrRunway ? ` ${arrRunway.id}` : ""})</div>
-              <Input placeholder="Raw METAR will appear here if fetch works; otherwise paste manually" value={metarArr} onChange={(e) => setMetarArr(e.target.value)} />
-              <div className="grid md:grid-cols-4 grid-cols-2 gap-3 mt-2">
-                <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-                  <div className="text-xs text-slate-400">Headwind</div>
-                  <div className="text-lg font-semibold">{arrWind.comps.headwind_kt ?? "—"} kt</div>
-                </div>
-                <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-                  <div className="text-xs text-slate-400">Crosswind</div>
-                  <div className="text-lg font-semibold">{arrWind.comps.crosswind_kt ?? "—"} kt</div>
-                </div>
-                <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-                  <div className="text-xs text-slate-400">Dir</div>
-                  <div className="text-lg font-semibold">{arrWind.parsed.wind_dir_deg ?? "VRB"}</div>
-                </div>
-                <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-                  <div className="text-xs text-slate-400">Spd/Gust</div>
-                  <div className="text-lg font-semibold">
-                    {arrWind.parsed.wind_speed_kt ?? "—"}/{arrWind.parsed.wind_gust_kt ?? "—"} kt
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        <Card title="Runway Feasibility Summary">
-          <Row cols={4}>
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-              <div className="text-xs text-slate-400">T/O Req (m)</div>
-              <div className="text-lg font-semibold">{Math.round(tkoCheck.required_length_m_est).toLocaleString()} m</div>
-            </div>
-            <div className={`px-3 py-2 rounded-xl bg-slate-950 border ${tkoCheck.feasible ? "border-emerald-500/40" : "border-rose-500/40"}`}>
-              <div className="text-xs text-slate-400">Departure Feasible?</div>
-              <div className={`text-lg font-semibold ${tkoCheck.feasible ? "text-emerald-400" : "text-rose-400"}`}>{tkoCheck.feasible ? "YES" : "NO"}</div>
-            </div>
-            <div className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800">
-              <div className="text-xs text-slate-400">LDG Req (m)</div>
-              <div className="text-lg font-semibold">{Math.round(ldgCheck.required_length_m_est).toLocaleString()} m</div>
-            </div>
-            <div className={`px-3 py-2 rounded-xl bg-slate-950 border ${ldgCheck.feasible ? "border-emerald-500/40" : "border-rose-500/40"}`}>
-              <div className="text-xs text-slate-400">Arrival Feasible?</div>
-              <div className={`text-lg font-semibold ${ldgCheck.feasible ? "text-emerald-400" : "text-rose-400"}`}>{ldgCheck.feasible ? "YES" : "NO"}</div>
-            </div>
-          </Row>
-          <div className="text-xs text-slate-400 mt-2">
-            Est. landing weight: <b>{Math.round(estLandingWeightKg).toLocaleString()} kg</b> (TOW − Trip Fuel).
-          </div>
-        </Card>
-
-        <Card title="Diagnostics / Self-tests" right={<Button variant="ghost" onClick={() => setTests(runSelfTests())}>Run Self-Tests</Button>}>
-          <div className="text-xs text-slate-400 mb-2">
-            Covers meters, crosswind, longest-runway, VRB parsing, manual-distance sanity, fuel monotonicity, landing feasibility, and FL clamping.
-          </div>
-          {tests.length === 0 ? (
-            <div className="text-sm text-slate-300">
-              Click <b>Run Self-Tests</b> to execute.
-            </div>
-          ) : (
-            <div>
-              <div className="mb-2 text-sm">Passed {passCount}/{tests.length}</div>
-              <ul className="list-disc pl-5 text-sm space-y-1">
-                {tests.map((t, i) => (
-                  <li key={i} className={t.pass ? "text-emerald-300" : "text-rose-300"}>
-                    {t.name} {t.pass ? "✓" : "✗"} {t.err ? `— ${t.err}` : ""}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </Card>
-
-        <Card title="Notes & Assumptions (for tuning)">
-          <ul className="list-disc pl-5 text-sm text-slate-300 space-y-1">
-            <li>All masses in <b>kg</b>. Distances in <b>NM</b>. Runway lengths in <b>m</b> only.</li>
-            <li>Nav DB autoloads Airports/Runways/NAVAIDs from OurAirports. No fallback.</li>
-            <li>Procedural tokens are accepted so copy-pasting OFP routes won’t break; true SID/STAR geometry is not expanded yet.</li>
-            <li>Fuel model is heuristic but altitude-sensitive and distance-stable; calibrate with DC Designs manual and in-sim numbers.</li>
-          </ul>
-        </Card>
-      </main>
-
-      <footer className="p-6 text-center text-xs text-slate-500">
-        Manual values © DC Designs Concorde (MSFS). Planner is for training/planning only; always verify in-sim. Made with love by @theawesomeray
-      </footer>
-
-      {/* Opens counter badge (bottom-right) */}
       <a
-        className="fixed bottom-3 right-3 z-50"
+        className="fixed bottom-4 right-4 z-50 opacity-70 transition hover:opacity-100"
         href={OPENS_COUNTER_PATH}
         target="_blank"
         rel="noreferrer"
@@ -2453,7 +2816,7 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
         <img
           src={OPENS_BADGE_SRC}
           alt="Site visits counter"
-          className="h-6 w-auto rounded-md border border-slate-700 bg-slate-950/70 backdrop-blur"
+          className="h-6 w-auto rounded-md border border-white/10 bg-black/60 backdrop-blur"
           loading="lazy"
         />
       </a>
@@ -2461,35 +2824,4 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
   );
 }
 
-type EBState = { error: unknown | null };
-
-class ErrorBoundary extends React.Component<{ children: React.ReactNode }, EBState> {
-  state: EBState = { error: null };
-  static getDerivedStateFromError(error: unknown): EBState {
-    return { error };
-  }
-  componentDidCatch(error: unknown, info: any) {
-    console.error("Concorde EFB crashed:", error, info);
-  }
-  render() {
-    if (this.state.error) {
-      return (
-        <div style={{ padding: 16 }}>
-          <h2>Something went wrong.</h2>
-          <p>Open the browser console for details.</p>
-          <pre style={{ whiteSpace: "pre-wrap" }}>{String(this.state.error)}</pre>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
-export default function ConcordeEFB() {
-  return (
-    <ErrorBoundary>
-      <ConcordePlannerCanvas />
-    </ErrorBoundary>
-  );
-}
-        
+export default ConcordePlannerCanvas;
