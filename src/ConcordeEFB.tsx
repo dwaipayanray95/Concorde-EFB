@@ -17,7 +17,7 @@ import type {
 import Papa from "papaparse";
 
 const APP_VERSION = "2.0.1";
-const BUILD_MARKER = "281225-RC6";
+const BUILD_MARKER = "281225-0126";
 const DEBUG_FL_AUTOPICK = false;
 // App icon
 // IMPORTANT: We want this to work on GitHub Pages (non-root base path) and inside Tauri.
