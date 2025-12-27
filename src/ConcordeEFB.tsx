@@ -1457,6 +1457,7 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
   const [metarErr, setMetarErr] = useState("");
 
   const [tests, setTests] = useState<SelfTestResult[]>([]);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [appIconMode, setAppIconMode] = useState<"primary" | "fallback" | "none">("primary");
 
   useEffect(() => {
@@ -1785,6 +1786,7 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
   }, [arrRunway?.length_m, estLandingWeightKg]);
 
   const passCount = useMemo(() => tests.filter((t) => t.pass).length, [tests]);
+  const failedTests = useMemo(() => tests.filter((t) => !t.pass), [tests]);
 
   function computeRouteDistanceFromText(text: string): {
     distanceNM: number;
@@ -2655,36 +2657,74 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
             </div>
           </Card>
 
-          <Card title="Diagnostics / Self-tests" right={<Button variant="ghost" onClick={() => setTests(runSelfTests())}>Run Self-Tests</Button>}>
-            <div className="text-xs text-white/45 mb-3">
-              Covers meters, crosswind, longest-runway, VRB parsing, manual-distance sanity, fuel monotonicity, landing feasibility, and FL clamping.
-            </div>
-            {tests.length === 0 ? (
-              <div className="text-sm text-white/70">
-                Click <b>Run Self-Tests</b> to execute.
-              </div>
-            ) : (
-              <div>
-                <div className="mb-2 text-sm text-white/70">Passed {passCount}/{tests.length}</div>
-                <ul className="list-disc pl-5 text-sm space-y-1 text-white/75">
-                  {tests.map((t, i) => (
-                    <li key={i} className={t.pass ? "text-emerald-300" : "text-rose-300"}>
-                      {t.name} {t.pass ? "✓" : "✗"} {t.err ? `— ${t.err}` : ""}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </Card>
-
-          <Card title="Notes & Assumptions (for tuning)">
+          <Card title="Notes & Assumptions">
             <ul className="list-disc pl-5 text-sm text-white/70 space-y-2">
               <li>All masses in <b>kg</b>. Distances in <b>NM</b>. Runway lengths in <b>m</b> only.</li>
-              <li>Nav DB autoloads Airports/Runways/NAVAIDs from OurAirports. No fallback.</li>
-              <li>Procedural tokens are accepted so copy-pasting OFP routes won’t break; true SID/STAR geometry is not expanded yet.</li>
-              <li>Fuel model is heuristic but altitude-sensitive and distance-stable; calibrate with DC Designs manual and in-sim numbers.</li>
+              <li>Nav DB loads Airports/Runways/NAVAIDs from OurAirports at runtime.</li>
+              <li>Routes accept SID/STAR tokens but do not expand full procedure geometry.</li>
+              <li>SimBrief import drives DEP/ARR, route, alternates, and METAR when available.</li>
+              <li>Fuel model is heuristic and altitude-sensitive; verify against DC Designs data and in‑sim results.</li>
+              <li>Reheat safety is a climb-time cap check; it does not change calculations.</li>
             </ul>
           </Card>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-xs text-white/60">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="ghost"
+                className="h-8 px-3 text-xs"
+                onClick={() => {
+                  setTests(runSelfTests());
+                  setShowDiagnostics(true);
+                }}
+              >
+                Run Self-Tests
+              </Button>
+              {tests.length > 0 && (
+                <span className="text-white/70">
+                  Diagnostics: {passCount}/{tests.length} passed
+                </span>
+              )}
+              {failedTests.length > 0 && (
+                <Button
+                  variant="ghost"
+                  className="h-8 px-3 text-xs"
+                  onClick={() => setShowDiagnostics((prev) => !prev)}
+                >
+                  {showDiagnostics ? "Hide Details" : "Show Details"}
+                </Button>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="ghost" className="h-8 px-3 text-xs" disabled title="Provide Donate URL">
+                Donate
+              </Button>
+              <Button variant="ghost" className="h-8 px-3 text-xs" disabled title="Provide GitHub URL">
+                GitHub
+              </Button>
+              <Button variant="ghost" className="h-8 px-3 text-xs" disabled title="Coming soon">
+                View Changelog
+              </Button>
+              <Button variant="ghost" className="h-8 px-3 text-xs" disabled title="Coming soon">
+                Download Stable
+              </Button>
+              <Button variant="ghost" className="h-8 px-3 text-xs" disabled title="Coming soon">
+                Download Beta
+              </Button>
+            </div>
+          </div>
+          {showDiagnostics && failedTests.length > 0 && (
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              {failedTests.map((t, i) => (
+                <div
+                  key={`fail-${i}`}
+                  className="text-[10px] px-2 py-1 rounded border border-rose-500/30 text-rose-300 bg-rose-500/5"
+                >
+                  {t.name} {t.err ? `— ${t.err}` : ""}
+                </div>
+              ))}
+            </div>
+          )}
         </main>
 
         <footer className="pt-6 text-center text-xs text-white/45">
