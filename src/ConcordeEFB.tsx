@@ -17,7 +17,7 @@ import type {
 import Papa from "papaparse";
 
 const APP_VERSION = "2.0.1";
-const BUILD_MARKER = "ui-rework/v1";
+const BUILD_MARKER = "271225-2202-build3";
 const DEBUG_FL_AUTOPICK = false;
 // App icon
 // IMPORTANT: We want this to work on GitHub Pages (non-root base path) and inside Tauri.
@@ -2082,7 +2082,7 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
             </div>
           )}
 
-          <Card title="IMPORT FLIGHT PLAN">
+          <Card title="FLIGHT PLAN">
             <div className="space-y-6">
               <Label>SimBrief Username / ID (optional)</Label>
               <div className="grid gap-6 sm:grid-cols-12 items-start">
@@ -2222,85 +2222,7 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
             </div>
           </Card>
 
-          <Card
-            title="Airports & Runways"
-            right={
-              <Button
-                onClick={async () => {
-                  setMetarErr("");
-                  const dep = depKey;
-                  const arr = arrKey;
-
-                  if (!dep || dep.length !== 4 || !arr || arr.length !== 4) {
-                    setMetarErr("Enter valid DEP and ARR ICAOs first.");
-                    return;
-                  }
-
-                  const [d, a] = await Promise.all([fetchMetarByICAO(dep), fetchMetarByICAO(arr)]);
-
-                  const errs: string[] = [];
-                  if (d.ok) setMetarDep(d.raw);
-                  else errs.push(d.error);
-
-                  if (a.ok) setMetarArr(a.raw);
-                  else errs.push(a.error);
-
-                  if (errs.length) setMetarErr(errs.join(" | "));
-                }}
-              >
-                Fetch METARs
-              </Button>
-            }
-          >
-            <Row>
-              <div>
-                <Label>Departure ICAO</Label>
-                <Input
-                  value={depIcao}
-                  onChange={(e) => setDepIcao(e.target.value.toUpperCase())}
-                />
-              </div>
-              <div>
-                <Label>Arrival ICAO</Label>
-                <Input
-                  value={arrIcao}
-                  onChange={(e) => setArrIcao(e.target.value.toUpperCase())}
-                />
-              </div>
-            </Row>
-
-            <Row>
-              <div>
-                <Label>Departure Runway</Label>
-                <Select value={depRw} onChange={(e) => setDepRw(e.target.value)}>
-                  <option value="">—</option>
-                  {(depInfo?.runways ?? []).map((r) => (
-                    <option key={`dep-${r.id}`} value={r.id}>
-                      {`RWY ${r.id} • ${Number(r.length_m || 0).toLocaleString()} m • ${Math.round(
-                        Number(r.heading || 0)
-                      )}°`}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-
-              <div>
-                <Label>Arrival Runway</Label>
-                <Select value={arrRw} onChange={(e) => setArrRw(e.target.value)}>
-                  <option value="">—</option>
-                  {(arrInfo?.runways ?? []).map((r) => (
-                    <option key={`arr-${r.id}`} value={r.id}>
-                      {`RWY ${r.id} • ${Number(r.length_m || 0).toLocaleString()} m • ${Math.round(
-                        Number(r.heading || 0)
-                      )}°`}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            </Row>
-          </Card>
-
-          <Card title="Performance & Fuel">
+          <Card title="CRUISE & FUEL MANAGEMENT">
             <Row>
               <div>
                 <Label>Planned Distance (NM)</Label>
@@ -2501,7 +2423,87 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
             )}
           </Card>
 
-          <Card title="Takeoff & Landing Speeds (IAS)">
+          <Card
+            title="PERFORMANCE CALCULATOR"
+            right={
+              <Button
+                onClick={async () => {
+                  setMetarErr("");
+                  const dep = depKey;
+                  const arr = arrKey;
+
+                  if (!dep || dep.length !== 4 || !arr || arr.length !== 4) {
+                    setMetarErr("Enter valid DEP and ARR ICAOs first.");
+                    return;
+                  }
+
+                  const [d, a] = await Promise.all([fetchMetarByICAO(dep), fetchMetarByICAO(arr)]);
+
+                  const errs: string[] = [];
+                  if (d.ok) setMetarDep(d.raw);
+                  else errs.push(d.error);
+
+                  if (a.ok) setMetarArr(a.raw);
+                  else errs.push(a.error);
+
+                  if (errs.length) setMetarErr(errs.join(" | "));
+                }}
+              >
+                Fetch METARs
+              </Button>
+            }
+          >
+            <SectionHeader>Airports & Runways</SectionHeader>
+            <Row>
+              <div>
+                <Label>Departure ICAO</Label>
+                <Input
+                  value={depIcao}
+                  onChange={(e) => setDepIcao(e.target.value.toUpperCase())}
+                />
+              </div>
+              <div>
+                <Label>Arrival ICAO</Label>
+                <Input
+                  value={arrIcao}
+                  onChange={(e) => setArrIcao(e.target.value.toUpperCase())}
+                />
+              </div>
+            </Row>
+
+            <Row>
+              <div>
+                <Label>Departure Runway</Label>
+                <Select value={depRw} onChange={(e) => setDepRw(e.target.value)}>
+                  <option value="">—</option>
+                  {(depInfo?.runways ?? []).map((r) => (
+                    <option key={`dep-${r.id}`} value={r.id}>
+                      {`RWY ${r.id} • ${Number(r.length_m || 0).toLocaleString()} m • ${Math.round(
+                        Number(r.heading || 0)
+                      )}°`}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+
+              <div>
+                <Label>Arrival Runway</Label>
+                <Select value={arrRw} onChange={(e) => setArrRw(e.target.value)}>
+                  <option value="">—</option>
+                  {(arrInfo?.runways ?? []).map((r) => (
+                    <option key={`arr-${r.id}`} value={r.id}>
+                      {`RWY ${r.id} • ${Number(r.length_m || 0).toLocaleString()} m • ${Math.round(
+                        Number(r.heading || 0)
+                      )}°`}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            </Row>
+
+            <Divider />
+
+            <SectionHeader>Takeoff & Landing Speeds (IAS)</SectionHeader>
             <Row cols={4}>
               <div className={metricBox}>
                 <div className={metricLabel}>Computed TOW</div>
@@ -2537,9 +2539,10 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
             <div className="text-xs text-white/45 mt-3">
               Speeds scale with √(weight/reference) and are indicative IAS; verify against the DC Designs manual & in-sim.
             </div>
-          </Card>
 
-          <Card title="Weather & Runway Wind Components" right={<div className="text-xs text-white/45">ILS intercept tip: ~15 NM / 5000 ft</div>}>
+            <Divider />
+
+            <SectionHeader>Weather & Runway Wind Components</SectionHeader>
             {metarErr && <div className="text-xs text-rose-300 mb-3">METAR fetch error: {metarErr}</div>}
             <div className="grid gap-4">
               <div>
@@ -2592,9 +2595,10 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                 </div>
               </div>
             </div>
-          </Card>
 
-          <Card title="Runway Feasibility Summary">
+            <Divider />
+
+            <SectionHeader>Runway Feasibility Summary</SectionHeader>
             <Row cols={4}>
               <div className={metricBox}>
                 <div className={metricLabel}>T/O Req (m)</div>
