@@ -2306,29 +2306,31 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
               </div>
             </Row>
 
-            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className={metricBox}>
-                <div className={metricLabel}>Climb</div>
-                <div className={metricValue}>
-                  <HHMM hours={climb.time_h} />
-                </div>
-              </div>
-              <div className={metricBox}>
-                <div className={metricLabel}>Cruise</div>
-                <div className={metricValue}>
-                  <HHMM hours={cruiseTimeH} />
-                </div>
-              </div>
-              <div className={metricBox}>
-                <div className={metricLabel}>Descent</div>
-                <div className={metricValue}>
-                  <HHMM hours={descent.time_h} />
-                </div>
-              </div>
-              <div className={metricBox}>
-                <div className={metricLabel}>Total ETE</div>
+            <div className="mt-6 grid gap-4 lg:grid-cols-[1.1fr_2fr]">
+              <div className={`${metricBox} lg:border-r lg:border-white/10`}>
+                <div className={metricLabel}>Total Flight Time</div>
                 <div className={metricValue}>
                   <HHMM hours={totalTimeH} />
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className={metricBox}>
+                  <div className={metricLabel}>Climb</div>
+                  <div className={metricValue}>
+                    <HHMM hours={climb.time_h} />
+                  </div>
+                </div>
+                <div className={metricBox}>
+                  <div className={metricLabel}>Cruise</div>
+                  <div className={metricValue}>
+                    <HHMM hours={cruiseTimeH} />
+                  </div>
+                </div>
+                <div className={metricBox}>
+                  <div className={metricLabel}>Descent</div>
+                  <div className={metricValue}>
+                    <HHMM hours={descent.time_h} />
+                  </div>
                 </div>
               </div>
             </div>
@@ -2348,27 +2350,28 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                     <Label>Final Reserve (kg)</Label>
                     <Input type="number" value={finalReserveKg} onChange={(e) => setFinalReserveKg(parseFloat(e.target.value || "0"))} />
                   </div>
-                  <div>
-                    <Label>Alternate ICAO</Label>
-                    <Input value={altIcao} onChange={(e) => setAltIcao(e.target.value.toUpperCase())} />
-                    <div className="text-xs text-white/45 mt-2">
-                      ARR → ALT distance: <b>{Math.round(alternateDistanceNM || 0).toLocaleString()}</b> NM
+                  <div className="space-y-3">
+                    <div>
+                      <Label>Trim Tank Fuel (kg)</Label>
+                      <Input type="number" value={trimTankKg} onChange={(e) => setTrimTankKg(parseFloat(e.target.value || "0"))} />
                     </div>
-                  </div>
-                  <div>
-                    <Label>Trim Tank Fuel (kg)</Label>
-                    <Input type="number" value={trimTankKg} onChange={(e) => setTrimTankKg(parseFloat(e.target.value || "0"))} />
-                  </div>
-                  <div>
-                    <Label>Computed TOW (kg)</Label>
-                    <div className={`${metricBox} font-semibold`}>
-                      {Math.round(tkoWeightKgAuto).toLocaleString()} kg
+                    <div className="h-px bg-white/10" />
+                    <div>
+                      <Label>Alternate ICAO</Label>
+                      <Input value={altIcao} onChange={(e) => setAltIcao(e.target.value.toUpperCase())} />
+                      <div className="text-xs text-white/45 mt-2">
+                        ARR → ALT distance: <b>{Math.round(alternateDistanceNM || 0).toLocaleString()}</b> NM
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   <div className={metricBox}>
+                    <div className={metricLabel}>Computed TOW</div>
+                    <div className={metricValue}>{Math.round(tkoWeightKgAuto).toLocaleString()} kg</div>
+                  </div>
+                  <div className={`efb-metric flex flex-col justify-center ${enduranceMeets ? "" : "border-rose-500/40"}`}>
                     <div className={metricLabel}>Fuel Endurance</div>
                     <div className={metricValue}>
                       <HHMM hours={enduranceHours} />
@@ -2381,20 +2384,46 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                     </div>
                   </div>
                   <div className={`efb-metric ${reheat.within_cap ? "" : "border-rose-500/40"}`}>
-                    <div className={metricLabel}>Reheat OK</div>
+                    <div className={`${metricLabel} flex items-center gap-2`}>
+                      Reheat OK
+                      <span
+                        className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-white/10 text-[10px] text-white/60 cursor-help"
+                        title={`Reheat minutes based on climb vs cap (${CONSTANTS.fuel.reheat_minutes_cap} min).`}
+                        aria-label={`Reheat minutes based on climb vs cap (${CONSTANTS.fuel.reheat_minutes_cap} min).`}
+                      >
+                        i
+                      </span>
+                    </div>
                     <div className={`text-lg font-semibold ${reheat.within_cap ? "text-emerald-300" : "text-rose-300"}`}>{reheat.within_cap ? "YES" : "NO"}</div>
                   </div>
                 </div>
+                {!enduranceMeets && (
+                  <div className="text-xs text-rose-300">
+                    Fuel endurance is less than required ETE + reserves.
+                  </div>
+                )}
               </div>
 
               <div className="rounded-3xl border border-white/10 bg-black/30 p-5 space-y-3">
                 <div className="flex justify-between items-center py-1 border-b border-white/10">
-                  <span className="text-sm text-white/50">Trip Fuel</span>
-                  <span className="text-lg font-mono text-white/90">{Math.round(tripKg).toLocaleString()}</span>
+                  <span className="text-sm text-white/70">Trip Fuel</span>
+                  <span className="text-xl font-mono text-white/95">{Math.round(tripKg).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-white/10">
+                  <span className="text-sm text-white/50">Taxi Fuel</span>
+                  <span className="text-base font-mono text-white/85">{Math.round(taxiKg || 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-white/10">
+                  <span className="text-sm text-white/50">Contingency</span>
+                  <span className="text-base font-mono text-white/85">{Math.round(blocks.contingency_kg || 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-white/10">
+                  <span className="text-sm text-white/50">Trim Fuel</span>
+                  <span className="text-base font-mono text-white/85">{Math.round(trimTankKg || 0).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center py-1 border-b border-white/10">
                   <span className="text-sm text-white/50">Alt Fuel ({Math.round(alternateDistanceNM || 0)} NM)</span>
-                  <span className="text-lg font-mono text-white/90">{Math.round((alternateDistanceNM || 0) * CONSTANTS.fuel.burn_kg_per_nm).toLocaleString()}</span>
+                  <span className="text-base font-mono text-white/85">{Math.round((alternateDistanceNM || 0) * CONSTANTS.fuel.burn_kg_per_nm).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center py-1 border-b border-white/10">
                   <span className="text-sm text-white/70 font-medium">Block Fuel</span>
@@ -2536,6 +2565,11 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
             <Divider />
 
             <div className="grid gap-6 lg:grid-cols-2">
+              {/*
+                Landing limits are based on runway length and MLW.
+                Keep the visual treatment in sync with the computed feasibility.
+              */}
+              {/**/}
               <div className={`rounded-3xl border p-5 space-y-4 ${
                 tkoCheck.feasible
                   ? "border-white/10 bg-black/30"
@@ -2578,7 +2612,11 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-white/10 bg-black/30 p-5 space-y-4">
+              <div className={`rounded-3xl border p-5 space-y-4 ${
+                ldgCheck.feasible && estLandingWeightKg <= CONSTANTS.weights.mlw_kg
+                  ? "border-white/10 bg-black/30"
+                  : "border-rose-500/60 bg-rose-500/15 shadow-[0_0_45px_rgba(244,63,94,0.35)]"
+              }`}>
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="text-xs font-semibold uppercase tracking-[0.28em] text-white/70">LANDING PERFORMANCE</div>
@@ -2589,12 +2627,16 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                   </div>
                   <div
                     className={`text-[11px] font-semibold px-3 py-1 rounded-full border ${
-                      ldgCheck.feasible
+                      ldgCheck.feasible && estLandingWeightKg <= CONSTANTS.weights.mlw_kg
                         ? "border-emerald-400/40 text-emerald-300 bg-emerald-500/10"
                         : "border-rose-400/40 text-rose-300 bg-rose-500/10"
                     }`}
                   >
-                    {ldgCheck.feasible ? "WITHIN LIMITS" : "RUNWAY TOO SHORT"}
+                    {ldgCheck.feasible && estLandingWeightKg <= CONSTANTS.weights.mlw_kg
+                      ? "WITHIN LIMITS"
+                      : estLandingWeightKg > CONSTANTS.weights.mlw_kg
+                      ? "OVER MLW"
+                      : "RUNWAY TOO SHORT"}
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
