@@ -1180,6 +1180,41 @@ const Button = ({ children, variant = "primary", className, ...props }: ButtonPr
   </button>
 );
 
+type ThemeMode = "dark" | "light";
+
+type ThemeToggleProps = {
+  theme: ThemeMode;
+  onToggle: () => void;
+};
+
+const ThemeToggle = ({ theme, onToggle }: ThemeToggleProps) => {
+  const isLight = theme === "light";
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={isLight}
+      aria-label={`Switch to ${isLight ? "dark" : "light"} mode`}
+      className="theme-toggle group relative inline-flex h-7 w-28 items-center rounded-full border border-white/10 bg-white/5 p-1 text-[9px] font-semibold uppercase tracking-[0.24em] text-white/60 transition hover:bg-white/10"
+    >
+      <span className="pointer-events-none relative z-10 grid w-full grid-cols-2 text-center">
+        <span className={`transition ${!isLight ? "text-white/90" : "text-white/50"}`}>
+          Dark
+        </span>
+        <span className={`transition ${isLight ? "text-white/90" : "text-white/50"}`}>
+          Light
+        </span>
+      </span>
+      <span
+        aria-hidden="true"
+        className={`theme-toggle-thumb absolute left-1 top-1 bottom-1 w-[calc(50%-4px)] rounded-full border border-white/10 bg-white/10 shadow transition ${
+          isLight ? "translate-x-full" : "translate-x-0"
+        }`}
+      />
+    </button>
+  );
+};
+
 type StatPillProps = {
   label: string;
   value: string;
@@ -1403,6 +1438,21 @@ function computeLandingSpeeds(lwKg: number): LandingSpeeds {
   return { VLS, VAPP };
 }
 
+function readStoredTheme(): ThemeMode | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = localStorage.getItem("efb-theme");
+    if (stored === "light" || stored === "dark") return stored;
+  } catch {
+    // Ignore storage access failures.
+  }
+  return null;
+}
+
+function resolveInitialTheme(): ThemeMode {
+  return readStoredTheme() ?? "dark";
+}
+
 function ConcordePlannerCanvas() {
   const [airports, setAirports] = useState<AirportIndex>({});
   const [dbLoaded, setDbLoaded] = useState(false);
@@ -1459,11 +1509,26 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
   const [tests, setTests] = useState<SelfTestResult[]>([]);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [appIconMode, setAppIconMode] = useState<"primary" | "fallback" | "none">("primary");
+  const [theme, setTheme] = useState<ThemeMode>(resolveInitialTheme);
+  const [themeStored, setThemeStored] = useState<boolean>(() => readStoredTheme() !== null);
 
   useEffect(() => {
     console.log(`[ConcordeEFB.tsx] ${BUILD_MARKER} v${APP_VERSION}`);
     document.title = `Concorde EFB v${APP_VERSION} • ${BUILD_MARKER}`;
   }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.dataset.theme = theme;
+    document.body.dataset.theme = theme;
+    if (themeStored) {
+      try {
+        localStorage.setItem("efb-theme", theme);
+      } catch {
+        // Ignore storage access failures.
+      }
+    }
+  }, [theme, themeStored]);
 
 
   const depKey = (depIcao || "").toUpperCase();
@@ -2068,12 +2133,21 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
               </div>
             </div>
           </div>
-          <div className="flex flex-wrap gap-6 md:justify-end">
-            <StatPill label="Nav DB" value={dbLoaded ? "Loaded" : "Loading"} ok={dbLoaded} />
-            <StatPill label="TAS" value={`${CONSTANTS.speeds.cruise_tas_kt} kt`} />
-            <StatPill label="MTOW" value={`${CONSTANTS.weights.mtow_kg.toLocaleString()} kg`} />
-            <StatPill label="MLW" value={`${CONSTANTS.weights.mlw_kg.toLocaleString()} kg`} />
-            <StatPill label="Fuel cap" value={`${CONSTANTS.weights.fuel_capacity_kg.toLocaleString()} kg`} />
+          <div className="flex flex-col items-end gap-3">
+            <ThemeToggle
+              theme={theme}
+              onToggle={() => {
+                setThemeStored(true);
+                setTheme(theme === "light" ? "dark" : "light");
+              }}
+            />
+            <div className="flex flex-wrap justify-end gap-6">
+              <StatPill label="Nav DB" value={dbLoaded ? "Loaded" : "Loading"} ok={dbLoaded} />
+              <StatPill label="TAS" value={`${CONSTANTS.speeds.cruise_tas_kt} kt`} />
+              <StatPill label="MTOW" value={`${CONSTANTS.weights.mtow_kg.toLocaleString()} kg`} />
+              <StatPill label="MLW" value={`${CONSTANTS.weights.mlw_kg.toLocaleString()} kg`} />
+              <StatPill label="Fuel cap" value={`${CONSTANTS.weights.fuel_capacity_kg.toLocaleString()} kg`} />
+            </div>
           </div>
         </header>
 
@@ -2699,6 +2773,9 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
               <Button variant="ghost" className="h-8 px-3 text-xs" disabled title="Provide Donate URL">
                 Donate
               </Button>
+              <Button variant="ghost" className="h-8 px-3 text-xs" disabled title="Provide feedback URL">
+                Bug / Feature
+              </Button>
               <Button variant="ghost" className="h-8 px-3 text-xs" disabled title="Provide GitHub URL">
                 GitHub
               </Button>
@@ -2706,10 +2783,7 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                 View Changelog
               </Button>
               <Button variant="ghost" className="h-8 px-3 text-xs" disabled title="Coming soon">
-                Download Stable
-              </Button>
-              <Button variant="ghost" className="h-8 px-3 text-xs" disabled title="Coming soon">
-                Download Beta
+                Download Latest
               </Button>
             </div>
           </div>
