@@ -17,7 +17,7 @@ import type {
 import Papa from "papaparse";
 
 const APP_VERSION = "2.0.1";
-const BUILD_MARKER = "271225-2202-build3";
+const BUILD_MARKER = "271225-RC4";
 const DEBUG_FL_AUTOPICK = false;
 // App icon
 // IMPORTANT: We want this to work on GitHub Pages (non-root base path) and inside Tauri.
@@ -2454,171 +2454,166 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
             }
           >
             <SectionHeader>Airports & Runways</SectionHeader>
-            <Row>
-              <div>
-                <Label>Departure ICAO</Label>
-                <Input
-                  value={depIcao}
-                  onChange={(e) => setDepIcao(e.target.value.toUpperCase())}
-                />
+            {metarErr && <div className="text-xs text-rose-300 mt-2">METAR fetch error: {metarErr}</div>}
+            <div className="grid gap-5 lg:grid-cols-2">
+              <div className="space-y-3">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <Label>Departure ICAO</Label>
+                    <Input
+                      value={depIcao}
+                      onChange={(e) => setDepIcao(e.target.value.toUpperCase())}
+                    />
+                  </div>
+                  <div>
+                    <Label>Departure Runway</Label>
+                    <Select value={depRw} onChange={(e) => setDepRw(e.target.value)}>
+                      <option value="">—</option>
+                      {(depInfo?.runways ?? []).map((r) => (
+                        <option key={`dep-${r.id}`} value={r.id}>
+                          {`RWY ${r.id} • ${Number(r.length_m || 0).toLocaleString()} m • ${Math.round(
+                            Number(r.heading || 0)
+                          )}°`}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                </div>
+                <div className={`rounded-2xl border px-4 py-3 ${
+                  depWind.parsed.wind_gust_kt
+                    ? "border-amber-400/40 bg-amber-500/10"
+                    : "border-emerald-400/30 bg-emerald-500/10"
+                }`}>
+                  <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.28em] text-white/60">
+                    <span>DEP METAR</span>
+                    <span className="text-white/60">{depIcao}{depRunway ? ` ${depRunway.id}` : ""}</span>
+                  </div>
+                  <div className="mt-2 text-xs text-white/90 font-mono break-words">
+                    {metarDep || "—"}
+                  </div>
+                </div>
               </div>
-              <div>
-                <Label>Arrival ICAO</Label>
-                <Input
-                  value={arrIcao}
-                  onChange={(e) => setArrIcao(e.target.value.toUpperCase())}
-                />
-              </div>
-            </Row>
 
-            <Row>
-              <div>
-                <Label>Departure Runway</Label>
-                <Select value={depRw} onChange={(e) => setDepRw(e.target.value)}>
-                  <option value="">—</option>
-                  {(depInfo?.runways ?? []).map((r) => (
-                    <option key={`dep-${r.id}`} value={r.id}>
-                      {`RWY ${r.id} • ${Number(r.length_m || 0).toLocaleString()} m • ${Math.round(
-                        Number(r.heading || 0)
-                      )}°`}
-                    </option>
-                  ))}
-                </Select>
+              <div className="space-y-3">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <Label>Arrival ICAO</Label>
+                    <Input
+                      value={arrIcao}
+                      onChange={(e) => setArrIcao(e.target.value.toUpperCase())}
+                    />
+                  </div>
+                  <div>
+                    <Label>Arrival Runway</Label>
+                    <Select value={arrRw} onChange={(e) => setArrRw(e.target.value)}>
+                      <option value="">—</option>
+                      {(arrInfo?.runways ?? []).map((r) => (
+                        <option key={`arr-${r.id}`} value={r.id}>
+                          {`RWY ${r.id} • ${Number(r.length_m || 0).toLocaleString()} m • ${Math.round(
+                            Number(r.heading || 0)
+                          )}°`}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                </div>
+                <div className={`rounded-2xl border px-4 py-3 ${
+                  arrWind.parsed.wind_gust_kt
+                    ? "border-amber-400/40 bg-amber-500/10"
+                    : "border-emerald-400/30 bg-emerald-500/10"
+                }`}>
+                  <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.28em] text-white/60">
+                    <span>ARR METAR</span>
+                    <span className="text-white/60">{arrIcao}{arrRunway ? ` ${arrRunway.id}` : ""}</span>
+                  </div>
+                  <div className="mt-2 text-xs text-white/90 font-mono break-words">
+                    {metarArr || "—"}
+                  </div>
+                </div>
               </div>
-
-              <div>
-                <Label>Arrival Runway</Label>
-                <Select value={arrRw} onChange={(e) => setArrRw(e.target.value)}>
-                  <option value="">—</option>
-                  {(arrInfo?.runways ?? []).map((r) => (
-                    <option key={`arr-${r.id}`} value={r.id}>
-                      {`RWY ${r.id} • ${Number(r.length_m || 0).toLocaleString()} m • ${Math.round(
-                        Number(r.heading || 0)
-                      )}°`}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            </Row>
+            </div>
 
             <Divider />
 
-            <SectionHeader>Takeoff & Landing Speeds (IAS)</SectionHeader>
-            <Row cols={4}>
-              <div className={metricBox}>
-                <div className={metricLabel}>Computed TOW</div>
-                <div className={metricValue}>{Math.round(tkoWeightKgAuto).toLocaleString()} kg</div>
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className={`rounded-3xl border p-5 space-y-4 ${
+                tkoCheck.feasible
+                  ? "border-white/10 bg-black/30"
+                  : "border-rose-500/60 bg-rose-500/15 shadow-[0_0_45px_rgba(244,63,94,0.35)]"
+              }`}>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-[0.28em] text-white/70">TAKEOFF PERFORMANCE</div>
+                    <div className="text-2xl font-semibold text-white/90 mt-2">
+                      {Math.round(tkoWeightKgAuto).toLocaleString()}
+                      <span className="text-sm text-white/40"> kg</span>
+                    </div>
+                  </div>
+                  <div
+                    className={`text-[11px] font-semibold px-3 py-1 rounded-full border ${
+                      tkoCheck.feasible
+                        ? "border-emerald-400/40 text-emerald-300 bg-emerald-500/10"
+                        : "border-rose-400/40 text-rose-300 bg-rose-500/10"
+                    }`}
+                  >
+                    {tkoCheck.feasible ? "WITHIN LIMITS" : "RUNWAY TOO SHORT"}
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className={metricBox}>
+                    <div className={metricLabel}>V1</div>
+                    <div className={metricValue}>{tkSpeeds.V1}</div>
+                  </div>
+                  <div className={metricBox}>
+                    <div className={metricLabel}>VR</div>
+                    <div className={metricValue}>{tkSpeeds.VR}</div>
+                  </div>
+                  <div className={metricBox}>
+                    <div className={metricLabel}>V2</div>
+                    <div className={metricValue}>{tkSpeeds.V2}</div>
+                  </div>
+                </div>
+                <div className="text-xs text-white/45">
+                  Runway required: <b>{Math.round(tkoCheck.required_length_m_est).toLocaleString()} m</b>
+                </div>
               </div>
-              <div className={metricBox}>
-                <div className={metricLabel}>V1</div>
-                <div className={metricValue}>{tkSpeeds.V1} kt</div>
+
+              <div className="rounded-3xl border border-white/10 bg-black/30 p-5 space-y-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-[0.28em] text-white/70">LANDING PERFORMANCE</div>
+                    <div className="text-2xl font-semibold text-white/90 mt-2">
+                      {Math.round(estLandingWeightKg).toLocaleString()}
+                      <span className="text-sm text-white/40"> kg</span>
+                    </div>
+                  </div>
+                  <div
+                    className={`text-[11px] font-semibold px-3 py-1 rounded-full border ${
+                      ldgCheck.feasible
+                        ? "border-emerald-400/40 text-emerald-300 bg-emerald-500/10"
+                        : "border-rose-400/40 text-rose-300 bg-rose-500/10"
+                    }`}
+                  >
+                    {ldgCheck.feasible ? "WITHIN LIMITS" : "RUNWAY TOO SHORT"}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className={metricBox}>
+                    <div className={metricLabel}>VLS</div>
+                    <div className={metricValue}>{ldSpeeds.VLS}</div>
+                  </div>
+                  <div className={metricBox}>
+                    <div className={metricLabel}>VAPP</div>
+                    <div className={metricValue}>{ldSpeeds.VAPP}</div>
+                  </div>
+                </div>
+                <div className="text-xs text-white/45">
+                  Runway required: <b>{Math.round(ldgCheck.required_length_m_est).toLocaleString()} m</b>
+                </div>
               </div>
-              <div className={metricBox}>
-                <div className={metricLabel}>VR</div>
-                <div className={metricValue}>{tkSpeeds.VR} kt</div>
-              </div>
-              <div className={metricBox}>
-                <div className={metricLabel}>V2</div>
-                <div className={metricValue}>{tkSpeeds.V2} kt</div>
-              </div>
-            </Row>
-            <Row cols={4}>
-              <div className={metricBox}>
-                <div className={metricLabel}>Est. Landing WT</div>
-                <div className={metricValue}>{Math.round(estLandingWeightKg).toLocaleString()} kg</div>
-              </div>
-              <div className={metricBox}>
-                <div className={metricLabel}>VLS</div>
-                <div className={metricValue}>{ldSpeeds.VLS} kt</div>
-              </div>
-              <div className={metricBox}>
-                <div className={metricLabel}>VAPP</div>
-                <div className={metricValue}>{ldSpeeds.VAPP} kt</div>
-              </div>
-            </Row>
+            </div>
             <div className="text-xs text-white/45 mt-3">
               Speeds scale with √(weight/reference) and are indicative IAS; verify against the DC Designs manual & in-sim.
-            </div>
-
-            <Divider />
-
-            <SectionHeader>Weather & Runway Wind Components</SectionHeader>
-            {metarErr && <div className="text-xs text-rose-300 mb-3">METAR fetch error: {metarErr}</div>}
-            <div className="grid gap-4">
-              <div>
-                <div className="text-sm font-semibold mb-2 text-white/90">Departure METAR ({depIcao}{depRunway ? ` ${depRunway.id}` : ""})</div>
-                <Input placeholder="Raw METAR will appear here if fetch works; otherwise paste manually" value={metarDep} onChange={(e) => setMetarDep(e.target.value)} />
-                <div className="grid md:grid-cols-4 grid-cols-2 gap-3 mt-3">
-                  <div className={metricBox}>
-                    <div className={metricLabel}>Headwind</div>
-                    <div className={metricValue}>{depWind.comps.headwind_kt ?? "—"} kt</div>
-                  </div>
-                  <div className={metricBox}>
-                    <div className={metricLabel}>Crosswind</div>
-                    <div className={metricValue}>{depWind.comps.crosswind_kt ?? "—"} kt</div>
-                  </div>
-                  <div className={metricBox}>
-                    <div className={metricLabel}>Dir</div>
-                    <div className={metricValue}>{depWind.parsed.wind_dir_deg ?? "VRB"}</div>
-                  </div>
-                  <div className={metricBox}>
-                    <div className={metricLabel}>Spd/Gust</div>
-                    <div className={metricValue}>
-                      {depWind.parsed.wind_speed_kt ?? "—"}/{depWind.parsed.wind_gust_kt ?? "—"} kt
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <div className="text-sm font-semibold mb-2 text-white/90">Arrival METAR ({arrIcao}{arrRunway ? ` ${arrRunway.id}` : ""})</div>
-                <Input placeholder="Raw METAR will appear here if fetch works; otherwise paste manually" value={metarArr} onChange={(e) => setMetarArr(e.target.value)} />
-                <div className="grid md:grid-cols-4 grid-cols-2 gap-3 mt-3">
-                  <div className={metricBox}>
-                    <div className={metricLabel}>Headwind</div>
-                    <div className={metricValue}>{arrWind.comps.headwind_kt ?? "—"} kt</div>
-                  </div>
-                  <div className={metricBox}>
-                    <div className={metricLabel}>Crosswind</div>
-                    <div className={metricValue}>{arrWind.comps.crosswind_kt ?? "—"} kt</div>
-                  </div>
-                  <div className={metricBox}>
-                    <div className={metricLabel}>Dir</div>
-                    <div className={metricValue}>{arrWind.parsed.wind_dir_deg ?? "VRB"}</div>
-                  </div>
-                  <div className={metricBox}>
-                    <div className={metricLabel}>Spd/Gust</div>
-                    <div className={metricValue}>
-                      {arrWind.parsed.wind_speed_kt ?? "—"}/{arrWind.parsed.wind_gust_kt ?? "—"} kt
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <Divider />
-
-            <SectionHeader>Runway Feasibility Summary</SectionHeader>
-            <Row cols={4}>
-              <div className={metricBox}>
-                <div className={metricLabel}>T/O Req (m)</div>
-                <div className={metricValue}>{Math.round(tkoCheck.required_length_m_est).toLocaleString()} m</div>
-              </div>
-              <div className={`efb-metric ${tkoCheck.feasible ? "border-emerald-500/30" : "border-rose-500/40"}`}>
-                <div className={metricLabel}>Departure Feasible?</div>
-                <div className={`text-lg font-semibold ${tkoCheck.feasible ? "text-emerald-300" : "text-rose-300"}`}>{tkoCheck.feasible ? "YES" : "NO"}</div>
-              </div>
-              <div className={metricBox}>
-                <div className={metricLabel}>LDG Req (m)</div>
-                <div className={metricValue}>{Math.round(ldgCheck.required_length_m_est).toLocaleString()} m</div>
-              </div>
-              <div className={`efb-metric ${ldgCheck.feasible ? "border-emerald-500/30" : "border-rose-500/40"}`}>
-                <div className={metricLabel}>Arrival Feasible?</div>
-                <div className={`text-lg font-semibold ${ldgCheck.feasible ? "text-emerald-300" : "text-rose-300"}`}>{ldgCheck.feasible ? "YES" : "NO"}</div>
-              </div>
-            </Row>
-            <div className="text-xs text-white/45 mt-3">
-              Est. landing weight: <b>{Math.round(estLandingWeightKg).toLocaleString()} kg</b> (TOW − Trip Fuel).
             </div>
           </Card>
 
