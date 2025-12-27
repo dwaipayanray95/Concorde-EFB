@@ -14,8 +14,11 @@ const isTauriBuild =
 export default defineConfig({
   base: isTauriBuild ? "./" : "/Concorde-EFB/",
   plugins: [react()],
+  server: {
+    host: "127.0.0.1",
+    port: 5173,
+  },
   build: {
-    outDir: "dist",
     outDir: "dist",
     sourcemap: true,
   },
