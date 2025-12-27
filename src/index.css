@@ -141,28 +141,28 @@
     color: rgba(15, 23, 42, 0.85);
   }
   html[data-theme="light"] .text-white\/80 {
-    color: rgba(15, 23, 42, 0.82);
+    color: rgba(15, 23, 42, 0.86);
   }
   html[data-theme="light"] .text-white\/70 {
-    color: rgba(15, 23, 42, 0.72);
+    color: rgba(15, 23, 42, 0.82);
   }
   html[data-theme="light"] .text-white\/60 {
-    color: rgba(15, 23, 42, 0.62);
+    color: rgba(15, 23, 42, 0.72);
   }
   html[data-theme="light"] .text-white\/50 {
-    color: rgba(15, 23, 42, 0.52);
+    color: rgba(15, 23, 42, 0.66);
   }
   html[data-theme="light"] .text-white\/45 {
-    color: rgba(15, 23, 42, 0.48);
+    color: rgba(15, 23, 42, 0.62);
   }
   html[data-theme="light"] .text-white\/40 {
-    color: rgba(15, 23, 42, 0.44);
+    color: rgba(15, 23, 42, 0.58);
   }
   html[data-theme="light"] .text-white\/35 {
-    color: rgba(15, 23, 42, 0.4);
+    color: rgba(15, 23, 42, 0.52);
   }
   html[data-theme="light"] .text-white\/25 {
-    color: rgba(15, 23, 42, 0.32);
+    color: rgba(15, 23, 42, 0.4);
   }
 
   html[data-theme="light"] .bg-white\/5 {
@@ -189,5 +189,25 @@
 
   html[data-theme="light"] .border-white\/10 {
     border-color: rgba(15, 23, 42, 0.12);
+  }
+
+  html[data-theme="light"] .text-emerald-300 {
+    color: #047857;
+  }
+  html[data-theme="light"] .text-rose-300 {
+    color: #be123c;
+  }
+  html[data-theme="light"] .text-amber-400 {
+    color: #b45309;
+  }
+
+  html[data-theme="light"] .bg-emerald-500\/10 {
+    background-color: rgba(16, 185, 129, 0.16);
+  }
+  html[data-theme="light"] .bg-rose-500\/10 {
+    background-color: rgba(244, 63, 94, 0.16);
+  }
+  html[data-theme="light"] .bg-rose-500\/15 {
+    background-color: rgba(244, 63, 94, 0.2);
   }
 }
