@@ -917,6 +917,105 @@ function parseMetarQnh(raw: string): { unit: "hPa" | "inHg"; value: number } | n
   return null;
 }
 
+function parseMetarTempC(raw: string): number | null {
+  const m = raw.match(/\b(M?\d{2})\/(M?\d{2})\b/);
+  if (!m) return null;
+  const toNum = (v: string) => (v.startsWith("M") ? -parseInt(v.slice(1), 10) : parseInt(v, 10));
+  const temp = toNum(m[1]);
+  return Number.isFinite(temp) ? temp : null;
+}
+
+function parseMetarVisibilityKm(raw: string): number | null {
+  const upper = raw.toUpperCase();
+  if (upper.includes("CAVOK")) return 10;
+  const tokens = upper.split(/\s+/).filter(Boolean);
+
+  const smIndex = tokens.findIndex((t) => t.endsWith("SM"));
+  if (smIndex >= 0) {
+    const token = tokens[smIndex].replace("SM", "");
+    const prev = smIndex > 0 ? tokens[smIndex - 1] : "";
+    const parseFraction = (v: string) => {
+      const parts = v.split("/");
+      if (parts.length !== 2) return NaN;
+      const num = Number(parts[0]);
+      const den = Number(parts[1]);
+      if (!Number.isFinite(num) || !Number.isFinite(den) || den === 0) return NaN;
+      return num / den;
+    };
+    let miles = 0;
+    if (prev && /^\d+$/.test(prev)) miles += parseInt(prev, 10);
+    if (token.includes("/")) miles += parseFraction(token);
+    else if (token) miles += Number(token);
+    return Number.isFinite(miles) ? miles * 1.60934 : null;
+  }
+
+  for (const token of tokens) {
+    if (/^(METAR|SPECI|AUTO|COR)$/i.test(token)) continue;
+    if (/^\d{6}Z$/.test(token)) continue;
+    if (/^(VRB|\d{3})\d{2}(G\d{2})?KT$/.test(token)) continue;
+    if (/^(A|Q)\d{4}$/.test(token)) continue;
+    if (/^R\d{2}[LRC]?\/\d{4}/.test(token)) continue;
+    if (/^(FEW|SCT|BKN|OVC|VV)\d{3}/.test(token)) continue;
+    if (token.includes("/")) continue;
+    if (/^\d{4}$/.test(token)) {
+      const meters = Number(token);
+      if (!Number.isFinite(meters)) continue;
+      if (meters >= 9999) return 10;
+      return meters / 1000;
+    }
+  }
+
+  return null;
+}
+
+type MetarWeatherSummary = {
+  label: string;
+};
+
+function parseMetarWeatherSummary(raw: string): MetarWeatherSummary | null {
+  const upper = raw.toUpperCase();
+  const tokens = upper.split(/\s+/).filter(Boolean);
+
+  for (const token of tokens) {
+    if (/^(METAR|SPECI|AUTO|COR)$/i.test(token)) continue;
+    if (/^\d{6}Z$/.test(token)) continue;
+    if (/^(VRB|\d{3})\d{2}(G\d{2})?KT$/.test(token)) continue;
+    if (/^\d{4}$/.test(token)) continue;
+    if (/^(A|Q)\d{4}$/.test(token)) continue;
+    if (/^[A-Z]{4}$/.test(token)) continue;
+    if (/^R\d{2}[LRC]?\/\d{4}/.test(token)) continue;
+    if (/^(FEW|SCT|BKN|OVC|VV)\d{3}/.test(token)) continue;
+    if (/^(SKC|CLR|NSC)$/.test(token)) continue;
+    if (token.includes("/")) continue;
+
+    const cleaned = token.replace(/^(VC|\+|-)/, "");
+    const hasTS = cleaned.includes("TS");
+    const hasFZ = cleaned.includes("FZ");
+    const hasSH = cleaned.includes("SH");
+
+    if (cleaned.includes("FG")) {
+      return { label: hasFZ ? "Freezing fog" : "Fog" };
+    }
+    if (cleaned.includes("BR")) return { label: "Mist" };
+    if (cleaned.includes("HZ") || cleaned.includes("FU") || cleaned.includes("DU") || cleaned.includes("SA"))
+      return { label: "Haze" };
+    if (hasTS) return { label: "Thunderstorm" };
+    if (cleaned.includes("RA") || cleaned.includes("DZ")) {
+      return { label: hasFZ ? "Freezing rain" : hasSH ? "Showers" : "Rain" };
+    }
+    if (cleaned.includes("SN") || cleaned.includes("SG") || cleaned.includes("PL") || cleaned.includes("IC"))
+      return { label: "Snow" };
+  }
+
+  if (upper.includes("OVC")) return { label: "Overcast" };
+  if (upper.includes("BKN")) return { label: "Broken clouds" };
+  if (upper.includes("SCT")) return { label: "Scattered clouds" };
+  if (upper.includes("FEW")) return { label: "Few clouds" };
+  if (upper.includes("SKC") || upper.includes("CLR") || upper.includes("NSC")) return { label: "Clear" };
+
+  return null;
+}
+
 type FlightCategory = "VFR" | "MVFR" | "IFR" | "LIFR" | "UNKNOWN";
 
 function parseMetarFlightCategory(raw: string): FlightCategory {
@@ -1465,55 +1564,46 @@ const StatusPill = ({ tone, children, className }: StatusPillProps) => (
   </span>
 );
 
-type DirectionArrowProps = {
-  direction: "up" | "down" | "left" | "right";
-  className?: string;
+type WindSummaryChipProps = {
+  windDir: number | null;
+  windSpeed: number | null;
+  windGust?: number | null;
 };
 
-const DirectionArrow = ({ direction, className }: DirectionArrowProps) => {
-  const rotation =
-    direction === "up" ? 0 : direction === "right" ? 90 : direction === "down" ? 180 : 270;
+const WindSummaryChip = ({ windDir, windSpeed, windGust }: WindSummaryChipProps) => {
+  const hasSpeed = Number.isFinite(windSpeed ?? NaN);
+  const hasDir = Number.isFinite(windDir ?? NaN);
+  const dirText = hasDir ? `${String(Math.round(windDir as number)).padStart(3, "0")}°` : "VRB";
+  const speedText = hasSpeed ? `${Math.round(windSpeed as number)}` : "—";
+  const gustText = Number.isFinite(windGust ?? NaN) ? `G${Math.round(windGust as number)}` : "";
   return (
-    <svg
-      viewBox="0 0 24 24"
-      className={`h-3 w-3 ${className ?? ""}`}
-      style={{ transform: `rotate(${rotation}deg)` }}
-      aria-hidden="true"
-    >
-      <path d="M12 4l6 8h-4v8h-4v-8H6z" fill="currentColor" />
-    </svg>
-  );
-};
-
-type WindComponentChipProps = {
-  label: string;
-  value: number | null;
-  direction?: "head" | "tail" | "left" | "right";
-};
-
-const WindComponentChip = ({ label, value, direction }: WindComponentChipProps) => {
-  const arrowDir =
-    direction === "head"
-      ? "up"
-      : direction === "tail"
-      ? "down"
-      : direction === "left"
-      ? "left"
-      : direction === "right"
-      ? "right"
-      : null;
-  return (
-    <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/75">
-      <span className="uppercase tracking-[0.2em] text-white/45">{label}</span>
-      <span className="flex items-center gap-1 font-semibold text-white/90">
-        {arrowDir && <DirectionArrow direction={arrowDir} className="text-white/70" />}
-        {value == null ? "—" : Math.round(Math.abs(value))}
-        <span className="text-[10px] text-white/40">kt</span>
+    <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/75 whitespace-nowrap">
+      <span className="uppercase tracking-[0.2em] text-white/45">Wind</span>
+      <span className="font-semibold text-white/90">
+        {hasSpeed ? `${dirText} ${speedText}${gustText} kt` : "—"}
       </span>
     </div>
   );
 };
 
+type VisibilityChipProps = {
+  visibilityKm: number | null;
+};
+
+const VisibilityChip = ({ visibilityKm }: VisibilityChipProps) => {
+  const val =
+    visibilityKm == null
+      ? "—"
+      : visibilityKm >= 10
+      ? "10+ km"
+      : `${visibilityKm.toFixed(1)} km`;
+  return (
+    <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/75 whitespace-nowrap">
+      <span className="uppercase tracking-[0.2em] text-white/45">Vis</span>
+      <span className="font-semibold text-white/90">{val}</span>
+    </div>
+  );
+};
 type RunwayWindVizProps = {
   runwayHeading: number | null;
   windDir: number | null;
@@ -2180,6 +2270,9 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
       comps,
       qnh: parseMetarQnh(metarDep || ""),
       category: parseMetarFlightCategory(metarDep || ""),
+      tempC: parseMetarTempC(metarDep || ""),
+      weather: parseMetarWeatherSummary(metarDep || ""),
+      visibilityKm: parseMetarVisibilityKm(metarDep || ""),
     };
   }, [metarDep, depRunway?.heading]);
 
@@ -2191,25 +2284,11 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
       comps,
       qnh: parseMetarQnh(metarArr || ""),
       category: parseMetarFlightCategory(metarArr || ""),
+      tempC: parseMetarTempC(metarArr || ""),
+      weather: parseMetarWeatherSummary(metarArr || ""),
+      visibilityKm: parseMetarVisibilityKm(metarArr || ""),
     };
   }, [metarArr, arrRunway?.heading]);
-
-  const depHeadDir =
-    depWind.comps.headwind_kt == null ? undefined : depWind.comps.headwind_kt >= 0 ? "head" : "tail";
-  const arrHeadDir =
-    arrWind.comps.headwind_kt == null ? undefined : arrWind.comps.headwind_kt >= 0 ? "head" : "tail";
-  const depCrossDir =
-    depWind.comps.crosswind_dir === "L"
-      ? "left"
-      : depWind.comps.crosswind_dir === "R"
-      ? "right"
-      : undefined;
-  const arrCrossDir =
-    arrWind.comps.crosswind_dir === "L"
-      ? "left"
-      : arrWind.comps.crosswind_dir === "R"
-      ? "right"
-      : undefined;
 
   const tkoCheck = useMemo(() => {
     const len = depRunway?.length_m ?? 0;
@@ -2942,7 +3021,8 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
               <span>DEP METAR</span>
               <div className="flex items-center gap-2">
                 <span className="text-white/60">
-                  {depIcao}{depRunway ? ` ${depRunway.id}` : ""}
+                  {depWind.weather?.label ?? "—"}
+                  {Number.isFinite(depWind.tempC ?? NaN) ? ` • ${Math.round(depWind.tempC as number)}°C` : ""}
                 </span>
                 <StatusPill tone={flightCategoryTone(depWind.category)} className="text-[9px]">
                   {depWind.category === "UNKNOWN" ? "—" : depWind.category}
@@ -2950,30 +3030,31 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
               </div>
             </div>
             <div className="mt-3 flex items-start gap-3">
-              <RunwayWindViz runwayHeading={depRunway?.heading ?? null} windDir={depWind.parsed.wind_dir_deg} />
+              <div className="flex flex-col items-center gap-1">
+                <RunwayWindViz runwayHeading={depRunway?.heading ?? null} windDir={depWind.parsed.wind_dir_deg} />
+                <div className="text-[11px] font-semibold text-white/70">
+                  {depRunway ? depRunway.id : "—"}
+                </div>
+              </div>
               <div className="flex-1">
                 <div className="text-xs text-white/90 font-mono break-words">
                   {metarDep || "—"}
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <WindComponentChip
-                    label="Head"
-                    value={depWind.comps.headwind_kt}
-                    direction={depHeadDir}
+                  <WindSummaryChip
+                    windDir={depWind.parsed.wind_dir_deg}
+                    windSpeed={depWind.parsed.wind_speed_kt}
+                    windGust={depWind.parsed.wind_gust_kt}
                   />
-                  <WindComponentChip
-                    label="Cross"
-                    value={depWind.comps.crosswind_kt}
-                    direction={depCrossDir}
-                  />
-                  <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/75">
+                  <VisibilityChip visibilityKm={depWind.visibilityKm} />
+                  <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/75 whitespace-nowrap">
                     <span className="uppercase tracking-[0.2em] text-white/45">QNH</span>
                     <span className="font-semibold text-white/90">
                       {depWind.qnh ? depWind.qnh.value.toFixed(depWind.qnh.unit === "hPa" ? 0 : 2) : "—"}
                       <span className="ml-1 text-[10px] text-white/40">{depWind.qnh?.unit ?? ""}</span>
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/75">
+                  <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/75 whitespace-nowrap">
                     <span className="uppercase tracking-[0.2em] text-white/45">RWY ELEV</span>
                     <span className="font-semibold text-white/90">
                       {Number.isFinite(depRunwayElevFt ?? NaN) ? Math.round(depRunwayElevFt as number) : "—"}
@@ -3016,7 +3097,8 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
               <span>ARR METAR</span>
               <div className="flex items-center gap-2">
                 <span className="text-white/60">
-                  {arrIcao}{arrRunway ? ` ${arrRunway.id}` : ""}
+                  {arrWind.weather?.label ?? "—"}
+                  {Number.isFinite(arrWind.tempC ?? NaN) ? ` • ${Math.round(arrWind.tempC as number)}°C` : ""}
                 </span>
                 <StatusPill tone={flightCategoryTone(arrWind.category)} className="text-[9px]">
                   {arrWind.category === "UNKNOWN" ? "—" : arrWind.category}
@@ -3024,30 +3106,31 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
               </div>
             </div>
             <div className="mt-3 flex items-start gap-3">
-              <RunwayWindViz runwayHeading={arrRunway?.heading ?? null} windDir={arrWind.parsed.wind_dir_deg} />
+              <div className="flex flex-col items-center gap-1">
+                <RunwayWindViz runwayHeading={arrRunway?.heading ?? null} windDir={arrWind.parsed.wind_dir_deg} />
+                <div className="text-[11px] font-semibold text-white/70">
+                  {arrRunway ? arrRunway.id : "—"}
+                </div>
+              </div>
               <div className="flex-1">
                 <div className="text-xs text-white/90 font-mono break-words">
                   {metarArr || "—"}
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <WindComponentChip
-                    label="Head"
-                    value={arrWind.comps.headwind_kt}
-                    direction={arrHeadDir}
+                  <WindSummaryChip
+                    windDir={arrWind.parsed.wind_dir_deg}
+                    windSpeed={arrWind.parsed.wind_speed_kt}
+                    windGust={arrWind.parsed.wind_gust_kt}
                   />
-                  <WindComponentChip
-                    label="Cross"
-                    value={arrWind.comps.crosswind_kt}
-                    direction={arrCrossDir}
-                  />
-                  <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/75">
+                  <VisibilityChip visibilityKm={arrWind.visibilityKm} />
+                  <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/75 whitespace-nowrap">
                     <span className="uppercase tracking-[0.2em] text-white/45">QNH</span>
                     <span className="font-semibold text-white/90">
                       {arrWind.qnh ? arrWind.qnh.value.toFixed(arrWind.qnh.unit === "hPa" ? 0 : 2) : "—"}
                       <span className="ml-1 text-[10px] text-white/40">{arrWind.qnh?.unit ?? ""}</span>
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/75">
+                  <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/75 whitespace-nowrap">
                     <span className="uppercase tracking-[0.2em] text-white/45">RWY ELEV</span>
                     <span className="font-semibold text-white/90">
                       {Number.isFinite(arrRunwayElevFt ?? NaN) ? Math.round(arrRunwayElevFt as number) : "—"}
