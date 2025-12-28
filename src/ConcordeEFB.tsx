@@ -2442,6 +2442,30 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
       if (extracted.arrMetar) setMetarArr(extracted.arrMetar);
       if (extracted.depMetar || extracted.arrMetar) setMetarErr("");
 
+      // Prefer live METARs when possible; fall back to SimBrief if fetch fails.
+      const liveDepIcao = normalizeIcao4(extracted.originIcao) ?? normalizeIcao4(depKey);
+      const liveArrIcao = normalizeIcao4(extracted.destIcao) ?? normalizeIcao4(arrKey);
+      if (liveDepIcao || liveArrIcao) {
+        const [depLive, arrLive] = await Promise.all([
+          liveDepIcao ? fetchMetarByICAO(liveDepIcao) : Promise.resolve<MetarFetchResult | null>(null),
+          liveArrIcao ? fetchMetarByICAO(liveArrIcao) : Promise.resolve<MetarFetchResult | null>(null),
+        ]);
+        const liveErrors: string[] = [];
+        if (depLive) {
+          if (depLive.ok) setMetarDep(depLive.raw);
+          else if (!extracted.depMetar) liveErrors.push(depLive.error);
+        }
+        if (arrLive) {
+          if (arrLive.ok) setMetarArr(arrLive.raw);
+          else if (!extracted.arrMetar) liveErrors.push(arrLive.error);
+        }
+        if (liveErrors.length) {
+          setMetarErr(`Live METAR fetch failed: ${liveErrors.join(" | ")}`);
+        } else {
+          setMetarErr("");
+        }
+      }
+
       const hasSimbriefDistance = typeof extracted.distanceNm === "number" && extracted.distanceNm > 0;
 
       if (extracted.route) {
