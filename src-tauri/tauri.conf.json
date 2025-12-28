@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Concorde EFB - v1.1 by @theawesomeray",
+        "title": "Concorde EFB - v2.0.1 by @theawesomeray",
         "width": 1280,
         "height": 800,
         "resizable": true,
