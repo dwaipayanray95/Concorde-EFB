@@ -45,6 +45,10 @@ const DONATE_PAGE_URL =
   import.meta.env.BASE_URL === "./"
     ? "https://dwaipayanray95.github.io/Concorde-EFB/donate/"
     : `${import.meta.env.BASE_URL}donate/`;
+const CHANGELOG_PAGE_URL =
+  import.meta.env.BASE_URL === "./"
+    ? "https://dwaipayanray95.github.io/Concorde-EFB/changelog/"
+    : `${import.meta.env.BASE_URL}changelog/`;
 
 // User should be able to enter FL below 300 (e.g. low-level segments), but Concorde max is still capped.
 const MIN_CONCORDE_FL = 0;
@@ -3162,9 +3166,13 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
             >
               GitHub
             </LinkButton>
-            <Button variant="ghost" className="h-8 px-3 text-xs" disabled title="Provide changelog URL">
+            <LinkButton
+              href={CHANGELOG_PAGE_URL}
+              className="h-8 px-3 text-xs"
+              title="View raw changes"
+            >
               View Changelog
-            </Button>
+            </LinkButton>
             <LinkButton
               href="https://github.com/dwaipayanray95/Concorde-EFB/releases"
               className="h-8 px-3 text-xs"
