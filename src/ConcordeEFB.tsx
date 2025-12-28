@@ -36,7 +36,7 @@ const OPENS_COUNTER_PATH = "https://dwaipayanray95.github.io/Concorde-EFB/";
 const OPENS_BADGE_SRC =
   "https://api.visitorbadge.io/api/visitors" +
   `?path=${encodeURIComponent(OPENS_COUNTER_PATH)}` +
-  "&label=SITE%20VISITS" +
+  "&label=EFB%20Launches" +
   "&labelColor=%23111a2b" +
   "&countColor=%230ea5e9" +
   "&style=flat" +
@@ -3509,11 +3509,11 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
         href={OPENS_COUNTER_PATH}
         target="_blank"
         rel="noreferrer"
-        title="Site visits (counts every app load)"
+        title="EFB launches (counts every app load)"
       >
         <img
           src={OPENS_BADGE_SRC}
-          alt="Site visits counter"
+          alt="EFB launches counter"
           className="h-6 w-auto rounded-md border border-white/10 bg-black/60 backdrop-blur"
           loading="lazy"
         />
