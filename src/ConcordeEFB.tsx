@@ -2886,7 +2886,11 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                 <HHMM hours={enduranceHours} />
               </div>
             </div>
-            <div className={`efb-metric ${enduranceMeets ? "border-emerald-500/30" : "border-rose-500/40"}`}>
+            <div
+              className={`efb-metric flex flex-col justify-center ${
+                enduranceMeets ? "border-emerald-500/30" : "border-rose-500/40"
+              }`}
+            >
               <div className={metricLabel}>ETE + Reserves</div>
               <div className={metricValue}>
                 <HHMM hours={eteHours + reserveTimeH} />
