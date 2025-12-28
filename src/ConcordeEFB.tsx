@@ -17,7 +17,7 @@ import type {
 import Papa from "papaparse";
 import { UI_TOKENS } from "./uiTokens";
 
-const APP_VERSION = "2.0.1";
+const APP_VERSION = "2.0.2";
 const BUILD_MARKER = "281226-RC11-beta";
 const DEBUG_FL_AUTOPICK = false;
 // App icon
@@ -2586,7 +2586,7 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
   const metricLabel = UI_TOKENS.metric.label;
   const metricValue = UI_TOKENS.metric.value;
 
-  const FlightPlanSection = () => (
+  const flightPlanSection = (
     <Card title="FLIGHT PLAN">
       <div className={UI_TOKENS.spacing.sectionStack}>
         <Label>SimBrief Username / ID (optional)</Label>
@@ -2754,7 +2754,7 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
     </Card>
   );
 
-  const FuelSection = () => (
+  const fuelSection = (
     <Card title="CRUISE & FUEL MANAGEMENT">
       <Row>
         <div>
@@ -2991,7 +2991,7 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
     </Card>
   );
 
-  const PerformanceSection = () => (
+  const performanceSection = (
     <Card
       title="PERFORMANCE CALCULATOR"
       right={
@@ -3356,8 +3356,8 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
           </div>
         </header>
 
-        {updateAvailable && (
-          <div className="mt-4 flex w-full justify-end">
+        <div className={`flex w-full justify-end ${updateAvailable ? "mt-4" : ""}`}>
+          {updateAvailable && (
             <div className="flex items-center gap-3 rounded-lg border border-amber-400/50 bg-amber-500/15 px-3 py-2 text-[11px] text-amber-50 shadow-[0_10px_24px_-18px_rgba(251,191,36,0.8)]">
               <span className="uppercase tracking-[0.24em] text-amber-200/80">
                 New update available
@@ -3371,8 +3371,8 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                 Get
               </LinkButton>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         <main className={UI_TOKENS.spacing.pageStack}>
           {dbError && (
@@ -3381,9 +3381,9 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
             </div>
           )}
 
-          <FlightPlanSection />
-          <FuelSection />
-          <PerformanceSection />
+          {flightPlanSection}
+          {fuelSection}
+          {performanceSection}
 
           <Card title="Notes & Assumptions">
             <ul className="list-disc pl-5 text-sm text-white/70 space-y-2">
