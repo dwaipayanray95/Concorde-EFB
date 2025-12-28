@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Support Concorde EFB</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        color-scheme: light;
+        --bg-1: #0b1116;
+        --bg-2: #10202a;
+        --ink: #e8f2f6;
+        --muted: rgba(232, 242, 246, 0.7);
+        --accent: #ff8f3f;
+        --accent-2: #2bc0ff;
+        --card: rgba(14, 22, 28, 0.72);
+        --stroke: rgba(255, 255, 255, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Space Grotesk", system-ui, -apple-system, sans-serif;
+        color: var(--ink);
+        background: radial-gradient(circle at 20% 20%, rgba(43, 192, 255, 0.12), transparent 45%),
+          radial-gradient(circle at 80% 0%, rgba(255, 143, 63, 0.16), transparent 45%),
+          linear-gradient(140deg, var(--bg-1), var(--bg-2));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 48px 20px;
+      }
+
+      .shell {
+        width: min(720px, 100%);
+        display: grid;
+        gap: 24px;
+      }
+
+      .hero {
+        display: grid;
+        gap: 12px;
+      }
+
+      .eyebrow {
+        text-transform: uppercase;
+        letter-spacing: 0.35em;
+        font-size: 11px;
+        color: var(--accent-2);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(28px, 4vw, 40px);
+        line-height: 1.1;
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.6;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--stroke);
+        border-radius: 22px;
+        padding: 24px;
+        display: grid;
+        gap: 18px;
+        backdrop-filter: blur(12px);
+        box-shadow: 0 20px 60px -40px rgba(0, 0, 0, 0.8);
+      }
+
+      .cta-row {
+        display: grid;
+        gap: 12px;
+      }
+
+      .cta {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 14px 18px;
+        border-radius: 16px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 15px;
+        border: 1px solid transparent;
+        transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+      }
+
+      .cta.primary {
+        background: linear-gradient(135deg, var(--accent), #ffb35a);
+        color: #1b0f05;
+        box-shadow: 0 16px 30px -18px rgba(255, 143, 63, 0.8);
+      }
+
+      .cta.secondary {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: var(--stroke);
+        color: var(--ink);
+      }
+
+      .cta:hover {
+        transform: translateY(-1px);
+      }
+
+      .mono {
+        font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 13px;
+        color: var(--muted);
+        background: rgba(0, 0, 0, 0.35);
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--stroke);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .mono button {
+        border: 1px solid var(--stroke);
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--ink);
+        font-family: inherit;
+        font-size: 12px;
+        padding: 6px 10px;
+        border-radius: 10px;
+        cursor: pointer;
+      }
+
+      .footer {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
+        font-size: 12px;
+        color: rgba(232, 242, 246, 0.6);
+      }
+
+      .footer a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .footer a:hover {
+        color: var(--accent-2);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <span class="eyebrow">Support Concorde EFB</span>
+        <h1>Keep the supersonic planner sharp and polished.</h1>
+        <p>
+          If this tool saves you time or makes Concorde ops more fun, consider sending a tip.
+          Every bit helps cover hosting and fuels future features.
+        </p>
+      </section>
+
+      <section class="card">
+        <div class="cta-row">
+          <a class="cta primary" href="https://www.paypal.com/paypalme/theawesomeray" target="_blank" rel="noreferrer">
+            Donate via PayPal
+          </a>
+          <a class="cta secondary" href="upi://pay?pa=dwaipayanray95@okaxis" title="Open UPI app">
+            Pay with UPI
+          </a>
+        </div>
+
+        <div class="mono" aria-live="polite">
+          <span>UPI ID: dwaipayanray95@okaxis</span>
+          <button type="button" data-copy>Copy</button>
+        </div>
+      </section>
+
+      <section class="footer">
+        <span>Thank you for supporting the project.</span>
+        <a href="/Concorde-EFB/">Back to the app</a>
+      </section>
+    </main>
+
+    <script>
+      const copyButton = document.querySelector("[data-copy]");
+      if (copyButton) {
+        copyButton.addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText("dwaipayanray95@okaxis");
+            copyButton.textContent = "Copied";
+            setTimeout(() => {
+              copyButton.textContent = "Copy";
+            }, 1500);
+          } catch (err) {
+            copyButton.textContent = "Copy failed";
+            setTimeout(() => {
+              copyButton.textContent = "Copy";
+            }, 1500);
+          }
+        });
+      }
+    </script>
+  </body>
+</html>
