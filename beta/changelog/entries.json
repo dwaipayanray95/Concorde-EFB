@@ -1,8 +1,28 @@
 [
   {
     "date": "2025-12-28",
+    "title": "Release v2.0.1",
+    "items": [
+      "Major UI overhaul with improved layout and readability",
+      "Light mode with refined contrast",
+      "SimBrief import expanded (route, alternates, METARs, callsign/registration, pax, runway tokens)",
+      "Route planning improvements: auto-estimated distance with manual override",
+      "Performance calculator: takeoff/landing feasibility cues and speed references",
+      "Fuel planning expanded: trip + block (taxi/contingency/final reserve/alternate) + trim tank option",
+      "METAR improvements: fallback fetch, runway-relative wind, QNH/visibility/runway elevation",
+      "Airport/runway database auto-load with longest runway auto-pick",
+      "Diagnostics/self-tests retained and expanded"
+    ]
+  },
+  {
+    "date": "2025-12-28",
     "title": "Commits",
     "items": [
+      "local: metar strip layout + visibility chip + runway elevation",
+      "local: fix runway wind arrow orientation",
+      "local: align ETE + Reserves card content",
+      "local: add spacing between time values and units",
+      "b2abc98 change beta 10 to RC10 because release ready now",
       "local: improve SimBrief pax count extraction",
       "9ba14d9 seed raw changelog entries from git history",
       "13fc2c6 Fix Donate link to honor base URL across pages",
