@@ -2,46 +2,186 @@
   {
     "date": "2025-12-28",
     "title": "Commits",
-    "items": []
+    "items": [
+      "9ba14d9 seed raw changelog entries from git history",
+      "13fc2c6 Fix Donate link to honor base URL across pages",
+      "b536039 Add GitHub Pages donate page and hook in-app link",
+      "fa3ffdf update build marker and footer links",
+      "94d5954 refine efb ui, metar visuals, and simbrief workflow",
+      "38cb876 Add light mode and improve light UI contrast",
+      "038114e Bump build marker",
+      "cdba7ff Improve light-mode contrast",
+      "88b26d5 added and fixed light UI mode, added a toggle too",
+      "6152ffc Initial commit: working towards a light UI",
+      "25157a8  Add diagnostics details toggle and update utility actions"
+    ]
   },
   {
     "date": "2025-12-27",
     "title": "Commits",
-    "items": []
+    "items": [
+      "fedcc50 remove Reheat:OK panel instead add a safety line with warning logic",
+      "f011094  Polish cruise timing row and enforce landing limits",
+      "78df2a2 update ui for T/O and LDG perf panels",
+      "2fc5dae Introduce Performance Calculator",
+      "e430144 added glow to certain ui elements & cleanup bg",
+      "4764f33 First rebuild at UI",
+      "795d41f change local host for web testing"
+    ]
   },
   {
     "date": "2025-12-26",
     "title": "Commits",
-    "items": []
+    "items": [
+      "257f466 Merge new features from feature/simbrief-import",
+      "94c93b5 center the texts in the middle of the boxes",
+      "0f804e2 add a call sign and arcft rgstrn box and gave them some colours",
+      "53ab38f split call sign and registration into two units",
+      "c73118b feat(simbrief): split callsign into callsign + aircraft registration in UI",
+      "43612d4 feat(simbrief): inject dep/arr runway tokens into imported route string (VIDP/27 … OMDB/30R)",
+      "811c97b feat(simbrief): auto-fill DEP/ARR METAR on import to populate wind components",
+      "d31917d starting work on newer",
+      "01ea99a pre-release v1.1.2 2612251804",
+      "55afde7 fix(ts): remove .tsx extensions from imports (CI typecheck)",
+      "bef456e changing deployment method #2 - update pages.yml",
+      "b25f21c changing deployment method #1 - cleaning beta tree",
+      "8296dbd fix deploying beta builds online for testing",
+      "1de9336 ci(beta): use npm install to avoid lockfile drift breaking deploy",
+      "a0ea21a update version to v1.1.2 and added build numbering",
+      "04d8105 Fix planned-distance recalculation + decouple SimBrief estimated distance",
+      "3658f09 push version to v1.1.1",
+      "dcd93a6 Update build number to track beta instead of globally",
+      "17d7e0d chore(ui): remove Auto-FL debug panel and disable FL debug mode",
+      "1a4bf80 fix(route): prevent manual planned distance edits from overwriting imported/estimated route distance; improve SimBrief status labels",
+      "83553ea removed useless .js causing conflicts and added auto FL calculation from simbrief",
+      "46d322c auto-calculating FL logic",
+      "f2233ed fix(ui): bundle header app icon for GitHub Pages",
+      "3adfe3a tried fixing app-icon not showing in web version",
+      "6bfb957 added app icon in app",
+      "cbce912 cleanup beta versioning and update version numbering to v1.1 (v1.1.0)",
+      "6a2cfa7 merge(beta): bring SimBrief import + route UI into main",
+      "ec086da Merge pull request #1 from dwaipayanray95/feature/simbrief-import",
+      "a0e342c FEATURE: implemented support to import data from simbrief",
+      "1a9eb84 feat(simbrief): auto-fill alternate ICAO on import",
+      "0cd9967 fix(ui): match route box height to estimated distance card",
+      "873bacd cleaned up the route box and deleted non required informations",
+      "9d32c1b inital commit: working branch to import simbrief data",
+      "dbed4f9 fix(dev): remove duplicate default export shims in App.js",
+      "1fc64df chore: ignore tauri/target and other build artifacts",
+      "9f199ca fix(tauri): repair tauri.conf.json (valid JSON + MSI config)",
+      "72adf09 fix(tauri): fix invalid tauri.conf.json (msi-only + v1.0.0)",
+      "45531f4 build only .msi instead of .exe as well",
+      "276b0ee lock installation path so that the app is always installed at the same place",
+      "d482077 update version to 1.0.0 in concordeefb.js",
+      "d744376 Add new app icon  - wohoo",
+      "2914804 chore(release): bump to v1.0.0 and update app/window title"
+    ]
   },
   {
     "date": "2025-12-25",
     "title": "Commits",
-    "items": []
+    "items": [
+      "157f229 Commit message: fix(build): unify scripts; make npm run build tauri-safe",
+      "bf52e34 Commit message: fix(tauri): use relative Vite base for desktop to prevent white screen",
+      "55ff53c Fix app not showing up once launched",
+      "b7d19a8 chore(rc): fix tauri v2 config + sync deps/lockfile for CI builds",
+      "489ece4 fix(build): add tailwind deps for CI build",
+      "5c88f24 chore: sync package-lock with package.json",
+      "f1c0972 Fix tauri build errors",
+      "74b90b5 chore(rc): migrate tauri config to v2 + set unique identifier",
+      "b8d17be fix building via tauri",
+      "93bdf11 fix(tauri): repair package.json JSON + add tauri scripts",
+      "75022db tracking windows releases as RC until stable",
+      "6216641 chore(tauri): add windows release workflow",
+      "3d12415 fix(route): move route card above dep/arr without touching legacy JS files",
+      "a57e671 fixing jsx compiling errors",
+      "7321df7 fix(route): disambiguate duplicate navaids, move route card to top, simplify UI",
+      "fbfa089 make sure app is building via .tsx and not older .js",
+      "b9cee72 feat(route): add optional fixes DB + safer SimBrief token parsing to improve distance estimates",
+      "8401e19 Commit message: fix(route): move Route card inside ConcordePlannerCanvas to resolve TS undefined names",
+      "212ae3c feat(route): add route paste + distance estimate that auto-fills planned distance (still editable)",
+      "ed78f7e add beta tag to the beta page",
+      "b0ac14a fix(build): restore valid package.json + repair vite config for beta build",
+      "da3773b trying to fix beta build errors",
+      "74f9f13 update pages again",
+      "e5e6081 update pages.yml for beta staging",
+      "ecb375b update pages.yml for beta staging",
+      "9f0097d update pages.yml to accomodate beta deployment",
+      "910a437 update yages.yml to accomodate for beta testing",
+      "2951b92 updates pages.yml to accomodate for beta testing app",
+      "53cfb2e update pages.yml for beta branch",
+      "e772686 update pages.yml to not delete beta",
+      "8e7c755 Test signing keys",
+      "5c233ee Test commit",
+      "1f1b51a deploy beta branch",
+      "14a5906 Add GitHub Actions workflow for stable deployment",
+      "ed303c8 Update GitHub Pages workflow for main and beta branches",
+      "132969e chore(ci): deploy main and beta to GitHub Pages",
+      "98a7eca chore(issues): rename issue template; remove auto-label workflow",
+      "dfe18f3 bug and feature update page automation update",
+      "1d15b9c Unified features and bug requests",
+      "cb285b8 cleanup the feature request form a bit",
+      "e26b0f0 Part 1: Add external user to request features (for flightsim.to)",
+      "8351f01 fix(ui): make auto-selected Non-RVSM notice green + rename counter label to SITE VISITS",
+      "d8af173 remove goatcounter script",
+      "444d467 fix(counter): replace CountAPI opens counter with visitorbadge SVG badge (no CORS)",
+      "455035f trying add CountAPI to count the number of users using the EFB."
+    ]
   },
   {
     "date": "2025-12-24",
     "title": "Commits",
-    "items": []
+    "items": [
+      "d494d75 fix(tests): make altitudeBurnFactor heuristic stable (FL450≈1.20, FL600≈1.00) while keeping UI FL limits",
+      "a05b530 Hygiene fixes and updated the readme with changelog and future plan",
+      "6ad0654 fix(fl): make FL editable, allow <300, enforce Non-RVSM snapping, auto-pick compliant default FL",
+      "ba460e5 Updated the correct file for v0.85 changes to reflect",
+      "05f0470 fix: another attempt at clamping FL590 and reflecting updated versioning number",
+      "51937d9 fix: clamp cruise FL to max FL590 + show clamp notice; ensure auto-FL respects max",
+      "8122827 feat(v0.85): auto FL recommendation + non-RVSM FL validation + fix runway dropdown selection"
+    ]
   },
   {
     "date": "2025-12-23",
     "title": "Commits",
-    "items": []
+    "items": [
+      "fbb6587 feat(v0.84): infer east/west direction and validate non-RVSM cruise FLs"
+    ]
   },
   {
     "date": "2025-12-08",
     "title": "Commits",
-    "items": []
+    "items": [
+      "c22b724 chore(release): bump app version to v0.83 — update header, index.html, README, and built JS",
+      "b75996f chore: fix runway selection, add fuel capacity warning, and retune Concorde landing speeds"
+    ]
   },
   {
     "date": "2025-11-17",
     "title": "Commits",
-    "items": []
+    "items": [
+      "b63fbd1 Update README with try link and author social media"
+    ]
   },
   {
     "date": "2025-11-10",
     "title": "Commits",
-    "items": []
+    "items": [
+      "f85b003 Updated to v0.82 overall fixes here and there",
+      "b8a0719 0.81 now its online added a ReadME and a few text additions in the app",
+      "e3cb3fe Fix: Attempt 3/'",
+      "667d3b0 fix: trying deploying in a different manner",
+      "72df7b6 Fix: Another Attempt #2",
+      "5934ca8 fix: rewrote a few things hope it works",
+      "493ac47 fix: another attempt",
+      "0c671dc fix: trying to make this deployable via github",
+      "aee30bf fix(ci): silence TS in EFB, add papaparse module decl, restore Vite config",
+      "1d5fac5 fix: restore proper Vite config and base path",
+      "aa047b4 ci: build with vite (skip tsc) to unblock Pages",
+      "d48a4b9 feat: initial Concorde EFB working locally",
+      "55ee251 fix: set Vite base to /Concorde-EFB/ and update remote",
+      "92428c1 Add GitHub Actions workflow for GitHub Pages deployment",
+      "71470ff feat: wire Tailwind and scaffold Concorde EFB"
+    ]
   }
 ]
