@@ -30,3 +30,6 @@ dist/
 # Tauri / Rust generated
 src-tauri/target/
 src-tauri/gen/
+
+# Avoid emitting JS next to TS sources
+src/*.js

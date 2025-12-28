@@ -73,6 +73,21 @@
     @apply w-full rounded-2xl bg-black/30 border border-white/10 px-4 py-3 text-sm text-white/90 placeholder-white/25 shadow-inner transition focus:outline-none focus:ring-4 focus:ring-sky-500/15 focus:border-sky-500/40;
   }
 
+  select.efb-input {
+    background-image: linear-gradient(45deg, transparent 50%, rgba(255, 255, 255, 0.55) 50%),
+      linear-gradient(135deg, rgba(255, 255, 255, 0.55) 50%, transparent 50%),
+      linear-gradient(to right, transparent, transparent);
+    background-position: calc(100% - 18px) calc(50% - 3px), calc(100% - 12px) calc(50% - 3px),
+      calc(100% - 3.2rem) 0.6rem;
+    background-size: 6px 6px, 6px 6px, 1px 1.4rem;
+    background-repeat: no-repeat;
+  }
+
+  select.efb-input option {
+    background-color: #0b0f14;
+    color: #f8fafc;
+  }
+
   .efb-label {
     @apply text-[10px] uppercase tracking-[0.28em] text-white/45;
   }
@@ -91,6 +106,17 @@
     background-color: rgba(255, 255, 255, 0.92);
     border-color: rgba(15, 23, 42, 0.12);
     color: rgba(15, 23, 42, 0.9);
+  }
+
+  html[data-theme="light"] select.efb-input {
+    background-image: linear-gradient(45deg, transparent 50%, rgba(15, 23, 42, 0.6) 50%),
+      linear-gradient(135deg, rgba(15, 23, 42, 0.6) 50%, transparent 50%),
+      linear-gradient(to right, transparent, transparent);
+  }
+
+  html[data-theme="light"] select.efb-input option {
+    background-color: #ffffff;
+    color: #0f172a;
   }
 
   html[data-theme="light"] .efb-input::placeholder {
@@ -209,5 +235,8 @@
   }
   html[data-theme="light"] .bg-rose-500\/15 {
     background-color: rgba(244, 63, 94, 0.2);
+  }
+  html[data-theme="light"] .bg-fuchsia-500\/15 {
+    background-color: rgba(217, 70, 239, 0.18);
   }
 }
