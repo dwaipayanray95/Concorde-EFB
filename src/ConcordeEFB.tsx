@@ -18,7 +18,7 @@ import Papa from "papaparse";
 import { UI_TOKENS } from "./uiTokens";
 
 const APP_VERSION = "2.0.1";
-const BUILD_MARKER = "281225-RC6";
+const BUILD_MARKER = "281226-beta7";
 const DEBUG_FL_AUTOPICK = false;
 // App icon
 // IMPORTANT: We want this to work on GitHub Pages (non-root base path) and inside Tauri.
@@ -1291,6 +1291,29 @@ const ThemeToggle = ({ theme, onToggle }: ThemeToggleProps) => {
   );
 };
 
+type LinkButtonProps = {
+  href: string;
+  children: ReactNode;
+  variant?: "primary" | "ghost";
+  className?: string;
+  title?: string;
+};
+
+const LinkButton = ({ href, children, variant = "ghost", className, title }: LinkButtonProps) => (
+  <a
+    href={href}
+    target="_blank"
+    rel="noreferrer"
+    title={title}
+    className={`inline-flex items-center justify-center rounded-2xl px-5 py-2.5 text-sm font-medium transition-all active:scale-95 ${
+      variant === "primary"
+        ? "bg-[#0a84ff] text-white shadow-[0_14px_30px_-12px_rgba(10,132,255,0.9)] hover:bg-[#0c8fff]"
+        : "bg-white/5 text-white/80 border border-white/10 hover:bg-white/10"
+    } ${className ?? ""}`.trim()}
+  >
+    {children}
+  </a>
+);
 type StatPillProps = {
   label: string;
   value: string;
@@ -3113,24 +3136,36 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                 </Button>
               )}
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button variant="ghost" className="h-8 px-3 text-xs" disabled title="Provide Donate URL">
-                Donate
-              </Button>
-              <Button variant="ghost" className="h-8 px-3 text-xs" disabled title="Provide feedback URL">
-                Bug / Feature
-              </Button>
-              <Button variant="ghost" className="h-8 px-3 text-xs" disabled title="Provide GitHub URL">
-                GitHub
-              </Button>
-              <Button variant="ghost" className="h-8 px-3 text-xs" disabled title="Coming soon">
-                View Changelog
-              </Button>
-              <Button variant="ghost" className="h-8 px-3 text-xs" disabled title="Coming soon">
-                Download Latest
-              </Button>
-            </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="ghost" className="h-8 px-3 text-xs" disabled title="Provide Donate URL">
+              Donate
+            </Button>
+            <LinkButton
+              href="https://github.com/dwaipayanray95/Concorde-EFB/issues/new/choose"
+              className="h-8 px-3 text-xs"
+              title="Create a GitHub issue"
+            >
+              Bug / Feature
+            </LinkButton>
+            <LinkButton
+              href="https://github.com/dwaipayanray95/Concorde-EFB"
+              className="h-8 px-3 text-xs"
+              title="GitHub repository"
+            >
+              GitHub
+            </LinkButton>
+            <Button variant="ghost" className="h-8 px-3 text-xs" disabled title="Provide changelog URL">
+              View Changelog
+            </Button>
+            <LinkButton
+              href="https://github.com/dwaipayanray95/Concorde-EFB/releases"
+              className="h-8 px-3 text-xs"
+              title="Download latest release"
+            >
+              Download Latest
+            </LinkButton>
           </div>
+        </div>
           {showDiagnostics && failedTests.length > 0 && (
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
               {failedTests.map((t, i) => (
