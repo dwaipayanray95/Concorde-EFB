@@ -1649,8 +1649,9 @@ function HHMM({ hours }: HHMMProps) {
   return (
     <span>
       {hh}
-      <span className="text-xs text-white/40">h</span> {mm}
-      <span className="text-xs text-white/40">m</span>
+      <span className="ml-1 text-xs text-white/40">h</span>{" "}
+      {mm}
+      <span className="ml-1 text-xs text-white/40">m</span>
     </span>
   );
 }
