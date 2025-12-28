@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Concorde EFB Changelog</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        color-scheme: light;
+        --bg-1: #0d0f17;
+        --bg-2: #151e2b;
+        --ink: #f6f4ee;
+        --muted: rgba(246, 244, 238, 0.68);
+        --accent: #6ee7b7;
+        --accent-2: #38bdf8;
+        --card: rgba(18, 26, 39, 0.8);
+        --stroke: rgba(255, 255, 255, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Space Grotesk", system-ui, -apple-system, sans-serif;
+        color: var(--ink);
+        background: radial-gradient(circle at 10% 10%, rgba(56, 189, 248, 0.18), transparent 45%),
+          radial-gradient(circle at 85% 25%, rgba(110, 231, 183, 0.2), transparent 48%),
+          linear-gradient(135deg, var(--bg-1), var(--bg-2));
+        padding: 32px 18px 40px;
+      }
+
+      .shell {
+        width: min(900px, 100%);
+        margin: 0 auto;
+        display: grid;
+        gap: 18px;
+      }
+
+      .hero {
+        display: grid;
+        gap: 10px;
+      }
+
+      .eyebrow {
+        text-transform: uppercase;
+        letter-spacing: 0.32em;
+        font-size: 11px;
+        color: var(--accent-2);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(24px, 3.2vw, 36px);
+        line-height: 1.1;
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.55;
+      }
+
+      .toolbar {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .toolbar a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .toolbar a:hover {
+        color: var(--accent);
+      }
+
+      .timeline {
+        display: grid;
+        gap: 10px;
+      }
+
+      .entry {
+        display: grid;
+        gap: 8px;
+        padding: 14px 16px;
+        border-radius: 18px;
+        background: var(--card);
+        border: 1px solid var(--stroke);
+        box-shadow: 0 18px 40px -32px rgba(0, 0, 0, 0.8);
+      }
+
+      .entry header {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .entry h2 {
+        margin: 0;
+        font-size: 16px;
+      }
+
+      .date {
+        font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        color: var(--accent);
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .empty {
+        padding: 20px;
+        border-radius: 16px;
+        border: 1px dashed var(--stroke);
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <span class="eyebrow">Raw Change Log</span>
+        <h1>Every update, in order, with the raw notes.</h1>
+        <p>
+          This page tracks all changes by date. Update the entries file to keep the log current.
+        </p>
+      </section>
+
+      <section class="toolbar">
+        <span>Source: <code>public/changelog/entries.json</code></span>
+        <a href="/Concorde-EFB/">Back to the app</a>
+      </section>
+
+      <section id="timeline" class="timeline" aria-live="polite"></section>
+    </main>
+
+    <script>
+      const timeline = document.getElementById("timeline");
+
+      const renderEmpty = () => {
+        timeline.innerHTML = '<div class="empty">No entries yet. Add items in entries.json.</div>';
+      };
+
+      const renderEntries = (entries) => {
+        if (!Array.isArray(entries) || entries.length === 0) {
+          renderEmpty();
+          return;
+        }
+
+        timeline.innerHTML = entries
+          .map((entry) => {
+            const title = entry.title ? entry.title : "Update";
+            const items = Array.isArray(entry.items) ? entry.items : [];
+            const list = items.length
+              ? `<ul>${items.map((item) => `<li>${item}</li>`).join("")}</ul>`
+              : "<div class='empty'>No notes added.</div>";
+
+            return `
+              <article class="entry">
+                <header>
+                  <h2>${title}</h2>
+                  <span class="date">${entry.date || "Unknown date"}</span>
+                </header>
+                ${list}
+              </article>
+            `;
+          })
+          .join("");
+      };
+
+      fetch("./entries.json", { cache: "no-store" })
+        .then((res) => (res.ok ? res.json() : []))
+        .then((data) => renderEntries(data))
+        .catch(renderEmpty);
+    </script>
+  </body>
+</html>
