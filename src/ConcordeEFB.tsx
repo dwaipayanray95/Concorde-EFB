@@ -41,7 +41,10 @@ const OPENS_BADGE_SRC =
   "&countColor=%230ea5e9" +
   "&style=flat" +
   "&labelStyle=upper";
-const DONATE_PAGE_URL = "https://dwaipayanray95.github.io/Concorde-EFB/donate/";
+const DONATE_PAGE_URL =
+  import.meta.env.BASE_URL === "./"
+    ? "https://dwaipayanray95.github.io/Concorde-EFB/donate/"
+    : `${import.meta.env.BASE_URL}donate/`;
 
 // User should be able to enter FL below 300 (e.g. low-level segments), but Concorde max is still capped.
 const MIN_CONCORDE_FL = 0;
