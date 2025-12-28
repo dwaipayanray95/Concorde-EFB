@@ -3356,6 +3356,24 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
           </div>
         </header>
 
+        {updateAvailable && (
+          <div className="mt-4 flex w-full justify-end">
+            <div className="flex items-center gap-3 rounded-lg border border-amber-400/50 bg-amber-500/15 px-3 py-2 text-[11px] text-amber-50 shadow-[0_10px_24px_-18px_rgba(251,191,36,0.8)]">
+              <span className="uppercase tracking-[0.24em] text-amber-200/80">
+                New update available
+              </span>
+              <span className="font-semibold">{updateVersion ? `v${updateVersion}` : ""}</span>
+              <LinkButton
+                href="https://github.com/dwaipayanray95/Concorde-EFB/releases"
+                className="h-7 px-2 text-[10px]"
+                title="Download the latest release"
+              >
+                Get
+              </LinkButton>
+            </div>
+          </div>
+        )}
+
         <main className={UI_TOKENS.spacing.pageStack}>
           {dbError && (
             <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-xs text-rose-200">
@@ -3405,20 +3423,6 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                 </Button>
               )}
             </div>
-          {updateAvailable && (
-            <div className="flex flex-wrap items-center gap-3 rounded-md border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
-              <span>
-                Update available{updateVersion ? `: v${updateVersion}` : ""}
-              </span>
-              <LinkButton
-                href="https://github.com/dwaipayanray95/Concorde-EFB/releases"
-                className="h-7 px-2 text-[11px]"
-                title="Download the latest release"
-              >
-                Get Update
-              </LinkButton>
-            </div>
-          )}
           <div className="flex flex-wrap items-center gap-2">
             <LinkButton
               href={DONATE_PAGE_URL}
