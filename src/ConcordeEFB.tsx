@@ -18,7 +18,7 @@ import Papa from "papaparse";
 import { UI_TOKENS } from "./uiTokens";
 
 const APP_VERSION = "2.0.1";
-const BUILD_MARKER = "281226-RC10";
+const BUILD_MARKER = "281226-RC11-beta";
 const DEBUG_FL_AUTOPICK = false;
 // App icon
 // IMPORTANT: We want this to work on GitHub Pages (non-root base path) and inside Tauri.
