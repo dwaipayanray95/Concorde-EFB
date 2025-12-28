@@ -1,6 +1,16 @@
 [
   {
     "date": "2025-12-28",
+    "title": "Release v2.0.2",
+    "items": [
+      "In-app update notification banner (Tauri updater)",
+      "Updater permissions and production endpoint configured",
+      "Fixed input focus loss in text fields",
+      "Build marker updated to 281225-2"
+    ]
+  },
+  {
+    "date": "2025-12-28",
     "title": "Release v2.0.1",
     "items": [
       "Major UI overhaul with improved layout and readability",
