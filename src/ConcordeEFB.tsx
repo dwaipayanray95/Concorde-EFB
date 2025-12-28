@@ -262,12 +262,14 @@ type RunwayInfo = {
   id: string;
   heading: number;
   length_m: number;
+  elevation_ft?: number;
 };
 
 type AirportInfo = {
   name: string;
   lat: number;
   lon: number;
+  elevation_ft?: number;
   runways: RunwayInfo[];
 };
 
@@ -1022,6 +1024,7 @@ type AirportCsvRow = {
   latitude_deg?: string;
   longitude_deg?: string;
   name?: string;
+  elevation_ft?: string;
 };
 
 type RunwayCsvRow = {
@@ -1032,6 +1035,8 @@ type RunwayCsvRow = {
   he_ident?: string;
   le_heading_degT?: string;
   he_heading_degT?: string;
+  le_elevation_ft?: string;
+  he_elevation_ft?: string;
 };
 
 type NavaidCsvRow = {
@@ -1062,10 +1067,12 @@ function buildWorldAirportDB(
     const lat = parseFloat(a?.latitude_deg ?? "");
     const lon = parseFloat(a?.longitude_deg ?? "");
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    const elevationFt = Number(a?.elevation_ft);
     airportsMap[ident] = airportsMap[ident] || {
       name: a?.name || ident,
       lat,
       lon,
+      elevation_ft: Number.isFinite(elevationFt) ? Math.round(elevationFt) : undefined,
       runways: [],
     };
   }
@@ -1084,17 +1091,23 @@ function buildWorldAirportDB(
     const heIdent = (r?.he_ident || "").trim().toUpperCase();
     const leHdg = Number(r?.le_heading_degT);
     const heHdg = Number(r?.he_heading_degT);
+    const leElev = Number(r?.le_elevation_ft);
+    const heElev = Number(r?.he_elevation_ft);
+    const leElevationFt = Number.isFinite(leElev) ? Math.round(leElev) : undefined;
+    const heElevationFt = Number.isFinite(heElev) ? Math.round(heElev) : undefined;
     if (leIdent)
       airport.runways.push({
         id: leIdent,
         heading: Math.round(Number.isFinite(leHdg) ? leHdg : 0),
         length_m: lengthM,
+        elevation_ft: leElevationFt,
       });
     if (heIdent)
       airport.runways.push({
         id: heIdent,
         heading: Math.round(Number.isFinite(heHdg) ? heHdg : 0),
         length_m: lengthM,
+        elevation_ft: heElevationFt,
       });
   }
   return airportsMap;
@@ -2156,6 +2169,9 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
     return arrInfo.runways.find((r) => r.id === arrRw) ?? null;
   }, [arrInfo, arrRw]);
 
+  const depRunwayElevFt = depRunway?.elevation_ft ?? depInfo?.elevation_ft;
+  const arrRunwayElevFt = arrRunway?.elevation_ft ?? arrInfo?.elevation_ft;
+
   const depWind = useMemo(() => {
     const parsed = parseMetarWind(metarDep || "");
     const comps = windComponents(parsed.wind_dir_deg, parsed.wind_speed_kt, depRunway?.heading ?? 0);
@@ -2957,6 +2973,13 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                       <span className="ml-1 text-[10px] text-white/40">{depWind.qnh?.unit ?? ""}</span>
                     </span>
                   </div>
+                  <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/75">
+                    <span className="uppercase tracking-[0.2em] text-white/45">RWY ELEV</span>
+                    <span className="font-semibold text-white/90">
+                      {Number.isFinite(depRunwayElevFt ?? NaN) ? Math.round(depRunwayElevFt as number) : "—"}
+                      <span className="ml-1 text-[10px] text-white/40">ft</span>
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -3022,6 +3045,13 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                     <span className="font-semibold text-white/90">
                       {arrWind.qnh ? arrWind.qnh.value.toFixed(arrWind.qnh.unit === "hPa" ? 0 : 2) : "—"}
                       <span className="ml-1 text-[10px] text-white/40">{arrWind.qnh?.unit ?? ""}</span>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/75">
+                    <span className="uppercase tracking-[0.2em] text-white/45">RWY ELEV</span>
+                    <span className="font-semibold text-white/90">
+                      {Number.isFinite(arrRunwayElevFt ?? NaN) ? Math.round(arrRunwayElevFt as number) : "—"}
+                      <span className="ml-1 text-[10px] text-white/40">ft</span>
                     </span>
                   </div>
                 </div>
