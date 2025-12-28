@@ -13,6 +13,7 @@
 
     "preview": "vite preview",
     "typecheck": "tsc -b",
+    "changelog:seed": "node -e \"const {execSync}=require('child_process'); const fs=require('fs'); const log=execSync('git log --date=short --pretty=format:%ad%x09%h%x09%s',{encoding:'utf8'}).trim(); const byDate=new Map(); if(log){ for(const line of log.split(/\\\\n/)){ const parts=line.split('\\\\t'); const date=parts[0]; const hash=parts[1] || ''; const subject=parts.slice(2).join('\\\\t'); if(!byDate.has(date)) byDate.set(date, []); byDate.get(date).push(`${hash} ${subject}`.trim()); }} const entries=[]; for(const [date, items] of byDate.entries()){ entries.push({date, title:'Commits', items}); } fs.writeFileSync('public/changelog/entries.json', JSON.stringify(entries, null, 2)+'\\\\n');\"",
     "tauri": "tauri"
   },
   "dependencies": {
