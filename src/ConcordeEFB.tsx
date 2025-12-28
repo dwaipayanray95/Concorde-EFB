@@ -18,7 +18,7 @@ import Papa from "papaparse";
 import { UI_TOKENS } from "./uiTokens";
 
 const APP_VERSION = "2.0.1";
-const BUILD_MARKER = "281226-RC10";
+const BUILD_MARKER = "281226-RC11-beta";
 const DEBUG_FL_AUTOPICK = false;
 // App icon
 // IMPORTANT: We want this to work on GitHub Pages (non-root base path) and inside Tauri.
@@ -1919,10 +1919,38 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
   const [appIconMode, setAppIconMode] = useState<"primary" | "fallback" | "none">("primary");
   const [theme, setTheme] = useState<ThemeMode>(resolveInitialTheme);
   const [themeStored, setThemeStored] = useState<boolean>(() => readStoredTheme() !== null);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [updateVersion, setUpdateVersion] = useState<string | null>(null);
 
   useEffect(() => {
     console.log(`[ConcordeEFB.tsx] ${BUILD_MARKER} v${APP_VERSION}`);
     document.title = `Concorde EFB v${APP_VERSION} • ${BUILD_MARKER}`;
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const isTauri =
+      typeof window !== "undefined" &&
+      ("__TAURI__" in window || "__TAURI_INTERNALS__" in window);
+    if (!isTauri) return;
+
+    const checkForUpdates = async () => {
+      try {
+        const { check } = await import("@tauri-apps/plugin-updater");
+        const update = await check();
+        if (!active || !update?.available) return;
+        setUpdateAvailable(true);
+        setUpdateVersion(update.version ?? null);
+      } catch (err) {
+        if (!active) return;
+        console.warn("Updater check failed:", err);
+      }
+    };
+
+    void checkForUpdates();
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -3327,6 +3355,24 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
             </div>
           </div>
         </header>
+
+        {updateAvailable && (
+          <div className="mt-4 flex w-full justify-end">
+            <div className="flex items-center gap-3 rounded-lg border border-amber-400/50 bg-amber-500/15 px-3 py-2 text-[11px] text-amber-50 shadow-[0_10px_24px_-18px_rgba(251,191,36,0.8)]">
+              <span className="uppercase tracking-[0.24em] text-amber-200/80">
+                New update available
+              </span>
+              <span className="font-semibold">{updateVersion ? `v${updateVersion}` : ""}</span>
+              <LinkButton
+                href="https://github.com/dwaipayanray95/Concorde-EFB/releases"
+                className="h-7 px-2 text-[10px]"
+                title="Download the latest release"
+              >
+                Get
+              </LinkButton>
+            </div>
+          </div>
+        )}
 
         <main className={UI_TOKENS.spacing.pageStack}>
           {dbError && (
