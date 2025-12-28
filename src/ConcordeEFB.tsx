@@ -1612,18 +1612,19 @@ type RunwayWindVizProps = {
 const RunwayWindViz = ({ runwayHeading, windDir }: RunwayWindVizProps) => {
   const relWind =
     runwayHeading == null || windDir == null ? null : ((windDir - runwayHeading) % 360 + 360) % 360;
+  const arrowRotation = relWind == null ? null : (relWind + 180) % 360;
 
   return (
     <div className="relative h-12 w-12 rounded-2xl border border-white/10 bg-black/30">
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="h-9 w-1 rounded-full bg-white/50" />
       </div>
-      {relWind != null && (
+      {arrowRotation != null && (
         <div className="absolute inset-0 flex items-center justify-center">
           <svg
             viewBox="0 0 24 24"
             className="h-6 w-6 text-sky-300"
-            style={{ transform: `rotate(${Math.round(relWind)}deg)` }}
+            style={{ transform: `rotate(${Math.round(arrowRotation)}deg)` }}
             aria-hidden="true"
           >
             <path d="M12 2l6 8h-4v12h-4V10H6z" fill="currentColor" />
