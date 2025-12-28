@@ -312,6 +312,8 @@ type SimbriefExtract = {
   raw?: unknown;
   callSign?: string;
   registration?: string;
+  paxCount?: number;
+  paxWeightKg?: number;
 };
 
 function normalizeIcao4(v: unknown): string | undefined {
@@ -431,6 +433,31 @@ function parseSimbriefCruiseFL(v: unknown): number | undefined {
   return undefined;
 }
 
+function parsePaxWeightKg(value: unknown, unit: unknown): number | undefined {
+  const n = toNumberOrUndefined(value);
+  if (n == null) return undefined;
+  const u = String(unit ?? "").trim().toLowerCase();
+  if (u.startsWith("lb")) return n * 0.45359237;
+  if (u.startsWith("kg")) return n;
+  // Heuristic: pax weight over 150 is almost certainly pounds.
+  if (n > 150) return n * 0.45359237;
+  return n;
+}
+
+function sumDefined(values: Array<number | undefined>): number | undefined {
+  const nums = values.filter((v): v is number => Number.isFinite(v ?? NaN));
+  if (!nums.length) return undefined;
+  return nums.reduce((a, b) => a + b, 0);
+}
+
+function choosePaxCountCandidate(candidates: Array<number | undefined>): number | undefined {
+  const nums = candidates.filter((v): v is number => Number.isFinite(v ?? NaN));
+  if (!nums.length) return undefined;
+  const positives = nums.filter((v) => v > 0);
+  const chosen = positives.length ? Math.max(...positives) : Math.max(...nums);
+  return Number.isFinite(chosen) ? Math.round(chosen) : undefined;
+}
+
 function extractSimbrief(data: any): SimbriefExtract {
   const ofp = data?.ofp ?? data;
 
@@ -535,6 +562,65 @@ function extractSimbrief(data: any): SimbriefExtract {
     parseSimbriefCruiseFL(ofp?.general?.initial_altitude) ??
     parseSimbriefCruiseFL(ofp?.general?.initial_altitude_ft);
 
+  const paxCountCandidate = choosePaxCountCandidate([
+    toNumberOrUndefined(ofp?.payload?.pax_count),
+    toNumberOrUndefined(ofp?.payload?.pax),
+    toNumberOrUndefined(ofp?.payload?.passengers),
+    toNumberOrUndefined(ofp?.general?.pax_count),
+    toNumberOrUndefined(ofp?.general?.pax),
+    toNumberOrUndefined(ofp?.general?.passengers),
+    toNumberOrUndefined(ofp?.weights?.pax_count),
+    toNumberOrUndefined(ofp?.weights?.pax),
+    toNumberOrUndefined(ofp?.payload?.pax_total),
+    toNumberOrUndefined(ofp?.weights?.pax_total),
+    toNumberOrUndefined(ofp?.general?.pax_total),
+  ]);
+
+  const paxAdults =
+    toNumberOrUndefined(ofp?.payload?.pax_adults) ??
+    toNumberOrUndefined(ofp?.payload?.pax_adult) ??
+    toNumberOrUndefined(ofp?.payload?.pax_adl);
+  const paxChildren =
+    toNumberOrUndefined(ofp?.payload?.pax_children) ??
+    toNumberOrUndefined(ofp?.payload?.pax_child) ??
+    toNumberOrUndefined(ofp?.payload?.pax_chd);
+  const paxInfants =
+    toNumberOrUndefined(ofp?.payload?.pax_infants) ??
+    toNumberOrUndefined(ofp?.payload?.pax_infant) ??
+    toNumberOrUndefined(ofp?.payload?.pax_inf);
+
+  const paxGroupSum = sumDefined([paxAdults, paxChildren, paxInfants]);
+  // Prefer a positive group sum; if the group sum is zero, fall back to the candidate count when available.
+  const paxCount =
+    paxGroupSum != null && paxGroupSum > 0
+      ? paxGroupSum
+      : Math.max(0, paxCountCandidate ?? paxGroupSum ?? NaN);
+  const paxCountFinal = Number.isFinite(paxCount) ? paxCount : undefined;
+
+  const paxWeightRaw =
+    ofp?.payload?.pax_weight ??
+    ofp?.payload?.pax_wt ??
+    ofp?.weights?.pax_weight ??
+    ofp?.general?.pax_weight ??
+    ofp?.payload?.pax_weight_kg ??
+    ofp?.weights?.pax_weight_kg ??
+    ofp?.general?.pax_weight_kg ??
+    ofp?.payload?.pax_weight_total ??
+    ofp?.weights?.pax_weight_total;
+  const paxWeightUnit =
+    ofp?.payload?.pax_weight_unit ??
+    ofp?.weights?.pax_weight_unit ??
+    ofp?.general?.pax_weight_unit ??
+    ofp?.payload?.weight_unit ??
+    ofp?.weights?.weight_unit ??
+    ofp?.general?.weight_unit;
+  const paxWeightKgRaw = parsePaxWeightKg(paxWeightRaw, paxWeightUnit);
+  let paxWeightKg = paxWeightKgRaw;
+  if (paxWeightKgRaw != null && paxCountFinal && paxCountFinal > 0) {
+    const perPax = paxWeightKgRaw / paxCountFinal;
+    if (perPax >= 50 && perPax <= 130) paxWeightKg = perPax;
+  }
+
   return {
     originIcao,
     destIcao,
@@ -549,6 +635,8 @@ function extractSimbrief(data: any): SimbriefExtract {
     raw: data,
     callSign,
     registration,
+    paxCount: paxCountFinal,
+    paxWeightKg,
   };
 }
 
@@ -692,7 +780,7 @@ const CONSTANTS = {
     fuel_capacity_kg: 95681,
     oew_kg: 78700,
     pax_full_count: 100,
-    pax_mass_kg: 95,
+    pax_mass_kg: 84,
   },
   speeds: { cruise_mach: 2.04, cruise_tas_kt: 1164 },
   fuel: {
@@ -1690,6 +1778,8 @@ function ConcordePlannerCanvas() {
   const [simbriefNotice, setSimbriefNotice] = useState<string>("");
   const [simbriefCallSign, setSimbriefCallSign] = useState<string>("");
   const [simbriefRegistration, setSimbriefRegistration] = useState<string>("");
+  const [simbriefPaxCount, setSimbriefPaxCount] = useState<number | null>(null);
+  const [simbriefPaxWeightKg, setSimbriefPaxWeightKg] = useState<number | null>(null);
   const [simbriefLoading, setSimbriefLoading] = useState(false);
   const [simbriefImported, setSimbriefImported] = useState(false);
   const [simbriefSnapshot, setSimbriefSnapshot] = useState<SimbriefSnapshot | null>(null);
@@ -2040,7 +2130,9 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
   const fuelWithinCapacity = totalFuelRequiredKg <= fuelCapacityKg;
   const fuelExcessKg = Math.max(totalFuelRequiredKg - fuelCapacityKg, 0);
 
-  const paxKg = CONSTANTS.weights.pax_full_count * CONSTANTS.weights.pax_mass_kg;
+  const paxCount = simbriefPaxCount ?? CONSTANTS.weights.pax_full_count;
+  const paxMassKg = simbriefPaxWeightKg ?? CONSTANTS.weights.pax_mass_kg;
+  const paxKg = paxCount * paxMassKg;
   const tkoWeightKgAuto = useMemo(() => {
     return CONSTANTS.weights.oew_kg + paxKg + totalFuelRequiredKg;
   }, [paxKg, totalFuelRequiredKg]);
@@ -2181,6 +2273,8 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
     setSimbriefImported(false);
     setSimbriefCallSign("");
     setSimbriefRegistration("");
+    setSimbriefPaxCount(null);
+    setSimbriefPaxWeightKg(null);
 
     const u = simbriefUser.trim();
     if (!u) {
@@ -2197,6 +2291,8 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
 
       if (extracted.callSign) setSimbriefCallSign(extracted.callSign);
       if (extracted.registration) setSimbriefRegistration(extracted.registration);
+      if (typeof extracted.paxCount === "number") setSimbriefPaxCount(extracted.paxCount);
+      if (typeof extracted.paxWeightKg === "number") setSimbriefPaxWeightKg(extracted.paxWeightKg);
 
       if (extracted.originIcao) {
         setDepIcao(extracted.originIcao);
@@ -2402,7 +2498,7 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
           </div>
 
           <div className="hidden sm:block sm:col-span-6">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div
                 className={`h-12 px-4 rounded-2xl border flex items-center justify-center min-w-0 text-center ${
                   simbriefImported
@@ -2441,6 +2537,23 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                     }`}
                   >
                     {simbriefImported ? (simbriefRegistration || "—") : "—"}
+                  </div>
+                </div>
+              </div>
+
+              <div
+                className={`h-12 px-4 rounded-2xl border flex items-center justify-center min-w-0 text-center ${
+                  simbriefImported
+                    ? "bg-white/10 border-white/20"
+                    : "bg-white/5 border-white/10"
+                }`}
+              >
+                <div className="min-w-0 text-center">
+                  <div className="text-[10px] uppercase tracking-[0.28em] text-white/40">
+                    Passengers
+                  </div>
+                  <div className="text-sm font-semibold text-white/90 truncate">
+                    {simbriefImported ? (simbriefPaxCount ?? "—") : "—"}
                   </div>
                 </div>
               </div>
@@ -2682,10 +2795,11 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                 <HHMM hours={eteHours + reserveTimeH} />
               </div>
             </div>
-            <div className={`efb-metric ${enduranceMeets ? "border-emerald-500/30" : "border-rose-500/40"}`}>
-              <div className={metricLabel}>ETE + Reserves</div>
-              <div className={metricValue}>
-                <HHMM hours={eteHours + reserveTimeH} />
+            <div className="efb-metric flex flex-col justify-center">
+              <div className={metricLabel}>Passengers</div>
+              <div className={metricValue}>{paxCount.toLocaleString()} pax</div>
+              <div className="text-xs text-white/55">
+                {Math.round(paxKg).toLocaleString()} kg @ {Math.round(paxMassKg)} kg each
               </div>
             </div>
           </div>
