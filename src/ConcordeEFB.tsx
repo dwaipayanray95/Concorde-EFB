@@ -41,6 +41,7 @@ const OPENS_BADGE_SRC =
   "&countColor=%230ea5e9" +
   "&style=flat" +
   "&labelStyle=upper";
+const DONATE_PAGE_URL = "https://dwaipayanray95.github.io/Concorde-EFB/donate/";
 
 // User should be able to enter FL below 300 (e.g. low-level segments), but Concorde max is still capped.
 const MIN_CONCORDE_FL = 0;
@@ -3137,9 +3138,13 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
               )}
             </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="ghost" className="h-8 px-3 text-xs" disabled title="Provide Donate URL">
+            <LinkButton
+              href={DONATE_PAGE_URL}
+              className="h-8 px-3 text-xs"
+              title="Support the project"
+            >
               Donate
-            </Button>
+            </LinkButton>
             <LinkButton
               href="https://github.com/dwaipayanray95/Concorde-EFB/issues/new/choose"
               className="h-8 px-3 text-xs"
