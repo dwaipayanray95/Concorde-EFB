@@ -1919,10 +1919,38 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
   const [appIconMode, setAppIconMode] = useState<"primary" | "fallback" | "none">("primary");
   const [theme, setTheme] = useState<ThemeMode>(resolveInitialTheme);
   const [themeStored, setThemeStored] = useState<boolean>(() => readStoredTheme() !== null);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [updateVersion, setUpdateVersion] = useState<string | null>(null);
 
   useEffect(() => {
     console.log(`[ConcordeEFB.tsx] ${BUILD_MARKER} v${APP_VERSION}`);
     document.title = `Concorde EFB v${APP_VERSION} • ${BUILD_MARKER}`;
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const isTauri =
+      typeof window !== "undefined" &&
+      ("__TAURI__" in window || "__TAURI_INTERNALS__" in window);
+    if (!isTauri) return;
+
+    const checkForUpdates = async () => {
+      try {
+        const { check } = await import("@tauri-apps/plugin-updater");
+        const update = await check();
+        if (!active || !update?.available) return;
+        setUpdateAvailable(true);
+        setUpdateVersion(update.version ?? null);
+      } catch (err) {
+        if (!active) return;
+        console.warn("Updater check failed:", err);
+      }
+    };
+
+    void checkForUpdates();
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -3377,6 +3405,20 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                 </Button>
               )}
             </div>
+          {updateAvailable && (
+            <div className="flex flex-wrap items-center gap-3 rounded-md border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+              <span>
+                Update available{updateVersion ? `: v${updateVersion}` : ""}
+              </span>
+              <LinkButton
+                href="https://github.com/dwaipayanray95/Concorde-EFB/releases"
+                className="h-7 px-2 text-[11px]"
+                title="Download the latest release"
+              >
+                Get Update
+              </LinkButton>
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-2">
             <LinkButton
               href={DONATE_PAGE_URL}
