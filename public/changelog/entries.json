@@ -3,6 +3,11 @@
     "date": "2025-12-28",
     "title": "Commits",
     "items": [
+      "local: metar strip layout + visibility chip + runway elevation",
+      "local: fix runway wind arrow orientation",
+      "local: align ETE + Reserves card content",
+      "local: add spacing between time values and units",
+      "b2abc98 change beta 10 to RC10 because release ready now",
       "local: improve SimBrief pax count extraction",
       "9ba14d9 seed raw changelog entries from git history",
       "13fc2c6 Fix Donate link to honor base URL across pages",
