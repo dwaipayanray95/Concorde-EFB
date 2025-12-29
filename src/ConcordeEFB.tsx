@@ -16,6 +16,7 @@ import type {
 } from "react";
 import Papa from "papaparse";
 import { UI_TOKENS } from "./uiTokens";
+import { useSimconnectBridge } from "./services/simconnectBridge";
 
 const APP_VERSION = "2.0.2";
 const BUILD_MARKER = "281225-2";
@@ -56,6 +57,7 @@ const MAX_CONCORDE_FL = 590;
 
 // Non-RVSM flight levels for Concorde above FL410 (user-provided rule-of-thumb)
 const NON_RVSM_MIN_FL = 410;
+const SIMCONNECT_BRIDGE_URL = "ws://127.0.0.1:8383";
 
 function clampNumber(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -150,6 +152,19 @@ function normalizeCruiseFLByRules(fl: number, direction: DirectionEW | null): nu
   return next;
 }
 
+function formatZuluTime(date: Date): string {
+  const h = String(date.getUTCHours()).padStart(2, "0");
+  const m = String(date.getUTCMinutes()).padStart(2, "0");
+  return `${h}:${m}Z`;
+}
+
+function formatDurationHours(hours: number): string {
+  if (!Number.isFinite(hours) || hours < 0) return "—";
+  const totalMinutes = Math.round(hours * 60);
+  const hh = String(Math.floor(totalMinutes / 60)).padStart(2, "0");
+  const mm = String(totalMinutes % 60).padStart(2, "0");
+  return `${hh}:${mm}h`;
+}
 
 function recommendedCruiseFL(direction: DirectionEW): number {
   // Keep the app’s original intent (high cruise) but make it compliant.
@@ -1858,6 +1873,7 @@ function resolveInitialTheme(): ThemeMode {
 }
 
 function ConcordePlannerCanvas() {
+  const [activeMode, setActiveMode] = useState<"planning" | "live">("planning");
   const [airports, setAirports] = useState<AirportIndex>({});
   const [dbLoaded, setDbLoaded] = useState(false);
   const [dbError, setDbError] = useState("");
@@ -1921,6 +1937,10 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
   const [themeStored, setThemeStored] = useState<boolean>(() => readStoredTheme() !== null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [updateVersion, setUpdateVersion] = useState<string | null>(null);
+  const simconnect = useSimconnectBridge({
+    url: SIMCONNECT_BRIDGE_URL,
+    autoConnect: activeMode === "live",
+  });
 
   useEffect(() => {
     console.log(`[ConcordeEFB.tsx] ${BUILD_MARKER} v${APP_VERSION}`);
@@ -2609,6 +2629,46 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
   const metricBox = UI_TOKENS.metric.box;
   const metricLabel = UI_TOKENS.metric.label;
   const metricValue = UI_TOKENS.metric.value;
+  const simconnectStatusLabel =
+    simconnect.status === "connected"
+      ? "Connected"
+      : simconnect.status === "connecting"
+      ? "Connecting"
+      : simconnect.status === "error"
+      ? "Error"
+      : simconnect.status === "disconnected"
+      ? "Disconnected"
+      : "Idle";
+  const simconnectTone =
+    simconnect.status === "connected"
+      ? "ok"
+      : simconnect.status === "connecting"
+      ? "warning"
+      : simconnect.status === "error"
+      ? "error"
+      : "neutral";
+  const simconnectLastUpdated = simconnect.lastUpdated
+    ? new Date(simconnect.lastUpdated).toLocaleTimeString()
+    : "—";
+  const liveDep = (simconnect.snapshot?.dep_icao || depIcao || "----").toUpperCase();
+  const liveArr = (simconnect.snapshot?.arr_icao || arrIcao || "----").toUpperCase();
+  const livePhase = simconnect.snapshot?.phase || "Waiting";
+  const liveTotalNm = Number.isFinite(simconnect.snapshot?.flightplan_total_nm ?? NaN)
+    ? (simconnect.snapshot?.flightplan_total_nm ?? 0)
+    : routeDistanceNM ?? null;
+  const liveRemainingNm = Number.isFinite(simconnect.snapshot?.flightplan_remaining_nm ?? NaN)
+    ? (simconnect.snapshot?.flightplan_remaining_nm ?? 0)
+    : null;
+  const liveProgress =
+    liveTotalNm && Number.isFinite(liveRemainingNm ?? NaN) && liveTotalNm > 0
+      ? clampNumber(1 - (liveRemainingNm ?? 0) / liveTotalNm, 0, 1)
+      : 0;
+  const liveEtaHours =
+    Number.isFinite(liveRemainingNm ?? NaN) && Number.isFinite(simconnect.snapshot?.gs_kt ?? NaN)
+      ? (liveRemainingNm ?? 0) / Math.max(simconnect.snapshot?.gs_kt ?? 0, 1)
+      : null;
+  const liveEtaZulu = liveEtaHours ? formatZuluTime(new Date(Date.now() + liveEtaHours * 3600 * 1000)) : "—";
+  const liveTakeoffTime = simconnect.snapshot?.takeoff_roll_time_utc || "—";
 
   const flightPlanSection = (
     <Card title="FLIGHT PLAN">
@@ -3309,6 +3369,167 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
     </Card>
   );
 
+  const liveFlightSection = (
+    <Card
+      title="LIVE FLIGHT (SIMCONNECT)"
+      right={
+        <div className="flex items-center gap-2">
+          <StatusPill tone={simconnectTone}>{simconnectStatusLabel}</StatusPill>
+          {simconnect.status === "connected" ? (
+            <Button variant="ghost" className="h-8 px-3 text-xs" onClick={simconnect.disconnect}>
+              Disconnect
+            </Button>
+          ) : (
+            <Button variant="ghost" className="h-8 px-3 text-xs" onClick={simconnect.connect}>
+              Connect
+            </Button>
+          )}
+        </div>
+      }
+    >
+      <div className="rounded-3xl border border-white/10 bg-black/35 px-5 py-5 mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="text-2xl font-semibold text-white/90 tracking-wide">
+            {liveDep}
+          </div>
+          <div className="text-lg font-semibold text-sky-300 uppercase tracking-[0.28em]">
+            {livePhase}
+          </div>
+          <div className="text-2xl font-semibold text-white/90 tracking-wide">
+            {liveArr}
+          </div>
+        </div>
+        <div className="mt-4 h-2 rounded-full bg-white/10 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-sky-400 transition-[width] duration-500"
+            style={{ width: `${(liveProgress * 100).toFixed(1)}%` }}
+          />
+        </div>
+        <div className="relative mt-3 h-6">
+          <div
+            className="absolute top-1 -translate-y-1/2 text-white/85"
+            style={{ left: `${(liveProgress * 100).toFixed(1)}%` }}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className="h-5 w-5 drop-shadow"
+              aria-hidden="true"
+            >
+              <path d="M2 13.2h6.6l2.2-1.5 4.8-3.4 5.4-0.9v2.2l-5.2 1.1-2.1 1.6 3.5 1.2h6.7v2.1h-7.8l-2.2 3.1-2.3-1 1.2-2.9H2z" />
+            </svg>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-4 text-sm text-white/70">
+          <div>
+            {Number.isFinite(liveTotalNm ?? NaN)
+              ? `${Math.round(liveTotalNm ?? 0).toLocaleString()} NM`
+              : "—"}{" "}
+            • Takeoff {liveTakeoffTime}
+          </div>
+          <div>
+            {Number.isFinite(liveRemainingNm ?? NaN)
+              ? `${Math.round(liveRemainingNm ?? 0).toLocaleString()} NM`
+              : "—"}{" "}
+            at {liveEtaZulu} in {liveEtaHours ? formatDurationHours(liveEtaHours) : "—"}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className={metricBox}>
+          <div className={metricLabel}>Altitude</div>
+          <div className={metricValue}>
+            {Number.isFinite(simconnect.snapshot?.altitude_ft ?? NaN)
+              ? `${Math.round(simconnect.snapshot?.altitude_ft ?? 0).toLocaleString()} ft`
+              : "—"}
+          </div>
+        </div>
+        <div className={metricBox}>
+          <div className={metricLabel}>IAS</div>
+          <div className={metricValue}>
+            {Number.isFinite(simconnect.snapshot?.ias_kt ?? NaN)
+              ? `${Math.round(simconnect.snapshot?.ias_kt ?? 0).toLocaleString()} kt`
+              : "—"}
+          </div>
+        </div>
+        <div className={metricBox}>
+          <div className={metricLabel}>Ground Speed</div>
+          <div className={metricValue}>
+            {Number.isFinite(simconnect.snapshot?.gs_kt ?? NaN)
+              ? `${Math.round(simconnect.snapshot?.gs_kt ?? 0).toLocaleString()} kt`
+              : "—"}
+          </div>
+        </div>
+        <div className={metricBox}>
+          <div className={metricLabel}>Mach</div>
+          <div className={metricValue}>
+            {Number.isFinite(simconnect.snapshot?.mach ?? NaN)
+              ? (simconnect.snapshot?.mach ?? 0).toFixed(2)
+              : "—"}
+          </div>
+        </div>
+        <div className={metricBox}>
+          <div className={metricLabel}>Next Waypoint</div>
+          <div className={metricValue}>
+            {simconnect.snapshot?.next_wp_id?.trim() ? simconnect.snapshot?.next_wp_id : "—"}
+          </div>
+        </div>
+        <div className={metricBox}>
+          <div className={metricLabel}>Touchdown Rate</div>
+          <div className={metricValue}>
+            {Number.isFinite(simconnect.snapshot?.touchdown_fpm ?? NaN)
+              ? `${Math.round(simconnect.snapshot?.touchdown_fpm ?? 0).toLocaleString()} fpm`
+              : "—"}
+          </div>
+        </div>
+        <div className={metricBox}>
+          <div className={metricLabel}>Fuel Total</div>
+          <div className={metricValue}>
+            {Number.isFinite(simconnect.snapshot?.fuel_total_kg ?? NaN)
+              ? `${Math.round(simconnect.snapshot?.fuel_total_kg ?? 0).toLocaleString()} kg`
+              : "—"}
+          </div>
+        </div>
+        <div className={metricBox}>
+          <div className={metricLabel}>Fuel Burnt</div>
+          <div className={metricValue}>
+            {Number.isFinite(simconnect.snapshot?.fuel_burn_kg ?? NaN)
+              ? `${Math.round(simconnect.snapshot?.fuel_burn_kg ?? 0).toLocaleString()} kg`
+              : "—"}
+          </div>
+        </div>
+        <div className={metricBox}>
+          <div className={metricLabel}>Aircraft Weight</div>
+          <div className={metricValue}>
+            {Number.isFinite(simconnect.snapshot?.weight_kg ?? NaN)
+              ? `${Math.round(simconnect.snapshot?.weight_kg ?? 0).toLocaleString()} kg`
+              : "—"}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-white/55">
+        <div>
+          Bridge URL: <span className="text-white/75">{SIMCONNECT_BRIDGE_URL}</span>
+        </div>
+        <div>Last update: {simconnectLastUpdated}</div>
+      </div>
+
+      {simconnect.status !== "connected" && (
+        <div className="mt-3 text-xs text-white/45">
+          Start the SimConnect bridge, then connect to begin streaming live data.
+        </div>
+      )}
+      {simconnect.error && (
+        <div className="mt-2 text-xs text-rose-300">
+          {simconnect.error}
+        </div>
+      )}
+    </Card>
+  );
+
   return (
     <div className="relative min-h-screen text-slate-100">
       <div className="pointer-events-none fixed inset-0 -z-10">
@@ -3399,15 +3620,51 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
         </div>
 
         <main className={UI_TOKENS.spacing.pageStack}>
-          {dbError && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/30 px-3 py-2">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/50">
+              Mode
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveMode("planning")}
+                className={`rounded-full px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] transition ${
+                  activeMode === "planning"
+                    ? "bg-white/15 text-white"
+                    : "text-white/60 hover:bg-white/10"
+                }`}
+              >
+                Planning
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveMode("live")}
+                className={`rounded-full px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] transition ${
+                  activeMode === "live"
+                    ? "bg-white/15 text-white"
+                    : "text-white/60 hover:bg-white/10"
+                }`}
+              >
+                Live Flight
+              </button>
+            </div>
+          </div>
+
+          {activeMode === "planning" && dbError && (
             <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-xs text-rose-200">
               Nav DB load error: {dbError}
             </div>
           )}
 
-          {flightPlanSection}
-          {fuelSection}
-          {performanceSection}
+          {activeMode === "planning" ? (
+            <>
+              {flightPlanSection}
+              {fuelSection}
+              {performanceSection}
+            </>
+          ) : (
+            liveFlightSection
+          )}
 
           <Card title="Notes & Assumptions">
             <ul className="list-disc pl-5 text-sm text-white/70 space-y-2">
