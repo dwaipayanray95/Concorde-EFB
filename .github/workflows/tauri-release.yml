@@ -2,9 +2,16 @@ name: Tauri Release (Windows)
 
 on:
   workflow_dispatch:
+    inputs:
+      test_release:
+        description: "Create draft prerelease (skip updater)"
+        type: boolean
+        default: false
+        required: false
   push:
     tags:
      - "v*"
+     - "test-*"
       #- "v*.*.*"          # stable semver tags (v0.9.0)
       #- "v*rc*"           # RC tags like v0.9rc1
       #- "v*.*.*-rc.*"     # RC semver tags like v0.9.0-rc.1
@@ -38,5 +45,5 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: "Concorde EFB ${{ github.ref_name }}"
           releaseBody: "Windows desktop build (Tauri)."
-          releaseDraft: false
-          prerelease: false
+          releaseDraft: ${{ startsWith(github.ref_name, 'test-') || inputs.test_release }}
+          prerelease: ${{ startsWith(github.ref_name, 'test-') || inputs.test_release }}
