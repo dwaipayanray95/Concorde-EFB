@@ -26,6 +26,7 @@ const DEBUG_FL_AUTOPICK = false;
 // Using `new URL(..., import.meta.url)` makes Vite bundle the PNG and generate a correct URL
 // regardless of the deployed base.
 const APP_ICON_SRC_PRIMARY = new URL("../app-icon.png", import.meta.url).href;
+const CONCORDE_TOPDOWN_SRC = new URL("./assets/concorde-topdown.png", import.meta.url).href;
 
 // Fallback to `/icon.png` (from Vite /public) if present; otherwise we fall back to the SVG.
 const APP_ICON_SRC_FALLBACK = `${import.meta.env.BASE_URL}icon.png`;
@@ -2668,6 +2669,14 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
       : simconnect.status === "error"
       ? "error"
       : "neutral";
+  const simconnectHint =
+    simconnect.status === "connected"
+      ? null
+      : simconnect.status === "connecting"
+      ? "Connecting to the local SimConnect bridge. If this takes more than a few seconds, ensure the bridge is running and allowed through the firewall."
+      : simconnect.status === "error"
+      ? "Connection failed. Confirm the SimConnect bridge is running and reachable on the bridge URL."
+      : "Start the SimConnect bridge, then connect to begin streaming live data.";
   const simconnectLastUpdated = simconnect.lastUpdated
     ? new Date(simconnect.lastUpdated).toLocaleTimeString()
     : "—";
@@ -3432,20 +3441,17 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
             style={{ width: `${(liveProgress * 100).toFixed(1)}%` }}
           />
         </div>
-        <div className="relative mt-3 h-6">
+        <div className="relative mt-3 h-8">
           <div
-            className="absolute top-1 -translate-y-1/2 text-white/85"
+            className="absolute top-1 -translate-y-1/2"
             style={{ left: `${(liveProgress * 100).toFixed(1)}%` }}
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              className="h-5 w-5 drop-shadow"
-              aria-hidden="true"
-            >
-              <path d="M2 13.2h6.6l2.2-1.5 4.8-3.4 5.4-0.9v2.2l-5.2 1.1-2.1 1.6 3.5 1.2h6.7v2.1h-7.8l-2.2 3.1-2.3-1 1.2-2.9H2z" />
-            </svg>
+            <img
+              src={CONCORDE_TOPDOWN_SRC}
+              alt="Concorde top-down"
+              className="h-7 w-auto drop-shadow opacity-85"
+              draggable={false}
+            />
           </div>
         </div>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-4 text-sm text-white/70">
@@ -3550,9 +3556,9 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
         <div>Last update: {simconnectLastUpdated}</div>
       </div>
 
-      {simconnect.status !== "connected" && (
+      {simconnectHint && (
         <div className="mt-3 text-xs text-white/45">
-          Start the SimConnect bridge, then connect to begin streaming live data.
+          {simconnectHint}
         </div>
       )}
       {simconnect.error && (

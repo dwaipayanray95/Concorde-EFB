@@ -43,6 +43,8 @@ export function useSimconnectBridge(options: SimconnectBridgeOptions = {}) {
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectRef = useRef<number | null>(null);
   const shouldReconnectRef = useRef(false);
+  const connectTimeoutRef = useRef<number | null>(null);
+  const hasEverConnectedRef = useRef(false);
 
   const [status, setStatus] = useState<SimconnectStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -56,26 +58,37 @@ export function useSimconnectBridge(options: SimconnectBridgeOptions = {}) {
     }
   }, []);
 
+  const clearConnectTimeout = useCallback(() => {
+    if (connectTimeoutRef.current !== null) {
+      window.clearTimeout(connectTimeoutRef.current);
+      connectTimeoutRef.current = null;
+    }
+  }, []);
+
   const disconnect = useCallback(() => {
     shouldReconnectRef.current = false;
     clearReconnect();
+    clearConnectTimeout();
     if (socketRef.current) {
       socketRef.current.close();
       socketRef.current = null;
     }
     setStatus("disconnected");
-  }, [clearReconnect]);
+  }, [clearConnectTimeout, clearReconnect]);
 
   const connect = useCallback(() => {
     if (socketRef.current) return;
     shouldReconnectRef.current = true;
     setStatus("connecting");
     setError(null);
+    clearConnectTimeout();
 
     const socket = new WebSocket(url);
     socketRef.current = socket;
 
     socket.onopen = () => {
+      hasEverConnectedRef.current = true;
+      clearConnectTimeout();
       setStatus("connected");
       setError(null);
     };
@@ -94,21 +107,32 @@ export function useSimconnectBridge(options: SimconnectBridgeOptions = {}) {
     };
 
     socket.onerror = () => {
+      clearConnectTimeout();
       setStatus("error");
       setError("Bridge connection error.");
     };
 
     socket.onclose = () => {
       socketRef.current = null;
-      if (shouldReconnectRef.current && reconnectMs > 0) {
+      clearConnectTimeout();
+      if (shouldReconnectRef.current && reconnectMs > 0 && hasEverConnectedRef.current) {
         setStatus("connecting");
         clearReconnect();
         reconnectRef.current = window.setTimeout(connect, reconnectMs);
+      } else if (shouldReconnectRef.current && !hasEverConnectedRef.current) {
+        setStatus("error");
+        setError((current) => current ?? "Bridge not reachable.");
       } else {
         setStatus("disconnected");
       }
     };
-  }, [clearReconnect, reconnectMs, url]);
+    connectTimeoutRef.current = window.setTimeout(() => {
+      if (!socketRef.current || socketRef.current.readyState === WebSocket.OPEN) return;
+      setStatus("error");
+      setError("Bridge connection timed out.");
+      socketRef.current.close();
+    }, 5000);
+  }, [clearConnectTimeout, clearReconnect, reconnectMs, url]);
 
   useEffect(() => {
     if (!autoConnect) return;
