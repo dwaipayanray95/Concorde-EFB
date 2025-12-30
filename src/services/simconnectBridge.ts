@@ -85,7 +85,7 @@ export function useSimconnectBridge(options: SimconnectBridgeOptions = {}) {
         const data = JSON.parse(String(event.data)) as BridgeMessage;
         const payload = "payload" in data ? data.payload : data;
         if (payload && typeof payload === "object") {
-          setSnapshot(payload);
+          setSnapshot(payload as SimconnectSnapshot);
           setLastUpdated(Date.now());
         }
       } catch {
