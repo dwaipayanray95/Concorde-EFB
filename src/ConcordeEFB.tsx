@@ -1937,6 +1937,8 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
   const [themeStored, setThemeStored] = useState<boolean>(() => readStoredTheme() !== null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [updateVersion, setUpdateVersion] = useState<string | null>(null);
+  const [burnRateKgPerHour, setBurnRateKgPerHour] = useState<number | null>(null);
+  const lastFuelSampleRef = useRef<{ fuelKg: number; timeMs: number } | null>(null);
   const simconnect = useSimconnectBridge({
     url: SIMCONNECT_BRIDGE_URL,
     autoConnect: activeMode === "live",
@@ -1985,6 +1987,25 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
       }
     }
   }, [theme, themeStored]);
+
+  useEffect(() => {
+    const fuelKg = simconnect.snapshot?.fuel_total_kg;
+    if (!Number.isFinite(fuelKg ?? NaN)) return;
+
+    const now = Date.now();
+    const last = lastFuelSampleRef.current;
+    lastFuelSampleRef.current = { fuelKg: fuelKg ?? 0, timeMs: now };
+    if (!last) return;
+
+    const deltaFuel = (last.fuelKg ?? 0) - (fuelKg ?? 0);
+    const deltaHours = (now - last.timeMs) / 3_600_000;
+    if (deltaHours <= 0 || deltaFuel <= 0) return;
+
+    const rate = deltaFuel / deltaHours;
+    if (Number.isFinite(rate) && rate > 0) {
+      setBurnRateKgPerHour(rate);
+    }
+  }, [simconnect.snapshot?.fuel_total_kg]);
 
 
   const depKey = (depIcao || "").toUpperCase();
@@ -2669,6 +2690,12 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
       : null;
   const liveEtaZulu = liveEtaHours ? formatZuluTime(new Date(Date.now() + liveEtaHours * 3600 * 1000)) : "—";
   const liveTakeoffTime = simconnect.snapshot?.takeoff_roll_time_utc || "—";
+  const fuelEnduranceHours =
+    Number.isFinite(simconnect.snapshot?.fuel_total_kg ?? NaN) &&
+    Number.isFinite(burnRateKgPerHour ?? NaN) &&
+    (burnRateKgPerHour ?? 0) > 0
+      ? (simconnect.snapshot?.fuel_total_kg ?? 0) / (burnRateKgPerHour ?? 1)
+      : null;
 
   const flightPlanSection = (
     <Card title="FLIGHT PLAN">
@@ -3477,15 +3504,7 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
           </div>
         </div>
         <div className={metricBox}>
-          <div className={metricLabel}>Touchdown Rate</div>
-          <div className={metricValue}>
-            {Number.isFinite(simconnect.snapshot?.touchdown_fpm ?? NaN)
-              ? `${Math.round(simconnect.snapshot?.touchdown_fpm ?? 0).toLocaleString()} fpm`
-              : "—"}
-          </div>
-        </div>
-        <div className={metricBox}>
-          <div className={metricLabel}>Fuel Total</div>
+          <div className={metricLabel}>Fuel Remaining</div>
           <div className={metricValue}>
             {Number.isFinite(simconnect.snapshot?.fuel_total_kg ?? NaN)
               ? `${Math.round(simconnect.snapshot?.fuel_total_kg ?? 0).toLocaleString()} kg`
@@ -3501,10 +3520,24 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
           </div>
         </div>
         <div className={metricBox}>
-          <div className={metricLabel}>Aircraft Weight</div>
+          <div className={metricLabel}>Current Weight</div>
           <div className={metricValue}>
             {Number.isFinite(simconnect.snapshot?.weight_kg ?? NaN)
               ? `${Math.round(simconnect.snapshot?.weight_kg ?? 0).toLocaleString()} kg`
+              : "—"}
+          </div>
+        </div>
+        <div className={metricBox}>
+          <div className={metricLabel}>Fuel Endurance</div>
+          <div className={metricValue}>
+            {fuelEnduranceHours ? formatDurationHours(fuelEnduranceHours) : "—"}
+          </div>
+        </div>
+        <div className={metricBox}>
+          <div className={metricLabel}>Touchdown Rate</div>
+          <div className={metricValue}>
+            {Number.isFinite(simconnect.snapshot?.touchdown_fpm ?? NaN)
+              ? `${Math.round(simconnect.snapshot?.touchdown_fpm ?? 0).toLocaleString()} fpm`
               : "—"}
           </div>
         </div>
