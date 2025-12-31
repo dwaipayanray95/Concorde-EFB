@@ -1940,10 +1940,40 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
   const [updateVersion, setUpdateVersion] = useState<string | null>(null);
   const [burnRateKgPerHour, setBurnRateKgPerHour] = useState<number | null>(null);
   const lastFuelSampleRef = useRef<{ fuelKg: number; timeMs: number } | null>(null);
+  const [bridgeLaunchState, setBridgeLaunchState] = useState<"idle" | "starting" | "started" | "error">("idle");
+  const [bridgeLaunchError, setBridgeLaunchError] = useState<string | null>(null);
   const simconnect = useSimconnectBridge({
     url: SIMCONNECT_BRIDGE_URL,
     autoConnect: activeMode === "live",
   });
+  const startSimconnectBridge = useCallback(async () => {
+    if (bridgeLaunchState === "starting") return;
+    setBridgeLaunchError(null);
+    setBridgeLaunchState("starting");
+
+    const isTauri =
+      typeof window !== "undefined" &&
+      ("__TAURI__" in window || "__TAURI_INTERNALS__" in window);
+    if (!isTauri) {
+      setBridgeLaunchState("error");
+      setBridgeLaunchError("Bridge can only be started from the desktop app.");
+      return;
+    }
+
+    try {
+      const { Command } = await import("@tauri-apps/plugin-shell");
+      await Command.sidecar("simconnect-bridge").spawn();
+      setBridgeLaunchState("started");
+      setBridgeLaunchError(null);
+      window.setTimeout(() => {
+        simconnect.connect();
+      }, 500);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setBridgeLaunchState("error");
+      setBridgeLaunchError(`Failed to start bridge. ${message}`);
+    }
+  }, [bridgeLaunchState, simconnect]);
 
   useEffect(() => {
     console.log(`[ConcordeEFB.tsx] ${BUILD_MARKER} v${APP_VERSION}`);
@@ -2673,10 +2703,10 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
     simconnect.status === "connected"
       ? null
       : simconnect.status === "connecting"
-      ? "Connecting to the local SimConnect bridge. If this takes more than a few seconds, ensure the bridge is running and allowed through the firewall."
+      ? "Connecting to the local SimConnect bridge. If this takes more than a few seconds, start the bridge or ensure it is allowed through the firewall."
       : simconnect.status === "error"
       ? "Connection failed. Confirm the SimConnect bridge is running and reachable on the bridge URL."
-      : "Start the SimConnect bridge, then connect to begin streaming live data.";
+      : "Start the SimConnect bridge (desktop app), then connect to begin streaming live data.";
   const simconnectLastUpdated = simconnect.lastUpdated
     ? new Date(simconnect.lastUpdated).toLocaleTimeString()
     : "—";
@@ -3416,9 +3446,19 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
               Disconnect
             </Button>
           ) : (
-            <Button variant="ghost" className="h-8 px-3 text-xs" onClick={simconnect.connect}>
-              Connect
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                className="h-8 px-3 text-xs"
+                onClick={startSimconnectBridge}
+                disabled={bridgeLaunchState === "starting"}
+              >
+                {bridgeLaunchState === "starting" ? "Starting…" : "Start Bridge"}
+              </Button>
+              <Button variant="ghost" className="h-8 px-3 text-xs" onClick={simconnect.connect}>
+                Connect
+              </Button>
+            </>
           )}
         </div>
       }
@@ -3564,6 +3604,11 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
       {simconnect.error && (
         <div className="mt-2 text-xs text-rose-300">
           {simconnect.error}
+        </div>
+      )}
+      {bridgeLaunchError && (
+        <div className="mt-2 text-xs text-amber-300">
+          {bridgeLaunchError}
         </div>
       )}
     </Card>
