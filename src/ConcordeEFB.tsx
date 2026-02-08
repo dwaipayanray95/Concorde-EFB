@@ -2218,18 +2218,6 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
     [burnKgPerNmAdj]
   );
 
-  const reserveTimeH = useMemo(() => {
-    const fr = Number(finalReserveKg);
-    if (!Number.isFinite(fr) || fr <= 0) return 0;
-    return fr / burnKgPerHour;
-  }, [finalReserveKg, burnKgPerHour]);
-
-  const enduranceHours = useMemo(() => {
-    return CONSTANTS.weights.fuel_capacity_kg / burnKgPerHour;
-  }, [burnKgPerHour]);
-
-  const enduranceMeets = enduranceHours >= eteHours + reserveTimeH;
-
   const alternateDistanceNM = useMemo(() => {
     if (!arrInfo || !altInfo) return 0;
     return greatCircleNM(arrInfo.lat, arrInfo.lon, altInfo.lat, altInfo.lon);
@@ -2258,6 +2246,27 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
     const t = Number(trimTankKg) || 0;
     return (blocks.block_kg || 0) + t;
   }, [blocks.block_kg, trimTankKg]);
+
+  const reserveFuelKg = useMemo(() => {
+    return Math.max(
+      (blocks.contingency_kg || 0) + (blocks.final_reserve_kg || 0) + (blocks.alternate_kg || 0),
+      0
+    );
+  }, [blocks.contingency_kg, blocks.final_reserve_kg, blocks.alternate_kg]);
+
+  const reserveTimeH = useMemo(() => {
+    return reserveFuelKg / burnKgPerHour;
+  }, [reserveFuelKg, burnKgPerHour]);
+
+  const airborneFuelKg = useMemo(() => {
+    return Math.max((totalFuelRequiredKg || 0) - (taxiKg || 0), 0);
+  }, [totalFuelRequiredKg, taxiKg]);
+
+  const enduranceHours = useMemo(() => {
+    return airborneFuelKg / burnKgPerHour;
+  }, [airborneFuelKg, burnKgPerHour]);
+
+  const enduranceMeets = enduranceHours >= eteHours + reserveTimeH;
 
   const fuelCapacityKg = CONSTANTS.weights.fuel_capacity_kg;
   const fuelWithinCapacity = totalFuelRequiredKg <= fuelCapacityKg;
@@ -2937,6 +2946,7 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
               <div className={metricValue}>
                 <HHMM hours={enduranceHours} />
               </div>
+              <div className="text-xs text-white/55">{Math.round(burnKgPerHour).toLocaleString()} kg/h burn</div>
             </div>
             <div
               className={`efb-metric flex flex-col justify-center ${
