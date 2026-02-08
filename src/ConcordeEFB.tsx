@@ -668,6 +668,11 @@ type MetarParse = {
   wind_gust_kt: number | null;
 };
 
+type MetarQnh = {
+  unit: "hPa" | "inHg";
+  value: number;
+};
+
 type MetarFetchSuccess = {
   ok: true;
   raw: string;
@@ -691,6 +696,33 @@ type SimbriefSnapshot = {
 type ProfileSegment = {
   time_h: number;
   dist_nm: number;
+};
+
+type CruiseClimbSegment = {
+  fl: number;
+  dist_nm: number;
+  time_h: number;
+  burn_kg: number;
+  burn_kg_per_nm: number;
+  tas_kt: number;
+};
+
+type CruiseMissionProfile = {
+  climb: ProfileSegment;
+  accel: ProfileSegment;
+  cruise: ProfileSegment;
+  descent: ProfileSegment;
+  cruise_segments: CruiseClimbSegment[];
+  climb_kg: number;
+  accel_kg: number;
+  cruise_kg: number;
+  descent_kg: number;
+  trip_kg: number;
+  total_time_h: number;
+  avg_cruise_burn_kg_per_nm: number;
+  avg_cruise_tas_kt: number;
+  initial_cruise_fl: number;
+  target_cruise_fl: number;
 };
 
 type BlockFuelInputs = {
@@ -721,6 +753,28 @@ type RunwayFeasibility = {
   required_length_m_est: number;
   runway_length_m: number;
   feasible: boolean;
+  base_required_length_m_est?: number;
+  correction_factor?: number;
+  correction_breakdown_pct?: {
+    pressure: number;
+    temperature: number;
+    wind: number;
+    total: number;
+  };
+  correction_inputs?: {
+    runway_elev_ft: number;
+    pressure_alt_ft: number | null;
+    isa_temp_c: number | null;
+    oat_c: number | null;
+    headwind_kt: number | null;
+  };
+};
+
+type RunwayEnvironmentInputs = {
+  runwayElevFt?: number | null;
+  qnh?: MetarQnh | null;
+  oatC?: number | null;
+  headwindKt?: number | null;
 };
 
 type WindComponentSummary = {
@@ -746,6 +800,12 @@ type SelfTestResult = {
   err?: string;
   value?: unknown;
   values?: Record<string, unknown>;
+};
+
+type OperationalAlert = {
+  id: string;
+  level: "warning" | "error";
+  message: string;
 };
 
 const toRad = (deg: number): number => (deg * Math.PI) / 180;
@@ -837,6 +897,131 @@ function estimateDescent(
   const tH = dist / Math.max(avgGSkt, 200);
   return { time_h: tH, dist_nm: dist };
 }
+
+const CRUISE_CLIMB_STEP_FL = 20;
+const CRUISE_CLIMB_START_FL = 500;
+const SUPR_ACCEL_NM = 90;
+const SUPR_ACCEL_TIME_H = 12 / 60;
+
+function cruiseTasKtForFL(fl: number): number {
+  const clamped = clampCruiseFL(fl);
+  if (clamped < 500) {
+    // Sub/transonic sector approximation for short missions.
+    const x = Math.max(0, Math.min(1, (clamped - 250) / 250));
+    return 520 + 340 * x;
+  }
+  // Supersonic TAS increases slightly as cruise-climb progresses.
+  const x = Math.max(0, Math.min(1, (clamped - 500) / 90));
+  return 1135 + 55 * x;
+}
+
+function cruiseBurnKgPerNmAtFL(fl: number): number {
+  const base = CONSTANTS.fuel.burn_kg_per_nm * altitudeBurnFactor(fl);
+  // Sub/transonic sectors are less efficient per NM than stabilized supersonic cruise.
+  const shortSectorPenalty = fl < 500 ? 1.15 : 1;
+  return base * shortSectorPenalty;
+}
+
+function buildCruiseClimbLevels(initialFL: number, targetFL: number): number[] {
+  const start = clampCruiseFL(initialFL);
+  const end = clampCruiseFL(targetFL);
+  if (end <= start) return [end];
+
+  const levels: number[] = [];
+  for (let fl = start; fl <= end; fl += CRUISE_CLIMB_STEP_FL) levels.push(fl);
+  if (levels[levels.length - 1] !== end) levels.push(end);
+  return levels;
+}
+
+function buildCruiseMissionProfile(
+  plannedDistanceNM: number,
+  selectedCruiseFL: number
+): CruiseMissionProfile {
+  const distanceNM = Math.max(Number(plannedDistanceNM) || 0, 0);
+  const targetFL = clampCruiseFL(selectedCruiseFL);
+  const initialCruiseFL = targetFL >= CRUISE_CLIMB_START_FL ? CRUISE_CLIMB_START_FL : targetFL;
+
+  const climb = estimateClimb(initialCruiseFL * 100);
+  const descent = estimateDescent(Math.max(targetFL, initialCruiseFL) * 100);
+
+  const coreRemainingNM = Math.max(distanceNM - (climb.dist_nm + descent.dist_nm), 0);
+  const useSupersonicAccel = targetFL >= CRUISE_CLIMB_START_FL;
+  const accelDistNM = useSupersonicAccel ? Math.min(SUPR_ACCEL_NM, coreRemainingNM * 0.4) : 0;
+  const accelTimeH = useSupersonicAccel && SUPR_ACCEL_NM > 0 ? SUPR_ACCEL_TIME_H * (accelDistNM / SUPR_ACCEL_NM) : 0;
+  const accelBurnKg =
+    accelDistNM *
+    (cruiseBurnKgPerNmAtFL(initialCruiseFL) * 2.1);
+
+  const cruiseNM = Math.max(coreRemainingNM - accelDistNM, 0);
+  const cruiseLevels = buildCruiseClimbLevels(initialCruiseFL, targetFL);
+
+  const weights = cruiseLevels.map((_, i) => {
+    if (cruiseLevels.length <= 1) return 1;
+    const x = i / (cruiseLevels.length - 1);
+    // Slightly bias distance toward higher FLs as weight burns off.
+    return 0.8 + 0.5 * x;
+  });
+  const weightSum = Math.max(weights.reduce((s, w) => s + w, 0), 1);
+
+  const cruiseSegments: CruiseClimbSegment[] = cruiseLevels.map((fl, i) => {
+    const segmentNM = cruiseNM * (weights[i] / weightSum);
+    const tasKT = Math.max(cruiseTasKtForFL(fl), 1);
+    const burnKgPerNm = cruiseBurnKgPerNmAtFL(fl);
+    const timeH = segmentNM / tasKT;
+    const burnKg = segmentNM * burnKgPerNm;
+    return {
+      fl,
+      dist_nm: segmentNM,
+      time_h: timeH,
+      burn_kg: burnKg,
+      burn_kg_per_nm: burnKgPerNm,
+      tas_kt: tasKT,
+    };
+  });
+
+  const cruiseTimeH = cruiseSegments.reduce((s, seg) => s + seg.time_h, 0);
+  const cruiseKg = cruiseSegments.reduce((s, seg) => s + seg.burn_kg, 0);
+
+  const climbKg =
+    climb.dist_nm *
+    cruiseBurnKgPerNmAtFL(initialCruiseFL) *
+    CONSTANTS.fuel.climb_factor;
+  const descentKg =
+    descent.dist_nm *
+    cruiseBurnKgPerNmAtFL(Math.max(targetFL, initialCruiseFL)) *
+    CONSTANTS.fuel.descent_factor;
+
+  const avgCruiseBurnKgPerNm =
+    cruiseNM > 0
+      ? cruiseKg / cruiseNM
+      : cruiseBurnKgPerNmAtFL(targetFL);
+  const avgCruiseTasKt =
+    cruiseTimeH > 0
+      ? cruiseNM / cruiseTimeH
+      : cruiseTasKtForFL(targetFL);
+
+  const tripKg = Math.max(climbKg + accelBurnKg + cruiseKg + descentKg, 0);
+  const totalTimeH = Math.max(climb.time_h + accelTimeH + cruiseTimeH + descent.time_h, 0);
+
+  return {
+    climb,
+    accel: { time_h: accelTimeH, dist_nm: accelDistNM },
+    cruise: { time_h: cruiseTimeH, dist_nm: cruiseNM },
+    descent,
+    cruise_segments: cruiseSegments,
+    climb_kg: climbKg,
+    accel_kg: accelBurnKg,
+    cruise_kg: cruiseKg,
+    descent_kg: descentKg,
+    trip_kg: tripKg,
+    total_time_h: totalTimeH,
+    avg_cruise_burn_kg_per_nm: avgCruiseBurnKgPerNm,
+    avg_cruise_tas_kt: avgCruiseTasKt,
+    initial_cruise_fl: initialCruiseFL,
+    target_cruise_fl: targetFL,
+  };
+}
+
 function blockFuelKg({
   tripKg,
   taxiKg,
@@ -870,30 +1055,131 @@ function reheatGuard(climbTimeHours: number): ReheatSummary {
 }
 function takeoffFeasibleM(
   runwayLengthM: number,
-  takeoffWeightKg: number
+  takeoffWeightKg: number,
+  env?: RunwayEnvironmentInputs
 ): RunwayFeasibility {
   const mtow = CONSTANTS.weights.mtow_kg;
   const baseReq = CONSTANTS.runway.min_takeoff_m_at_mtow;
   const ratio = Math.max(Math.min(takeoffWeightKg / mtow, 1.2), 0.5);
-  const required = baseReq * ratio;
+  const baseRequired = baseReq * ratio;
+  const correction = runwayLengthCorrectionFactor("takeoff", env);
+  const required = baseRequired * correction.factor;
   return {
+    base_required_length_m_est: baseRequired,
     required_length_m_est: required,
     runway_length_m: runwayLengthM,
     feasible: runwayLengthM >= required,
+    correction_factor: correction.factor,
+    correction_breakdown_pct: correction.breakdownPct,
+    correction_inputs: correction.inputs,
   };
 }
 function landingFeasibleM(
   runwayLengthM: number,
-  landingWeightKg: number
+  landingWeightKg: number,
+  env?: RunwayEnvironmentInputs
 ): RunwayFeasibility {
   const mlw = CONSTANTS.weights.mlw_kg;
   const baseReq = CONSTANTS.runway.min_landing_m_at_mlw;
   const ratio = Math.max(Math.min((landingWeightKg || mlw) / mlw, 1.3), 0.6);
-  const required = baseReq * Math.pow(ratio, 1.15);
+  const baseRequired = baseReq * Math.pow(ratio, 1.15);
+  const correction = runwayLengthCorrectionFactor("landing", env);
+  const required = baseRequired * correction.factor;
   return {
+    base_required_length_m_est: baseRequired,
     required_length_m_est: required,
     runway_length_m: runwayLengthM,
     feasible: runwayLengthM >= required,
+    correction_factor: correction.factor,
+    correction_breakdown_pct: correction.breakdownPct,
+    correction_inputs: correction.inputs,
+  };
+}
+
+function qnhToHpa(qnh: MetarQnh | null | undefined): number | null {
+  if (!qnh || !Number.isFinite(qnh.value)) return null;
+  if (qnh.unit === "hPa") return qnh.value;
+  return qnh.value * 33.8638866667;
+}
+
+function isaTempCAtElevationFt(elevationFt: number): number {
+  return 15 - 1.98 * (elevationFt / 1000);
+}
+
+function runwayLengthCorrectionFactor(
+  phase: "takeoff" | "landing",
+  env?: RunwayEnvironmentInputs
+): {
+  factor: number;
+  breakdownPct: { pressure: number; temperature: number; wind: number; total: number };
+  inputs: {
+    runway_elev_ft: number;
+    pressure_alt_ft: number | null;
+    isa_temp_c: number | null;
+    oat_c: number | null;
+    headwind_kt: number | null;
+  };
+} {
+  const runwayElevFt = Number.isFinite(env?.runwayElevFt ?? NaN) ? (env?.runwayElevFt as number) : 0;
+  const qnhHpa = qnhToHpa(env?.qnh);
+  const pressureAltFt = qnhHpa == null ? null : runwayElevFt + (1013.25 - qnhHpa) * 30;
+  const isaTempC = isaTempCAtElevationFt(runwayElevFt);
+  const oatC = Number.isFinite(env?.oatC ?? NaN) ? (env?.oatC as number) : null;
+  const headwindKt = Number.isFinite(env?.headwindKt ?? NaN) ? (env?.headwindKt as number) : null;
+
+  // Pressure altitude penalty.
+  // Takeoff: +1.2% / 1000 ft above MSL, slight benefit when below.
+  // Landing: +0.7% / 1000 ft above MSL, slight benefit when below.
+  const pressurePctRaw =
+    pressureAltFt == null
+      ? 0
+      : phase === "takeoff"
+      ? (pressureAltFt / 1000) * 0.012
+      : (pressureAltFt / 1000) * 0.007;
+  const pressurePct = Math.max(Math.min(pressurePctRaw, 0.35), -0.08);
+
+  // Temperature correction based on ISA deviation at runway elevation.
+  const tempDelta = oatC == null ? null : oatC - isaTempC;
+  let temperaturePct = 0;
+  if (tempDelta != null) {
+    if (phase === "takeoff") {
+      temperaturePct = tempDelta >= 0 ? tempDelta * 0.01 : tempDelta * 0.004;
+    } else {
+      temperaturePct = tempDelta >= 0 ? tempDelta * 0.005 : tempDelta * 0.002;
+    }
+  }
+  temperaturePct = Math.max(Math.min(temperaturePct, 0.35), -0.1);
+
+  // Wind correction by headwind component.
+  // Tailwind is strongly penalized, headwind gives limited credit.
+  let windPct = 0;
+  if (headwindKt != null) {
+    if (headwindKt >= 0) {
+      windPct = phase === "takeoff" ? -Math.min(headwindKt * 0.01, 0.2) : -Math.min(headwindKt * 0.01, 0.15);
+    } else {
+      const tailwind = Math.abs(headwindKt);
+      windPct = phase === "takeoff" ? Math.min(tailwind * 0.03, 0.5) : Math.min(tailwind * 0.04, 0.65);
+    }
+  }
+
+  const totalPct = pressurePct + temperaturePct + windPct;
+  const factor = Math.max(0.7, 1 + totalPct);
+
+  return {
+    factor,
+    breakdownPct: {
+      pressure: pressurePct * 100,
+      temperature: temperaturePct * 100,
+      wind: windPct * 100,
+      total: (factor - 1) * 100,
+    },
+    inputs: {
+      runway_elev_ft: runwayElevFt,
+      pressure_alt_ft: pressureAltFt,
+      isa_temp_c: oatC == null ? null : isaTempC,
+      oat_c: oatC,
+      headwind_kt: headwindKt,
+    },
   };
 }
 
@@ -909,7 +1195,7 @@ function parseMetarWind(raw: string): MetarParse {
   return { wind_dir_deg: dirDeg, wind_speed_kt: spd, wind_gust_kt: gst };
 }
 
-function parseMetarQnh(raw: string): { unit: "hPa" | "inHg"; value: number } | null {
+function parseMetarQnh(raw: string): MetarQnh | null {
   const qMatch = raw.match(/\bQ(\d{4})\b/);
   if (qMatch) return { unit: "hPa", value: parseInt(qMatch[1], 10) };
   const aMatch = raw.match(/\bA(\d{4})\b/);
@@ -1729,6 +2015,17 @@ function runSelfTests(): SelfTestResult[] {
     results.push({ name: "takeoffFeasibleM throws", pass: false, err: String(e) });
   }
   try {
+    const calm = takeoffFeasibleM(4000, CONSTANTS.weights.mtow_kg, { headwindKt: 0 });
+    const tail = takeoffFeasibleM(4000, CONSTANTS.weights.mtow_kg, { headwindKt: -10 });
+    results.push({
+      name: "T/O correction: 10 kt tailwind increases required length",
+      pass: tail.required_length_m_est > calm.required_length_m_est,
+      values: { calm: calm.required_length_m_est, tail: tail.required_length_m_est },
+    });
+  } catch (e) {
+    results.push({ name: "takeoff tailwind correction throws", pass: false, err: String(e) });
+  }
+  try {
     const p = parseMetarWind("XXXX 101650Z VRB05KT 9999");
     results.push({ name: "parseMetarWind VRB05KT dir=null", pass: p.wind_dir_deg === null && p.wind_speed_kt === 5, value: p });
   } catch (e) {
@@ -1771,6 +2068,21 @@ function runSelfTests(): SelfTestResult[] {
     results.push({ name: "fuel monotonicity throws", pass: false, err: String(e) });
   }
   try {
+    const p = buildCruiseMissionProfile(3200, 590);
+    results.push({
+      name: "cruise-climb profile builds multi-FL cruise",
+      pass: p.cruise_segments.length >= 3 && p.cruise.dist_nm > 0 && p.target_cruise_fl >= p.initial_cruise_fl,
+      values: {
+        segments: p.cruise_segments.length,
+        cruiseNM: p.cruise.dist_nm,
+        initialFL: p.initial_cruise_fl,
+        targetFL: p.target_cruise_fl,
+      },
+    });
+  } catch (e) {
+    results.push({ name: "cruise-climb profile throws", pass: false, err: String(e) });
+  }
+  try {
     const a = landingFeasibleM(2200, CONSTANTS.weights.mlw_kg);
     const b = landingFeasibleM(1800, CONSTANTS.weights.mlw_kg);
     results.push({ name: "landing feasible 2200m@MLW; not at 1800m@MLW", pass: a.feasible === true && b.feasible === false });
@@ -1778,13 +2090,12 @@ function runSelfTests(): SelfTestResult[] {
     results.push({ name: "landing feasibility throws", pass: false, err: String(e) });
   }
   try {
-    const fl = 580;
-    const dist = 2000;
-    const climb = estimateClimb(fl * 100);
-    const desc = estimateDescent(fl * 100);
-    const cruiseNM = Math.max(dist - climb.dist_nm - desc.dist_nm, 0);
-    const t = cruiseTimeHours(cruiseNM);
-    results.push({ name: "manual distance yields finite cruise time", pass: Number.isFinite(t) && t >= 0 });
+    const p = buildCruiseMissionProfile(2000, 580);
+    results.push({
+      name: "manual distance yields finite mission profile",
+      pass: Number.isFinite(p.total_time_h) && p.total_time_h >= 0 && Number.isFinite(p.trip_kg) && p.trip_kg >= 0,
+      values: { totalTimeH: p.total_time_h, tripKg: p.trip_kg },
+    });
   } catch (e) {
     results.push({ name: "manual distance sanity throws", pass: false, err: String(e) });
   }
@@ -2183,39 +2494,33 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
     if (nextText !== cruiseFLText) setCruiseFLText(nextText);
   }, [directionEW, cruiseFL, cruiseFLText]);
 
-  const climb = useMemo(() => estimateClimb(Math.max(clampCruiseFL(cruiseFL), 0) * 100), [cruiseFL]);
-  const descent = useMemo(() => estimateDescent(Math.max(clampCruiseFL(cruiseFL), 0) * 100), [cruiseFL]);
+  const missionProfile = useMemo(
+    () => buildCruiseMissionProfile(plannedDistance, clampCruiseFL(cruiseFL)),
+    [plannedDistance, cruiseFL]
+  );
+
+  const climb = missionProfile.climb;
+  const descent = missionProfile.descent;
 
   const reheat = useMemo(() => reheatGuard(climb.time_h), [climb.time_h]);
 
-  const burnKgPerNmAdj = useMemo(
-    () => CONSTANTS.fuel.burn_kg_per_nm * altitudeBurnFactor(clampCruiseFL(cruiseFL)),
-    [cruiseFL]
+  const cruiseNM = useMemo(
+    () => (missionProfile.accel.dist_nm || 0) + (missionProfile.cruise.dist_nm || 0),
+    [missionProfile.accel.dist_nm, missionProfile.cruise.dist_nm]
   );
 
-  const cruiseNM = useMemo(() => {
-    const nm = plannedDistance - (climb.dist_nm + descent.dist_nm);
-    return Math.max(nm, 0);
-  }, [plannedDistance, climb.dist_nm, descent.dist_nm]);
-
-  const cruiseTimeH = useMemo(() => {
-    try {
-      return cruiseTimeHours(cruiseNM);
-    } catch {
-      return 0;
-    }
-  }, [cruiseNM]);
-
-  const totalTimeH = useMemo(
-    () => (climb.time_h || 0) + (cruiseTimeH || 0) + (descent.time_h || 0),
-    [climb.time_h, cruiseTimeH, descent.time_h]
+  const cruiseTimeH = useMemo(
+    () => (missionProfile.accel.time_h || 0) + (missionProfile.cruise.time_h || 0),
+    [missionProfile.accel.time_h, missionProfile.cruise.time_h]
   );
 
+  const totalTimeH = missionProfile.total_time_h;
   const eteHours = totalTimeH;
 
+  const burnKgPerNmAdj = missionProfile.avg_cruise_burn_kg_per_nm;
   const burnKgPerHour = useMemo(
-    () => Math.max(burnKgPerNmAdj * CONSTANTS.speeds.cruise_tas_kt, 1),
-    [burnKgPerNmAdj]
+    () => Math.max(burnKgPerNmAdj * missionProfile.avg_cruise_tas_kt, 1),
+    [burnKgPerNmAdj, missionProfile.avg_cruise_tas_kt]
   );
 
   const alternateDistanceNM = useMemo(() => {
@@ -2223,13 +2528,7 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
     return greatCircleNM(arrInfo.lat, arrInfo.lon, altInfo.lat, altInfo.lon);
   }, [arrInfo, altInfo]);
 
-  const tripKg = useMemo(() => {
-    // Heuristic: climb burns more, descent burns less
-    const climbKg = climb.dist_nm * burnKgPerNmAdj * CONSTANTS.fuel.climb_factor;
-    const cruiseKg = cruiseNM * burnKgPerNmAdj;
-    const descKg = descent.dist_nm * burnKgPerNmAdj * CONSTANTS.fuel.descent_factor;
-    return Math.max(climbKg + cruiseKg + descKg, 0);
-  }, [climb.dist_nm, cruiseNM, descent.dist_nm, burnKgPerNmAdj]);
+  const tripKg = missionProfile.trip_kg;
 
   const blocks = useMemo(() => {
     return blockFuelKg({
@@ -2331,13 +2630,23 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
 
   const tkoCheck = useMemo(() => {
     const len = depRunway?.length_m ?? 0;
-    return takeoffFeasibleM(len, tkoWeightKgAuto);
-  }, [depRunway?.length_m, tkoWeightKgAuto]);
+    return takeoffFeasibleM(len, tkoWeightKgAuto, {
+      runwayElevFt: depRunwayElevFt,
+      qnh: depWind.qnh,
+      oatC: depWind.tempC,
+      headwindKt: depWind.comps.headwind_kt,
+    });
+  }, [depRunway?.length_m, tkoWeightKgAuto, depRunwayElevFt, depWind.qnh, depWind.tempC, depWind.comps.headwind_kt]);
 
   const ldgCheck = useMemo(() => {
     const len = arrRunway?.length_m ?? 0;
-    return landingFeasibleM(len, estLandingWeightKg);
-  }, [arrRunway?.length_m, estLandingWeightKg]);
+    return landingFeasibleM(len, estLandingWeightKg, {
+      runwayElevFt: arrRunwayElevFt,
+      qnh: arrWind.qnh,
+      oatC: arrWind.tempC,
+      headwindKt: arrWind.comps.headwind_kt,
+    });
+  }, [arrRunway?.length_m, estLandingWeightKg, arrRunwayElevFt, arrWind.qnh, arrWind.tempC, arrWind.comps.headwind_kt]);
 
   const depRunwayStatus = useMemo(() => {
     if (depKey.length !== 4) return { ready: false, message: "Enter ICAO" };
@@ -2354,6 +2663,117 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
     if (!arrRunway) return { ready: false, message: "Select runway" };
     return { ready: true, message: "" };
   }, [arrKey.length, arrInfo, arrRunway]);
+
+  const operationalAlerts = useMemo<OperationalAlert[]>(() => {
+    const alerts: OperationalAlert[] = [];
+
+    if (!enduranceMeets) {
+      const reqH = eteHours + reserveTimeH;
+      const missingH = Math.max(reqH - enduranceHours, 0);
+      const missingKg = missingH * burnKgPerHour;
+      alerts.push({
+        id: "fuel-endurance-deficit",
+        level: "error",
+        message: `Fuel endurance short by ${Math.round(missingKg).toLocaleString()} kg (~${Math.round(
+          missingH * 60
+        )} min).`,
+      });
+    }
+
+    if (altKey.length === 4 && alternateDistanceNM > 0) {
+      const fuelAtDestinationKg = airborneFuelKg - tripKg;
+      const minForAltAndFinalKg = (blocks.alternate_kg || 0) + (blocks.final_reserve_kg || 0);
+      if (fuelAtDestinationKg < minForAltAndFinalKg) {
+        alerts.push({
+          id: "alternate-unreachable",
+          level: "error",
+          message: `Alternate risk: fuel at destination is below alternate + final reserve by ${Math.round(
+            minForAltAndFinalKg - fuelAtDestinationKg
+          ).toLocaleString()} kg.`,
+        });
+      }
+    }
+
+    if (tkoWeightKgAuto > CONSTANTS.weights.mtow_kg) {
+      alerts.push({
+        id: "over-mtow",
+        level: "error",
+        message: `Takeoff weight exceeds MTOW by ${Math.round(tkoWeightKgAuto - CONSTANTS.weights.mtow_kg).toLocaleString()} kg.`,
+      });
+    }
+
+    if (estLandingWeightKg > CONSTANTS.weights.mlw_kg) {
+      alerts.push({
+        id: "over-mlw",
+        level: "error",
+        message: `Estimated landing weight exceeds MLW by ${Math.round(
+          estLandingWeightKg - CONSTANTS.weights.mlw_kg
+        ).toLocaleString()} kg.`,
+      });
+    }
+
+    if (depRunwayStatus.ready && !tkoCheck.feasible) {
+      alerts.push({
+        id: "takeoff-runway-short",
+        level: "error",
+        message: `Takeoff runway short by ${Math.round(
+          tkoCheck.required_length_m_est - tkoCheck.runway_length_m
+        ).toLocaleString()} m.`,
+      });
+    }
+
+    if (arrRunwayStatus.ready && !ldgCheck.feasible) {
+      alerts.push({
+        id: "landing-runway-short",
+        level: "error",
+        message: `Landing runway short by ${Math.round(
+          ldgCheck.required_length_m_est - ldgCheck.runway_length_m
+        ).toLocaleString()} m.`,
+      });
+    }
+
+    if (Number.isFinite(depWind.comps.headwind_kt ?? NaN) && (depWind.comps.headwind_kt as number) < -8) {
+      alerts.push({
+        id: "takeoff-tailwind",
+        level: "warning",
+        message: `Takeoff tailwind ${Math.round(Math.abs(depWind.comps.headwind_kt as number))} kt on selected runway.`,
+      });
+    }
+
+    if (Number.isFinite(arrWind.comps.headwind_kt ?? NaN) && (arrWind.comps.headwind_kt as number) < -10) {
+      alerts.push({
+        id: "landing-tailwind",
+        level: "warning",
+        message: `Landing tailwind ${Math.round(Math.abs(arrWind.comps.headwind_kt as number))} kt on selected runway.`,
+      });
+    }
+
+    return alerts;
+  }, [
+    enduranceMeets,
+    eteHours,
+    reserveTimeH,
+    enduranceHours,
+    burnKgPerHour,
+    altKey.length,
+    alternateDistanceNM,
+    airborneFuelKg,
+    tripKg,
+    blocks.alternate_kg,
+    blocks.final_reserve_kg,
+    tkoWeightKgAuto,
+    estLandingWeightKg,
+    depRunwayStatus.ready,
+    arrRunwayStatus.ready,
+    tkoCheck.feasible,
+    tkoCheck.required_length_m_est,
+    tkoCheck.runway_length_m,
+    ldgCheck.feasible,
+    ldgCheck.required_length_m_est,
+    ldgCheck.runway_length_m,
+    depWind.comps.headwind_kt,
+    arrWind.comps.headwind_kt,
+  ]);
 
   const passCount = useMemo(() => tests.filter((t) => t.pass).length, [tests]);
   const failedTests = useMemo(() => tests.filter((t) => !t.pass), [tests]);
@@ -2900,6 +3320,13 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
           </div>
         </div>
       </div>
+      <div className="mt-2 text-xs text-white/45">
+        Cruise-climb profile: FL{missionProfile.initial_cruise_fl}
+        {missionProfile.target_cruise_fl > missionProfile.initial_cruise_fl
+          ? ` to FL${missionProfile.target_cruise_fl}`
+          : ` hold at FL${missionProfile.target_cruise_fl}`}
+        , with acceleration phase included in cruise time/fuel.
+      </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
         <div className="space-y-6">
@@ -3259,6 +3686,21 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
           <div className="text-xs text-white/45">
             Runway required: <b>{Math.round(tkoCheck.required_length_m_est).toLocaleString()} m</b>
           </div>
+          {tkoCheck.correction_breakdown_pct && (
+            <div className="text-[11px] text-white/50 leading-relaxed">
+              Weather/elevation correction:{" "}
+              <b className={tkoCheck.correction_breakdown_pct.total >= 0 ? "text-amber-300" : "text-emerald-300"}>
+                {tkoCheck.correction_breakdown_pct.total >= 0 ? "+" : ""}
+                {tkoCheck.correction_breakdown_pct.total.toFixed(1)}%
+              </b>{" "}
+              (P {tkoCheck.correction_breakdown_pct.pressure >= 0 ? "+" : ""}
+              {tkoCheck.correction_breakdown_pct.pressure.toFixed(1)}%, T{" "}
+              {tkoCheck.correction_breakdown_pct.temperature >= 0 ? "+" : ""}
+              {tkoCheck.correction_breakdown_pct.temperature.toFixed(1)}%, W{" "}
+              {tkoCheck.correction_breakdown_pct.wind >= 0 ? "+" : ""}
+              {tkoCheck.correction_breakdown_pct.wind.toFixed(1)}%)
+            </div>
+          )}
         </div>
 
         <div
@@ -3311,8 +3753,40 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
           <div className="text-xs text-white/45">
             Runway required: <b>{Math.round(ldgCheck.required_length_m_est).toLocaleString()} m</b>
           </div>
+          {ldgCheck.correction_breakdown_pct && (
+            <div className="text-[11px] text-white/50 leading-relaxed">
+              Weather/elevation correction:{" "}
+              <b className={ldgCheck.correction_breakdown_pct.total >= 0 ? "text-amber-300" : "text-emerald-300"}>
+                {ldgCheck.correction_breakdown_pct.total >= 0 ? "+" : ""}
+                {ldgCheck.correction_breakdown_pct.total.toFixed(1)}%
+              </b>{" "}
+              (P {ldgCheck.correction_breakdown_pct.pressure >= 0 ? "+" : ""}
+              {ldgCheck.correction_breakdown_pct.pressure.toFixed(1)}%, T{" "}
+              {ldgCheck.correction_breakdown_pct.temperature >= 0 ? "+" : ""}
+              {ldgCheck.correction_breakdown_pct.temperature.toFixed(1)}%, W{" "}
+              {ldgCheck.correction_breakdown_pct.wind >= 0 ? "+" : ""}
+              {ldgCheck.correction_breakdown_pct.wind.toFixed(1)}%)
+            </div>
+          )}
         </div>
       </div>
+      {operationalAlerts.length > 0 && (
+        <div className="mt-4 rounded-2xl border border-rose-500/35 bg-rose-500/10 px-4 py-3">
+          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-rose-200 mb-2">
+            Operational Alerts
+          </div>
+          <div className="space-y-1.5">
+            {operationalAlerts.map((alert) => (
+              <div
+                key={alert.id}
+                className={`text-xs ${alert.level === "error" ? "text-rose-100" : "text-amber-200"}`}
+              >
+                {alert.level === "error" ? "ERROR" : "WARN"}: {alert.message}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="text-xs text-white/45 mt-3">
         Speeds scale with √(weight/reference) and are indicative IAS; verify against the DC Designs manual & in-sim.
       </div>

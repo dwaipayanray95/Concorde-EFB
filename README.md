@@ -76,9 +76,14 @@ All rights reserved. Contact me for reuse or distribution.
 
 ## Changelog
 ## Current version
-Current version: v0.85
+Current version: v2.0.2
 
 ## Changelog
+
+### Unreleased
+- Fuel model: Implement Concorde-style cruise-climb mission profile (climb + accel + segmented cruise-climb + descent) and use it for ETE/trip fuel/endurance math.
+- Performance: Add METAR-corrected runway requirement model (QNH, OAT/ISA, headwind/tailwind) for takeoff/landing feasibility.
+- Ops safety: Add Operational Alerts panel for fuel deficit, alternate risk, MTOW/MLW exceedance, runway shortfall, and tailwind warnings.
 
 ### In the Pipeline
 - Auto FL after distance input
