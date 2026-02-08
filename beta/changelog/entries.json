@@ -1,5 +1,14 @@
 [
   {
+    "date": "2026-02-08",
+    "title": "Unreleased",
+    "items": [
+      "Fuel model: Concorde cruise-climb mission profile (climb + accel + segmented cruise-climb + descent) now drives ETE/trip/endurance calculations",
+      "Performance: takeoff and landing runway requirements now include METAR/elevation corrections (QNH, OAT vs ISA, headwind/tailwind)",
+      "Ops safety: added Operational Alerts panel for fuel endurance deficit, alternate risk, MTOW/MLW exceedance, runway shortfall, and significant tailwind"
+    ]
+  },
+  {
     "date": "2025-12-28",
     "title": "Release v2.0.2",
     "items": [
