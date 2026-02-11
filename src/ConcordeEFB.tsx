@@ -2516,19 +2516,22 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
 
   const totalTimeH = missionProfile.total_time_h;
   const eteHours = totalTimeH;
+  const tripKg = missionProfile.trip_kg;
 
   const burnKgPerNmAdj = missionProfile.avg_cruise_burn_kg_per_nm;
   const burnKgPerHour = useMemo(
-    () => Math.max(burnKgPerNmAdj * missionProfile.avg_cruise_tas_kt, 1),
-    [burnKgPerNmAdj, missionProfile.avg_cruise_tas_kt]
+    () => {
+      if (!Number.isFinite(eteHours) || eteHours <= 0) return 1;
+      if (!Number.isFinite(tripKg) || tripKg <= 0) return 1;
+      return Math.max(tripKg / eteHours, 1);
+    },
+    [tripKg, eteHours]
   );
 
   const alternateDistanceNM = useMemo(() => {
     if (!arrInfo || !altInfo) return 0;
     return greatCircleNM(arrInfo.lat, arrInfo.lon, altInfo.lat, altInfo.lon);
   }, [arrInfo, altInfo]);
-
-  const tripKg = missionProfile.trip_kg;
 
   const blocks = useMemo(() => {
     return blockFuelKg({
@@ -3422,7 +3425,7 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
           </div>
           <div className="flex justify-between items-center py-1">
             <span className="text-sm text-white/50">Alt Fuel ({Math.round(alternateDistanceNM || 0)} NM)</span>
-            <span className="text-base font-mono text-white/85">{Math.round((alternateDistanceNM || 0) * CONSTANTS.fuel.burn_kg_per_nm).toLocaleString()}</span>
+            <span className="text-base font-mono text-white/85">{Math.round(blocks.alternate_kg || 0).toLocaleString()}</span>
           </div>
           <div className="flex justify-between items-center py-1">
             <span className="text-sm text-white/70 font-medium">Block Fuel</span>
