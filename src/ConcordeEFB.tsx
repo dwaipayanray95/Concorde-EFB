@@ -17,8 +17,7 @@ import type {
 import Papa from "papaparse";
 import { UI_TOKENS } from "./uiTokens";
 
-const APP_VERSION = "2.0.2";
-const BUILD_MARKER = "281225-2";
+const APP_VERSION = "2.1.0";
 const DEBUG_FL_AUTOPICK = false;
 // App icon
 // IMPORTANT: We want this to work on GitHub Pages (non-root base path) and inside Tauri.
@@ -42,13 +41,13 @@ const OPENS_BADGE_SRC =
   "&style=flat" +
   "&labelStyle=upper";
 const DONATE_PAGE_URL =
-  import.meta.env.BASE_URL === "./"
-    ? "https://dwaipayanray95.github.io/Concorde-EFB/donate/"
-    : `${import.meta.env.BASE_URL}donate/`;
+  "https://patreon.com/theawesoperay?utm_medium=unknown&utm_source=join_link&utm_campaign=creatorshare_creator&utm_content=copyLink";
 const CHANGELOG_PAGE_URL =
-  import.meta.env.BASE_URL === "./"
-    ? "https://dwaipayanray95.github.io/Concorde-EFB/changelog/"
-    : `${import.meta.env.BASE_URL}changelog/`;
+  "https://github.com/dwaipayanray95/Concorde-EFB?tab=readme-ov-file#changelog-1";
+const DOWNLOAD_LATEST_URL = "https://flightsim.to/file/101890/concorde-efb";
+const GITHUB_LATEST_RELEASE_API = "https://api.github.com/repos/dwaipayanray95/Concorde-EFB/releases/latest";
+const UPDATE_CHECK_CACHE_KEY = "efb_update_check_v1";
+const UPDATE_CHECK_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
 // User should be able to enter FL below 300 (e.g. low-level segments), but Concorde max is still capped.
 const MIN_CONCORDE_FL = 0;
@@ -56,6 +55,41 @@ const MAX_CONCORDE_FL = 590;
 
 // Non-RVSM flight levels for Concorde above FL410 (user-provided rule-of-thumb)
 const NON_RVSM_MIN_FL = 410;
+
+function normalizeVersionTag(input: string | null | undefined): string {
+  const raw = String(input || "").trim();
+  if (!raw) return "";
+  return raw.replace(/^v/i, "").split("-")[0];
+}
+
+function parseSemverParts(version: string): number[] {
+  const norm = normalizeVersionTag(version);
+  if (!norm) return [];
+  return norm
+    .split(".")
+    .map((part) => parseInt(part, 10))
+    .filter((part) => Number.isFinite(part));
+}
+
+function compareSemver(a: string, b: string): number {
+  const av = parseSemverParts(a);
+  const bv = parseSemverParts(b);
+  const len = Math.max(av.length, bv.length);
+  for (let i = 0; i < len; i += 1) {
+    const ai = av[i] ?? 0;
+    const bi = bv[i] ?? 0;
+    if (ai > bi) return 1;
+    if (ai < bi) return -1;
+  }
+  return 0;
+}
+
+function isNewerVersion(candidate: string, current: string): boolean {
+  const normalizedCandidate = normalizeVersionTag(candidate);
+  const normalizedCurrent = normalizeVersionTag(current);
+  if (!normalizedCandidate || !normalizedCurrent) return false;
+  return compareSemver(normalizedCandidate, normalizedCurrent) > 0;
+}
 
 function clampNumber(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -2234,8 +2268,8 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
   const [updateVersion, setUpdateVersion] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log(`[ConcordeEFB.tsx] ${BUILD_MARKER} v${APP_VERSION}`);
-    document.title = `Concorde EFB v${APP_VERSION} • ${BUILD_MARKER}`;
+    console.log(`[ConcordeEFB.tsx] v${APP_VERSION}`);
+    document.title = `Concorde EFB v${APP_VERSION}`;
   }, []);
 
   useEffect(() => {
@@ -2243,15 +2277,70 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
     const isTauri =
       typeof window !== "undefined" &&
       ("__TAURI__" in window || "__TAURI_INTERNALS__" in window);
-    if (!isTauri) return;
 
     const checkForUpdates = async () => {
       try {
-        const { check } = await import("@tauri-apps/plugin-updater");
-        const update = await check();
-        if (!active || !update?.available) return;
-        setUpdateAvailable(true);
-        setUpdateVersion(update.version ?? null);
+        if (isTauri) {
+          const { check } = await import("@tauri-apps/plugin-updater");
+          const update = await check();
+          if (!active || !update?.available) return;
+          const nextVersion = normalizeVersionTag(update.version ?? null);
+          setUpdateAvailable(true);
+          setUpdateVersion(nextVersion || (update.version ?? null));
+          return;
+        }
+
+        let cachedLatestVersion: string | null = null;
+        try {
+          const raw = localStorage.getItem(UPDATE_CHECK_CACHE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw) as {
+              checkedAt?: number;
+              latestVersion?: string;
+            };
+            const checkedAt = Number(parsed?.checkedAt || 0);
+            const latestVersion = normalizeVersionTag(parsed?.latestVersion ?? "");
+            const fresh = checkedAt > 0 && Date.now() - checkedAt <= UPDATE_CHECK_CACHE_TTL_MS;
+            if (fresh && latestVersion) cachedLatestVersion = latestVersion;
+          }
+        } catch {
+          // Ignore cache parse/storage errors.
+        }
+
+        if (cachedLatestVersion) {
+          if (active && isNewerVersion(cachedLatestVersion, APP_VERSION)) {
+            setUpdateAvailable(true);
+            setUpdateVersion(cachedLatestVersion);
+          }
+          return;
+        }
+
+        const response = await fetch(GITHUB_LATEST_RELEASE_API, {
+          headers: { Accept: "application/vnd.github+json" },
+        });
+        if (!active || !response.ok) return;
+
+        const payload = (await response.json()) as { tag_name?: string };
+        const latestVersion = normalizeVersionTag(payload?.tag_name ?? "");
+
+        if (latestVersion) {
+          try {
+            localStorage.setItem(
+              UPDATE_CHECK_CACHE_KEY,
+              JSON.stringify({
+                checkedAt: Date.now(),
+                latestVersion,
+              })
+            );
+          } catch {
+            // Ignore cache storage errors.
+          }
+        }
+
+        if (latestVersion && isNewerVersion(latestVersion, APP_VERSION)) {
+          setUpdateAvailable(true);
+          setUpdateVersion(latestVersion);
+        }
       } catch (err) {
         if (!active) return;
         console.warn("Updater check failed:", err);
@@ -3696,10 +3785,10 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                 {tkoCheck.correction_breakdown_pct.total >= 0 ? "+" : ""}
                 {tkoCheck.correction_breakdown_pct.total.toFixed(1)}%
               </b>{" "}
-              (P {tkoCheck.correction_breakdown_pct.pressure >= 0 ? "+" : ""}
-              {tkoCheck.correction_breakdown_pct.pressure.toFixed(1)}%, T{" "}
+              (Pressure {tkoCheck.correction_breakdown_pct.pressure >= 0 ? "+" : ""}
+              {tkoCheck.correction_breakdown_pct.pressure.toFixed(1)}%, Temperature{" "}
               {tkoCheck.correction_breakdown_pct.temperature >= 0 ? "+" : ""}
-              {tkoCheck.correction_breakdown_pct.temperature.toFixed(1)}%, W{" "}
+              {tkoCheck.correction_breakdown_pct.temperature.toFixed(1)}%, Wind{" "}
               {tkoCheck.correction_breakdown_pct.wind >= 0 ? "+" : ""}
               {tkoCheck.correction_breakdown_pct.wind.toFixed(1)}%)
             </div>
@@ -3763,10 +3852,10 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                 {ldgCheck.correction_breakdown_pct.total >= 0 ? "+" : ""}
                 {ldgCheck.correction_breakdown_pct.total.toFixed(1)}%
               </b>{" "}
-              (P {ldgCheck.correction_breakdown_pct.pressure >= 0 ? "+" : ""}
-              {ldgCheck.correction_breakdown_pct.pressure.toFixed(1)}%, T{" "}
+              (Pressure {ldgCheck.correction_breakdown_pct.pressure >= 0 ? "+" : ""}
+              {ldgCheck.correction_breakdown_pct.pressure.toFixed(1)}%, Temperature{" "}
               {ldgCheck.correction_breakdown_pct.temperature >= 0 ? "+" : ""}
-              {ldgCheck.correction_breakdown_pct.temperature.toFixed(1)}%, W{" "}
+              {ldgCheck.correction_breakdown_pct.temperature.toFixed(1)}%, Wind{" "}
               {ldgCheck.correction_breakdown_pct.wind >= 0 ? "+" : ""}
               {ldgCheck.correction_breakdown_pct.wind.toFixed(1)}%)
             </div>
@@ -3843,9 +3932,6 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
                 <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
                   v{APP_VERSION}
                 </span>
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
-                  Build {BUILD_MARKER}
-                </span>
               </div>
             </div>
           </div>
@@ -3871,15 +3957,15 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
           {updateAvailable && (
             <div className="flex items-center gap-3 rounded-lg border border-amber-400/50 bg-amber-500/15 px-3 py-2 text-[11px] text-amber-50 shadow-[0_10px_24px_-18px_rgba(251,191,36,0.8)]">
               <span className="uppercase tracking-[0.24em] text-amber-200/80">
-                New update available
+                New update available. Click Download Latest
               </span>
               <span className="font-semibold">{updateVersion ? `v${updateVersion}` : ""}</span>
               <LinkButton
-                href="https://github.com/dwaipayanray95/Concorde-EFB/releases"
+                href={DOWNLOAD_LATEST_URL}
                 className="h-7 px-2 text-[10px]"
                 title="Download the latest release"
               >
-                Get
+                Download Latest
               </LinkButton>
             </div>
           )}
@@ -3964,7 +4050,7 @@ const [cruiseFLTouched, setCruiseFLTouched] = useState(false);
               View Changelog
             </LinkButton>
             <LinkButton
-              href="https://github.com/dwaipayanray95/Concorde-EFB/releases"
+              href={DOWNLOAD_LATEST_URL}
               className="h-8 px-3 text-xs"
               title="Download latest release"
             >
