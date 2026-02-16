@@ -75,12 +75,12 @@ All rights reserved. Contact me for reuse or distribution.
 ---
 
 ## Changelog
-## Current version
-Current version: v2.0.2
+Current version: v2.1.0
 
-## Changelog
-
-### Unreleased
+### v2.1.0 — 2026-02-16
+- Release version bumped globally to v2.1.0 (app, npm package, Cargo manifest, and Tauri config).
+- Removed in-app build marker display; app now shows only the semantic version.
+- Desktop external links fixed by enabling Tauri opener plugin and permissions.
 - Fuel model: Implement Concorde-style cruise-climb mission profile (climb + accel + segmented cruise-climb + descent) and use it for ETE/trip fuel/endurance math.
 - Performance: Add METAR-corrected runway requirement model (QNH, OAT/ISA, headwind/tailwind) for takeoff/landing feasibility.
 - Ops safety: Add Operational Alerts panel for fuel deficit, alternate risk, MTOW/MLW exceedance, runway shortfall, and tailwind warnings.
