@@ -6,6 +6,7 @@ class EfbTextField extends StatefulWidget {
   final String initialValue;
   final Function(String) onChanged;
   final TextInputType? keyboardType;
+  final TextCapitalization textCapitalization;
   final String? placeholder;
   final bool readOnly;
 
@@ -15,6 +16,7 @@ class EfbTextField extends StatefulWidget {
     required this.initialValue,
     required this.onChanged,
     this.keyboardType,
+    this.textCapitalization = TextCapitalization.none,
     this.placeholder,
     this.readOnly = false,
   });
@@ -73,6 +75,7 @@ class _EfbTextFieldState extends State<EfbTextField> {
           controller: _controller,
           onChanged: widget.onChanged,
           keyboardType: widget.keyboardType,
+          textCapitalization: widget.textCapitalization,
           readOnly: widget.readOnly,
           style: const TextStyle(color: UiTokens.textPrimary, fontWeight: FontWeight.bold, fontFamily: 'monospace', fontSize: 15),
           decoration: InputDecoration(
