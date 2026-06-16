@@ -539,11 +539,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ],
           ),
           const SizedBox(height: 32),
-          Column(
+          Row(
             children: [
-              _buildPerfCard(ref, 'TAKEOFF PERFORMANCE', ref.watch(weightsProvider)['TOW']!, ref.watch(takeoffSpeedsProvider), ref.watch(takeoffFeasibilityProvider)),
-              const SizedBox(height: 32),
-              _buildPerfCard(ref, 'LANDING PERFORMANCE', ref.watch(weightsProvider)['LW']!, ref.watch(landingSpeedsProvider), ref.watch(landingFeasibilityProvider)),
+              Expanded(child: _buildPerfCard(ref, 'TAKEOFF PERFORMANCE', ref.watch(weightsProvider)['TOW']!, ref.watch(takeoffSpeedsProvider), ref.watch(takeoffFeasibilityProvider))),
+              const SizedBox(width: 32),
+              Expanded(child: _buildPerfCard(ref, 'LANDING PERFORMANCE', ref.watch(weightsProvider)['LW']!, ref.watch(landingSpeedsProvider), ref.watch(landingFeasibilityProvider))),
             ],
           ),
         ],
