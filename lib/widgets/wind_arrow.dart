@@ -41,15 +41,23 @@ class WindArrow extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Runway Indicator Line
+          // Runway Indicator Graphic
           Transform.rotate(
             angle: runwayRadians,
             child: Container(
-              width: 3,
+              width: size * 0.15,
               height: size * 0.8,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.4),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(2),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: List.generate(4, (index) => Container(
+                  width: 2,
+                  height: size * 0.1,
+                  color: Colors.white.withValues(alpha: 0.8),
+                )),
               ),
             ),
           ),
