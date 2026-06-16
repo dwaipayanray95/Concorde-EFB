@@ -44,6 +44,7 @@ dependencies:
   flutter_svg: ^2.3.0
   flutter_animate: ^4.5.2
   glass_kit: ^4.0.2
+  window_manager: ^0.5.1
 
 dev_dependencies:
   flutter_test:
