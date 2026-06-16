@@ -1,0 +1,44 @@
+Running `(cd /Users/rayr/.pub-cache/hosted/pub.dev/objective_c-9.4.1/; ANDROID_HOME=/opt/homebrew/share/android-commandlinetools TMPDIR=/var/folders/5g/mx2t_zs56q3c9k6lxkd0j9mh0000gn/T/ PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/Library/Frameworks/Python.framework/Versions/3.6/bin:/Library/Frameworks/Python.framework/Versions/3.13/bin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Library/Apple/usr/bin:/Users/rayr/.cargo/bin:/opt/homebrew/share/android-commandlinetools/platform-tools:/opt/homebrew/share/android-commandlinetools/cmdline-tools/latest/bin HOME=/Users/rayr /opt/homebrew/share/flutter/bin/cache/dart-sdk/bin/dart --packages=/Users/rayr/concorde-EFB/.dart_tool/package_config.json /Users/rayr/concorde-EFB/.dart_tool/hooks_runner/objective_c/5f31b8d621/hook.dill --config=/Users/rayr/concorde-EFB/.dart_tool/hooks_runner/objective_c/5f31b8d621/input.json )`.
+INFO: 2026-06-16 16:02:31.399635: Using compiler /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang from BuildInput.cCompiler.cc.
+
+INFO: 2026-06-16 16:02:31.402921: Running: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -target x86_64-apple-darwin -mmacos-version-min=13 -c /Users/rayr/.pub-cache/hosted/pub.dev/objective_c-9.4.1/src/include/dart_api_dl.c -fpic -gline-tables-only -I src -o /Users/rayr/concorde-EFB/.dart_tool/hooks_runner/shared/objective_c/build/5f31b8d621/obj/src/include/dart_api_dl.c.o
+
+INFO: 2026-06-16 16:02:31.403999: Running: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -target x86_64-apple-darwin -mmacos-version-min=13 -x objective-c -fobjc-arc -c /Users/rayr/.pub-cache/hosted/pub.dev/objective_c-9.4.1/src/input_stream_adapter.m -fpic -gline-tables-only -I src -o /Users/rayr/concorde-EFB/.dart_tool/hooks_runner/shared/objective_c/build/5f31b8d621/obj/src/input_stream_adapter.m.o
+
+INFO: 2026-06-16 16:02:31.404157: Running: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -target x86_64-apple-darwin -mmacos-version-min=13 -x objective-c -fobjc-arc -c /Users/rayr/.pub-cache/hosted/pub.dev/objective_c-9.4.1/src/observer.m -fpic -gline-tables-only -I src -o /Users/rayr/concorde-EFB/.dart_tool/hooks_runner/shared/objective_c/build/5f31b8d621/obj/src/observer.m.o
+
+.m.o
+
+INFO: 2026-06-16 16:02:31.404329: Running: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -target x86_64-apple-darwin -mmacos-version-min=13 -x objective-c -fobjc-arc -c /Users/rayr/.pub-cache/hosted/pub.dev/objective_c-9.4.1/src/ns_number.m -fpic -gline-tables-only -I src -o /Users/rayr/concorde-EFB/.dart_tool/hooks_runner/shared/objective_c/build/5f31b8d621/obj/src/ns_number.m.o
+
+INFO: 2026-06-16 16:02:31.404569: Running: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -target x86_64-apple-darwin -mmacos-version-min=13 -x objective-c -fobjc-arc -c /Users/rayr/.pub-cache/hosted/pub.dev/objective_c-9.4.1/src/objective_c_bindings_generated.m -fpic -gline-tables-only -I src -o /Users/rayr/concorde-EFB/.dart_tool/hooks_runner/shared/objective_c/build/5f31b8d621/obj/src/objective_c_bindings_generated.m.o
+
+INFO: 2026-06-16 16:02:31.512656: 
+INFO: 2026-06-16 16:02:31.512718: 
+INFO: 2026-06-16 16:02:31.512739: Generated /Users/rayr/concorde-EFB/.dart_tool/hooks_runner/shared/objective_c/build/5f31b8d621/obj/src/objective_c.c.o
+
+INFO: 2026-06-16 16:02:31.513416: 
+INFO: 2026-06-16 16:02:31.513441: Generated /Users/rayr/concorde-EFB/.dart_tool/hooks_runner/shared/objective_c/build/5f31b8d621/obj/src/protocol.m.o
+
+d/5f31b8d621/obj/src/include/dart_api_dl.c.o
+
+INFO: 2026-06-16 16:02:31.658578: 
+INFO: 2026-06-16 16:02:31.658618: 
+INFO: 2026-06-16 16:02:31.658631: Generated /Users/rayr/concorde-EFB/.dart_tool/hooks_runner/shared/objective_c/build/5f31b8d621/obj/src/ns_number.m.o
+
+INFO: 2026-06-16 16:02:31.667998: 
+INFO: 2026-06-16 16:02:31.668011: 
+INFO: 2026-06-16 16:02:31.668020: Generated /Users/rayr/concorde-EFB/.dart_tool/hooks_runner/shared/objective_c/build/5f31b8d621/obj/src/objective_c.m.o
+
+ter.m.o
+
+INFO: 2026-06-16 16:02:31.673474: 
+INFO: 2026-06-16 16:02:31.673502: 
+INFO: 2026-06-16 16:02:31.673510: Generated /Users/rayr/concorde-EFB/.dart_tool/hooks_runner/shared/objective_c/build/5f31b8d621/obj/src/objective_c_bindings_generated.m.o
+
+INFO: 2026-06-16 16:02:31.673753: Running: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -shared -Wl,-encryptable -undefined dynamic_lookup -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -target x86_64-apple-darwin -mmacos-version-min=13 /Users/rayr/concorde-EFB/.dart_tool/hooks_runner/shared/objective_c/build/5f31b8d621/obj/src/include/dart_api_dl.c.o /Users/rayr/concorde-EFB/.dart_tool/hooks_runner/shared/objective_c/build/5f31b8d621/obj/src/objective_c.c.o /Users/rayr/concorde-EFB/.dart_tool/hooks_runner/shared/objective_c/build/5f31b8d621/obj/src/input_stream_adapter.m.o /Users/rayr/concorde-EFB/.dart_tool/hooks_runner/shared/objective_c/build/5f31b8d621/obj/src/objective_c.m.o /Users/rayr/concorde-EFB/.dart_tool/hooks_runner/shared/objective_c/build/5f31b8d621/obj/src/observer.m.o /Users/rayr/concorde-EFB/.dart_tool/hooks_runner/shared/objective_c/build/5f31b8d621/obj/src/ns_number.m.o /Users/rayr/concorde-EFB/.dart_tool/hooks_runner/shared/objective_c/build/5f31b8d621/obj/src/protocol.m.o /Users/rayr/concorde-EFB/.dart_tool/hooks_runner/shared/objective_c/build/5f31b8d621/obj/src/objective_c_bindings_generated.m.o -o /Users/rayr/concorde-EFB/.dart_tool/hooks_runner/shared/objective_c/build/5f31b8d621/objective_c.dylib
+
+INFO: 2026-06-16 16:02:31.700038: 
+INFO: 2026-06-16 16:02:31.700093: 
+INFO: 2026-06-16 16:02:31.700101: Generated /Users/rayr/concorde-EFB/.dart_tool/hooks_runner/shared/objective_c/build/5f31b8d621/objective_c.dylib
+
