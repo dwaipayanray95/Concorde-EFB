@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../providers/badge_provider.dart';
 import '../core/ui_tokens.dart';
@@ -15,9 +16,9 @@ class EfbLaunchesBadge extends ConsumerWidget {
     return countAsync.when(
       data: (count) {
         if (count == 0) {
-          return const Text(
+          return Text(
             'EFB Launches: Offline',
-            style: TextStyle(
+            style: GoogleFonts.plusJakartaSans(
               color: UiTokens.textDim,
               fontSize: 12,
               fontWeight: FontWeight.bold,
@@ -42,9 +43,9 @@ class EfbLaunchesBadge extends ConsumerWidget {
                     bottomLeft: Radius.circular(3),
                   ),
                 ),
-                child: const Text(
+                child: Text(
                   'EFB LAUNCHES',
-                  style: TextStyle(
+                  style: GoogleFonts.plusJakartaSans(
                     color: Colors.white,
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
@@ -63,7 +64,7 @@ class EfbLaunchesBadge extends ConsumerWidget {
                 ),
                 child: Text(
                   numFormat.format(count),
-                  style: const TextStyle(
+                  style: GoogleFonts.jetBrainsMono(
                     color: Colors.white,
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
@@ -74,9 +75,9 @@ class EfbLaunchesBadge extends ConsumerWidget {
           ),
         );
       },
-      loading: () => const Text(
+      loading: () => Text(
         'Loading launches...',
-        style: TextStyle(color: UiTokens.textDim, fontSize: 12),
+        style: GoogleFonts.plusJakartaSans(color: UiTokens.textDim, fontSize: 12),
       ),
       error: (_, __) => const SizedBox.shrink(),
     );

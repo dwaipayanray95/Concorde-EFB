@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../core/ui_tokens.dart';
 
 class EfbTextField extends StatefulWidget {
@@ -37,16 +38,13 @@ class _EfbTextFieldState extends State<EfbTextField> {
   @override
   void didUpdateWidget(EfbTextField oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Sync controller only if external value changed significantly
     if (widget.initialValue != oldWidget.initialValue && 
         widget.initialValue != _controller.text) {
       
-      // For numeric fields, ignore trivial formatting differences like "10." vs "10.0"
       if (widget.keyboardType == TextInputType.number) {
         final currentVal = double.tryParse(_controller.text);
         final newVal = double.tryParse(widget.initialValue);
         if (currentVal != null && newVal != null && currentVal == newVal) {
-          // If the values are numerically identical, don't update to avoid cursor jump
           return;
         }
       }
@@ -68,7 +66,12 @@ class _EfbTextFieldState extends State<EfbTextField> {
       children: [
         Text(
           widget.label,
-          style: const TextStyle(fontSize: 11, color: UiTokens.textSecondary, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 11,
+            color: UiTokens.textSecondary,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
         ),
         const SizedBox(height: 6),
         TextField(
@@ -77,10 +80,14 @@ class _EfbTextFieldState extends State<EfbTextField> {
           keyboardType: widget.keyboardType,
           textCapitalization: widget.textCapitalization,
           readOnly: widget.readOnly,
-          style: const TextStyle(color: UiTokens.textPrimary, fontWeight: FontWeight.bold, fontFamily: 'monospace', fontSize: 15),
+          style: GoogleFonts.jetBrainsMono(
+            color: UiTokens.textPrimary,
+            fontWeight: FontWeight.bold,
+            fontSize: 15,
+          ),
           decoration: InputDecoration(
             hintText: widget.placeholder,
-            hintStyle: const TextStyle(color: UiTokens.textDim),
+            hintStyle: GoogleFonts.plusJakartaSans(color: UiTokens.textDim),
             filled: true,
             fillColor: Colors.white.withValues(alpha: 0.05),
             border: OutlineInputBorder(
