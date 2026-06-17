@@ -34,19 +34,24 @@ class WindArrow extends StatelessWidget {
       );
     }
 
+    // Calculate wind direction relative to the runway.
+    // windDir is where the wind is coming FROM.
+    // runwayHeading is where the nose of the plane points.
     final relWind = ((windDir! - runwayHeading!) % 360 + 360) % 360;
+    
+    // We want the runway graphic to always be straight UP (vertical).
+    // The runway graphic is drawn vertically by default, so rotation is 0.
+    final runwayRadians = 0.0;
+    
+    // The arrow icon points UP by default.
+    // If we have a direct headwind (relWind = 0), the wind is coming FROM straight ahead,
+    // meaning the arrow should point DOWN (180 degrees) towards the bottom of the runway.
     final arrowRotation = (relWind + 180) % 360;
     final arrowRadians = arrowRotation * math.pi / 180;
-    final runwayRadians = runwayHeading! * math.pi / 180;
 
-    return Container(
+    return SizedBox(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
-        color: color.withValues(alpha: 0.1),
-      ),
       child: Stack(
         alignment: Alignment.center,
         children: [
