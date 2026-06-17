@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/ui_tokens.dart';
+import 'efb_glass_container.dart';
 
 class EfbTextField extends StatefulWidget {
   final String label;
@@ -74,31 +75,28 @@ class _EfbTextFieldState extends State<EfbTextField> {
           ),
         ),
         const SizedBox(height: 6),
-        TextField(
-          controller: _controller,
-          onChanged: widget.onChanged,
-          keyboardType: widget.keyboardType,
-          textCapitalization: widget.textCapitalization,
-          readOnly: widget.readOnly,
-          style: GoogleFonts.jetBrainsMono(
-            color: UiTokens.textPrimary,
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-          ),
-          decoration: InputDecoration(
-            hintText: widget.placeholder,
-            hintStyle: GoogleFonts.plusJakartaSans(color: UiTokens.textDim),
-            filled: true,
-            fillColor: Colors.white.withValues(alpha: 0.05),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
+        EfbGlassContainer(
+          blur: 10,
+          borderRadius: BorderRadius.circular(12),
+          child: TextField(
+            controller: _controller,
+            onChanged: widget.onChanged,
+            keyboardType: widget.keyboardType,
+            textCapitalization: widget.textCapitalization,
+            readOnly: widget.readOnly,
+            style: GoogleFonts.jetBrainsMono(
+              color: UiTokens.textPrimary,
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
             ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: UiTokens.accent, width: 1.5),
+            decoration: InputDecoration(
+              hintText: widget.placeholder,
+              hintStyle: GoogleFonts.plusJakartaSans(color: UiTokens.textDim),
+              filled: false,
+              border: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           ),
         ),
       ],

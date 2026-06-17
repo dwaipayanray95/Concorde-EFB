@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../providers/badge_provider.dart';
 import '../core/ui_tokens.dart';
+import 'efb_glass_container.dart';
 
 class EfbLaunchesBadge extends ConsumerWidget {
   const EfbLaunchesBadge({super.key});
@@ -26,11 +27,9 @@ class EfbLaunchesBadge extends ConsumerWidget {
           );
         }
 
-        return Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-          ),
+        return EfbGlassContainer(
+          blur: 10,
+          borderRadius: BorderRadius.circular(4),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
