@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class WindArrow extends StatelessWidget {
   final double? runwayHeading;
@@ -21,7 +22,15 @@ class WindArrow extends StatelessWidget {
       return SizedBox(
         width: size,
         height: size,
-        child: const Center(child: Text('VRB', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+        child: Center(
+          child: Text(
+            'VRB',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
       );
     }
 

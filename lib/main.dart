@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'core/ui_tokens.dart';
 import 'screens/home_screen.dart';
 
@@ -42,9 +43,9 @@ class ConcordeEfbApp extends StatelessWidget {
       theme: ThemeData(
         brightness: Brightness.dark,
         scaffoldBackgroundColor: UiTokens.bg,
-        fontFamily: 'system-ui',
-        textTheme: ThemeData.dark().textTheme.apply(
-          fontFamily: 'system-ui',
+        textTheme: GoogleFonts.plusJakartaSansTextTheme(
+          ThemeData.dark().textTheme,
+        ).apply(
           bodyColor: UiTokens.textPrimary,
           displayColor: UiTokens.textPrimary,
         ),

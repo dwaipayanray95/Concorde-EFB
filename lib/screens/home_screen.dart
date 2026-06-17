@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../providers/efb_providers.dart';
 import '../providers/badge_provider.dart';
@@ -14,6 +15,7 @@ import '../core/metar_parser.dart';
 import '../models/concorde_models.dart';
 import '../services/simbrief_service.dart';
 import '../models/airport.dart';
+import '../core/app_version.dart';
 
 final numFormat = NumberFormat('#,###');
 
@@ -34,15 +36,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final airportDbAsync = ref.watch(airportDbProvider);
 
     return airportDbAsync.when(
-      loading: () => const Scaffold(
+      loading: () => Scaffold(
         backgroundColor: UiTokens.bg,
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(color: UiTokens.accent),
-              SizedBox(height: 24),
-              Text('LOADING AIRPORT DATABASE...', style: TextStyle(color: UiTokens.textSecondary, letterSpacing: 3, fontWeight: FontWeight.w900)),
+              const CircularProgressIndicator(color: UiTokens.accent),
+              const SizedBox(height: 24),
+              Text(
+                'LOADING AIRPORT DATABASE...',
+                style: GoogleFonts.plusJakartaSans(
+                  color: UiTokens.textSecondary,
+                  letterSpacing: 3,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
             ],
           ),
         ),
@@ -50,7 +59,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       error: (err, stack) => Scaffold(
         backgroundColor: UiTokens.bg,
         body: Center(
-          child: Text('Error loading database: $err', style: const TextStyle(color: UiTokens.error)),
+          child: Text(
+            'Error loading database: $err',
+            style: GoogleFonts.plusJakartaSans(color: UiTokens.error),
+          ),
         ),
       ),
       data: (db) {
@@ -61,7 +73,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: SizedBox(
-                  // Force a minimum width to prevent any RenderFlex overflow issues
                   width: MediaQuery.of(context).size.width > 1080 ? MediaQuery.of(context).size.width : 1080,
                   child: SingleChildScrollView(
                     scrollDirection: Axis.vertical,
@@ -106,19 +117,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Concorde EFB',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white),
+                style: GoogleFonts.plusJakartaSans(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white),
               ),
               const SizedBox(height: 4),
-              const Text(
+              Text(
                 'Flight planning & performance for MSFS.',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: UiTokens.textSecondary),
+                style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w500, color: UiTokens.textSecondary),
               ),
               const SizedBox(height: 8),
               Row(
                 children: [
-                  _buildBadge('V2.1.0'),
+                  _buildBadge(AppVersion.display),
                   const SizedBox(width: 8),
                   _buildBadge('BUILD 160626-3'),
                 ],
@@ -145,7 +156,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
-      child: Text(text, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: UiTokens.textDim)),
+      child: Text(
+        text,
+        style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: UiTokens.textDim),
+      ),
     );
   }
 
@@ -153,9 +167,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: UiTokens.textSecondary, letterSpacing: 1.5)),
+        Text(
+          label,
+          style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w800, color: UiTokens.textSecondary, letterSpacing: 1.5),
+        ),
         const SizedBox(height: 4),
-        Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: valueColor, fontFamily: 'monospace')),
+        Text(
+          value,
+          style: GoogleFonts.jetBrainsMono(fontSize: 16, fontWeight: FontWeight.w900, color: valueColor),
+        ),
       ],
     );
   }
@@ -216,7 +236,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     }
                   },
                   icon: isLoading ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.download, size: 16),
-                  label: const Text('Import', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                  label: Text(
+                    'Import',
+                    style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: UiTokens.accent,
                     foregroundColor: Colors.white,
@@ -232,7 +255,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               const SizedBox(width: 16),
               Expanded(child: _buildInfoChip('REGISTRATION', ref.watch(registrationProvider))),
               const SizedBox(width: 16),
-              Expanded(child: _buildInfoChip('PASSENGERS', '${ref.watch(paxCountProvider)}')),
+              Expanded(child: _buildInfoChip('PASSENGERS', '${ref.watch(paxCountProvider)}', isNumeric: true)),
             ],
           ),
           const SizedBox(height: 24),
@@ -251,14 +274,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     '${ref.watch(departureIcaoProvider)} → ${ref.watch(arrivalIcaoProvider)} (ALT: ${ref.watch(alternateIcaoProvider)})',
-                    style: const TextStyle(color: UiTokens.textSecondary, fontFamily: 'monospace', fontSize: 14),
+                    style: GoogleFonts.jetBrainsMono(
+                      color: UiTokens.textSecondary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
                 flex: 1,
-                child: _buildInfoChip('ESTIMATED ROUTE DISTANCE', '${ref.watch(plannedDistanceProvider).round()} NM', alignLeft: true),
+                child: _buildInfoChip('ROUTE DISTANCE', '${ref.watch(plannedDistanceProvider).round()} NM', alignLeft: true, isNumeric: true),
               ),
             ],
           ),
@@ -267,7 +294,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildInfoChip(String label, String value, {bool alignLeft = false}) {
+  Widget _buildInfoChip(String label, String value, {bool alignLeft = false, bool isNumeric = false}) {
     return Container(
       height: 48,
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -280,9 +307,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: alignLeft ? CrossAxisAlignment.start : CrossAxisAlignment.center,
         children: [
-          Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: UiTokens.textDim, letterSpacing: 1)),
+          Text(
+            label,
+            style: GoogleFonts.plusJakartaSans(fontSize: 9, fontWeight: FontWeight.bold, color: UiTokens.textDim, letterSpacing: 1),
+          ),
           const SizedBox(height: 2),
-          Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: UiTokens.textSecondary)),
+          Text(
+            value,
+            style: (isNumeric ? GoogleFonts.jetBrainsMono : GoogleFonts.plusJakartaSans)(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: UiTokens.textSecondary,
+            ),
+          ),
         ],
       ),
     );
@@ -300,7 +337,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row 1 (Full Width): Times
           Row(
             children: [
               Expanded(child: _buildTimeBox('TOTAL FLIGHT TIME', mission.totalTimeH)),
@@ -315,20 +351,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const SizedBox(height: 12),
           Text(
             'Cruise-climb profile: FL${mission.initialCruiseFl} to FL${mission.targetCruiseFl}, with acceleration phase included in cruise time/fuel.',
-            style: const TextStyle(color: UiTokens.textDim, fontSize: 10),
+            style: GoogleFonts.plusJakartaSans(color: UiTokens.textDim, fontSize: 10),
           ),
           const SizedBox(height: 32),
-          // Bottom Section: Split
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Left Column: Inputs + Advanced + Stats
               Expanded(
                 flex: 13,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Distance & FL Inputs
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -354,7 +387,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               const SizedBox(height: 4),
                               Text(
                                 'Direction (auto): ${direction == "E" ? "Eastbound" : direction == "W" ? "Westbound" : "unknown"}. Above FL410 we snap to Non-RVSM levels.',
-                                style: const TextStyle(color: UiTokens.textDim, fontSize: 10),
+                                style: GoogleFonts.plusJakartaSans(color: UiTokens.textDim, fontSize: 10),
                               ),
                             ],
                           ),
@@ -362,7 +395,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ],
                     ),
                     const SizedBox(height: 32),
-                    const Text('ADVANCED', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: UiTokens.textPrimary, letterSpacing: 2)),
+                    Text(
+                      'ADVANCED',
+                      style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w900, color: UiTokens.textPrimary, letterSpacing: 2),
+                    ),
                     const SizedBox(height: 16),
                     Row(
                       children: [
@@ -395,7 +431,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
               const SizedBox(width: 32),
-              // Right Column: Fuel Strip
               Expanded(
                 flex: 7,
                 child: Container(
@@ -429,18 +464,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Total Required', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: UiTokens.textPrimary)),
+                              Text(
+                                'Total Required',
+                                style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.bold, color: UiTokens.textPrimary),
+                              ),
                               const SizedBox(height: 4),
-                              Text('Block + Trim (0 kg)', style: TextStyle(fontSize: 10, color: UiTokens.textSecondary.withValues(alpha: 0.5))),
+                              Text(
+                                'Block + Trim (0 kg)',
+                                style: GoogleFonts.plusJakartaSans(fontSize: 10, color: UiTokens.textSecondary.withValues(alpha: 0.5)),
+                              ),
                             ],
                           ),
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.baseline,
                             textBaseline: TextBaseline.alphabetic,
                             children: [
-                              Text(numFormat.format(fuel.blockKg + ref.watch(trimTankFuelProvider)), style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: isOverCapacity ? UiTokens.error : UiTokens.success, fontFamily: 'monospace')),
+                              Text(
+                                numFormat.format(fuel.blockKg + ref.watch(trimTankFuelProvider)),
+                                style: GoogleFonts.jetBrainsMono(fontSize: 28, fontWeight: FontWeight.w900, color: isOverCapacity ? UiTokens.error : UiTokens.success),
+                              ),
                               const SizedBox(width: 4),
-                              const Text('kg', style: TextStyle(fontSize: 14, color: UiTokens.textSecondary)),
+                              Text(
+                                'kg',
+                                style: GoogleFonts.jetBrainsMono(fontSize: 14, color: UiTokens.textSecondary),
+                              ),
                             ],
                           ),
                         ],
@@ -452,23 +499,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          // Warning/Alert messages
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Reheat safety: climb reheat within ${ConcordeConstants.fuel.reheatMinutesCap} min cap.',
-                style: TextStyle(
+                style: GoogleFonts.plusJakartaSans(
                   color: mission.climb.timeH * 60 <= ConcordeConstants.fuel.reheatMinutesCap ? UiTokens.textDim : UiTokens.error,
                   fontSize: 12,
                 ),
               ),
               if (fuel.blockKg < (mission.totalTimeH + (fuel.finalReserveKg / 40000)) * 40000)
-                const Padding(
-                  padding: EdgeInsets.only(top: 8),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
                   child: Text(
                     'Fuel endurance is less than required ETE + reserves.',
-                    style: TextStyle(color: UiTokens.error, fontSize: 12),
+                    style: GoogleFonts.plusJakartaSans(color: UiTokens.error, fontSize: 12),
                   ),
                 ),
               if (isOverCapacity)
@@ -476,7 +522,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
                     'Warning: Total fuel exceeds Concorde fuel capacity of ${numFormat.format(ConcordeConstants.weights.fuelCapacityKg)} kg.',
-                    style: const TextStyle(color: UiTokens.error, fontSize: 12, fontWeight: FontWeight.bold),
+                    style: GoogleFonts.plusJakartaSans(color: UiTokens.error, fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                 ),
             ],
@@ -501,16 +547,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: UiTokens.textDim, letterSpacing: 1), maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(
+            label,
+            style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: UiTokens.textDim, letterSpacing: 1),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
           const SizedBox(height: 8),
           RichText(
             text: TextSpan(
-              style: const TextStyle(fontFamily: 'monospace', color: Colors.white, fontWeight: FontWeight.w900),
+              style: GoogleFonts.jetBrainsMono(color: Colors.white, fontWeight: FontWeight.w900),
               children: [
                 TextSpan(text: '$h', style: const TextStyle(fontSize: 22)),
-                const TextSpan(text: ' h ', style: TextStyle(fontSize: 12, color: UiTokens.textSecondary, fontWeight: FontWeight.w600)),
+                TextSpan(text: ' h ', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: UiTokens.textSecondary, fontWeight: FontWeight.w600)),
                 TextSpan(text: m.toString().padLeft(2, '0'), style: const TextStyle(fontSize: 22)),
-                const TextSpan(text: ' m', style: TextStyle(fontSize: 12, color: UiTokens.textSecondary, fontWeight: FontWeight.w600)),
+                TextSpan(text: ' m', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: UiTokens.textSecondary, fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -526,12 +577,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: UiTokens.textDim, letterSpacing: 1), maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(
+            label,
+            style: GoogleFonts.plusJakartaSans(fontSize: 9, fontWeight: FontWeight.bold, color: UiTokens.textDim, letterSpacing: 1),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
           const SizedBox(height: 8),
-          Text(value, style: TextStyle(fontSize: isLarge ? 18 : 16, fontWeight: FontWeight.w900, color: Colors.white, fontFamily: 'monospace')),
+          Text(
+            value,
+            style: GoogleFonts.jetBrainsMono(fontSize: isLarge ? 18 : 16, fontWeight: FontWeight.w900, color: Colors.white),
+          ),
           if (subtext != null) ...[
             const SizedBox(height: 4),
-            Text(subtext, style: const TextStyle(fontSize: 10, color: UiTokens.textDim, fontWeight: FontWeight.w500)),
+            Text(
+              subtext,
+              style: GoogleFonts.jetBrainsMono(fontSize: 10, color: UiTokens.textDim, fontWeight: FontWeight.w500),
+            ),
           ],
         ],
       ),
@@ -544,8 +606,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontSize: 14, fontWeight: isBold ? FontWeight.bold : FontWeight.normal, color: isBold ? Colors.white : UiTokens.textSecondary)),
-          Text(numFormat.format(value.round()), style: TextStyle(fontSize: isBold ? 18 : 16, fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'monospace')),
+          Text(
+            label,
+            style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: isBold ? FontWeight.bold : FontWeight.normal, color: isBold ? Colors.white : UiTokens.textSecondary),
+          ),
+          Text(
+            numFormat.format(value.round()),
+            style: GoogleFonts.jetBrainsMono(fontSize: isBold ? 18 : 16, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
         ],
       ),
     );
@@ -564,9 +632,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('PERFORMANCE CALCULATOR', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1)),
+          Text(
+            'PERFORMANCE CALCULATOR',
+            style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1),
+          ),
           const SizedBox(height: 32),
-          const Text('Airports & Runways', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+          Text(
+            'Airports & Runways',
+            style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -616,7 +690,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: UiTokens.textSecondary, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+        Text(
+          label,
+          style: GoogleFonts.plusJakartaSans(fontSize: 11, color: UiTokens.textSecondary, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+        ),
         const SizedBox(height: 6),
         Container(
           height: 48,
@@ -628,9 +705,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               items: airport?.runways.map((r) => DropdownMenuItem(value: r.id, child: Text('RWY ${r.id} • ${numFormat.format(r.lengthM)} m • ${r.heading}°'))).toList() ?? [],
               onChanged: onChanged,
               dropdownColor: const Color(0xFF1E293B),
-              style: const TextStyle(color: UiTokens.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
+              style: GoogleFonts.jetBrainsMono(color: UiTokens.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
               isExpanded: true,
-              hint: const Text('Select...', style: TextStyle(color: UiTokens.textDim)),
+              hint: Text('Select...', style: GoogleFonts.plusJakartaSans(color: UiTokens.textDim)),
             ),
           ),
         ),
@@ -671,19 +748,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               children: [
                 Row(
                   children: [
-                    Text(title, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: UiTokens.textSecondary, letterSpacing: 2)),
+                    Text(
+                      title,
+                      style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w900, color: UiTokens.textSecondary, letterSpacing: 2),
+                    ),
                     const SizedBox(width: 8),
                     Icon(showRaw ? Icons.expand_less : Icons.expand_more, size: 16, color: UiTokens.textDim),
                   ],
                 ),
                 Row(
                   children: [
-                    Text('$summary • ${tempC?.round() ?? '--'}°C', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: UiTokens.textSecondary, letterSpacing: 1)),
+                    Text(
+                      '$summary • ${tempC?.round() ?? '--'}°C',
+                      style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: UiTokens.textSecondary, letterSpacing: 1),
+                    ),
                     const SizedBox(width: 12),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(color: Colors.transparent, borderRadius: BorderRadius.circular(12), border: Border.all(color: catColor, width: 1.5)),
-                      child: Text(cat, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: catColor)),
+                      child: Text(
+                        cat,
+                        style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w900, color: catColor),
+                      ),
                     ),
                   ],
                 ),
@@ -691,7 +777,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             const SizedBox(height: 24),
             if (showRaw && metarStr.isNotEmpty) ...[
-              Text(metarStr, style: const TextStyle(fontSize: 14, fontFamily: 'monospace', color: Colors.white, fontWeight: FontWeight.w600)),
+              Text(
+                metarStr,
+                style: GoogleFonts.jetBrainsMono(fontSize: 14, color: Colors.white, fontWeight: FontWeight.w600),
+              ),
               const SizedBox(height: 16),
             ],
             Row(
@@ -701,7 +790,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   children: [
                     WindArrow(runwayHeading: rwyHeading, windDir: parsed.windDirDeg, color: UiTokens.accent, size: 56),
                     const SizedBox(height: 8),
-                    Text(runway?.id ?? '--', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                    Text(
+                      runway?.id ?? '--',
+                      style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
                   ],
                 ),
                 const SizedBox(width: 24),
@@ -735,9 +827,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label, style: const TextStyle(fontSize: 11, color: UiTokens.textDim, fontWeight: FontWeight.bold, letterSpacing: 1)),
+          Text(
+            label,
+            style: GoogleFonts.plusJakartaSans(fontSize: 11, color: UiTokens.textDim, fontWeight: FontWeight.bold, letterSpacing: 1),
+          ),
           const SizedBox(width: 8),
-          Text(value, style: const TextStyle(fontSize: 13, color: Colors.white, fontWeight: FontWeight.bold)),
+          Text(
+            value,
+            style: GoogleFonts.jetBrainsMono(fontSize: 13, color: Colors.white, fontWeight: FontWeight.bold),
+          ),
         ],
       ),
     );
@@ -762,11 +860,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 2)),
+              Text(
+                title,
+                style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 2),
+              ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: (isFeasible ? UiTokens.vfr : UiTokens.error).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16), border: Border.all(color: (isFeasible ? UiTokens.vfr : UiTokens.error).withValues(alpha: 0.5))),
-                child: Text(isFeasible ? 'WITHIN LIMITS' : 'EXCEEDS LIMITS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: isFeasible ? UiTokens.vfr : UiTokens.error, letterSpacing: 1)),
+                decoration: BoxDecoration(
+                  color: (isFeasible ? UiTokens.vfr : UiTokens.error).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: (isFeasible ? UiTokens.vfr : UiTokens.error).withValues(alpha: 0.5)),
+                ),
+                child: Text(
+                  isFeasible ? 'WITHIN LIMITS' : 'EXCEEDS LIMITS',
+                  style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w900, color: isFeasible ? UiTokens.vfr : UiTokens.error, letterSpacing: 1),
+                ),
               ),
             ],
           ),
@@ -775,9 +883,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text(numFormat.format(weightKg.round()), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white)),
+              Text(
+                numFormat.format(weightKg.round()),
+                style: GoogleFonts.jetBrainsMono(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white),
+              ),
               const SizedBox(width: 4),
-              const Text('kg', style: TextStyle(fontSize: 14, color: UiTokens.textSecondary, fontWeight: FontWeight.bold)),
+              Text(
+                'kg',
+                style: GoogleFonts.jetBrainsMono(fontSize: 14, color: UiTokens.textSecondary, fontWeight: FontWeight.bold),
+              ),
             ],
           ),
           const SizedBox(height: 24),
@@ -790,33 +904,45 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(e.key, style: const TextStyle(fontSize: 12, color: UiTokens.textSecondary, fontWeight: FontWeight.bold)),
+                    Text(
+                      e.key,
+                      style: GoogleFonts.plusJakartaSans(fontSize: 12, color: UiTokens.textSecondary, fontWeight: FontWeight.bold),
+                    ),
                     const SizedBox(height: 8),
-                    Text(e.value.round().toString(), style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white)),
+                    Text(
+                      e.value.round().toString(),
+                      style: GoogleFonts.jetBrainsMono(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white),
+                    ),
                   ],
                 ),
               ),
             )).toList(),
           ),
           const SizedBox(height: 20),
-          Text('Runway required: $reqRunway m', style: const TextStyle(fontSize: 14, color: UiTokens.textSecondary)),
+          Text(
+            'Runway required: $reqRunway m',
+            style: GoogleFonts.plusJakartaSans(fontSize: 14, color: UiTokens.textSecondary),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildFooter() {
-    return const Column(
+    return Column(
       children: [
-        SizedBox(height: 20),
-        Row(
+        const SizedBox(height: 20),
+        const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             EfbLaunchesBadge(),
           ],
         ),
-        SizedBox(height: 24),
-        Text('Speeds scale with √(weight/reference) and are indicative IAS; verify against the DC Designs manual & in-sim.', style: TextStyle(color: UiTokens.textDim, fontSize: 12)),
+        const SizedBox(height: 24),
+        Text(
+          'Speeds scale with √(weight/reference) and are indicative IAS; verify against the DC Designs manual & in-sim.',
+          style: GoogleFonts.plusJakartaSans(color: UiTokens.textDim, fontSize: 12),
+        ),
       ],
     );
   }
