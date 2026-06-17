@@ -6,6 +6,7 @@ import '../providers/efb_providers.dart';
 import '../providers/badge_provider.dart';
 import '../widgets/efb_card.dart';
 import '../widgets/efb_text_field.dart';
+import '../widgets/efb_launches_badge.dart';
 import '../widgets/wind_arrow.dart';
 import '../core/ui_tokens.dart';
 import '../core/concorde_constants.dart';
@@ -805,24 +806,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildFooter() {
-    return Column(
+    return const Column(
       children: [
-        const SizedBox(height: 20),
+        SizedBox(height: 20),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            ref.watch(visitorBadgeProvider).when(
-              data: (svgStr) {
-                if (svgStr.isEmpty) return const Text('EFB Launches: Offline', style: TextStyle(color: UiTokens.textDim, fontSize: 12, fontWeight: FontWeight.bold));
-                return SvgPicture.string(svgStr, height: 28);
-              },
-              loading: () => const Text('Loading launches...', style: TextStyle(color: UiTokens.textDim, fontSize: 12)),
-              error: (_, __) => const Text('EFB Launches: Error', style: TextStyle(color: UiTokens.textDim, fontSize: 12, fontWeight: FontWeight.bold)),
-            ),
+            EfbLaunchesBadge(),
           ],
         ),
-        const SizedBox(height: 24),
-        const Text('Speeds scale with √(weight/reference) and are indicative IAS; verify against the DC Designs manual & in-sim.', style: TextStyle(color: UiTokens.textDim, fontSize: 12)),
+        SizedBox(height: 24),
+        Text('Speeds scale with √(weight/reference) and are indicative IAS; verify against the DC Designs manual & in-sim.', style: TextStyle(color: UiTokens.textDim, fontSize: 12)),
       ],
     );
   }
