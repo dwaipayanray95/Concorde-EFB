@@ -3,12 +3,16 @@
     "date": "2026-02-16",
     "title": "Release v2.1.0",
     "items": [
-      "Release version bumped globally to v2.1.0 (app, npm package, Cargo manifest, and Tauri config)",
-      "Removed in-app build marker display; app now shows only the semantic version",
-      "Desktop external links fixed by enabling Tauri opener plugin and permissions",
-      "Fuel model: Concorde cruise-climb mission profile (climb + accel + segmented cruise-climb + descent) now drives ETE/trip/endurance calculations",
-      "Performance: takeoff and landing runway requirements now include METAR/elevation corrections (QNH, OAT vs ISA, headwind/tailwind)",
-      "Ops safety: added Operational Alerts panel for fuel endurance deficit, alternate risk, MTOW/MLW exceedance, runway shortfall, and significant tailwind"
+      "Flight model: introduced segmented Concorde mission profile (climb, accel, cruise-climb segments, descent) and rewired ETE/trip/endurance calculations to use it",
+      "Performance: takeoff/landing runway requirements now apply METAR/elevation corrections (QNH, ISA delta, headwind/tailwind, runway elevation) with pressure/temperature/wind breakdown in UI",
+      "Ops safety: added Operational Alerts for fuel endurance deficit, alternate risk, MTOW/MLW exceedance, runway shortfall, and notable tailwind conditions",
+      "Fuel logic: endurance now uses dynamic burn rate from mission profile, airborne fuel basis, and reserve timing for more realistic pass/fail checks",
+      "Fuel display: alternate fuel now reflects computed block alternate fuel instead of a simplified fixed-rate proxy",
+      "SimBrief flow: after import, app now prefers live METAR fetch (AviationWeather with fallback) and only keeps SimBrief METAR when live fetch is unavailable",
+      "UI copy: renamed usage counter label from SITE VISITS to EFB Launches",
+      "Desktop app: enabled external link opening via Tauri opener plugin and opener capability permission",
+      "Release metadata: version bumped globally to v2.1.0 across app, npm, Cargo, and Tauri config",
+      "UI cleanup: removed build marker display so the app surface shows semantic version only"
     ]
   },
   {

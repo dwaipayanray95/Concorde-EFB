@@ -61,7 +61,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 scrollDirection: Axis.horizontal,
                 child: SizedBox(
                   // Force a minimum width to prevent any RenderFlex overflow issues
-                  width: MediaQuery.of(context).size.width > 1200 ? MediaQuery.of(context).size.width : 1200,
+                  width: MediaQuery.of(context).size.width > 1080 ? MediaQuery.of(context).size.width : 1080,
                   child: SingleChildScrollView(
                     scrollDirection: Axis.vertical,
                     padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 48),
@@ -297,42 +297,67 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return EfbCard(
       title: 'CRUISE & FUEL MANAGEMENT',
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Row 1 (Full Width): Times
+          Row(
+            children: [
+              Expanded(child: _buildTimeBox('TOTAL FLIGHT TIME', mission.totalTimeH)),
+              const SizedBox(width: 16),
+              Expanded(child: _buildTimeBox('CLIMB', mission.climb.timeH)),
+              const SizedBox(width: 16),
+              Expanded(child: _buildTimeBox('CRUISE', mission.cruise.timeH)),
+              const SizedBox(width: 16),
+              Expanded(child: _buildTimeBox('DESCENT', mission.descent.timeH)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Cruise-climb profile: FL${mission.initialCruiseFl} to FL${mission.targetCruiseFl}, with acceleration phase included in cruise time/fuel.',
+            style: const TextStyle(color: UiTokens.textDim, fontSize: 10),
+          ),
+          const SizedBox(height: 32),
+          // Bottom Section: Split
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Left Column: Inputs + Advanced + Stats
               Expanded(
-                flex: 2,
+                flex: 13,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Distance & FL Inputs
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(child: EfbTextField(label: 'PLANNED DISTANCE (NM)', initialValue: ref.watch(plannedDistanceProvider).round().toString(), onChanged: (v) => ref.read(plannedDistanceProvider.notifier).set(double.tryParse(v) ?? 0.0), keyboardType: TextInputType.number)),
+                        Expanded(
+                          child: EfbTextField(
+                            label: 'PLANNED DISTANCE (NM)',
+                            initialValue: ref.watch(plannedDistanceProvider).round().toString(),
+                            onChanged: (v) => ref.read(plannedDistanceProvider.notifier).set(double.tryParse(v) ?? 0.0),
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              EfbTextField(label: 'CRUISE FLIGHT LEVEL (FL)', initialValue: ref.watch(cruiseFLProvider).round().toString(), onChanged: (v) => ref.read(cruiseFLProvider.notifier).set(double.tryParse(v) ?? 590.0, direction), keyboardType: TextInputType.number),
+                              EfbTextField(
+                                label: 'CRUISE FLIGHT LEVEL (FL)',
+                                initialValue: ref.watch(cruiseFLProvider).round().toString(),
+                                onChanged: (v) => ref.read(cruiseFLProvider.notifier).set(double.tryParse(v) ?? 590.0, direction),
+                                keyboardType: TextInputType.number,
+                              ),
                               const SizedBox(height: 4),
-                              Text('Direction (auto): ${direction == "E" ? "Eastbound" : direction == "W" ? "Westbound" : "unknown"}. Above FL410 we snap to Non-RVSM levels.', style: const TextStyle(color: UiTokens.textDim, fontSize: 10)),
+                              Text(
+                                'Direction (auto): ${direction == "E" ? "Eastbound" : direction == "W" ? "Westbound" : "unknown"}. Above FL410 we snap to Non-RVSM levels.',
+                                style: const TextStyle(color: UiTokens.textDim, fontSize: 10),
+                              ),
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      children: [
-                        Expanded(child: _buildTimeBox('TOTAL FLIGHT TIME', mission.totalTimeH)),
-                        const SizedBox(width: 16),
-                        Expanded(child: _buildTimeBox('CLIMB', mission.climb.timeH)),
-                        const SizedBox(width: 16),
-                        Expanded(child: _buildTimeBox('CRUISE', mission.cruise.timeH)),
-                        const SizedBox(width: 16),
-                        Expanded(child: _buildTimeBox('DESCENT', mission.descent.timeH)),
                       ],
                     ),
                     const SizedBox(height: 32),
@@ -353,13 +378,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         Expanded(child: EfbTextField(label: 'TRIM TANK FUEL (KG)', initialValue: ref.watch(trimTankFuelProvider).round().toString(), onChanged: (v) => ref.read(trimTankFuelProvider.notifier).set(double.tryParse(v) ?? 0.0), keyboardType: TextInputType.number)),
                       ],
                     ),
+                    const SizedBox(height: 32),
+                    Row(
+                      children: [
+                        Expanded(child: _buildBottomStatBox('COMPUTED TOW', '${numFormat.format(weights['TOW']!.round())} kg', isLarge: true)),
+                        const SizedBox(width: 12),
+                        Expanded(child: _buildBottomStatBox('FUEL ENDURANCE', _formatHoursMinutes(fuel.blockKg / 40000))),
+                        const SizedBox(width: 12),
+                        Expanded(child: _buildBottomStatBox('ETE + RESERVES', _formatHoursMinutes(mission.totalTimeH + (fuel.finalReserveKg / 40000)))),
+                        const SizedBox(width: 12),
+                        Expanded(child: _buildBottomStatBox('PASSENGERS', '${ref.watch(paxCountProvider)} pax', subtext: '${numFormat.format(weights['PAX']!.round())} kg @ 84 kg each')),
+                      ],
+                    ),
                   ],
                 ),
               ),
               const SizedBox(width: 32),
-              // Right Column (Fuel Calculator)
+              // Right Column: Fuel Strip
               Expanded(
-                flex: 1,
+                flex: 7,
                 child: Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
@@ -413,17 +450,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 32),
-          // Full-width Bottom Stats
-          Row(
+          const SizedBox(height: 16),
+          // Warning/Alert messages
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(flex: 2, child: _buildBottomStatBox('COMPUTED TOW', '${numFormat.format(weights['TOW']!.round())} kg', isLarge: true)),
-              const SizedBox(width: 16),
-              Expanded(flex: 2, child: _buildBottomStatBox('FUEL ENDURANCE', _formatHoursMinutes(fuel.blockKg / 40000))), 
-              const SizedBox(width: 16),
-              Expanded(flex: 2, child: _buildBottomStatBox('ETE + RESERVES', _formatHoursMinutes(mission.totalTimeH + (fuel.finalReserveKg / 40000)))),
-              const SizedBox(width: 16),
-              Expanded(flex: 3, child: _buildBottomStatBox('PASSENGERS', '${ref.watch(paxCountProvider)} pax', subtext: '${numFormat.format(weights['PAX']!.round())} kg @ 84 kg each')),
+              Text(
+                'Reheat safety: climb reheat within ${ConcordeConstants.fuel.reheatMinutesCap} min cap.',
+                style: TextStyle(
+                  color: mission.climb.timeH * 60 <= ConcordeConstants.fuel.reheatMinutesCap ? UiTokens.textDim : UiTokens.error,
+                  fontSize: 12,
+                ),
+              ),
+              if (fuel.blockKg < (mission.totalTimeH + (fuel.finalReserveKg / 40000)) * 40000)
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Fuel endurance is less than required ETE + reserves.',
+                    style: TextStyle(color: UiTokens.error, fontSize: 12),
+                  ),
+                ),
+              if (isOverCapacity)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Warning: Total fuel exceeds Concorde fuel capacity of ${numFormat.format(ConcordeConstants.weights.fuelCapacityKg)} kg.',
+                    style: const TextStyle(color: UiTokens.error, fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                ),
             ],
           ),
         ],
@@ -441,21 +495,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final h = hoursDecimal.floor();
     final m = ((hoursDecimal - h) * 60).round();
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.03), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white.withValues(alpha: 0.05))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: UiTokens.textDim, letterSpacing: 1), maxLines: 1, overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           RichText(
             text: TextSpan(
               style: const TextStyle(fontFamily: 'monospace', color: Colors.white, fontWeight: FontWeight.w900),
               children: [
-                TextSpan(text: '$h', style: const TextStyle(fontSize: 24)),
-                const TextSpan(text: ' h ', style: TextStyle(fontSize: 14, color: UiTokens.textSecondary, fontWeight: FontWeight.w600)),
-                TextSpan(text: m.toString().padLeft(2, '0'), style: const TextStyle(fontSize: 24)),
-                const TextSpan(text: ' m', style: TextStyle(fontSize: 14, color: UiTokens.textSecondary, fontWeight: FontWeight.w600)),
+                TextSpan(text: '$h', style: const TextStyle(fontSize: 22)),
+                const TextSpan(text: ' h ', style: TextStyle(fontSize: 12, color: UiTokens.textSecondary, fontWeight: FontWeight.w600)),
+                TextSpan(text: m.toString().padLeft(2, '0'), style: const TextStyle(fontSize: 22)),
+                const TextSpan(text: ' m', style: TextStyle(fontSize: 12, color: UiTokens.textSecondary, fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -466,17 +520,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildBottomStatBox(String label, String value, {bool isLarge = false, String? subtext}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.03), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white.withValues(alpha: 0.05))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: UiTokens.textDim, letterSpacing: 1), maxLines: 1, overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 12),
-          Text(value, style: TextStyle(fontSize: isLarge ? 24 : 20, fontWeight: FontWeight.w900, color: Colors.white, fontFamily: 'monospace')),
+          Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: UiTokens.textDim, letterSpacing: 1), maxLines: 1, overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 8),
+          Text(value, style: TextStyle(fontSize: isLarge ? 18 : 16, fontWeight: FontWeight.w900, color: Colors.white, fontFamily: 'monospace')),
           if (subtext != null) ...[
-            const SizedBox(height: 8),
-            Text(subtext, style: const TextStyle(fontSize: 12, color: UiTokens.textDim, fontWeight: FontWeight.w500)),
+            const SizedBox(height: 4),
+            Text(subtext, style: const TextStyle(fontSize: 10, color: UiTokens.textDim, fontWeight: FontWeight.w500)),
           ],
         ],
       ),
