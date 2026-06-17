@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -69,29 +70,58 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         return Scaffold(
           backgroundColor: UiTokens.bg,
           body: SafeArea(
-            child: Scrollbar(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SizedBox(
-                  width: MediaQuery.of(context).size.width > 1080 ? MediaQuery.of(context).size.width : 1080,
+            child: Stack(
+              children: [
+                Scrollbar(
                   child: SingleChildScrollView(
-                    scrollDirection: Axis.vertical,
-                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 48),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildHeader(ref),
-                        const SizedBox(height: 48),
-                        _buildFlightPlanAndCruiseRow(ref),
-                        const SizedBox(height: 32),
-                        _buildPerformanceCalculatorSection(ref),
-                        const SizedBox(height: 64),
-                        _buildFooter(),
-                      ],
+                    scrollDirection: Axis.horizontal,
+                    child: SizedBox(
+                      width: MediaQuery.of(context).size.width > 1080 ? MediaQuery.of(context).size.width : 1080,
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.vertical,
+                        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 48),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildHeader(ref),
+                            const SizedBox(height: 48),
+                            _buildFlightPlanAndCruiseRow(ref),
+                            const SizedBox(height: 32),
+                            _buildPerformanceCalculatorSection(ref),
+                            const SizedBox(height: 64),
+                            _buildFooter(),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
+                // Floating Version Tag
+                Positioned(
+                  bottom: 16,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.5),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(8),
+                        bottomLeft: Radius.circular(8),
+                      ),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
+                    ),
+                    child: Text(
+                      AppVersion.display,
+                      style: GoogleFonts.jetBrainsMono(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: UiTokens.textDim,
+                        fontFeatures: const [FontFeature.enable('smcp')],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -125,14 +155,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               Text(
                 'Flight planning & performance for MSFS.',
                 style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w500, color: UiTokens.textSecondary),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  _buildBadge(AppVersion.display),
-                  const SizedBox(width: 8),
-                  _buildBadge('BUILD 160626-3'),
-                ],
               ),
             ],
           ),
