@@ -858,7 +858,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 children: [
                   Column(
                     children: [
-                      WindArrow(runwayHeading: rwyHeading, windDir: parsed.windDirDeg, color: UiTokens.accent, size: 56),
+                      WindArrow(runwayHeading: rwyHeading, windDir: parsed.windDirDeg, color: UiTokens.accent, size: 72),
                       const SizedBox(height: 8),
                       Text(
                         runway?.id ?? '--',
