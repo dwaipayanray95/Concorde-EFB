@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/ui_tokens.dart';
+import 'efb_glass_container.dart';
 
 class EfbCard extends StatelessWidget {
   final String title;
@@ -16,17 +17,10 @@ class EfbCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
+    return EfbGlassContainer(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: UiTokens.surface.withValues(alpha: 0.4),
-        borderRadius: UiTokens.borderRadius,
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.05),
-          width: 1,
-        ),
-      ),
+      blur: 20,
+      borderRadius: UiTokens.borderRadius,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,

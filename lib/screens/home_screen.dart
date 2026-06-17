@@ -1,7 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../providers/efb_providers.dart';
@@ -10,6 +9,7 @@ import '../widgets/efb_card.dart';
 import '../widgets/efb_text_field.dart';
 import '../widgets/efb_launches_badge.dart';
 import '../widgets/wind_arrow.dart';
+import '../widgets/efb_glass_container.dart';
 import '../core/ui_tokens.dart';
 import '../core/concorde_constants.dart';
 import '../core/metar_parser.dart';
@@ -28,7 +28,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  // Local state for expanding METAR strings
   bool showDepRaw = false;
   bool showArrRaw = false;
 
@@ -72,6 +71,56 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           body: SafeArea(
             child: Stack(
               children: [
+                // Dynamic Background for Refraction
+                Positioned.fill(
+                  child: Container(
+                    decoration: const BoxDecoration(color: UiTokens.bg),
+                    child: Stack(
+                      children: [
+                        Positioned(
+                          top: -100,
+                          left: -100,
+                          child: Container(
+                            width: 400,
+                            height: 400,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: const Color(0xFF3B82F6).withValues(alpha: 0.25),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 100,
+                          right: -50,
+                          child: Container(
+                            width: 500,
+                            height: 500,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: const Color(0xFF8B5CF6).withValues(alpha: 0.2),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: 200,
+                          right: 200,
+                          child: Container(
+                            width: 300,
+                            height: 300,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: const Color(0xFF0EA5E9).withValues(alpha: 0.2),
+                            ),
+                          ),
+                        ),
+                        BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
+                          child: Container(color: Colors.transparent),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
                 Scrollbar(
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -96,7 +145,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                   ),
                 ),
-                // Floating Version Tag
                 Positioned(
                   bottom: 16,
                   right: 0,
@@ -167,21 +215,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         const SizedBox(width: 32),
         _buildHeaderStat('MLW', '${numFormat.format(ConcordeConstants.weights.mlwKg)} kg'),
       ],
-    );
-  }
-
-  Widget _buildBadge(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-      ),
-      child: Text(
-        text,
-        style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: UiTokens.textDim),
-      ),
     );
   }
 
@@ -285,21 +318,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             children: [
               Expanded(
                 flex: 4,
-                child: Container(
-                  height: 48,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.03),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-                  ),
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    '${ref.watch(departureIcaoProvider)} → ${ref.watch(arrivalIcaoProvider)} (ALT: ${ref.watch(alternateIcaoProvider)})',
-                    style: GoogleFonts.jetBrainsMono(
-                      color: UiTokens.textSecondary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+                child: EfbGlassContainer(
+                  blur: 10,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    height: 48,
+                    width: double.infinity,
+                    alignment: Alignment.centerLeft,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      '${ref.watch(departureIcaoProvider)} → ${ref.watch(arrivalIcaoProvider)} (ALT: ${ref.watch(alternateIcaoProvider)})',
+                      style: GoogleFonts.jetBrainsMono(
+                        color: UiTokens.textSecondary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
@@ -317,32 +350,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildInfoChip(String label, String value, {bool alignLeft = false, bool isNumeric = false}) {
-    return Container(
-      height: 48,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: alignLeft ? CrossAxisAlignment.start : CrossAxisAlignment.center,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.plusJakartaSans(fontSize: 9, fontWeight: FontWeight.bold, color: UiTokens.textDim, letterSpacing: 1),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: (isNumeric ? GoogleFonts.jetBrainsMono : GoogleFonts.plusJakartaSans)(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: UiTokens.textSecondary,
+    return EfbGlassContainer(
+      blur: 10,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        height: 48,
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: alignLeft ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.plusJakartaSans(fontSize: 9, fontWeight: FontWeight.bold, color: UiTokens.textDim, letterSpacing: 1),
             ),
-          ),
-        ],
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: (isNumeric ? GoogleFonts.jetBrainsMono : GoogleFonts.plusJakartaSans)(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: UiTokens.textSecondary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -455,66 +488,66 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               const SizedBox(width: 32),
               Expanded(
                 flex: 7,
-                child: Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.02),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildFuelRow('Trip Fuel', fuel.tripKg),
-                      _buildDivider(),
-                      _buildFuelRow('Taxi Fuel', fuel.taxiKg),
-                      _buildDivider(),
-                      _buildFuelRow('Contingency', fuel.contingencyKg),
-                      _buildDivider(),
-                      _buildFuelRow('Trim Fuel', ref.watch(trimTankFuelProvider)),
-                      _buildDivider(),
-                      _buildFuelRow('Alt Fuel (${ref.watch(alternateDistanceProvider).round()} NM)', fuel.alternateKg),
-                      _buildDivider(),
-                      _buildFuelRow('Block Fuel', fuel.blockKg, isBold: true),
-                      const SizedBox(height: 32),
-                      const Divider(color: Colors.white10, thickness: 1),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Total Required',
-                                style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.bold, color: UiTokens.textPrimary),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Block + Trim (0 kg)',
-                                style: GoogleFonts.plusJakartaSans(fontSize: 10, color: UiTokens.textSecondary.withValues(alpha: 0.5)),
-                              ),
-                            ],
-                          ),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              Text(
-                                numFormat.format(fuel.blockKg + ref.watch(trimTankFuelProvider)),
-                                style: GoogleFonts.jetBrainsMono(fontSize: 28, fontWeight: FontWeight.w900, color: isOverCapacity ? UiTokens.error : UiTokens.success),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'kg',
-                                style: GoogleFonts.jetBrainsMono(fontSize: 14, color: UiTokens.textSecondary),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
+                child: EfbGlassContainer(
+                  blur: 15,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildFuelRow('Trip Fuel', fuel.tripKg),
+                        _buildDivider(),
+                        _buildFuelRow('Taxi Fuel', fuel.taxiKg),
+                        _buildDivider(),
+                        _buildFuelRow('Contingency', fuel.contingencyKg),
+                        _buildDivider(),
+                        _buildFuelRow('Trim Fuel', ref.watch(trimTankFuelProvider)),
+                        _buildDivider(),
+                        _buildFuelRow('Alt Fuel (${ref.watch(alternateDistanceProvider).round()} NM)', fuel.alternateKg),
+                        _buildDivider(),
+                        _buildFuelRow('Block Fuel', fuel.blockKg, isBold: true),
+                        const SizedBox(height: 32),
+                        const Divider(color: Colors.white10, thickness: 1),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Total Required',
+                                  style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.bold, color: UiTokens.textPrimary),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Block + Trim (0 kg)',
+                                  style: GoogleFonts.plusJakartaSans(fontSize: 10, color: UiTokens.textSecondary.withValues(alpha: 0.5)),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
+                                Text(
+                                  numFormat.format(fuel.blockKg + ref.watch(trimTankFuelProvider)),
+                                  style: GoogleFonts.jetBrainsMono(fontSize: 28, fontWeight: FontWeight.w900, color: isOverCapacity ? UiTokens.error : UiTokens.success),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'kg',
+                                  style: GoogleFonts.jetBrainsMono(fontSize: 14, color: UiTokens.textSecondary),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -563,61 +596,69 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildTimeBox(String label, double hoursDecimal) {
     final h = hoursDecimal.floor();
     final m = ((hoursDecimal - h) * 60).round();
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.03), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white.withValues(alpha: 0.05))),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: UiTokens.textDim, letterSpacing: 1),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 8),
-          RichText(
-            text: TextSpan(
-              style: GoogleFonts.jetBrainsMono(color: Colors.white, fontWeight: FontWeight.w900),
-              children: [
-                TextSpan(text: '$h', style: const TextStyle(fontSize: 22)),
-                TextSpan(text: ' h ', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: UiTokens.textSecondary, fontWeight: FontWeight.w600)),
-                TextSpan(text: m.toString().padLeft(2, '0'), style: const TextStyle(fontSize: 22)),
-                TextSpan(text: ' m', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: UiTokens.textSecondary, fontWeight: FontWeight.w600)),
-              ],
+    return EfbGlassContainer(
+      blur: 10,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: UiTokens.textDim, letterSpacing: 1),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            RichText(
+              text: TextSpan(
+                style: GoogleFonts.jetBrainsMono(color: Colors.white, fontWeight: FontWeight.w900),
+                children: [
+                  TextSpan(text: '$h', style: const TextStyle(fontSize: 22)),
+                  TextSpan(text: ' h ', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: UiTokens.textSecondary, fontWeight: FontWeight.w600)),
+                  TextSpan(text: m.toString().padLeft(2, '0'), style: const TextStyle(fontSize: 22)),
+                  TextSpan(text: ' m', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: UiTokens.textSecondary, fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildBottomStatBox(String label, String value, {bool isLarge = false, String? subtext}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.03), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white.withValues(alpha: 0.05))),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.plusJakartaSans(fontSize: 9, fontWeight: FontWeight.bold, color: UiTokens.textDim, letterSpacing: 1),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: GoogleFonts.jetBrainsMono(fontSize: isLarge ? 18 : 16, fontWeight: FontWeight.w900, color: Colors.white),
-          ),
-          if (subtext != null) ...[
-            const SizedBox(height: 4),
+    return EfbGlassContainer(
+      blur: 10,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Text(
-              subtext,
-              style: GoogleFonts.jetBrainsMono(fontSize: 10, color: UiTokens.textDim, fontWeight: FontWeight.w500),
+              label,
+              style: GoogleFonts.plusJakartaSans(fontSize: 9, fontWeight: FontWeight.bold, color: UiTokens.textDim, letterSpacing: 1),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: GoogleFonts.jetBrainsMono(fontSize: isLarge ? 18 : 16, fontWeight: FontWeight.w900, color: Colors.white),
+            ),
+            if (subtext != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                subtext,
+                style: GoogleFonts.jetBrainsMono(fontSize: 10, color: UiTokens.textDim, fontWeight: FontWeight.w500),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -644,66 +685,66 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildDivider() => const Divider(color: Colors.white10, height: 16);
 
   Widget _buildPerformanceCalculatorSection(WidgetRef ref) {
-    return Container(
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E293B).withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'PERFORMANCE CALCULATOR',
-            style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1),
-          ),
-          const SizedBox(height: 32),
-          Text(
-            'Airports & Runways',
-            style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(child: EfbTextField(label: 'DEPARTURE ICAO', initialValue: ref.watch(departureIcaoProvider), onChanged: (v) => ref.read(departureIcaoProvider.notifier).set(v))),
-              const SizedBox(width: 16),
-              Expanded(child: _buildRunwayDropdown(ref, 'DEPARTURE RUNWAY', ref.watch(depAirportProvider), ref.watch(departureRunwayIdProvider), (v) => ref.read(departureRunwayIdProvider.notifier).set(v ?? ''))),
-              const SizedBox(width: 32),
-              Expanded(child: EfbTextField(label: 'ARRIVAL ICAO', initialValue: ref.watch(arrivalIcaoProvider), onChanged: (v) => ref.read(arrivalIcaoProvider.notifier).set(v))),
-              const SizedBox(width: 16),
-              Expanded(child: _buildRunwayDropdown(ref, 'ARRIVAL RUNWAY', ref.watch(arrAirportProvider), ref.watch(arrivalRunwayIdProvider), (v) => ref.read(arrivalRunwayIdProvider.notifier).set(v ?? ''))),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: ref.watch(departureMetarFutureProvider).when(
-                  data: (metar) => _buildMetarDisplay('DEP METAR', metar, ref.watch(departureRunwayProvider), showDepRaw, () => setState(() => showDepRaw = !showDepRaw)),
-                  loading: () => const SizedBox(height: 140, child: Center(child: CircularProgressIndicator())),
-                  error: (error, stack) => _buildMetarDisplay('DEP METAR', '', ref.watch(departureRunwayProvider), showDepRaw, () => setState(() => showDepRaw = !showDepRaw)),
+    return EfbGlassContainer(
+      blur: 20,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'PERFORMANCE CALCULATOR',
+              style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1),
+            ),
+            const SizedBox(height: 32),
+            Text(
+              'Airports & Runways',
+              style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(child: EfbTextField(label: 'DEPARTURE ICAO', initialValue: ref.watch(departureIcaoProvider), onChanged: (v) => ref.read(departureIcaoProvider.notifier).set(v))),
+                const SizedBox(width: 16),
+                Expanded(child: _buildRunwayDropdown(ref, 'DEPARTURE RUNWAY', ref.watch(depAirportProvider), ref.watch(departureRunwayIdProvider), (v) => ref.read(departureRunwayIdProvider.notifier).set(v ?? ''))),
+                const SizedBox(width: 32),
+                Expanded(child: EfbTextField(label: 'ARRIVAL ICAO', initialValue: ref.watch(arrivalIcaoProvider), onChanged: (v) => ref.read(arrivalIcaoProvider.notifier).set(v))),
+                const SizedBox(width: 16),
+                Expanded(child: _buildRunwayDropdown(ref, 'ARRIVAL RUNWAY', ref.watch(arrAirportProvider), ref.watch(arrivalRunwayIdProvider), (v) => ref.read(arrivalRunwayIdProvider.notifier).set(v ?? ''))),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: ref.watch(departureMetarFutureProvider).when(
+                    data: (metar) => _buildMetarDisplay('DEP METAR', metar, ref.watch(departureRunwayProvider), showDepRaw, () => setState(() => showDepRaw = !showDepRaw)),
+                    loading: () => const SizedBox(height: 140, child: Center(child: CircularProgressIndicator())),
+                    error: (error, stack) => _buildMetarDisplay('DEP METAR', '', ref.watch(departureRunwayProvider), showDepRaw, () => setState(() => showDepRaw = !showDepRaw)),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 32),
-              Expanded(
-                child: ref.watch(arrivalMetarFutureProvider).when(
-                  data: (metar) => _buildMetarDisplay('ARR METAR', metar, ref.watch(arrivalRunwayProvider), showArrRaw, () => setState(() => showArrRaw = !showArrRaw)),
-                  loading: () => const SizedBox(height: 140, child: Center(child: CircularProgressIndicator())),
-                  error: (error, stack) => _buildMetarDisplay('ARR METAR', '', ref.watch(arrivalRunwayProvider), showArrRaw, () => setState(() => showArrRaw = !showArrRaw)),
+                const SizedBox(width: 32),
+                Expanded(
+                  child: ref.watch(arrivalMetarFutureProvider).when(
+                    data: (metar) => _buildMetarDisplay('ARR METAR', metar, ref.watch(arrivalRunwayProvider), showArrRaw, () => setState(() => showArrRaw = !showArrRaw)),
+                    loading: () => const SizedBox(height: 140, child: Center(child: CircularProgressIndicator())),
+                    error: (error, stack) => _buildMetarDisplay('ARR METAR', '', ref.watch(arrivalRunwayProvider), showArrRaw, () => setState(() => showArrRaw = !showArrRaw)),
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 32),
-          Row(
-            children: [
-              Expanded(child: _buildPerfCard(ref, 'TAKEOFF PERFORMANCE', ref.watch(weightsProvider)['TOW']!, ref.watch(takeoffSpeedsProvider), ref.watch(takeoffFeasibilityProvider))),
-              const SizedBox(width: 32),
-              Expanded(child: _buildPerfCard(ref, 'LANDING PERFORMANCE', ref.watch(weightsProvider)['LW']!, ref.watch(landingSpeedsProvider), ref.watch(landingFeasibilityProvider))),
-            ],
-          ),
-        ],
+              ],
+            ),
+            const SizedBox(height: 32),
+            Row(
+              children: [
+                Expanded(child: _buildPerfCard(ref, 'TAKEOFF PERFORMANCE', ref.watch(weightsProvider)['TOW']!, ref.watch(takeoffSpeedsProvider), ref.watch(takeoffFeasibilityProvider))),
+                const SizedBox(width: 32),
+                Expanded(child: _buildPerfCard(ref, 'LANDING PERFORMANCE', ref.watch(weightsProvider)['LW']!, ref.watch(landingSpeedsProvider), ref.watch(landingFeasibilityProvider))),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -717,19 +758,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           style: GoogleFonts.plusJakartaSans(fontSize: 11, color: UiTokens.textSecondary, fontWeight: FontWeight.bold, letterSpacing: 0.5),
         ),
         const SizedBox(height: 6),
-        Container(
-          height: 48,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(12)),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: currentId.isEmpty ? null : currentId,
-              items: airport?.runways.map((r) => DropdownMenuItem(value: r.id, child: Text('RWY ${r.id} • ${numFormat.format(r.lengthM)} m • ${r.heading}°'))).toList() ?? [],
-              onChanged: onChanged,
-              dropdownColor: const Color(0xFF1E293B),
-              style: GoogleFonts.jetBrainsMono(color: UiTokens.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
-              isExpanded: true,
-              hint: Text('Select...', style: GoogleFonts.plusJakartaSans(color: UiTokens.textDim)),
+        EfbGlassContainer(
+          blur: 10,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            height: 48,
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: currentId.isEmpty ? null : currentId,
+                items: airport?.runways.map((r) => DropdownMenuItem(value: r.id, child: Text('RWY ${r.id} • ${numFormat.format(r.lengthM)} m • ${r.heading}°'))).toList() ?? [],
+                onChanged: onChanged,
+                dropdownColor: const Color(0xFF1E293B),
+                style: GoogleFonts.jetBrainsMono(color: UiTokens.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
+                isExpanded: true,
+                hint: Text('Select...', style: GoogleFonts.plusJakartaSans(color: UiTokens.textDim)),
+              ),
             ),
           ),
         ),
@@ -755,110 +800,114 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return InkWell(
       onTap: metarStr.isNotEmpty ? onToggle : null,
       borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.02),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: catColor.withValues(alpha: 0.4), width: 1.5),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w900, color: UiTokens.textSecondary, letterSpacing: 2),
-                    ),
-                    const SizedBox(width: 8),
-                    Icon(showRaw ? Icons.expand_less : Icons.expand_more, size: 16, color: UiTokens.textDim),
-                  ],
-                ),
-                Row(
-                  children: [
-                    Text(
-                      '$summary • ${tempC?.round() ?? '--'}°C',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: UiTokens.textSecondary, letterSpacing: 1),
-                    ),
-                    const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(color: Colors.transparent, borderRadius: BorderRadius.circular(12), border: Border.all(color: catColor, width: 1.5)),
-                      child: Text(
-                        cat,
-                        style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w900, color: catColor),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            if (showRaw && metarStr.isNotEmpty) ...[
-              Text(
-                metarStr,
-                style: GoogleFonts.jetBrainsMono(fontSize: 14, color: Colors.white, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 16),
-            ],
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Column(
-                  children: [
-                    WindArrow(runwayHeading: rwyHeading, windDir: parsed.windDirDeg, color: UiTokens.accent, size: 56),
-                    const SizedBox(height: 8),
-                    Text(
-                      runway?.id ?? '--',
-                      style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-                  ],
-                ),
-                const SizedBox(width: 24),
-                Expanded(
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+      child: EfbGlassContainer(
+        blur: 15,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            border: Border.all(color: catColor.withValues(alpha: 0.4), width: 1.5),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
                     children: [
-                      _buildMetarChip('WIND', '${parsed.windDirDeg?.round() ?? 'VRB'}° ${parsed.windSpeedKt?.round() ?? '--'} kt'),
-                      _buildMetarChip('VIS', '${vis != null ? (vis >= 10 ? '10+' : vis.toStringAsFixed(1)) : '--'} km'),
-                      _buildMetarChip('QNH', '${qnh?.value.round() ?? '--'} ${qnh?.unit ?? ''}'),
-                      if (runway != null) _buildMetarChip('RWY ELEV', '${runway.elevationFt?.round() ?? '--'} ft'),
+                      Text(
+                        title,
+                        style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w900, color: UiTokens.textSecondary, letterSpacing: 2),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(showRaw ? Icons.expand_less : Icons.expand_more, size: 16, color: UiTokens.textDim),
                     ],
                   ),
+                  Row(
+                    children: [
+                      Text(
+                        '$summary • ${tempC?.round() ?? '--'}°C',
+                        style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: UiTokens.textSecondary, letterSpacing: 1),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(color: Colors.transparent, borderRadius: BorderRadius.circular(12), border: Border.all(color: catColor, width: 1.5)),
+                        child: Text(
+                          cat,
+                          style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w900, color: catColor),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              if (showRaw && metarStr.isNotEmpty) ...[
+                Text(
+                  metarStr,
+                  style: GoogleFonts.jetBrainsMono(fontSize: 14, color: Colors.white, fontWeight: FontWeight.w600),
                 ),
+                const SizedBox(height: 16),
               ],
-            ),
-          ],
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Column(
+                    children: [
+                      WindArrow(runwayHeading: rwyHeading, windDir: parsed.windDirDeg, color: UiTokens.accent, size: 56),
+                      const SizedBox(height: 8),
+                      Text(
+                        runway?.id ?? '--',
+                        style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 24),
+                  Expanded(
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _buildMetarChip('WIND', '${parsed.windDirDeg?.round() ?? 'VRB'}° ${parsed.windSpeedKt?.round() ?? '--'} kt'),
+                        _buildMetarChip('VIS', '${vis != null ? (vis >= 10 ? '10+' : vis.toStringAsFixed(1)) : '--'} km'),
+                        _buildMetarChip('QNH', '${qnh?.value.round() ?? '--'} ${qnh?.unit ?? ''}'),
+                        if (runway != null) _buildMetarChip('RWY ELEV', '${runway.elevationFt?.round() ?? '--'} ft'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildMetarChip(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.plusJakartaSans(fontSize: 11, color: UiTokens.textDim, fontWeight: FontWeight.bold, letterSpacing: 1),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            value,
-            style: GoogleFonts.jetBrainsMono(fontSize: 13, color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-        ],
+    return EfbGlassContainer(
+      blur: 5,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.plusJakartaSans(fontSize: 11, color: UiTokens.textDim, fontWeight: FontWeight.bold, letterSpacing: 1),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              value,
+              style: GoogleFonts.jetBrainsMono(fontSize: 13, color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -868,84 +917,94 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final String reqRunway = f != null ? numFormat.format(f.requiredLengthMEst.round()) : '--';
     final Color tintColor = isFeasible ? UiTokens.surface : UiTokens.error;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: tintColor.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: (isFeasible ? Colors.white : UiTokens.error).withValues(alpha: 0.05)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 2),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: (isFeasible ? UiTokens.vfr : UiTokens.error).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: (isFeasible ? UiTokens.vfr : UiTokens.error).withValues(alpha: 0.5)),
+    return EfbGlassContainer(
+      blur: 20,
+      borderRadius: BorderRadius.circular(20),
+      color: tintColor.withValues(alpha: 0.1),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: (isFeasible ? Colors.white : UiTokens.error).withValues(alpha: 0.1)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 2),
                 ),
-                child: Text(
-                  isFeasible ? 'WITHIN LIMITS' : 'EXCEEDS LIMITS',
-                  style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w900, color: isFeasible ? UiTokens.vfr : UiTokens.error, letterSpacing: 1),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: (isFeasible ? UiTokens.vfr : UiTokens.error).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: (isFeasible ? UiTokens.vfr : UiTokens.error).withValues(alpha: 0.5)),
+                  ),
+                  child: Text(
+                    isFeasible ? 'WITHIN LIMITS' : 'EXCEEDS LIMITS',
+                    style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w900, color: isFeasible ? UiTokens.vfr : UiTokens.error, letterSpacing: 1),
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                numFormat.format(weightKg.round()),
-                style: GoogleFonts.jetBrainsMono(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                'kg',
-                style: GoogleFonts.jetBrainsMono(fontSize: 14, color: UiTokens.textSecondary, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: speeds.entries.map((e) => Expanded(
-              child: Container(
-                margin: const EdgeInsets.only(right: 12),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(12)),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      e.key,
-                      style: GoogleFonts.plusJakartaSans(fontSize: 12, color: UiTokens.textSecondary, fontWeight: FontWeight.bold),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  numFormat.format(weightKg.round()),
+                  style: GoogleFonts.jetBrainsMono(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'kg',
+                  style: GoogleFonts.jetBrainsMono(fontSize: 14, color: UiTokens.textSecondary, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: speeds.entries.map((e) => Expanded(
+                child: EfbGlassContainer(
+                  blur: 5,
+                  borderRadius: BorderRadius.circular(12),
+                  margin: const EdgeInsets.only(right: 12),
+                  color: Colors.black.withValues(alpha: 0.3),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          e.key,
+                          style: GoogleFonts.plusJakartaSans(fontSize: 12, color: UiTokens.textSecondary, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          e.value.round().toString(),
+                          style: GoogleFonts.jetBrainsMono(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      e.value.round().toString(),
-                      style: GoogleFonts.jetBrainsMono(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            )).toList(),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Runway required: $reqRunway m',
-            style: GoogleFonts.plusJakartaSans(fontSize: 14, color: UiTokens.textSecondary),
-          ),
-        ],
+              )).toList(),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Runway required: $reqRunway m',
+              style: GoogleFonts.plusJakartaSans(fontSize: 14, color: UiTokens.textSecondary),
+            ),
+          ],
+        ),
       ),
     );
   }
