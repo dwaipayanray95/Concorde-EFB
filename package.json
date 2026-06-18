@@ -5,17 +5,19 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-
     "build": "npm run build:tauri",
     "build:web": "tsc -b && vite build --base=/Concorde-EFB/",
     "build:beta": "tsc -b && vite build --base=/Concorde-EFB/beta/",
     "build:tauri": "tsc -b && vite build --base=./",
-
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "bump-version": "node scripts/bump-version.cjs",
     "changelog:seed": "node -e \"const {execSync}=require('child_process'); const fs=require('fs'); const log=execSync('git log --date=short --pretty=format:%ad%x09%h%x09%s',{encoding:'utf8'}).trim(); const byDate=new Map(); if(log){ for(const line of log.split(/\\\\n/)){ const parts=line.split('\\\\t'); const date=parts[0]; const hash=parts[1] || ''; const subject=parts.slice(2).join('\\\\t'); if(!byDate.has(date)) byDate.set(date, []); byDate.get(date).push(`${hash} ${subject}`.trim()); }} const entries=[]; for(const [date, items] of byDate.entries()){ entries.push({date, title:'Commits', items}); } fs.writeFileSync('public/changelog/entries.json', JSON.stringify(entries, null, 2)+'\\\\n');\"",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "bump-major": "bump-version major",
+    "bump-minor": "bump-version minor",
+    "bump-patch": "bump-version patch",
+    "bump-undo": "bump-version undo"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",
@@ -31,6 +33,7 @@
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.4.20",
+    "bump-version": "github:dwaipayanray95/bump-version",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.6.0",
