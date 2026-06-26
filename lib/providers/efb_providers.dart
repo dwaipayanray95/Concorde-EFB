@@ -70,6 +70,20 @@ class SimbriefLoadingNotifier extends Notifier<bool> {
 }
 final simbriefLoadingProvider = NotifierProvider<SimbriefLoadingNotifier, bool>(SimbriefLoadingNotifier.new);
 
+class SimbriefRouteNotifier extends Notifier<String> {
+  @override
+  String build() => '--';
+  void set(String val) => state = val;
+}
+final simbriefRouteProvider = NotifierProvider<SimbriefRouteNotifier, String>(SimbriefRouteNotifier.new);
+
+class SimbriefLoadedNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+  void set(bool val) => state = val;
+}
+final simbriefLoadedProvider = NotifierProvider<SimbriefLoadedNotifier, bool>(SimbriefLoadedNotifier.new);
+
 // --- Runways State ---
 class DepartureRunwayIdNotifier extends Notifier<String> {
   @override
@@ -158,6 +172,13 @@ class TrimTankFuelNotifier extends Notifier<double> {
 }
 final trimTankFuelProvider = NotifierProvider<TrimTankFuelNotifier, double>(TrimTankFuelNotifier.new);
 
+class ExtraFuelNotifier extends Notifier<double> {
+  @override
+  double build() => 0.0;
+  void set(double val) => state = val;
+}
+final extraFuelProvider = NotifierProvider<ExtraFuelNotifier, double>(ExtraFuelNotifier.new);
+
 class PaxCountNotifier extends Notifier<int> {
   @override
   int build() => 100;
@@ -232,7 +253,8 @@ final paxWeightProvider = Provider<double>((ref) {
 final weightsProvider = Provider<Map<String, double>>((ref) {
   final fuel = ref.watch(fuelBreakdownProvider);
   final trim = ref.watch(trimTankFuelProvider);
-  final totalFuel = fuel.blockKg + trim;
+  final extra = ref.watch(extraFuelProvider);
+  final totalFuel = fuel.blockKg + trim + extra;
   final paxWeight = ref.watch(paxWeightProvider);
   
   final tow = ConcordeConstants.weights.oewKg + paxWeight + totalFuel;

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 class UiTokens {
-  static const Color bg = Color(0xFF0F172A);
-  static const Color surface = Color(0xFF1E293B);
+  static const Color bg = Color(0xFF05070C);
+  static const Color surface = Color(0xFF0F172A);
   static const Color accent = Color(0xFF3B82F6); // Lighter, modern blue
 
   static const Color textPrimary = Color(0xFFF8FAFC);

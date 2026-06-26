@@ -1,5 +1,7 @@
+import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -85,7 +87,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             height: 400,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: const Color(0xFF3B82F6).withValues(alpha: 0.25),
+                              color: const Color(0xFF1E3A8A).withValues(alpha: 0.15),
                             ),
                           ),
                         ),
@@ -97,7 +99,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             height: 500,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: const Color(0xFF8B5CF6).withValues(alpha: 0.2),
+                              color: const Color(0xFF4C1D95).withValues(alpha: 0.12),
                             ),
                           ),
                         ),
@@ -109,7 +111,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             height: 300,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: const Color(0xFF0EA5E9).withValues(alpha: 0.2),
+                              color: const Color(0xFF0369A1).withValues(alpha: 0.12),
                             ),
                           ),
                         ),
@@ -265,8 +267,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
               const SizedBox(width: 16),
-              SizedBox(
+              Container(
                 height: 48,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: UiTokens.accent.withValues(alpha: 0.35),
+                      blurRadius: 16,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
                 child: ElevatedButton.icon(
                   onPressed: isLoading ? null : () async {
                     final user = ref.read(simbriefUserProvider);
@@ -285,6 +297,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         
                         ref.read(departureRunwayIdProvider.notifier).set(ofp['origin']?['plan_rwy'] ?? '');
                         ref.read(arrivalRunwayIdProvider.notifier).set(ofp['destination']?['plan_rwy'] ?? '');
+                        
+                        ref.read(simbriefRouteProvider.notifier).set(ofp['general']?['route'] ?? '--');
+                        ref.read(simbriefLoadedProvider.notifier).set(true);
                       }
                     } finally {
                       ref.read(simbriefLoadingProvider.notifier).set(false);
@@ -298,17 +313,50 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: UiTokens.accent,
                     foregroundColor: Colors.white,
-                    elevation: 10,
-                    shadowColor: UiTokens.accent.withValues(alpha: 0.5),
+                    elevation: 0,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     padding: const EdgeInsets.symmetric(horizontal: 32),
                   ),
                 ),
               ),
               const SizedBox(width: 24),
-              Expanded(child: _buildInfoChip('CALL SIGN', ref.watch(callSignProvider))),
+              Expanded(
+                child: _buildInfoChip(
+                  'CALL SIGN',
+                  ref.watch(callSignProvider),
+                  glassColor: ref.watch(simbriefLoadedProvider)
+                      ? const Color(0x3310B981) // Solid glass green (Emerald)
+                      : null,
+                  boxShadow: ref.watch(simbriefLoadedProvider)
+                      ? [
+                          BoxShadow(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.45),
+                            blurRadius: 20,
+                            spreadRadius: 2,
+                          )
+                        ]
+                      : null,
+                ),
+              ),
               const SizedBox(width: 16),
-              Expanded(child: _buildInfoChip('REGISTRATION', ref.watch(registrationProvider))),
+              Expanded(
+                child: _buildInfoChip(
+                  'REGISTRATION',
+                  ref.watch(registrationProvider),
+                  glassColor: ref.watch(simbriefLoadedProvider)
+                      ? const Color(0x33F59E0B) // Solid glass yellow (Amber)
+                      : null,
+                  boxShadow: ref.watch(simbriefLoadedProvider)
+                      ? [
+                          BoxShadow(
+                            color: const Color(0xFFF59E0B).withValues(alpha: 0.45),
+                            blurRadius: 20,
+                            spreadRadius: 2,
+                          )
+                        ]
+                      : null,
+                ),
+              ),
               const SizedBox(width: 16),
               Expanded(child: _buildInfoChip('PASSENGERS', '${ref.watch(paxCountProvider)}', isNumeric: true)),
             ],
@@ -317,7 +365,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Row(
             children: [
               Expanded(
-                flex: 4,
+                flex: 1,
                 child: EfbGlassContainer(
                   blur: 10,
                   borderRadius: BorderRadius.circular(12),
@@ -326,12 +374,126 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     width: double.infinity,
                     alignment: Alignment.centerLeft,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      '${ref.watch(departureIcaoProvider)} → ${ref.watch(arrivalIcaoProvider)} (ALT: ${ref.watch(alternateIcaoProvider)})',
-                      style: GoogleFonts.jetBrainsMono(
-                        color: UiTokens.textSecondary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${ref.watch(departureIcaoProvider)} → ${ref.watch(arrivalIcaoProvider)}',
+                          style: GoogleFonts.jetBrainsMono(
+                            color: UiTokens.textSecondary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          'ALT: ${ref.watch(alternateIcaoProvider)}',
+                          style: GoogleFonts.jetBrainsMono(
+                            color: UiTokens.textDim,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                flex: 3,
+                child: InkWell(
+                  onTap: () {
+                    final route = ref.read(simbriefRouteProvider);
+                    if (route.isNotEmpty && route != '--') {
+                      Clipboard.setData(ClipboardData(text: route));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Route copied to clipboard!',
+                            style: GoogleFonts.plusJakartaSans(color: Colors.white),
+                          ),
+                          behavior: SnackBarBehavior.floating,
+                          backgroundColor: UiTokens.surface,
+                        ),
+                      );
+                      
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          backgroundColor: UiTokens.surface,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          title: Text(
+                            'FULL ROUTE',
+                            style: GoogleFonts.plusJakartaSans(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                          content: SingleChildScrollView(
+                            child: SelectableText(
+                              route,
+                              style: GoogleFonts.jetBrainsMono(
+                                color: UiTokens.textSecondary,
+                                fontSize: 14,
+                                height: 1.5,
+                              ),
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: Text(
+                                'CLOSE',
+                                style: GoogleFonts.plusJakartaSans(
+                                  color: UiTokens.textDim,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                  },
+                  mouseCursor: SystemMouseCursors.click,
+                  borderRadius: BorderRadius.circular(12),
+                  child: EfbGlassContainer(
+                    blur: 10,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      height: 48,
+                      width: double.infinity,
+                      alignment: Alignment.centerLeft,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.route, color: UiTokens.textDim, size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              ref.watch(simbriefRouteProvider),
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.jetBrainsMono(
+                                color: ref.watch(simbriefRouteProvider) == '--'
+                                    ? UiTokens.textDim
+                                    : UiTokens.textSecondary,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(
+                            Icons.copy_all,
+                            color: ref.watch(simbriefRouteProvider) == '--'
+                                ? UiTokens.textDim.withValues(alpha: 0.5)
+                                : UiTokens.accent,
+                            size: 16,
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -349,10 +511,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildInfoChip(String label, String value, {bool alignLeft = false, bool isNumeric = false}) {
+  Widget _buildInfoChip(String label, String value, {bool alignLeft = false, bool isNumeric = false, Color? glassColor, List<BoxShadow>? boxShadow}) {
     return EfbGlassContainer(
       blur: 10,
       borderRadius: BorderRadius.circular(12),
+      color: glassColor,
+      boxShadow: boxShadow,
       child: Container(
         height: 48,
         width: double.infinity,
@@ -363,15 +527,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           children: [
             Text(
               label,
-              style: GoogleFonts.plusJakartaSans(fontSize: 9, fontWeight: FontWeight.bold, color: UiTokens.textDim, letterSpacing: 1),
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+                color: glassColor != null ? Colors.white.withValues(alpha: 0.6) : UiTokens.textDim,
+                letterSpacing: 1,
+              ),
             ),
             const SizedBox(height: 2),
             Text(
               value,
               style: (isNumeric ? GoogleFonts.jetBrainsMono : GoogleFonts.plusJakartaSans)(
                 fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: UiTokens.textSecondary,
+                fontWeight: FontWeight.bold,
+                color: glassColor != null ? Colors.white : UiTokens.textSecondary,
               ),
             ),
           ],
@@ -384,8 +553,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final fuel = ref.watch(fuelBreakdownProvider);
     final mission = ref.watch(missionProfileProvider);
     final weights = ref.watch(weightsProvider);
-    final isOverCapacity = fuel.blockKg > ConcordeConstants.weights.fuelCapacityKg;
+    final trim = ref.watch(trimTankFuelProvider);
+    final extra = ref.watch(extraFuelProvider);
+    final totalFuel = fuel.blockKg + trim + extra;
+    final isOverCapacity = totalFuel > ConcordeConstants.weights.fuelCapacityKg;
     final direction = ref.watch(flightDirectionProvider);
+
+    // Calculate dynamic flight burn rate (kg/hour) and fuel endurance
+    final double averageBurnRate = mission.totalTimeH > 0 && mission.tripKg > 0
+        ? (mission.tripKg / mission.totalTimeH)
+        : (ConcordeConstants.fuel.burnKgPerNm * ConcordeConstants.speeds.cruiseTasKt);
+
+    final double airborneFuel = math.max(0.0, totalFuel - fuel.taxiKg);
+    final double fuelEnduranceH = averageBurnRate > 0 ? (airborneFuel / averageBurnRate) : 0.0;
+    
+    final double reserveFuel = fuel.finalReserveKg + fuel.alternateKg + fuel.contingencyKg;
+    final double reserveTimeH = averageBurnRate > 0 ? (reserveFuel / averageBurnRate) : 0.0;
+    final double etePlusReservesH = mission.totalTimeH + reserveTimeH;
 
     return EfbCard(
       title: 'CRUISE & FUEL MANAGEMENT',
@@ -470,14 +654,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         Expanded(child: EfbTextField(label: 'TRIM TANK FUEL (KG)', initialValue: ref.watch(trimTankFuelProvider).round().toString(), onChanged: (v) => ref.read(trimTankFuelProvider.notifier).set(double.tryParse(v) ?? 0.0), keyboardType: TextInputType.number)),
                       ],
                     ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(child: EfbTextField(label: 'EXTRA FUEL (KG)', initialValue: ref.watch(extraFuelProvider).round().toString(), onChanged: (v) => ref.read(extraFuelProvider.notifier).set(double.tryParse(v) ?? 0.0), keyboardType: TextInputType.number)),
+                        const SizedBox(width: 16),
+                        const Spacer(),
+                      ],
+                    ),
                     const SizedBox(height: 32),
                     Row(
                       children: [
                         Expanded(child: _buildBottomStatBox('COMPUTED TOW', '${numFormat.format(weights['TOW']!.round())} kg', isLarge: true)),
                         const SizedBox(width: 12),
-                        Expanded(child: _buildBottomStatBox('FUEL ENDURANCE', _formatHoursMinutes(fuel.blockKg / 40000))),
+                        Expanded(child: _buildBottomStatBox('FUEL ENDURANCE', _formatHoursMinutes(fuelEnduranceH))),
                         const SizedBox(width: 12),
-                        Expanded(child: _buildBottomStatBox('ETE + RESERVES', _formatHoursMinutes(mission.totalTimeH + (fuel.finalReserveKg / 40000)))),
+                        Expanded(child: _buildBottomStatBox('ETE + RESERVES', _formatHoursMinutes(etePlusReservesH))),
                         const SizedBox(width: 12),
                         Expanded(child: _buildBottomStatBox('PASSENGERS', '${ref.watch(paxCountProvider)} pax', subtext: '${numFormat.format(weights['PAX']!.round())} kg @ 84 kg each')),
                       ],
@@ -503,7 +695,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         _buildDivider(),
                         _buildFuelRow('Contingency', fuel.contingencyKg),
                         _buildDivider(),
-                        _buildFuelRow('Trim Fuel', ref.watch(trimTankFuelProvider)),
+                        _buildFuelRow('Trim Fuel', trim),
+                        _buildDivider(),
+                        _buildFuelRow('Extra Fuel', extra),
                         _buildDivider(),
                         _buildFuelRow('Alt Fuel (${ref.watch(alternateDistanceProvider).round()} NM)', fuel.alternateKg),
                         _buildDivider(),
@@ -524,7 +718,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Block + Trim (0 kg)',
+                                  'Block + Trim + Extra (${numFormat.format(trim + extra)} kg)',
                                   style: GoogleFonts.plusJakartaSans(fontSize: 10, color: UiTokens.textSecondary.withValues(alpha: 0.5)),
                                 ),
                               ],
@@ -534,7 +728,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               textBaseline: TextBaseline.alphabetic,
                               children: [
                                 Text(
-                                  numFormat.format(fuel.blockKg + ref.watch(trimTankFuelProvider)),
+                                  numFormat.format(totalFuel),
                                   style: GoogleFonts.jetBrainsMono(fontSize: 28, fontWeight: FontWeight.w900, color: isOverCapacity ? UiTokens.error : UiTokens.success),
                                 ),
                                 const SizedBox(width: 4),
@@ -564,7 +758,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   fontSize: 12,
                 ),
               ),
-              if (fuel.blockKg < (mission.totalTimeH + (fuel.finalReserveKg / 40000)) * 40000)
+              if (fuelEnduranceH < etePlusReservesH)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
@@ -803,10 +997,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: EfbGlassContainer(
         blur: 15,
         borderRadius: BorderRadius.circular(16),
+        color: catColor.withValues(alpha: 0.04), // Subtle glassy category tint
+        boxShadow: [
+          BoxShadow(
+            color: catColor.withValues(alpha: 0.20), // Soft, vibrant neon glow
+            blurRadius: 20,
+            spreadRadius: 0,
+          )
+        ],
         child: Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            border: Border.all(color: catColor.withValues(alpha: 0.4), width: 1.5),
+            border: Border.all(color: catColor.withValues(alpha: 0.25), width: 1.0), // Thinner border
             borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
@@ -816,15 +1018,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Text(
-                        title,
-                        style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w900, color: UiTokens.textSecondary, letterSpacing: 2),
-                      ),
-                      const SizedBox(width: 8),
-                      Icon(showRaw ? Icons.expand_less : Icons.expand_more, size: 16, color: UiTokens.textDim),
-                    ],
+                  Text(
+                    title,
+                    style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w900, color: UiTokens.textSecondary, letterSpacing: 2),
                   ),
                   Row(
                     children: [
@@ -835,7 +1031,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       const SizedBox(width: 12),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(color: Colors.transparent, borderRadius: BorderRadius.circular(12), border: Border.all(color: catColor, width: 1.5)),
+                        decoration: BoxDecoration(
+                          color: catColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: catColor, width: 1.0),
+                        ),
                         child: Text(
                           cat,
                           style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w900, color: catColor),
@@ -846,36 +1046,68 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ],
               ),
               const SizedBox(height: 24),
-              if (showRaw && metarStr.isNotEmpty) ...[
-                Text(
-                  metarStr,
-                  style: GoogleFonts.jetBrainsMono(fontSize: 14, color: Colors.white, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 16),
-              ],
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      WindArrow(runwayHeading: rwyHeading, windDir: parsed.windDirDeg, color: UiTokens.accent, size: 72),
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.35),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                        ),
+                        child: Center(
+                          child: WindArrow(
+                            runwayHeading: rwyHeading,
+                            windDir: parsed.windDirDeg,
+                            windSpeedKt: parsed.windSpeedKt,
+                            color: UiTokens.accent,
+                            size: 40,
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       Text(
                         runway?.id ?? '--',
-                        style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white.withValues(alpha: 0.95),
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(width: 24),
+                  const SizedBox(width: 20),
                   Expanded(
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        _buildMetarChip('WIND', '${parsed.windDirDeg?.round() ?? 'VRB'}° ${parsed.windSpeedKt?.round() ?? '--'} kt'),
-                        _buildMetarChip('VIS', '${vis != null ? (vis >= 10 ? '10+' : vis.toStringAsFixed(1)) : '--'} km'),
-                        _buildMetarChip('QNH', '${qnh?.value.round() ?? '--'} ${qnh?.unit ?? ''}'),
-                        if (runway != null) _buildMetarChip('RWY ELEV', '${runway.elevationFt?.round() ?? '--'} ft'),
+                        if (metarStr.isNotEmpty) ...[
+                          Text(
+                            metarStr,
+                            style: GoogleFonts.jetBrainsMono(
+                              fontSize: 13,
+                              color: Colors.white.withValues(alpha: 0.95),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _buildMetarChip('WIND', '${parsed.windDirDeg?.round() ?? 'VRB'}° ${parsed.windSpeedKt?.round() ?? '--'} kt'),
+                            _buildMetarChip('VIS', '${vis != null ? (vis >= 10 ? '10+' : vis.toStringAsFixed(1)) : '--'} km'),
+                            _buildMetarChip('QNH', '${qnh?.value.round() ?? '--'} ${qnh?.unit ?? ''}'),
+                            if (runway != null) _buildMetarChip('RWY ELEV', '${runway.elevationFt?.round() ?? '--'} ft'),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -893,18 +1125,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       blur: 5,
       borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               label,
-              style: GoogleFonts.plusJakartaSans(fontSize: 11, color: UiTokens.textDim, fontWeight: FontWeight.bold, letterSpacing: 1),
+              style: GoogleFonts.plusJakartaSans(fontSize: 9, color: UiTokens.textDim, fontWeight: FontWeight.bold, letterSpacing: 1),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             Text(
               value,
-              style: GoogleFonts.jetBrainsMono(fontSize: 13, color: Colors.white, fontWeight: FontWeight.bold),
+              style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -913,7 +1145,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildPerfCard(WidgetRef ref, String title, double weightKg, Map<String, double> speeds, RunwayFeasibility? f) {
-    final bool isFeasible = f?.feasible ?? true;
+    final double totalFuel = ref.watch(weightsProvider)['FUEL'] ?? 0.0;
+    final bool isFuelOver = totalFuel > ConcordeConstants.weights.fuelCapacityKg;
+    final double maxWeight = title.contains('TAKEOFF')
+        ? ConcordeConstants.weights.mtowKg
+        : ConcordeConstants.weights.mlwKg;
+    final bool isWeightFeasible = weightKg <= maxWeight;
+    final bool isFeasible = (f?.feasible ?? true) && isWeightFeasible && !isFuelOver;
     final String reqRunway = f != null ? numFormat.format(f.requiredLengthMEst.round()) : '--';
     final Color tintColor = isFeasible ? UiTokens.surface : UiTokens.error;
 
@@ -999,9 +1237,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               )).toList(),
             ),
             const SizedBox(height: 20),
-            Text(
-              'Runway required: $reqRunway m',
-              style: GoogleFonts.plusJakartaSans(fontSize: 14, color: UiTokens.textSecondary),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Runway required: $reqRunway m',
+                  style: GoogleFonts.plusJakartaSans(fontSize: 14, color: UiTokens.textSecondary),
+                ),
+                if (!isWeightFeasible)
+                  Text(
+                    'EXCEEDS MAX WEIGHT (${numFormat.format(maxWeight)} kg)',
+                    style: GoogleFonts.plusJakartaSans(fontSize: 11, color: UiTokens.error, fontWeight: FontWeight.bold),
+                  )
+                else if (isFuelOver)
+                  Text(
+                    'EXCEEDS FUEL CAPACITY (${numFormat.format(ConcordeConstants.weights.fuelCapacityKg)} kg)',
+                    style: GoogleFonts.plusJakartaSans(fontSize: 11, color: UiTokens.error, fontWeight: FontWeight.bold),
+                  ),
+              ],
             ),
           ],
         ),
