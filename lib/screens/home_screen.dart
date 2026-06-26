@@ -32,6 +32,8 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool showDepRaw = false;
   bool showArrRaw = false;
+  int selectedTab = 0;
+  String selectedChecklistPhase = 'cold_dark';
 
   @override
   Widget build(BuildContext context) {
@@ -123,29 +125,53 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                   ),
                 ),
-                Scrollbar(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: SizedBox(
-                      width: MediaQuery.of(context).size.width > 1080 ? MediaQuery.of(context).size.width : 1080,
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final height = constraints.maxHeight;
+                    return Scrollbar(
                       child: SingleChildScrollView(
-                        scrollDirection: Axis.vertical,
-                        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 48),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildHeader(ref),
-                            const SizedBox(height: 48),
-                            _buildFlightPlanAndCruiseRow(ref),
-                            const SizedBox(height: 32),
-                            _buildPerformanceCalculatorSection(ref),
-                            const SizedBox(height: 64),
-                            _buildFooter(),
-                          ],
+                        scrollDirection: Axis.horizontal,
+                        child: SizedBox(
+                          width: MediaQuery.of(context).size.width > 1080 ? MediaQuery.of(context).size.width : 1080,
+                          height: height,
+                          child: selectedTab == 0
+                              ? SingleChildScrollView(
+                                  scrollDirection: Axis.vertical,
+                                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 48),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      _buildHeader(ref),
+                                      const SizedBox(height: 32),
+                                      _buildTabSelector(),
+                                      const SizedBox(height: 32),
+                                      _buildFlightPlanAndCruiseRow(ref),
+                                      const SizedBox(height: 32),
+                                      _buildPerformanceCalculatorSection(ref),
+                                      const SizedBox(height: 64),
+                                      _buildFooter(),
+                                    ],
+                                  ),
+                                )
+                              : Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 48),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      _buildHeader(ref),
+                                      const SizedBox(height: 32),
+                                      _buildTabSelector(),
+                                      const SizedBox(height: 32),
+                                      Expanded(
+                                        child: _buildChecklistsSection(ref),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                         ),
                       ),
-                    ),
-                  ),
+                    );
+                  }
                 ),
                 Positioned(
                   bottom: 16,
@@ -1280,4 +1306,366 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ],
     );
   }
+
+  Widget _buildTabSelector() {
+    return Row(
+      children: [
+        _buildTabButton(0, 'FLIGHT PLANNER', Icons.flight_takeoff),
+        const SizedBox(width: 16),
+        _buildTabButton(1, 'CHECKLISTS', Icons.playlist_add_check),
+      ],
+    );
+  }
+
+  Widget _buildTabButton(int index, String label, IconData icon) {
+    final isSelected = selectedTab == index;
+    return InkWell(
+      onTap: () => setState(() => selectedTab = index),
+      borderRadius: BorderRadius.circular(12),
+      mouseCursor: SystemMouseCursors.click,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? UiTokens.accent.withValues(alpha: 0.15) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? UiTokens.accent : Colors.white.withValues(alpha: 0.05),
+            width: 1.5,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: UiTokens.accent.withValues(alpha: 0.25),
+                    blurRadius: 12,
+                    spreadRadius: -2,
+                  )
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: isSelected ? Colors.white : UiTokens.textDim, size: 18),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: isSelected ? Colors.white : UiTokens.textDim,
+                letterSpacing: 1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChecklistsSection(WidgetRef ref) {
+    final checklistState = ref.watch(checklistProvider);
+    final notifier = ref.read(checklistProvider.notifier);
+
+    final phases = [
+      {'id': 'cold_dark', 'name': 'Cold & Dark Setup'},
+      {'id': 'before_start', 'name': 'Before Start & Engine Start'},
+      {'id': 'before_takeoff', 'name': 'Before Takeoff & Taxi'},
+      {'id': 'after_takeoff', 'name': 'After Takeoff'},
+      {'id': 'cruise_accel', 'name': 'Cruise & Supersonic Accel'},
+      {'id': 'descent', 'name': 'Deceleration & Descent'},
+    ];
+
+    final Map<String, List<ChecklistItem>> checklistData = {
+      'cold_dark': [
+        ChecklistItem(id: 'cd_bat', item: 'Battery Switch', status: 'SPLIT A & B'),
+        ChecklistItem(id: 'cd_gnd_pwr', item: 'Ground Power', status: 'ON', note: 'Ground power is highly important for system alignment!'),
+        ChecklistItem(id: 'cd_crossfeed', item: 'Fuel Cross Feed Valves', status: 'ON (ALL 4 ENGINES)'),
+        ChecklistItem(id: 'cd_bleed', item: 'Engine Bleed Valves', status: 'AUTO'),
+        ChecklistItem(id: 'cd_heater', item: 'Engine Heater', status: 'AUTO'),
+        ChecklistItem(id: 'cd_visor', item: 'Nose Visor', status: 'DOWN'),
+        ChecklistItem(id: 'cd_lights', item: 'Lights & Seatbelts', status: 'ON'),
+        ChecklistItem(id: 'cd_antistall', item: 'Anti-Stall Switches', status: 'ON'),
+        ChecklistItem(id: 'cd_trim', item: 'Pitch Trim', status: 'CENTER (0.0)', note: 'Normalizes pitch response'),
+        ChecklistItem(id: 'cd_fmc', item: 'FMC / Route', status: 'SET DEP/ARR, FLIGHT NO, CRUISE FL, SPEED to 250, & INITIAL ALT', note: 'Refer to manual or import via SimBrief'),
+        ChecklistItem(id: 'cd_pos_init', item: 'FMC POS Init', status: 'Main Menu ➔ Set POS'),
+        ChecklistItem(id: 'cd_v_speeds', item: 'FMC V-Speeds', status: 'Perf Page ➔ Set V-Speeds'),
+      ],
+      'before_start': [
+        ChecklistItem(id: 'bs_beacon', item: 'Beacon Lights', status: 'ON'),
+        ChecklistItem(id: 'bs_pumps', item: 'Fuel Pumps', status: 'ON'),
+        ChecklistItem(id: 'bs_eng_start', item: 'Engine Start Selectors', status: 'START', note: 'Standard Concorde Sequence: 3, 4, 2, 1 or 3, 2, 1, 4'),
+        ChecklistItem(id: 'bs_throttle', item: 'Throttle Levers', status: 'IDLE'),
+        ChecklistItem(id: 'bs_csd_on', item: 'CSD Generators 1-4', status: 'ON', note: 'Engage once engines are stabilized'),
+        ChecklistItem(id: 'bs_gnd_pwr_off', item: 'Ground Power', status: 'OFF / DISCONNECT'),
+      ],
+      'before_takeoff': [
+        ChecklistItem(id: 'bt_controls', item: 'Flight Controls', status: 'CHECKED'),
+        ChecklistItem(id: 'bt_visor', item: 'Nose Visor', status: '5° (TAXI/TAKEOFF)'),
+        ChecklistItem(id: 'bt_reheat', item: 'Reheat Selectors', status: 'ARMED'),
+        ChecklistItem(id: 'bt_lights', item: 'Landing Lights', status: 'AS REQUIRED'),
+        ChecklistItem(id: 'bt_speed_arm', item: 'Speed Arming', status: 'Select IAS ACQ Button'),
+        ChecklistItem(id: 'bt_ap_at_off', item: 'Autopilot / Autothrottle', status: 'DISENGAGED'),
+      ],
+      'after_takeoff': [
+        ChecklistItem(id: 'at_gear', item: 'Landing Gear', status: 'UP'),
+        ChecklistItem(id: 'at_autothrottle', item: 'Autothrottle', status: 'ON'),
+        ChecklistItem(id: 'at_reheat_off', item: 'Reheats (Afterburners)', status: 'OFF'),
+        ChecklistItem(id: 'at_visor', item: 'Nose Visor', status: 'UP'),
+      ],
+      'cruise_accel': [
+        ChecklistItem(id: 'ca_reheat', item: 'Reheats (Afterburners)', status: 'ENGAGE (1 & 4, then 2 & 3)', note: 'Cap at 25 min'),
+        ChecklistItem(id: 'ca_cg', item: 'Fuel Transfer (CG Management)', status: 'PUMP AFT (Tanks 9 & 11)', note: 'Target 59% MAC at Mach 2.0'),
+        ChecklistItem(id: 'ca_ap', item: 'Autopilot / Max Climb', status: 'ENGAGED'),
+      ],
+      'descent': [
+        ChecklistItem(id: 'de_reheat', item: 'Reheats', status: 'OFF'),
+        ChecklistItem(id: 'de_throttle', item: 'Throttles', status: 'IDLE / RETRACT'),
+        ChecklistItem(id: 'de_cg', item: 'Fuel Transfer (CG Management)', status: 'PUMP FORWARD', note: 'Target 53% MAC before landfall'),
+        ChecklistItem(id: 'de_visor', item: 'Nose Visor', status: 'DOWN (17.5°)'),
+        ChecklistItem(id: 'de_brakes', item: 'Autobrakes', status: 'ARMED'),
+      ],
+    };
+
+    final currentItems = checklistData[selectedChecklistPhase] ?? [];
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Left Navigation Panel
+        Expanded(
+          flex: 3,
+          child: EfbGlassContainer(
+            blur: 20,
+            borderRadius: BorderRadius.circular(16),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: phases.map((phase) {
+                  final isSelected = selectedChecklistPhase == phase['id'];
+                  final phaseItems = checklistData[phase['id']] ?? [];
+                  final checkedCount = phaseItems.where((item) => checklistState[item.id] ?? false).length;
+                  final totalCount = phaseItems.length;
+                  final isCompleted = checkedCount == totalCount && totalCount > 0;
+
+                  return InkWell(
+                    onTap: () => setState(() => selectedChecklistPhase = phase['id']!),
+                    borderRadius: BorderRadius.circular(12),
+                    mouseCursor: SystemMouseCursors.click,
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: isSelected ? UiTokens.accent.withValues(alpha: 0.15) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected ? UiTokens.accent : Colors.transparent,
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              phase['name']!,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                color: isSelected ? Colors.white : UiTokens.textSecondary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isCompleted
+                                  ? UiTokens.success.withValues(alpha: 0.15)
+                                  : Colors.white.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isCompleted ? UiTokens.success : Colors.white.withValues(alpha: 0.05),
+                              ),
+                            ),
+                            child: Text(
+                              '$checkedCount/$totalCount',
+                              style: GoogleFonts.jetBrainsMono(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: isCompleted ? UiTokens.success : UiTokens.textDim,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 32),
+        // Right Checklist Panel
+        Expanded(
+          flex: 7,
+          child: EfbGlassContainer(
+            blur: 20,
+            borderRadius: BorderRadius.circular(20),
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        phases.firstWhere((p) => p['id'] == selectedChecklistPhase)['name']!.toUpperCase(),
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () {
+                          final ids = currentItems.map((item) => item.id).toList();
+                          notifier.resetPhase(ids);
+                        },
+                        icon: const Icon(Icons.refresh, size: 16, color: UiTokens.error),
+                        label: Text(
+                          'RESET PHASE',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: UiTokens.error,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  const Divider(color: Colors.white10),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: currentItems.length,
+                      itemBuilder: (context, index) {
+                        final item = currentItems[index];
+                        final isChecked = checklistState[item.id] ?? false;
+
+                        return InkWell(
+                          onTap: () => notifier.toggle(item.id),
+                          borderRadius: BorderRadius.circular(12),
+                          mouseCursor: SystemMouseCursors.click,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                            margin: const EdgeInsets.symmetric(vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isChecked ? Colors.white.withValues(alpha: 0.02) : Colors.transparent,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Transform.scale(
+                                    scale: 0.9,
+                                    child: Checkbox(
+                                      value: isChecked,
+                                      onChanged: (_) => notifier.toggle(item.id),
+                                      activeColor: UiTokens.accent,
+                                      checkColor: Colors.white,
+                                      side: BorderSide(
+                                        color: Colors.white.withValues(alpha: 0.3),
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                                        textBaseline: TextBaseline.alphabetic,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              item.item,
+                                              style: GoogleFonts.plusJakartaSans(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                                color: isChecked ? UiTokens.textDim : Colors.white,
+                                                decoration: isChecked ? TextDecoration.lineThrough : TextDecoration.none,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 16),
+                                          Text(
+                                            item.status,
+                                            style: GoogleFonts.jetBrainsMono(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
+                                              color: isChecked ? UiTokens.textDim : UiTokens.accent,
+                                              decoration: isChecked ? TextDecoration.lineThrough : TextDecoration.none,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      if (item.note != null) ...[
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          item.note!,
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w500,
+                                            color: isChecked ? UiTokens.textDim.withValues(alpha: 0.5) : UiTokens.textDim,
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class ChecklistItem {
+  final String id;
+  final String item;
+  final String status;
+  final String? note;
+
+  const ChecklistItem({
+    required this.id,
+    required this.item,
+    required this.status,
+    this.note,
+  });
 }
