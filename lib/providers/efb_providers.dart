@@ -294,3 +294,24 @@ final landingFeasibilityProvider = Provider<RunwayFeasibility?>((ref) {
   
   return ConcordeLogic.landingFeasibleM(runway.lengthM, weights['LW']!);
 });
+
+class ChecklistNotifier extends Notifier<Map<String, bool>> {
+  @override
+  Map<String, bool> build() => {};
+
+  void toggle(String itemId) {
+    state = {
+      ...state,
+      itemId: !(state[itemId] ?? false),
+    };
+  }
+
+  void resetPhase(List<String> itemIds) {
+    final newState = Map<String, bool>.from(state);
+    for (final id in itemIds) {
+      newState[id] = false;
+    }
+    state = newState;
+  }
+}
+final checklistProvider = NotifierProvider<ChecklistNotifier, Map<String, bool>>(ChecklistNotifier.new);
