@@ -1,6 +1,6 @@
 [Setup]
 AppName=Concorde EFB
-AppVersion=3.1.10
+AppVersion=3.1.20
 DefaultDirName={autopf}\Concorde EFB
 DefaultGroupName=Concorde EFB
 UninstallDisplayIcon={app}\concorde_efb.exe

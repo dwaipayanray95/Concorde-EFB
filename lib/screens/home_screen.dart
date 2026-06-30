@@ -1298,9 +1298,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w900, color: UiTokens.textSecondary, letterSpacing: 2),
+                  Row(
+                    children: [
+                      Text(
+                        title,
+                        style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w900, color: UiTokens.textSecondary, letterSpacing: 2),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.refresh, size: 16, color: UiTokens.textSecondary),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: () {
+                          if (title.contains('DEP')) {
+                            ref.invalidate(departureMetarFutureProvider);
+                          } else {
+                            ref.invalidate(arrivalMetarFutureProvider);
+                          }
+                        },
+                      ),
+                    ],
                   ),
                   Row(
                     children: [
