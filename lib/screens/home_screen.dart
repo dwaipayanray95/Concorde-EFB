@@ -1190,7 +1190,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                 ),
               ],
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Text(
+                  'Takeoff Reheat (Afterburners):',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: Colors.white70,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Switch(
+                  value: ref.watch(useReheatTakeoffProvider),
+                  onChanged: (val) => ref.read(useReheatTakeoffProvider.notifier).set(val),
+                  activeThumbColor: UiTokens.accent,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(child: _buildPerfCard(ref, 'TAKEOFF PERFORMANCE', ref.watch(weightsProvider)['TOW']!, ref.watch(takeoffSpeedsProvider), ref.watch(takeoffFeasibilityProvider))),
