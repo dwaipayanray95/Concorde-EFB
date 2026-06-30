@@ -651,10 +651,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Direction (auto): ${direction == "E" ? "Eastbound" : direction == "W" ? "Westbound" : "unknown"}. Above FL410 we snap to Non-RVSM levels.',
+                                'Direction (auto): ${direction == "E" ? "Eastbound" : direction == "W" ? "Westbound" : "unknown"}. snap to Non-RVSM.',
                                 style: GoogleFonts.plusJakartaSans(color: UiTokens.textDim, fontSize: 10),
                               ),
                             ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: EfbTextField(
+                            label: 'ALTERNATE ICAO (ALT)',
+                            initialValue: ref.watch(alternateIcaoProvider),
+                            onChanged: (v) => ref.read(alternateIcaoProvider.notifier).set(v),
+                            textCapitalization: TextCapitalization.characters,
                           ),
                         ),
                       ],

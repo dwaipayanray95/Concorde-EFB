@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/airport_database_service.dart';
 import '../core/concorde_logic.dart';
 import '../models/concorde_models.dart';
@@ -43,9 +44,27 @@ final plannedDistanceProvider = NotifierProvider<PlannedDistanceNotifier, double
 
 // --- SimBrief State ---
 class SimbriefUserNotifier extends Notifier<String> {
+  SharedPreferences? _prefs;
+
   @override
-  String build() => '';
-  void set(String val) => state = val;
+  String build() {
+    _loadPrefs();
+    return '';
+  }
+
+  void _loadPrefs() async {
+    _prefs = await SharedPreferences.getInstance();
+    final saved = _prefs?.getString('simbrief_username');
+    if (saved != null && saved.isNotEmpty) {
+      state = saved;
+    }
+  }
+
+  void set(String val) async {
+    state = val;
+    _prefs ??= await SharedPreferences.getInstance();
+    await _prefs?.setString('simbrief_username', val);
+  }
 }
 final simbriefUserProvider = NotifierProvider<SimbriefUserNotifier, String>(SimbriefUserNotifier.new);
 
