@@ -95,13 +95,13 @@ jobs:
       - name: Build Windows Release
         run: flutter build windows --release
 
-      - name: Archive Windows Release Files
-        shell: pwsh
+      - name: Compile Windows Installer (Inno Setup)
         run: |
-          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath build\windows\x64\runner\Release\Concorde-EFB-Windows.zip
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" inno_setup.iss
+        shell: powershell
 
-      - name: Upload Windows Artifact
+      - name: Upload Windows Installer Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Concorde-EFB-Windows-ZIP
-          path: build/windows/x64/runner/Release/Concorde-EFB-Windows.zip
+          name: Concorde-EFB-Windows-Installer
+          path: build/windows/Concorde-EFB-Installer.exe
