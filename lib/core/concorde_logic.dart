@@ -300,18 +300,33 @@ class ConcordeLogic {
     };
   }
 
-  static RunwayFeasibility takeoffFeasibleM(double runwayLengthM, double takeoffWeightKg, {RunwayEnvironmentInputs? env}) {
+  static RunwayFeasibility takeoffFeasibleM(
+    double runwayLengthM, 
+    double takeoffWeightKg, {
+    RunwayEnvironmentInputs? env,
+    bool useReheat = true,
+  }) {
     final mtow = ConcordeConstants.weights.mtowKg;
     final baseReq = ConcordeConstants.runway.minTakeoffMAtMtow.toDouble();
     final ratio = (takeoffWeightKg / mtow).clamp(0.5, 1.2);
-    final baseRequired = baseReq * ratio;
+    
+    // Scale required distance based on reheat availability. 
+    // Without reheat, required distance increases by ~35%.
+    final reheatFactor = useReheat ? 1.0 : 1.35;
+    
+    final baseRequired = baseReq * ratio * reheatFactor;
     final correction = runwayLengthCorrectionFactor("takeoff", env);
     final required = baseRequired * (correction["factor"] as double);
+    
+    // If reheat is off and weight is too high (above 155,000 kg),
+    // Concorde cannot climb out safely without afterburners, making it unfeasible.
+    final feasible = (runwayLengthM >= required) && (useReheat || takeoffWeightKg < 155000);
+    
     return RunwayFeasibility(
       baseRequiredLengthMEst: baseRequired,
       requiredLengthMEst: required,
       runwayLengthM: runwayLengthM,
-      feasible: runwayLengthM >= required,
+      feasible: feasible,
       correctionFactor: correction["factor"] as double,
       correctionBreakdownPct: Map<String, double>.from(correction["breakdownPct"]),
       correctionInputs: Map<String, dynamic>.from(correction["inputs"]),

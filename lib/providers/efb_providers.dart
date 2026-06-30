@@ -298,12 +298,24 @@ final landingSpeedsProvider = Provider<Map<String, double>>((ref) {
   return ConcordeLogic.computeLandingSpeeds(weights['LW']!);
 });
 
+class UseReheatTakeoffNotifier extends Notifier<bool> {
+  @override
+  bool build() => true;
+  void set(bool val) => state = val;
+}
+final useReheatTakeoffProvider = NotifierProvider<UseReheatTakeoffNotifier, bool>(UseReheatTakeoffNotifier.new);
+
 final takeoffFeasibilityProvider = Provider<RunwayFeasibility?>((ref) {
   final runway = ref.watch(departureRunwayProvider);
   final weights = ref.watch(weightsProvider);
+  final useReheat = ref.watch(useReheatTakeoffProvider);
   if (runway == null) return null;
   
-  return ConcordeLogic.takeoffFeasibleM(runway.lengthM, weights['TOW']!);
+  return ConcordeLogic.takeoffFeasibleM(
+    runway.lengthM, 
+    weights['TOW']!, 
+    useReheat: useReheat,
+  );
 });
 
 final landingFeasibilityProvider = Provider<RunwayFeasibility?>((ref) {
