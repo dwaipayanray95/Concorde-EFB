@@ -50,7 +50,15 @@ class _EfbTextFieldState extends State<EfbTextField> {
         }
       }
       
+      final selection = _controller.selection;
       _controller.text = widget.initialValue;
+      try {
+        _controller.selection = selection;
+      } catch (_) {
+        _controller.selection = TextSelection.fromPosition(
+          TextPosition(offset: _controller.text.length),
+        );
+      }
     }
   }
 
