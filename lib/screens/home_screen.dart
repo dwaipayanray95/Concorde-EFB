@@ -1,10 +1,16 @@
 import 'dart:math' as math;
 import 'dart:ui';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
+import 'package:window_manager/window_manager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/efb_providers.dart';
 import '../providers/badge_provider.dart';
 import '../widgets/efb_card.dart';
@@ -30,11 +36,143 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
   bool showDepRaw = false;
   bool showArrRaw = false;
   int selectedTab = 0;
   String selectedChecklistPhase = 'cold_dark';
+
+  String? _latestVersion;
+  bool _hasUpdate = false;
+
+  @override
+  void initState() {
+    super.initState();
+    windowManager.addListener(this);
+    _checkForUpdates();
+  }
+
+  @override
+  void dispose() {
+    windowManager.removeListener(this);
+    super.dispose();
+  }
+
+  void _checkForUpdates() async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://api.github.com/repos/dwaipayanray95/Concorde-EFB/releases/latest'),
+        headers: {'Accept': 'application/vnd.github.v3+json'},
+      ).timeout(const Duration(seconds: 5));
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final tagName = data['tag_name'] as String?;
+        if (tagName != null) {
+          final remoteVersion = tagName.replaceAll(RegExp(r'^[vV]'), '');
+          if (remoteVersion != AppVersion.full) {
+            setState(() {
+              _latestVersion = remoteVersion;
+              _hasUpdate = true;
+            });
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  @override
+  void onWindowClose() async {
+    final isDesktop = !kIsWeb && (
+      defaultTargetPlatform == TargetPlatform.windows ||
+      defaultTargetPlatform == TargetPlatform.macOS ||
+      defaultTargetPlatform == TargetPlatform.linux
+    );
+
+    if (!isDesktop) {
+      Navigator.of(context).pop();
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final isFirstLaunch = prefs.getBool('is_first_launch') ?? true;
+    final hasRatedPrompted = prefs.getBool('has_rated_prompted') ?? false;
+
+    if (isFirstLaunch && !hasRatedPrompted) {
+      await prefs.setBool('has_rated_prompted', true);
+      await prefs.setBool('is_first_launch', false);
+
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            backgroundColor: const Color(0xFF0F172A),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(color: Colors.white.withValues(alpha: 0.1), width: 1.5),
+            ),
+            title: Text(
+              'RATE CONCORDE EFB',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: 16,
+                letterSpacing: 1.5,
+              ),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'We hope you enjoyed using the EFB! Would you like to leave a 5-star rating on flightsim.to before you go?',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.plusJakartaSans(
+                    color: UiTokens.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () async {
+                  Navigator.of(context).pop();
+                  await windowManager.destroy();
+                },
+                child: Text(
+                  'NO THANKS',
+                  style: GoogleFonts.plusJakartaSans(color: UiTokens.textDim),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final url = Uri.parse('https://flightsim.to/addon/101890/concorde-efb');
+                  try {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  } catch (_) {}
+                  if (context.mounted) Navigator.of(context).pop();
+                  await windowManager.destroy();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: UiTokens.accent,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: Text(
+                  'RATE 5 STARS',
+                  style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+    } else {
+      await prefs.setBool('is_first_launch', false);
+      await windowManager.destroy();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -207,42 +345,112 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildHeader(WidgetRef ref) {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [BoxShadow(color: UiTokens.accent.withValues(alpha: 0.2), blurRadius: 20, spreadRadius: -5)],
+        if (_hasUpdate && _latestVersion != null) ...[
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 24),
+            decoration: BoxDecoration(
+              color: UiTokens.accent.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: UiTokens.accent.withValues(alpha: 0.4), width: 1.5),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, color: UiTokens.accent, size: 24),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'A NEW UPDATE IS AVAILABLE',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 12,
+                          color: UiTokens.accent,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Version v$_latestVersion is now ready. Download it from flightsim.to to get the latest features.',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 24),
+                ElevatedButton(
+                  onPressed: () async {
+                    final url = Uri.parse('https://flightsim.to/addon/101890/concorde-efb');
+                    try {
+                      await launchUrl(url, mode: LaunchMode.externalApplication);
+                    } catch (_) {}
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: UiTokens.accent,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: Text(
+                    'DOWNLOAD NOW',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                      color: Colors.white,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Image.asset('assets/app-icon.png', width: 64, height: 64, errorBuilder: (context, error, stackTrace) => const Icon(Icons.airplanemode_active, color: UiTokens.accent, size: 64)),
-          ),
-        ),
-        const SizedBox(width: 24),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Concorde EFB',
-                style: GoogleFonts.plusJakartaSans(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white),
+        ],
+        Row(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [BoxShadow(color: UiTokens.accent.withValues(alpha: 0.2), blurRadius: 20, spreadRadius: -5)],
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Flight planning & performance for MSFS.',
-                style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w500, color: UiTokens.textSecondary),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.asset('assets/app-icon.png', width: 64, height: 64, errorBuilder: (context, error, stackTrace) => const Icon(Icons.airplanemode_active, color: UiTokens.accent, size: 64)),
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 24),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Concorde EFB',
+                    style: GoogleFonts.plusJakartaSans(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Flight planning & performance for MSFS.',
+                    style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w500, color: UiTokens.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            _buildHeaderStat('NAV DB', 'Loaded', valueColor: UiTokens.success),
+            const SizedBox(width: 32),
+            _buildHeaderStat('TAS', '1164 kt'),
+            const SizedBox(width: 32),
+            _buildHeaderStat('MTOW', '${numFormat.format(ConcordeConstants.weights.mtowKg)} kg'),
+            const SizedBox(width: 32),
+            _buildHeaderStat('MLW', '${numFormat.format(ConcordeConstants.weights.mlwKg)} kg'),
+          ],
         ),
-        _buildHeaderStat('NAV DB', 'Loaded', valueColor: UiTokens.success),
-        const SizedBox(width: 32),
-        _buildHeaderStat('TAS', '1164 kt'),
-        const SizedBox(width: 32),
-        _buildHeaderStat('MTOW', '${numFormat.format(ConcordeConstants.weights.mtowKg)} kg'),
-        const SizedBox(width: 32),
-        _buildHeaderStat('MLW', '${numFormat.format(ConcordeConstants.weights.mlwKg)} kg'),
       ],
     );
   }
