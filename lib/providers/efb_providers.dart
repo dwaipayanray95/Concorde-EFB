@@ -1,7 +1,9 @@
+import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/airport_database_service.dart';
 import '../core/concorde_logic.dart';
+import '../core/metar_parser.dart' as mp;
 import '../models/concorde_models.dart';
 import '../models/airport.dart';
 import '../core/concorde_constants.dart';
@@ -311,9 +313,42 @@ final takeoffFeasibilityProvider = Provider<RunwayFeasibility?>((ref) {
   final useReheat = ref.watch(useReheatTakeoffProvider);
   if (runway == null) return null;
   
+  final metarAsync = ref.watch(departureMetarFutureProvider);
+  final metar = metarAsync.value ?? '';
+  
+  final tempC = mp.MetarParser.parseTempC(metar);
+  final parsedQnh = mp.MetarParser.parseQnh(metar);
+  final parsedWind = mp.MetarParser.parseWind(metar);
+  
+  double headwind = 0.0;
+  if (runway.heading != null) {
+    final windDirection = parsedWind.windDirDeg;
+    final windSpeed = parsedWind.windSpeedKt;
+    if (windDirection != null && windSpeed != null) {
+      final angleRad = (windDirection - runway.heading!) * math.pi / 180.0;
+      headwind = windSpeed * math.cos(angleRad);
+    }
+  }
+  
+  MetarQnh? qnhInput;
+  if (parsedQnh != null) {
+    qnhInput = MetarQnh(
+      unit: parsedQnh.unit,
+      value: parsedQnh.value,
+    );
+  }
+  
+  final env = RunwayEnvironmentInputs(
+    runwayElevFt: runway.elevationFt?.toDouble(),
+    qnh: qnhInput,
+    oatC: tempC,
+    headwindKt: headwind,
+  );
+  
   return ConcordeLogic.takeoffFeasibleM(
     runway.lengthM, 
     weights['TOW']!, 
+    env: env,
     useReheat: useReheat,
   );
 });
@@ -323,7 +358,43 @@ final landingFeasibilityProvider = Provider<RunwayFeasibility?>((ref) {
   final weights = ref.watch(weightsProvider);
   if (runway == null) return null;
   
-  return ConcordeLogic.landingFeasibleM(runway.lengthM, weights['LW']!);
+  final metarAsync = ref.watch(arrivalMetarFutureProvider);
+  final metar = metarAsync.value ?? '';
+  
+  final tempC = mp.MetarParser.parseTempC(metar);
+  final parsedQnh = mp.MetarParser.parseQnh(metar);
+  final parsedWind = mp.MetarParser.parseWind(metar);
+  
+  double headwind = 0.0;
+  if (runway.heading != null) {
+    final windDirection = parsedWind.windDirDeg;
+    final windSpeed = parsedWind.windSpeedKt;
+    if (windDirection != null && windSpeed != null) {
+      final angleRad = (windDirection - runway.heading!) * math.pi / 180.0;
+      headwind = windSpeed * math.cos(angleRad);
+    }
+  }
+  
+  MetarQnh? qnhInput;
+  if (parsedQnh != null) {
+    qnhInput = MetarQnh(
+      unit: parsedQnh.unit,
+      value: parsedQnh.value,
+    );
+  }
+  
+  final env = RunwayEnvironmentInputs(
+    runwayElevFt: runway.elevationFt?.toDouble(),
+    qnh: qnhInput,
+    oatC: tempC,
+    headwindKt: headwind,
+  );
+  
+  return ConcordeLogic.landingFeasibleM(
+    runway.lengthM, 
+    weights['LW']!, 
+    env: env,
+  );
 });
 
 class ChecklistNotifier extends Notifier<Map<String, bool>> {
