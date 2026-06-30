@@ -1366,6 +1366,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildChecklistsSection(WidgetRef ref) {
     final checklistState = ref.watch(checklistProvider);
     final notifier = ref.read(checklistProvider.notifier);
+    final landingSpeeds = ref.watch(landingSpeedsProvider);
+    final takeoffSpeeds = ref.watch(takeoffSpeedsProvider);
+    final simbriefLoaded = ref.watch(simbriefLoadedProvider);
+    final vappSpeed = landingSpeeds['VAPP'];
+    final vappStr = (simbriefLoaded && vappSpeed != null) ? '${vappSpeed.round()} KT' : 'VAPP';
+    final v1 = takeoffSpeeds['V1'];
+    final vr = takeoffSpeeds['VR'];
+    final v2 = takeoffSpeeds['V2'];
+    final vSpeedsStr = (simbriefLoaded && v1 != null && vr != null && v2 != null)
+        ? 'V1:${v1.round()} VR:${vr.round()} V2:${v2.round()}'
+        : 'V-Speeds';
 
     final phases = [
       {'id': 'cold_dark', 'name': 'Cold & Dark Setup'},
@@ -1374,6 +1385,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       {'id': 'after_takeoff', 'name': 'After Takeoff'},
       {'id': 'cruise_accel', 'name': 'Cruise & Supersonic Accel'},
       {'id': 'descent', 'name': 'Deceleration & Descent'},
+      {'id': 'approach', 'name': 'Approach'},
     ];
 
     final Map<String, List<ChecklistItem>> checklistData = {
@@ -1389,7 +1401,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ChecklistItem(id: 'cd_trim', item: 'Pitch Trim', status: 'CENTER (0.0)', note: 'Normalizes pitch response'),
         ChecklistItem(id: 'cd_fmc', item: 'FMC / Route', status: 'SET DEP/ARR, FLIGHT NO, CRUISE FL, SPEED to 250, & INITIAL ALT', note: 'Refer to manual or import via SimBrief'),
         ChecklistItem(id: 'cd_pos_init', item: 'FMC POS Init', status: 'Main Menu ➔ Set POS'),
-        ChecklistItem(id: 'cd_v_speeds', item: 'FMC V-Speeds', status: 'Perf Page ➔ Set V-Speeds'),
+        ChecklistItem(id: 'cd_v_speeds', item: 'FMC V-Speeds', status: 'Perf Page ➔ SET $vSpeedsStr'),
       ],
       'before_start': [
         ChecklistItem(id: 'bs_beacon', item: 'Beacon Lights', status: 'ON'),
@@ -1420,10 +1432,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ],
       'descent': [
         ChecklistItem(id: 'de_reheat', item: 'Reheats', status: 'OFF'),
-        ChecklistItem(id: 'de_throttle', item: 'Throttles', status: 'IDLE / RETRACT'),
+        ChecklistItem(id: 'de_throttle', item: 'Throttles', status: 'SET SPEED & SELECT IAS ACQ (or IDLE / RETRACT)'),
         ChecklistItem(id: 'de_cg', item: 'Fuel Transfer (CG Management)', status: 'PUMP FORWARD', note: 'Target 53% MAC before landfall'),
-        ChecklistItem(id: 'de_visor', item: 'Nose Visor', status: 'DOWN (17.5°)'),
-        ChecklistItem(id: 'de_brakes', item: 'Autobrakes', status: 'ARMED'),
+      ],
+      'approach': [
+        ChecklistItem(id: 'ap_speed', item: 'Approach Speed', status: 'SET $vappStr'),
+        ChecklistItem(id: 'ap_visor', item: 'Nose Visor', status: 'DOWN (17.5°)', note: 'Move to 5° or 17.5° depending on speed/glideslope'),
+        ChecklistItem(id: 'ap_gear', item: 'Landing Gear', status: 'DOWN', note: 'Extend below 270 KIAS'),
       ],
     };
 
