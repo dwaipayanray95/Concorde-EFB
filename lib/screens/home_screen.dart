@@ -12,6 +12,7 @@ import '../widgets/efb_text_field.dart';
 import '../widgets/efb_launches_badge.dart';
 import '../widgets/wind_arrow.dart';
 import '../widgets/efb_glass_container.dart';
+import '../widgets/efb_ad_banner.dart';
 import '../core/ui_tokens.dart';
 import '../core/concorde_constants.dart';
 import '../core/metar_parser.dart';
@@ -1312,6 +1313,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           'Speeds scale with √(weight/reference) and are indicative IAS; verify against the DC Designs manual & in-sim.',
           style: GoogleFonts.plusJakartaSans(color: UiTokens.textDim, fontSize: 12),
         ),
+        const EfbAdBanner(),
       ],
     );
   }
