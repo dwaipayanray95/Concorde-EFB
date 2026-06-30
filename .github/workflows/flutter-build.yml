@@ -1,0 +1,107 @@
+name: Manual Flutter Build
+
+on:
+  workflow_dispatch: # Allows triggering the build manually from the Actions tab on GitHub
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Get Dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Concorde-EFB-Android-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+  build-macos:
+    name: Build macOS DMG
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Get Dependencies
+        run: flutter pub get
+
+      - name: Build macOS App
+        run: flutter build macos --release
+
+      - name: Package DMG
+        run: |
+          cd build/macos/Build/Products/Release
+          # Install create-dmg utility if not present (usually pre-installed, but brew makes sure)
+          if ! command -v create-dmg &> /dev/null; then
+            brew install create-dmg
+          fi
+          create-dmg \
+            --volname "Concorde EFB" \
+            --window-size 500 300 \
+            --icon-size 100 \
+            --icon "concorde_efb.app" 250 150 \
+            --hide-extension "concorde_efb.app" \
+            "Concorde-EFB-macOS.dmg" \
+            "concorde_efb.app"
+
+      - name: Upload DMG Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Concorde-EFB-macOS-DMG
+          path: build/macos/Build/Products/Release/Concorde-EFB-macOS.dmg
+
+  build-windows:
+    name: Build Windows EXE Bundle
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Get Dependencies
+        run: flutter pub get
+
+      - name: Build Windows Release
+        run: flutter build windows --release
+
+      - name: Archive Windows Release Files
+        shell: pwsh
+        run: |
+          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath build\windows\x64\runner\Release\Concorde-EFB-Windows.zip
+
+      - name: Upload Windows Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Concorde-EFB-Windows-ZIP
+          path: build/windows/x64/runner/Release/Concorde-EFB-Windows.zip
