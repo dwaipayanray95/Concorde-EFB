@@ -58,6 +58,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
     super.dispose();
   }
 
+  bool _isNewerVersion(String remote, String local) {
+    try {
+      final remoteParts = remote.split('.').map(int.parse).toList();
+      final localParts = local.split('.').map(int.parse).toList();
+      
+      final maxLength = math.max(remoteParts.length, localParts.length);
+      for (int i = 0; i < maxLength; i++) {
+        final remoteVal = i < remoteParts.length ? remoteParts[i] : 0;
+        final localVal = i < localParts.length ? localParts[i] : 0;
+        
+        if (remoteVal > localVal) return true;
+        if (remoteVal < localVal) return false;
+      }
+    } catch (_) {}
+    return false;
+  }
+
   void _checkForUpdates() async {
     try {
       final response = await http.get(
@@ -70,7 +87,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
         final tagName = data['tag_name'] as String?;
         if (tagName != null) {
           final remoteVersion = tagName.replaceAll(RegExp(r'^[vV]'), '');
-          if (remoteVersion != AppVersion.full) {
+          if (_isNewerVersion(remoteVersion, AppVersion.full)) {
             setState(() {
               _latestVersion = remoteVersion;
               _hasUpdate = true;
@@ -150,7 +167,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                 onPressed: () async {
                   final url = Uri.parse('https://flightsim.to/addon/101890/concorde-efb');
                   try {
-                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                    await launchUrl(url);
                   } catch (_) {}
                   if (context.mounted) Navigator.of(context).pop();
                   await windowManager.destroy();
@@ -391,7 +408,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                   onPressed: () async {
                     final url = Uri.parse('https://flightsim.to/addon/101890/concorde-efb');
                     try {
-                      await launchUrl(url, mode: LaunchMode.externalApplication);
+                      await launchUrl(url);
                     } catch (_) {}
                   },
                   style: ElevatedButton.styleFrom(
