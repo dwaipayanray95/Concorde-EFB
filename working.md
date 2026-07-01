@@ -18,8 +18,10 @@ The project is a **Flutter-based rewrite/migration** of the Concorde Electronic 
 * Resolved upstream dependencies (`fl_chart` / packaging configurations).
 * Fixed warning issues in [lib/providers/efb_providers.dart](file:///E:/VSCODE/Concorde-EFB/lib/providers/efb_providers.dart) related to redundant null checks on non-nullable `runway.heading`.
 * Reduced the hover border opacity and glow shadow spread/blur in [lib/widgets/efb_glass_container.dart](file:///E:/VSCODE/Concorde-EFB/lib/widgets/efb_glass_container.dart) to make hover highlight on cards subtle.
-* Confirmed that `flutter analyze` runs with **No issues found!**
 * Fixed a large commit push failure by resetting the local commit, adding `node_modules/` and `src-tauri/target/` build files to [.gitignore](file:///E:/VSCODE/Concorde-EFB/.gitignore), and pushed a clean, light commit successfully.
+* Added 'VIEW CHANGELOG' footer link and made the bottom-right version badge clickable (attaching an external launch icon) pointing to the GitHub Pages hosted changelog.
+* Updated the changelog data file [public/changelog/entries.json](file:///E:/VSCODE/Concorde-EFB/public/changelog/entries.json) with Release v3.2.0 entries using the existing JSON schema.
+* Confirmed that `flutter analyze` runs with **No issues found!**
 
 ## 3. Immediate Next Steps
 * Monitor the integration of the flight monitor features with MSFS SimConnect.

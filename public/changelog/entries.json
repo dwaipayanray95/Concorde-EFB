@@ -1,5 +1,19 @@
 [
   {
+    "date": "2026-07-01",
+    "title": "Release v3.2.0 (Flutter Migration)",
+    "items": [
+      "Architecture: complete rewrite/migration from React/Tauri to Flutter, supporting Web, Desktop, and Mobile platforms",
+      "Flight Monitor: added a real-time Flight Monitor tab with SimConnect integration and an interactive CG envelope chart",
+      "Checklists: added a dedicated Concorde Interactive Checklist system",
+      "Performance: added a reheat toggle for takeoff, and enhanced landing/takeoff performance calculations with real-time METAR data",
+      "Weather: added METAR auto-fetch and refresh options from AviationWeather & VATSIM fallback",
+      "UI/UX: polished the dashboard layout, added subtle hover card effects, and implemented a cleaner dark mode styling",
+      "App Update: added auto-update notifications and rate button link",
+      "Donate: integrated a dedicated donate feature"
+    ]
+  },
+  {
     "date": "2026-02-16",
     "title": "Release v2.1.0",
     "items": [
