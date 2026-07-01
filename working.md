@@ -21,6 +21,7 @@ The project is a **Flutter-based rewrite/migration** of the Concorde Electronic 
 * Fixed a large commit push failure by resetting the local commit, adding `node_modules/` and `src-tauri/target/` build files to [.gitignore](file:///E:/VSCODE/Concorde-EFB/.gitignore), and pushed a clean, light commit successfully.
 * Added 'VIEW CHANGELOG' footer link and made the bottom-right version badge clickable (attaching an external launch icon) pointing to the GitHub Pages hosted changelog.
 * Updated the changelog data file [public/changelog/entries.json](file:///E:/VSCODE/Concorde-EFB/public/changelog/entries.json) with Release v3.2.0 entries using the existing JSON schema.
+* Updated [.github/workflows/pages.yml](file:///E:/VSCODE/Concorde-EFB/.github/workflows/pages.yml) to deploy only the static changelog files (to both root and `/changelog/` paths) when pushing to the `flutter` branch instead of building the whole React app.
 * Confirmed that `flutter analyze` runs with **No issues found!**
 
 ## 3. Immediate Next Steps

@@ -2,7 +2,7 @@ name: Deploy (stable + beta) to GitHub Pages
 
 on:
   push:
-    branches: [ main, beta ]
+    branches: [ main, beta, flutter ]
   workflow_dispatch:
 
 permissions:
@@ -20,15 +20,18 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node
+        if: github.ref_name != 'flutter'
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
       - name: Install
+        if: github.ref_name != 'flutter'
         run: npm ci
 
       - name: Typecheck
+        if: github.ref_name != 'flutter'
         run: npx tsc -b
 
       - name: Build (stable)
@@ -39,11 +42,20 @@ jobs:
         if: github.ref_name == 'beta'
         run: npx vite build --base=/${{ github.event.repository.name }}/beta/
 
+      - name: Build Static Changelog Page (flutter branch)
+        if: github.ref_name == 'flutter'
+        run: |
+          mkdir -p dist/changelog
+          cp public/changelog/index.html dist/index.html
+          cp public/changelog/entries.json dist/entries.json
+          cp public/changelog/index.html dist/changelog/index.html
+          cp public/changelog/entries.json dist/changelog/entries.json
+
       - name: Disable Jekyll
         run: touch dist/.nojekyll
 
-      - name: Deploy (stable)
-        if: github.ref_name == 'main'
+      - name: Deploy (stable/flutter)
+        if: github.ref_name == 'main' || github.ref_name == 'flutter'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
