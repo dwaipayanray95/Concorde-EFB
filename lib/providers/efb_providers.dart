@@ -321,13 +321,11 @@ final takeoffFeasibilityProvider = Provider<RunwayFeasibility?>((ref) {
   final parsedWind = mp.MetarParser.parseWind(metar);
   
   double headwind = 0.0;
-  if (runway.heading != null) {
-    final windDirection = parsedWind.windDirDeg;
-    final windSpeed = parsedWind.windSpeedKt;
-    if (windDirection != null && windSpeed != null) {
-      final angleRad = (windDirection - runway.heading!) * math.pi / 180.0;
-      headwind = windSpeed * math.cos(angleRad);
-    }
+  final windDirection = parsedWind.windDirDeg;
+  final windSpeed = parsedWind.windSpeedKt;
+  if (windDirection != null && windSpeed != null) {
+    final angleRad = (windDirection - runway.heading) * math.pi / 180.0;
+    headwind = windSpeed * math.cos(angleRad);
   }
   
   MetarQnh? qnhInput;
@@ -366,13 +364,11 @@ final landingFeasibilityProvider = Provider<RunwayFeasibility?>((ref) {
   final parsedWind = mp.MetarParser.parseWind(metar);
   
   double headwind = 0.0;
-  if (runway.heading != null) {
-    final windDirection = parsedWind.windDirDeg;
-    final windSpeed = parsedWind.windSpeedKt;
-    if (windDirection != null && windSpeed != null) {
-      final angleRad = (windDirection - runway.heading!) * math.pi / 180.0;
-      headwind = windSpeed * math.cos(angleRad);
-    }
+  final windDirection = parsedWind.windDirDeg;
+  final windSpeed = parsedWind.windSpeedKt;
+  if (windDirection != null && windSpeed != null) {
+    final angleRad = (windDirection - runway.heading) * math.pi / 180.0;
+    headwind = windSpeed * math.cos(angleRad);
   }
   
   MetarQnh? qnhInput;

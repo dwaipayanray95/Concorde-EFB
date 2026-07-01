@@ -37,15 +37,15 @@ class _EfbGlassContainerState extends State<EfbGlassContainer> {
     
     // Animate border color and neon glows on hover
     final borderCol = _isHovered 
-        ? UiTokens.accent.withValues(alpha: 0.40) 
+        ? UiTokens.accent.withValues(alpha: 0.22) 
         : Colors.white.withValues(alpha: 0.1);
         
     final hoverGlow = [
       if (_isHovered)
         BoxShadow(
-          color: UiTokens.accent.withValues(alpha: 0.15),
-          blurRadius: 20,
-          spreadRadius: 2,
+          color: UiTokens.accent.withValues(alpha: 0.06),
+          blurRadius: 12,
+          spreadRadius: 0,
         ),
       ...?widget.boxShadow,
     ];
