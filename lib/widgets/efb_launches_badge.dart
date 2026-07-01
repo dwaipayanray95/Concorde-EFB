@@ -78,7 +78,7 @@ class EfbLaunchesBadge extends ConsumerWidget {
         'Loading launches...',
         style: GoogleFonts.plusJakartaSans(color: UiTokens.textDim, fontSize: 12),
       ),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (err, stack) => const SizedBox.shrink(),
     );
   }
 }
