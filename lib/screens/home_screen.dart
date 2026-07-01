@@ -355,23 +355,47 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                 Positioned(
                   bottom: 16,
                   right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.5),
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(8),
-                        bottomLeft: Radius.circular(8),
-                      ),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
+                  child: InkWell(
+                    onTap: () async {
+                      final url = Uri.parse('https://dwaipayanray95.github.io/Concorde-EFB/changelog/');
+                      try {
+                        await launchUrl(url);
+                      } catch (_) {}
+                    },
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(8),
+                      bottomLeft: Radius.circular(8),
                     ),
-                    child: Text(
-                      AppVersion.display,
-                      style: GoogleFonts.jetBrainsMono(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: UiTokens.textDim,
-                        fontFeatures: const [FontFeature.enable('smcp')],
+                    mouseCursor: SystemMouseCursors.click,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.5),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(8),
+                          bottomLeft: Radius.circular(8),
+                        ),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            AppVersion.display,
+                            style: GoogleFonts.jetBrainsMono(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: UiTokens.textDim,
+                              fontFeatures: const [FontFeature.enable('smcp')],
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Icon(
+                            Icons.open_in_new,
+                            size: 10,
+                            color: UiTokens.textDim,
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -1596,6 +1620,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
         Text(
           'Speeds scale with √(weight/reference) and are indicative IAS; verify against the DC Designs manual & in-sim.',
           style: GoogleFonts.plusJakartaSans(color: UiTokens.textDim, fontSize: 12),
+        ),
+        const SizedBox(height: 16),
+        InkWell(
+          onTap: () async {
+            final url = Uri.parse('https://dwaipayanray95.github.io/Concorde-EFB/changelog/');
+            try {
+              await launchUrl(url);
+            } catch (_) {}
+          },
+          borderRadius: BorderRadius.circular(4),
+          mouseCursor: SystemMouseCursors.click,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Text(
+              'VIEW CHANGELOG',
+              style: GoogleFonts.plusJakartaSans(
+                color: UiTokens.accent,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+                decoration: TextDecoration.underline,
+              ),
+            ),
+          ),
         ),
         const EfbAdBanner(),
       ],
