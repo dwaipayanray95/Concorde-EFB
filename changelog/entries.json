@@ -1,6 +1,15 @@
 [
-  {
+    {
     "date": "2026-07-01",
+    "title": "New Flight Monitor System",
+    "items": [
+      "reduced glass brightness effects"
+      "Added a Flight Monitoring System"
+      "Draws realtime flight telemetry from the flight sim"
+    ]
+  },
+  {
+    "date": "2026-06-30",
     "title": "Release v3.2.0 (Flutter Migration)",
     "items": [
       "Architecture: complete rewrite/migration from React/Tauri to Flutter, supporting Web, Desktop, and Mobile platforms",
