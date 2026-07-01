@@ -12,7 +12,6 @@ import 'package:window_manager/window_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/efb_providers.dart';
-import '../providers/badge_provider.dart';
 import '../widgets/efb_card.dart';
 import '../widgets/efb_text_field.dart';
 import '../widgets/efb_launches_badge.dart';
@@ -23,6 +22,13 @@ import '../core/ui_tokens.dart';
 import '../core/concorde_constants.dart';
 import '../core/metar_parser.dart';
 import '../models/concorde_models.dart';
+import '../features/flight_monitor/presentation/controllers/telemetry_provider.dart';
+import '../features/flight_monitor/presentation/widgets/concorde_dial_gauges.dart';
+import '../features/flight_monitor/presentation/widgets/cg_envelope_widget.dart';
+import '../features/flight_monitor/presentation/widgets/thermal_panel_widget.dart';
+import '../features/flight_monitor/presentation/widgets/fuel_status_panel.dart';
+import '../features/flight_monitor/presentation/widgets/landing_reporter.dart';
+import '../features/flight_monitor/presentation/widgets/flight_history_dashboard.dart';
 import '../services/simbrief_service.dart';
 import '../models/airport.dart';
 import '../core/app_version.dart';
@@ -309,21 +315,38 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                                     ],
                                   ),
                                 )
-                              : Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 48),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      _buildHeader(ref),
-                                      const SizedBox(height: 32),
-                                      _buildTabSelector(),
-                                      const SizedBox(height: 32),
-                                      Expanded(
-                                        child: _buildChecklistsSection(ref),
+                              : selectedTab == 1
+                                  ? Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 48),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          _buildHeader(ref),
+                                          const SizedBox(height: 32),
+                                          _buildTabSelector(),
+                                          const SizedBox(height: 32),
+                                          Expanded(
+                                            child: _buildChecklistsSection(ref),
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
-                                ),
+                                    )
+                                  : SingleChildScrollView(
+                                      scrollDirection: Axis.vertical,
+                                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 48),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          _buildHeader(ref),
+                                          const SizedBox(height: 32),
+                                          _buildTabSelector(),
+                                          const SizedBox(height: 32),
+                                          _buildFlightMonitorSection(ref),
+                                          const SizedBox(height: 64),
+                                          _buildFooter(),
+                                        ],
+                                      ),
+                                    ),
                         ),
                       ),
                     );
@@ -1585,6 +1608,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
         _buildTabButton(0, 'FLIGHT PLANNER', Icons.flight_takeoff),
         const SizedBox(width: 16),
         _buildTabButton(1, 'CHECKLISTS', Icons.playlist_add_check),
+        const SizedBox(width: 16),
+        _buildTabButton(2, 'FLIGHT MONITOR', Icons.monitor_heart),
       ],
     );
   }
@@ -1938,6 +1963,235 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
             ),
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildFlightMonitorSection(WidgetRef ref) {
+    final monitorState = ref.watch(flightMonitorProvider);
+    final notifier = ref.read(flightMonitorProvider.notifier);
+
+    // Header Row with Controls
+    Widget controlsHeader;
+    if (monitorState.isPlaybackMode) {
+      controlsHeader = Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.amberAccent, shape: BoxShape.circle)),
+              const SizedBox(width: 8),
+              Text(
+                'LOG PLAYBACK MODE',
+                style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.amberAccent),
+              ),
+            ],
+          ),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.exit_to_app, size: 16),
+            label: const Text('EXIT PLAYBACK'),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.white10),
+            onPressed: () {
+              notifier.exitPlayback();
+            },
+          ),
+        ],
+      );
+    } else {
+      controlsHeader = Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: monitorState.isConnected ? Colors.greenAccent : Colors.redAccent,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                monitorState.isConnected ? 'SIMCONNECT BRIDGE CONNECTED' : 'DISCONNECTED FROM SIMCONNECT BRIDGE',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: monitorState.isConnected ? Colors.greenAccent : Colors.white30,
+                ),
+              ),
+            ],
+          ),
+          if (monitorState.isConnected)
+            ElevatedButton.icon(
+              icon: Icon(monitorState.isRecording ? Icons.stop : Icons.fiber_manual_record, color: Colors.red),
+              label: Text(monitorState.isRecording ? 'STOP RECORDING (${monitorState.recordedFramesCount})' : 'START RECORDING'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: monitorState.isRecording ? Colors.red.withValues(alpha: 0.2) : Colors.white10,
+              ),
+              onPressed: () async {
+                if (monitorState.isRecording) {
+                  await notifier.stopRecording();
+                } else {
+                  notifier.startRecording();
+                }
+              },
+            ),
+        ],
+      );
+    }
+
+    final hasData = monitorState.currentTelemetry != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        controlsHeader,
+        const SizedBox(height: 24),
+        if (monitorState.isPlaybackMode && monitorState.playbackFrames.isNotEmpty) ...[
+          // Timeline Scrubbing Slider
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back_ios, size: 14),
+                onPressed: monitorState.playbackIndex > 0
+                    ? () => notifier.setPlaybackIndex(monitorState.playbackIndex - 1)
+                    : null,
+              ),
+              Expanded(
+                child: Slider(
+                  min: 0.0,
+                  max: (monitorState.playbackFrames.length - 1).toDouble(),
+                  value: monitorState.playbackIndex.toDouble(),
+                  onChanged: (val) {
+                    notifier.setPlaybackIndex(val.toInt());
+                  },
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.arrow_forward_ios, size: 14),
+                onPressed: monitorState.playbackIndex < monitorState.playbackFrames.length - 1
+                    ? () => notifier.setPlaybackIndex(monitorState.playbackIndex + 1)
+                    : null,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Frame: ${monitorState.playbackIndex + 1} / ${monitorState.playbackFrames.length}',
+                style: GoogleFonts.jetBrainsMono(fontSize: 11, color: Colors.white54),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+        ],
+        if (hasData) ...[
+          // Main Dashboard Grid
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Left Column: Dials + Landing Reporter
+              Expanded(
+                flex: 4,
+                child: Column(
+                  children: [
+                    EfbGlassContainer(
+                      padding: const EdgeInsets.all(20),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.white10, width: 1.5),
+                        ),
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'FLIGHT DECK INSTRUMENTS',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white30,
+                                letterSpacing: 1.5,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                ConcordeAirspeedGauge(
+                                  ias: monitorState.currentTelemetry!.ias,
+                                  mach: monitorState.currentTelemetry!.mach,
+                                ),
+                                ConcordeAltimeterGauge(
+                                  altitude: monitorState.currentTelemetry!.altitude,
+                                ),
+                                ConcordeVerticalSpeedGauge(
+                                  vs: monitorState.currentTelemetry!.vs,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    LandingReporter(
+                      currentPitch: monitorState.currentTelemetry!.pitch,
+                      isLanding: monitorState.currentTelemetry!.isLanding,
+                      touchdownVS: monitorState.currentTelemetry!.touchdownVS,
+                      touchdownPitch: monitorState.currentTelemetry!.touchdownPitch,
+                      touchdownGForce: monitorState.currentTelemetry!.touchdownGForce,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 24),
+              // Right Column: CG Chart + Thermal + Fuel
+              Expanded(
+                flex: 3,
+                child: Column(
+                  children: [
+                    CgEnvelopeWidget(
+                      mach: monitorState.currentTelemetry!.mach,
+                      cgPct: monitorState.currentTelemetry!.cgPct,
+                    ),
+                    const SizedBox(height: 24),
+                    ThermalPanelWidget(
+                      tat: monitorState.currentTelemetry!.tat,
+                    ),
+                    const SizedBox(height: 24),
+                    FuelStatusPanel(
+                      left: monitorState.currentTelemetry!.fuelLeftTank,
+                      right: monitorState.currentTelemetry!.fuelRightTank,
+                      center: monitorState.currentTelemetry!.fuelCenterTank,
+                      trimFwd: monitorState.currentTelemetry!.fuelTrimForward,
+                      trimAft: monitorState.currentTelemetry!.fuelTrimAft,
+                      fuelFlowKgh: monitorState.currentTelemetry!.fuelBurnTotal,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 48),
+        ],
+        // Log history widget at the bottom or if no live data is active
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'FLIGHT RECORDER LOGBOOK',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+                letterSpacing: 1.5,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        const FlightHistoryDashboard(),
       ],
     );
   }

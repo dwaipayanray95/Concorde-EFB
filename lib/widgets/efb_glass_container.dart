@@ -1,7 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../core/ui_tokens.dart';
 
-class EfbGlassContainer extends StatelessWidget {
+class EfbGlassContainer extends StatefulWidget {
   final Widget child;
   final double blur;
   final BorderRadius? borderRadius;
@@ -24,37 +25,66 @@ class EfbGlassContainer extends StatelessWidget {
   });
 
   @override
+  State<EfbGlassContainer> createState() => _EfbGlassContainerState();
+}
+
+class _EfbGlassContainerState extends State<EfbGlassContainer> {
+  bool _isHovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    final radius = borderRadius ?? BorderRadius.circular(16);
-    return Padding(
-      padding: margin ?? EdgeInsets.zero,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          boxShadow: boxShadow,
+    final radius = widget.borderRadius ?? BorderRadius.circular(16);
+    
+    // Animate border color and neon glows on hover
+    final borderCol = _isHovered 
+        ? UiTokens.accent.withValues(alpha: 0.40) 
+        : Colors.white.withValues(alpha: 0.1);
+        
+    final hoverGlow = [
+      if (_isHovered)
+        BoxShadow(
+          color: UiTokens.accent.withValues(alpha: 0.15),
+          blurRadius: 20,
+          spreadRadius: 2,
         ),
-        child: ClipRRect(
-          borderRadius: radius,
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-            child: Container(
-              padding: padding,
-              decoration: BoxDecoration(
-                borderRadius: radius,
-                border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1.0),
-                color: color,
-                gradient: color == null && gradient == null
-                    ? LinearGradient(
-                        colors: [
-                          Colors.white.withValues(alpha: 0.08),
-                          Colors.white.withValues(alpha: 0.03),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      )
-                    : gradient,
+      ...?widget.boxShadow,
+    ];
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: Padding(
+        padding: widget.margin ?? EdgeInsets.zero,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            boxShadow: hoverGlow,
+          ),
+          child: ClipRRect(
+            borderRadius: radius,
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: widget.blur, sigmaY: widget.blur),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: widget.padding,
+                decoration: BoxDecoration(
+                  borderRadius: radius,
+                  border: Border.all(color: borderCol, width: 1.0),
+                  color: widget.color,
+                  gradient: widget.color == null && widget.gradient == null
+                      ? LinearGradient(
+                          colors: [
+                            Colors.white.withValues(alpha: 0.08),
+                            Colors.white.withValues(alpha: 0.03),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : widget.gradient,
+                ),
+                child: widget.child,
               ),
-              child: child,
             ),
           ),
         ),

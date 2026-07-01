@@ -98,7 +98,11 @@ class _EfbAdBannerState extends State<EfbAdBanner> {
                 final url = Uri.parse('https://www.patreon.com/c/theawesomeray');
                 try {
                   await launchUrl(url, mode: LaunchMode.externalApplication);
-                } catch (_) {}
+                } catch (_) {
+                  try {
+                    await launchUrl(url);
+                  } catch (_) {}
+                }
                 if (context.mounted) Navigator.of(context).pop();
               },
               icon: const Icon(Icons.star, color: Colors.white, size: 20),
@@ -120,7 +124,7 @@ class _EfbAdBannerState extends State<EfbAdBanner> {
             const Divider(color: Colors.white10),
             const SizedBox(height: 16),
             Text(
-              'Support via UPI (Scan to Pay)',
+              'Support via UPI',
               style: GoogleFonts.plusJakartaSans(
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
