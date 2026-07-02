@@ -518,43 +518,37 @@
           .then(res => res.ok ? res.json() : [])
           .then(releases => {
             if (!Array.isArray(releases) || releases.length === 0) {
-              downloadsContainer.innerHTML = '<div class="empty">No releases found.</div>';
-              return;
-            }
-            // Sort to get latest stable and latest pre-release
-            const stable = releases.find(r => !r.prerelease);
-            const preRelease = releases.find(r => r.prerelease);
-            
-            let html = '';
-            if (stable) {
-              const asset = stable.assets[0];
-              const downloadUrl = asset ? asset.browser_download_url : stable.html_url;
-              html += `
+              downloadsContainer.innerHTML = `
                 <div class="download-item stable-release">
                   <div class="download-badge stable">Stable</div>
                   <div class="download-info">
-                    <h4>Version ${stable.name || stable.tag_name}</h4>
-                    <p>Released on ${new Date(stable.published_at).toLocaleDateString()}</p>
+                    <h4>Concorde EFB Releases</h4>
+                    <p>Track updates and download installers</p>
                   </div>
-                  <a href="${downloadUrl}" class="btn btn-download">Download Installer</a>
+                  <a href="https://github.com/dwaipayanray95/Concorde-EFB/releases" target="_blank" class="btn btn-download">View on GitHub</a>
                 </div>
               `;
+              return;
             }
-            if (preRelease) {
-              const asset = preRelease.assets[0];
-              const downloadUrl = asset ? asset.browser_download_url : preRelease.html_url;
-              html += `
-                <div class="download-item pre-release">
-                  <div class="download-badge beta">Beta / Pre-Release</div>
-                  <div class="download-info">
-                    <h4>Version ${preRelease.name || preRelease.tag_name}</h4>
-                    <p>Released on ${new Date(preRelease.published_at).toLocaleDateString()}</p>
-                  </div>
-                  <a href="${downloadUrl}" class="btn btn-download-beta">Download Beta</a>
+            
+            const latest = releases[0];
+            const isBeta = latest.prerelease;
+            const badgeClass = isBeta ? "beta" : "stable";
+            const badgeText = isBeta ? "Beta / Pre-Release" : "Latest Release";
+            
+            downloadsContainer.innerHTML = `
+              <div class="download-item stable-release" style="flex-direction: column; align-items: flex-start; width: 100%;">
+                <div class="download-badge ${badgeClass}">${badgeText}</div>
+                <div class="download-info" style="margin-top: 8px; margin-bottom: 8px;">
+                  <h4 style="font-size: 15px; font-weight: 700; color: white;">${latest.name || latest.tag_name}</h4>
+                  <p>Released on ${new Date(latest.published_at).toLocaleDateString()}</p>
                 </div>
-              `;
-            }
-            downloadsContainer.innerHTML = html;
+                <div style="display: flex; gap: 8px; width: 100%; margin-top: 4px;">
+                  <a href="${latest.html_url}" target="_blank" class="btn btn-download" style="flex: 1; text-align: center;">Get Latest Version</a>
+                  <a href="https://github.com/dwaipayanray95/Concorde-EFB/releases" target="_blank" class="btn btn-download-beta" style="flex: 1; text-align: center;">All Releases &rarr;</a>
+                </div>
+              </div>
+            `;
           })
           .catch(() => {
             downloadsContainer.innerHTML = '<div class="empty">Unable to fetch releases. <a href="https://github.com/dwaipayanray95/Concorde-EFB/releases" target="_blank" style="color: var(--accent);">View on GitHub</a></div>';
