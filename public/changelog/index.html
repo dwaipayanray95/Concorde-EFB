@@ -473,10 +473,11 @@
               ? `<ul>${items.map((item) => `<li>${item}</li>`).join("")}</ul>`
               : "<div class='empty'>No notes added.</div>";
 
-            const isRelease = title.toLowerCase().startsWith("release v") || title.toLowerCase().startsWith("v");
+            const isRelease = entry.isGithubRelease || title.toLowerCase().startsWith("release v") || title.toLowerCase().startsWith("v");
             const entryClass = isRelease ? "entry release-entry" : "entry";
+            const badgeText = entry.isGithubRelease ? "Official Release" : "Release";
             const badge = isRelease 
-              ? `<span class="release-badge">Official Release</span>` 
+              ? `<span class="release-badge">${badgeText}</span>` 
               : "";
 
             return `
@@ -495,10 +496,46 @@
           .join("");
       };
 
-      fetch("./entries.json", { cache: "no-store" })
-        .then((res) => (res.ok ? res.json() : []))
-        .then((data) => renderEntries(data))
+      const loadTimeline = () => {
+        Promise.all([
+          fetch("./entries.json", { cache: "no-store" }).then(res => res.ok ? res.json() : []),
+          fetch("https://api.github.com/repos/dwaipayanray95/Concorde-EFB/releases").then(res => res.ok ? res.json() : [])
+        ])
+        .then(([localEntries, githubReleases]) => {
+          const githubTagNames = new Set(githubReleases.map(r => r.tag_name.toLowerCase()));
+          
+          let merged = localEntries.filter(entry => {
+            const title = entry.title || "";
+            const isManualRelease = title.toLowerCase().startsWith("release v");
+            if (isManualRelease) {
+              const tagMatch = title.match(/v\d+\.\d+\.\d+/);
+              if (tagMatch && githubTagNames.has(tagMatch[0].toLowerCase())) {
+                return false;
+              }
+            }
+            return true;
+          });
+          
+          githubReleases.forEach(release => {
+            const dateStr = release.published_at.split("T")[0];
+            const rawItems = release.body ? release.body.split("\n") : [];
+            const items = rawItems
+              .map(line => line.trim().replace(/^[-*+]\s*/, ""))
+              .filter(line => line.length > 0 && !line.startsWith("###") && !line.startsWith("##"));
+            
+            merged.push({
+              date: dateStr,
+              title: release.name || release.tag_name,
+              items: items.length > 0 ? items : ["No release notes provided."],
+              isGithubRelease: true
+            });
+          });
+          
+          merged.sort((a, b) => new Date(b.date) - new Date(a.date));
+          renderEntries(merged);
+        })
         .catch(renderEmpty);
+      };
 
       function showQrModal() {
         document.getElementById("qr-modal").style.display = "flex";
@@ -557,6 +594,7 @@
 
       window.addEventListener('load', () => {
         fetchReleases();
+        loadTimeline();
         // Check after 1 second to allow adblocker extensions to block ads.js
         setTimeout(() => {
           if (window.canShowAds === undefined) {
