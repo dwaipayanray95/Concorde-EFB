@@ -3,6 +3,7 @@
         "date": "2026-07-02",
         "title": "Commits",
         "items": [
+            "5a808c3 perf(telemetry): isolate dial gauges with RepaintBoundary for 240Hz buttery UI performance",
             "f701a5b feat(windows): programmatically force Impeller rendering engine at Win32 startup",
             "1d3ea3f fix(changelog): restrict official release tag to dynamic api releases only",
             "b73ae0d feat(changelog): merge github releases directly into the timeline",
