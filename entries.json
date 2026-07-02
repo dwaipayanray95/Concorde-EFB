@@ -3,6 +3,7 @@
         "date": "2026-07-02",
         "title": "Commits",
         "items": [
+            "aad3ace feat(animations): integrate EntranceFader staggered slide and fade-in animations on tab loads",
             "488bdbf perf(scrolling): configure BouncingScrollPhysics and fix Windows terminate exit delay",
             "5a808c3 perf(telemetry): isolate dial gauges with RepaintBoundary for 240Hz buttery UI performance",
             "f701a5b feat(windows): programmatically force Impeller rendering engine at Win32 startup",
