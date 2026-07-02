@@ -293,12 +293,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                     return Scrollbar(
                       child: SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
                         child: SizedBox(
                           width: MediaQuery.of(context).size.width > 1080 ? MediaQuery.of(context).size.width : 1080,
                           height: height,
                           child: selectedTab == 0
                               ? SingleChildScrollView(
                                   scrollDirection: Axis.vertical,
+                                  physics: const BouncingScrollPhysics(),
                                   padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 48),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -333,6 +335,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                                     )
                                   : SingleChildScrollView(
                                       scrollDirection: Axis.vertical,
+                                      physics: const BouncingScrollPhysics(),
                                       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 48),
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
