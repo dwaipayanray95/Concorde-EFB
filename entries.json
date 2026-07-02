@@ -3,6 +3,7 @@
         "date": "2026-07-02",
         "title": "Commits",
         "items": [
+            "7eb92c9 feat(animations): anchor global header statically and assign value keys to force tab transition playbacks",
             "bf6c223 feat(animations): extend entrance fader slide duration and double staggered delays for a more deliberate cascade",
             "9e54fad feat(animations): apply staggered entrance delays to separate layout widgets",
             "aad3ace feat(animations): integrate EntranceFader staggered slide and fade-in animations on tab loads",
