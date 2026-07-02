@@ -3,6 +3,7 @@
         "date": "2026-07-02",
         "title": "Commits",
         "items": [
+            "ba0fe93 added donate and monetization scope for the app",
             "c97eb0d added auto changelog generator on github"
         ]
     },
