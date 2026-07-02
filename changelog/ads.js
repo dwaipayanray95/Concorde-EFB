@@ -1,0 +1,1 @@
+window.canShowAds = true;
