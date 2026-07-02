@@ -473,7 +473,7 @@
               ? `<ul>${items.map((item) => `<li>${item}</li>`).join("")}</ul>`
               : "<div class='empty'>No notes added.</div>";
 
-            const isRelease = title.toLowerCase().includes("release") || title.toLowerCase().startsWith("v");
+            const isRelease = title.toLowerCase().startsWith("release v") || title.toLowerCase().startsWith("v");
             const entryClass = isRelease ? "entry release-entry" : "entry";
             const badge = isRelease 
               ? `<span class="release-badge">Official Release</span>` 
