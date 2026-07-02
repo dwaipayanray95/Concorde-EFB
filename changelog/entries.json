@@ -3,6 +3,7 @@
         "date": "2026-07-02",
         "title": "Commits",
         "items": [
+            "4895994 rename model classes and stuff",
             "7b1344b add monetization",
             "8965077 add monetag",
             "ba0fe93 added donate and monetization scope for the app",

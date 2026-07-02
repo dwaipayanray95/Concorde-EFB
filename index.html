@@ -230,7 +230,7 @@
         border: 1px solid var(--stroke);
       }
 
-      .modal {
+      .overlay-layer {
         display: none;
         position: fixed;
         z-index: 99999;
@@ -244,7 +244,7 @@
         justify-content: center;
       }
 
-      .modal-content {
+      .overlay-card {
         background: var(--bg-2);
         margin: auto;
         padding: 28px 24px;
@@ -337,8 +337,8 @@
     </main>
 
     <!-- UPI QR Modal -->
-    <div id="qr-modal" class="modal">
-      <div class="modal-content">
+    <div id="qr-modal" class="overlay-layer">
+      <div class="overlay-card">
         <span class="close-modal" onclick="closeQrModal()">&times;</span>
         <h3 style="margin: 0; font-size: 16px; color: var(--accent);">Scan to Pay via UPI</h3>
         <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi%3A%2F%2Fpay%3Fpa%3Ddwaipayanray95%40ptaxis%26pn%3DRay%26tn%3DConcorde%2520EFB%2520Support%26cu%3DINR" alt="UPI QR Code" class="qr-image" />
@@ -347,8 +347,8 @@
     </div>
 
     <!-- Adblock Warning Modal -->
-    <div id="adblock-modal" class="modal">
-      <div class="modal-content" style="border-color: var(--accent-2);">
+    <div id="sys-notice-overlay" class="overlay-layer">
+      <div class="overlay-card" style="border-color: var(--accent-2);">
         <span class="close-modal" onclick="closeAdblockModal()">&times;</span>
         <h3 style="margin: 0; font-size: 16px; color: var(--accent-2);">Ad Blocker Detected</h3>
         <p style="margin: 16px 0; font-size: 13px; color: var(--muted); line-height: 1.5; text-align: center;">
@@ -418,21 +418,21 @@
       }
 
       function closeAdblockModal() {
-        document.getElementById("adblock-modal").style.display = "none";
+        document.getElementById("sys-notice-overlay").style.display = "none";
       }
 
       window.addEventListener('load', () => {
         // Check after 1 second to allow adblocker extensions to block ads.js
         setTimeout(() => {
           if (window.canShowAds === undefined) {
-            document.getElementById("adblock-modal").style.display = "flex";
+            document.getElementById("sys-notice-overlay").style.display = "flex";
           }
         }, 1000);
       });
 
       window.onclick = function(event) {
         const qrModal = document.getElementById("qr-modal");
-        const abModal = document.getElementById("adblock-modal");
+        const abModal = document.getElementById("sys-notice-overlay");
         if (event.target == qrModal) {
           qrModal.style.display = "none";
         }
