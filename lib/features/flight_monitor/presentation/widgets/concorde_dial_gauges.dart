@@ -11,17 +11,18 @@ class ConcordeAirspeedGauge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 150,
-      height: 150,
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white10, width: 2),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 8),
-        ],
-      ),
+    return RepaintBoundary(
+      child: Container(
+        width: 150,
+        height: 150,
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E293B),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white10, width: 2),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 8),
+          ],
+        ),
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -73,6 +74,7 @@ class ConcordeAirspeedGauge extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -164,17 +166,18 @@ class ConcordeAltimeterGauge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 150,
-      height: 150,
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white10, width: 2),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 8),
-        ],
-      ),
+    return RepaintBoundary(
+      child: Container(
+        width: 150,
+        height: 150,
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E293B),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white10, width: 2),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 8),
+          ],
+        ),
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -217,6 +220,7 @@ class ConcordeAltimeterGauge extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -299,17 +303,18 @@ class ConcordeVerticalSpeedGauge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 150,
-      height: 150,
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white10, width: 2),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 8),
-        ],
-      ),
+    return RepaintBoundary(
+      child: Container(
+        width: 150,
+        height: 150,
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E293B),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white10, width: 2),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 8),
+          ],
+        ),
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -343,6 +348,7 @@ class ConcordeVerticalSpeedGauge extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }
