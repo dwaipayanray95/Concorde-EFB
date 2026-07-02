@@ -298,95 +298,96 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                         child: SizedBox(
                           width: MediaQuery.of(context).size.width > 1080 ? MediaQuery.of(context).size.width : 1080,
                           height: height,
-                           child: selectedTab == 0
-                              ? SingleChildScrollView(
-                                  scrollDirection: Axis.vertical,
-                                  physics: const BouncingScrollPhysics(),
-                                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 48),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      EntranceFader(
-                                        delay: Duration.zero,
-                                        child: _buildHeader(ref),
-                                      ),
-                                      const SizedBox(height: 32),
-                                      EntranceFader(
-                                        delay: const Duration(milliseconds: 150),
-                                        child: _buildTabSelector(),
-                                      ),
-                                      const SizedBox(height: 32),
-                                      EntranceFader(
-                                        delay: const Duration(milliseconds: 300),
-                                        child: _buildFlightPlanAndCruiseRow(ref),
-                                      ),
-                                      const SizedBox(height: 32),
-                                      EntranceFader(
-                                        delay: const Duration(milliseconds: 450),
-                                        child: _buildPerformanceCalculatorSection(ref),
-                                      ),
-                                      const SizedBox(height: 64),
-                                      EntranceFader(
-                                        delay: const Duration(milliseconds: 600),
-                                        child: _buildFooter(),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                              : selectedTab == 1
-                                  ? Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 48),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          EntranceFader(
-                                            delay: Duration.zero,
-                                            child: _buildHeader(ref),
-                                          ),
-                                          const SizedBox(height: 32),
-                                          EntranceFader(
-                                            delay: const Duration(milliseconds: 150),
-                                            child: _buildTabSelector(),
-                                          ),
-                                          const SizedBox(height: 32),
-                                          Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Global static header and tab selector (Animates only once on app startup)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 40, right: 40, top: 48),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    EntranceFader(
+                                      key: const ValueKey('global-header'),
+                                      delay: Duration.zero,
+                                      child: _buildHeader(ref),
+                                    ),
+                                    const SizedBox(height: 32),
+                                    EntranceFader(
+                                      key: const ValueKey('global-tabs'),
+                                      delay: const Duration(milliseconds: 100),
+                                      child: _buildTabSelector(),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 32),
+                              // Dynamic tab views (cascade anims play on tab switches)
+                              Expanded(
+                                child: selectedTab == 0
+                                    ? SingleChildScrollView(
+                                        key: const ValueKey('scroll-tab-0'),
+                                        scrollDirection: Axis.vertical,
+                                        physics: const BouncingScrollPhysics(),
+                                        padding: const EdgeInsets.only(left: 40, right: 40, bottom: 48),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            EntranceFader(
+                                              key: ValueKey('plan-row-$selectedTab'),
+                                              delay: const Duration(milliseconds: 100),
+                                              child: _buildFlightPlanAndCruiseRow(ref),
+                                            ),
+                                            const SizedBox(height: 32),
+                                            EntranceFader(
+                                              key: ValueKey('perf-section-$selectedTab'),
+                                              delay: const Duration(milliseconds: 220),
+                                              child: _buildPerformanceCalculatorSection(ref),
+                                            ),
+                                            const SizedBox(height: 64),
+                                            EntranceFader(
+                                              key: ValueKey('footer-$selectedTab'),
+                                              delay: const Duration(milliseconds: 340),
+                                              child: _buildFooter(),
+                                            ),
+                                          ],
+                                        ),
+                                      )
+                                    : selectedTab == 1
+                                        ? Padding(
+                                            key: const ValueKey('padding-tab-1'),
+                                            padding: const EdgeInsets.only(left: 40, right: 40, bottom: 48),
                                             child: EntranceFader(
-                                              delay: const Duration(milliseconds: 300),
+                                              key: ValueKey('checklist-section-$selectedTab'),
+                                              delay: const Duration(milliseconds: 100),
                                               child: _buildChecklistsSection(ref),
                                             ),
+                                          )
+                                        : SingleChildScrollView(
+                                            key: const ValueKey('scroll-tab-2'),
+                                            scrollDirection: Axis.vertical,
+                                            physics: const BouncingScrollPhysics(),
+                                            padding: const EdgeInsets.only(left: 40, right: 40, bottom: 48),
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                EntranceFader(
+                                                  key: ValueKey('monitor-section-$selectedTab'),
+                                                  delay: const Duration(milliseconds: 100),
+                                                  child: _buildFlightMonitorSection(ref),
+                                                ),
+                                                const SizedBox(height: 64),
+                                                EntranceFader(
+                                                  key: ValueKey('monitor-footer-$selectedTab'),
+                                                  delay: const Duration(milliseconds: 220),
+                                                  child: _buildFooter(),
+                                                ),
+                                              ],
+                                            ),
                                           ),
-                                        ],
-                                      ),
-                                    )
-                                  : SingleChildScrollView(
-                                      scrollDirection: Axis.vertical,
-                                      physics: const BouncingScrollPhysics(),
-                                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 48),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          EntranceFader(
-                                            delay: Duration.zero,
-                                            child: _buildHeader(ref),
-                                          ),
-                                          const SizedBox(height: 32),
-                                          EntranceFader(
-                                            delay: const Duration(milliseconds: 150),
-                                            child: _buildTabSelector(),
-                                          ),
-                                          const SizedBox(height: 32),
-                                          EntranceFader(
-                                            delay: const Duration(milliseconds: 300),
-                                            child: _buildFlightMonitorSection(ref),
-                                          ),
-                                          const SizedBox(height: 64),
-                                          EntranceFader(
-                                            delay: const Duration(milliseconds: 450),
-                                            child: _buildFooter(),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     );
