@@ -3,6 +3,7 @@
         "date": "2026-07-02",
         "title": "Commits",
         "items": [
+            "b73ae0d feat(changelog): merge github releases directly into the timeline",
             "1ca6cea refine changelog page to identify official releases",
             "06a4abb Modify changelog entry titles for clarity",
             "5ff2a2b fix download options on the external page",
