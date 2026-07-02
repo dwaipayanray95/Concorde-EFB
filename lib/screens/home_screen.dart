@@ -18,6 +18,7 @@ import '../widgets/efb_launches_badge.dart';
 import '../widgets/wind_arrow.dart';
 import '../widgets/efb_glass_container.dart';
 import '../widgets/efb_ad_banner.dart';
+import '../widgets/entrance_fader.dart';
 import '../core/ui_tokens.dart';
 import '../core/concorde_constants.dart';
 import '../core/metar_parser.dart';
@@ -297,57 +298,63 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                         child: SizedBox(
                           width: MediaQuery.of(context).size.width > 1080 ? MediaQuery.of(context).size.width : 1080,
                           height: height,
-                          child: selectedTab == 0
+                           child: selectedTab == 0
                               ? SingleChildScrollView(
                                   scrollDirection: Axis.vertical,
                                   physics: const BouncingScrollPhysics(),
                                   padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 48),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      _buildHeader(ref),
-                                      const SizedBox(height: 32),
-                                      _buildTabSelector(),
-                                      const SizedBox(height: 32),
-                                      _buildFlightPlanAndCruiseRow(ref),
-                                      const SizedBox(height: 32),
-                                      _buildPerformanceCalculatorSection(ref),
-                                      const SizedBox(height: 64),
-                                      _buildFooter(),
-                                    ],
+                                  child: EntranceFader(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        _buildHeader(ref),
+                                        const SizedBox(height: 32),
+                                        _buildTabSelector(),
+                                        const SizedBox(height: 32),
+                                        _buildFlightPlanAndCruiseRow(ref),
+                                        const SizedBox(height: 32),
+                                        _buildPerformanceCalculatorSection(ref),
+                                        const SizedBox(height: 64),
+                                        _buildFooter(),
+                                      ],
+                                    ),
                                   ),
                                 )
                               : selectedTab == 1
                                   ? Padding(
                                       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 48),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          _buildHeader(ref),
-                                          const SizedBox(height: 32),
-                                          _buildTabSelector(),
-                                          const SizedBox(height: 32),
-                                          Expanded(
-                                            child: _buildChecklistsSection(ref),
-                                          ),
-                                        ],
+                                      child: EntranceFader(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            _buildHeader(ref),
+                                            const SizedBox(height: 32),
+                                            _buildTabSelector(),
+                                            const SizedBox(height: 32),
+                                            Expanded(
+                                              child: _buildChecklistsSection(ref),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     )
                                   : SingleChildScrollView(
                                       scrollDirection: Axis.vertical,
                                       physics: const BouncingScrollPhysics(),
                                       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 48),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          _buildHeader(ref),
-                                          const SizedBox(height: 32),
-                                          _buildTabSelector(),
-                                          const SizedBox(height: 32),
-                                          _buildFlightMonitorSection(ref),
-                                          const SizedBox(height: 64),
-                                          _buildFooter(),
-                                        ],
+                                      child: EntranceFader(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            _buildHeader(ref),
+                                            const SizedBox(height: 32),
+                                            _buildTabSelector(),
+                                            const SizedBox(height: 32),
+                                            _buildFlightMonitorSection(ref),
+                                            const SizedBox(height: 64),
+                                            _buildFooter(),
+                                          ],
+                                        ),
                                       ),
                                     ),
                         ),
