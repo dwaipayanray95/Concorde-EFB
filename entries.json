@@ -3,6 +3,7 @@
         "date": "2026-07-02",
         "title": "Commits",
         "items": [
+            "5ff2a2b fix download options on the external page",
             "a8ba6d4 redesign changelog landing page",
             "4895994 rename model classes and stuff",
             "7b1344b add monetization",
