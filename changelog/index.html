@@ -155,30 +155,89 @@
         color: var(--muted);
       }
 
-      .support-card {
+      .dashboard-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+        margin-bottom: 8px;
+      }
+      @media (max-width: 768px) {
+        .dashboard-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .download-card {
+        padding: 20px 24px;
+        border-radius: 18px;
+        background: var(--card);
+        border: 1px solid var(--stroke);
+        box-shadow: 0 18px 40px -32px rgba(0, 0, 0, 0.8);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .download-card h3 {
+        margin: 0;
+        font-size: 16px;
+        color: var(--accent-2);
+      }
+
+      .downloads-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 4px;
+      }
+
+      .download-item {
         display: flex;
         justify-content: space-between;
         align-items: center;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--stroke);
         flex-wrap: wrap;
-        gap: 18px;
-        padding: 20px 24px;
-        border-radius: 18px;
-        background: linear-gradient(135deg, rgba(56, 189, 248, 0.08), rgba(110, 231, 183, 0.08));
-        border: 1px solid var(--accent);
-        box-shadow: 0 18px 40px -32px rgba(0, 0, 0, 0.8);
+        gap: 8px;
       }
 
-      .support-card h3 {
-        margin: 0 0 6px 0;
-        font-size: 16px;
+      .download-item.stable-release {
+        border-color: rgba(110, 231, 183, 0.2);
+      }
+
+      .download-badge {
+        font-size: 8px;
+        text-transform: uppercase;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 99px;
+        letter-spacing: 0.1em;
+      }
+
+      .download-badge.stable {
+        background: rgba(110, 231, 183, 0.12);
         color: var(--accent);
+        border: 1px solid var(--accent);
       }
 
-      .support-card p {
-        margin: 0;
+      .download-badge.beta {
+        background: rgba(56, 189, 248, 0.12);
+        color: var(--accent-2);
+        border: 1px solid var(--accent-2);
+      }
+
+      .download-info h4 {
+        margin: 0 0 2px 0;
         font-size: 13px;
+        color: white;
+      }
+
+      .download-info p {
+        margin: 0;
+        font-size: 11px;
         color: var(--muted);
-        max-width: 500px;
       }
 
       .support-actions {
@@ -198,6 +257,26 @@
         cursor: pointer;
         border: none;
         transition: all 0.2s;
+      }
+
+      .btn-download {
+        background: var(--accent);
+        color: black !important;
+        font-weight: 700;
+      }
+
+      .btn-download:hover {
+        background: #52d2a4;
+      }
+
+      .btn-download-beta {
+        background: rgba(255, 255, 255, 0.06);
+        color: white !important;
+        border: 1px solid var(--stroke);
+      }
+
+      .btn-download-beta:hover {
+        background: rgba(255, 255, 255, 0.12);
       }
 
       .btn-patreon {
@@ -301,23 +380,35 @@
   <body>
     <main class="shell">
       <section class="hero">
-        <span class="eyebrow">Raw Change Log</span>
-        <h1>Every update, in order, with the raw notes.</h1>
+        <span class="eyebrow">Concorde EFB Portal</span>
+        <h1>Download, Support & Changelog</h1>
         <p>
-          This page tracks all changes by date. Update the entries file to keep the log current.
+          Get the latest pre-releases, stable builds, check the live history logs, and support the development of the ultimate Concorde flight companion.
         </p>
       </section>
 
-      <section class="support-card">
-        <div class="support-content">
-          <h3>Support Concorde EFB</h3>
-          <p>This project is maintained for free. If you enjoy flying supersonic with this EFB, consider supporting the developer!</p>
+      <!-- Dashboard Grid -->
+      <div class="dashboard-grid">
+        <!-- Downloads Card -->
+        <div class="download-card">
+          <h3>Latest Releases</h3>
+          <div id="downloads-list" class="downloads-list">
+            <div class="empty">Loading GitHub releases...</div>
+          </div>
         </div>
-        <div class="support-actions">
-          <a href="https://www.patreon.com/c/theawesomeray" target="_blank" class="btn btn-patreon">Support on Patreon</a>
-          <button onclick="showQrModal()" class="btn btn-upi">Show UPI QR</button>
+
+        <!-- Support Card -->
+        <div class="download-card" style="border-color: var(--accent); background: linear-gradient(135deg, rgba(56, 189, 248, 0.05), rgba(110, 231, 183, 0.05));">
+          <h3 style="color: var(--accent);">Support & Donation</h3>
+          <p style="margin: 0; font-size: 13px; color: var(--muted); line-height: 1.55;">
+            Concorde EFB is maintained for free in the developer's spare time. Contributions keep the servers active and fuel new feature expansions!
+          </p>
+          <div class="support-actions" style="margin-top: auto;">
+            <a href="https://www.patreon.com/c/theawesomeray" target="_blank" class="btn btn-patreon" style="flex: 1;">Patreon Tip</a>
+            <button onclick="showQrModal()" class="btn btn-upi" style="flex: 1;">Show UPI QR</button>
+          </div>
         </div>
-      </section>
+      </div>
 
       <!-- BEGIN AADS AD UNIT 2446475 -->
       <section class="ad-container">
@@ -421,7 +512,57 @@
         document.getElementById("sys-notice-overlay").style.display = "none";
       }
 
+      const fetchReleases = () => {
+        const downloadsContainer = document.getElementById("downloads-list");
+        fetch("https://api.github.com/repos/dwaipayanray95/Concorde-EFB/releases")
+          .then(res => res.ok ? res.json() : [])
+          .then(releases => {
+            if (!Array.isArray(releases) || releases.length === 0) {
+              downloadsContainer.innerHTML = '<div class="empty">No releases found.</div>';
+              return;
+            }
+            // Sort to get latest stable and latest pre-release
+            const stable = releases.find(r => !r.prerelease);
+            const preRelease = releases.find(r => r.prerelease);
+            
+            let html = '';
+            if (stable) {
+              const asset = stable.assets[0];
+              const downloadUrl = asset ? asset.browser_download_url : stable.html_url;
+              html += `
+                <div class="download-item stable-release">
+                  <div class="download-badge stable">Stable</div>
+                  <div class="download-info">
+                    <h4>Version ${stable.name || stable.tag_name}</h4>
+                    <p>Released on ${new Date(stable.published_at).toLocaleDateString()}</p>
+                  </div>
+                  <a href="${downloadUrl}" class="btn btn-download">Download Installer</a>
+                </div>
+              `;
+            }
+            if (preRelease) {
+              const asset = preRelease.assets[0];
+              const downloadUrl = asset ? asset.browser_download_url : preRelease.html_url;
+              html += `
+                <div class="download-item pre-release">
+                  <div class="download-badge beta">Beta / Pre-Release</div>
+                  <div class="download-info">
+                    <h4>Version ${preRelease.name || preRelease.tag_name}</h4>
+                    <p>Released on ${new Date(preRelease.published_at).toLocaleDateString()}</p>
+                  </div>
+                  <a href="${downloadUrl}" class="btn btn-download-beta">Download Beta</a>
+                </div>
+              `;
+            }
+            downloadsContainer.innerHTML = html;
+          })
+          .catch(() => {
+            downloadsContainer.innerHTML = '<div class="empty">Unable to fetch releases. <a href="https://github.com/dwaipayanray95/Concorde-EFB/releases" target="_blank" style="color: var(--accent);">View on GitHub</a></div>';
+          });
+      };
+
       window.addEventListener('load', () => {
+        fetchReleases();
         // Check after 1 second to allow adblocker extensions to block ads.js
         setTimeout(() => {
           if (window.canShowAds === undefined) {
