@@ -312,22 +312,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                                       ),
                                       const SizedBox(height: 32),
                                       EntranceFader(
-                                        delay: const Duration(milliseconds: 80),
+                                        delay: const Duration(milliseconds: 150),
                                         child: _buildTabSelector(),
                                       ),
                                       const SizedBox(height: 32),
                                       EntranceFader(
-                                        delay: const Duration(milliseconds: 160),
+                                        delay: const Duration(milliseconds: 300),
                                         child: _buildFlightPlanAndCruiseRow(ref),
                                       ),
                                       const SizedBox(height: 32),
                                       EntranceFader(
-                                        delay: const Duration(milliseconds: 240),
+                                        delay: const Duration(milliseconds: 450),
                                         child: _buildPerformanceCalculatorSection(ref),
                                       ),
                                       const SizedBox(height: 64),
                                       EntranceFader(
-                                        delay: const Duration(milliseconds: 320),
+                                        delay: const Duration(milliseconds: 600),
                                         child: _buildFooter(),
                                       ),
                                     ],
@@ -345,13 +345,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                                           ),
                                           const SizedBox(height: 32),
                                           EntranceFader(
-                                            delay: const Duration(milliseconds: 80),
+                                            delay: const Duration(milliseconds: 150),
                                             child: _buildTabSelector(),
                                           ),
                                           const SizedBox(height: 32),
                                           Expanded(
                                             child: EntranceFader(
-                                              delay: const Duration(milliseconds: 160),
+                                              delay: const Duration(milliseconds: 300),
                                               child: _buildChecklistsSection(ref),
                                             ),
                                           ),
@@ -371,17 +371,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                                           ),
                                           const SizedBox(height: 32),
                                           EntranceFader(
-                                            delay: const Duration(milliseconds: 80),
+                                            delay: const Duration(milliseconds: 150),
                                             child: _buildTabSelector(),
                                           ),
                                           const SizedBox(height: 32),
                                           EntranceFader(
-                                            delay: const Duration(milliseconds: 160),
+                                            delay: const Duration(milliseconds: 300),
                                             child: _buildFlightMonitorSection(ref),
                                           ),
                                           const SizedBox(height: 64),
                                           EntranceFader(
-                                            delay: const Duration(milliseconds: 240),
+                                            delay: const Duration(milliseconds: 450),
                                             child: _buildFooter(),
                                           ),
                                         ],
