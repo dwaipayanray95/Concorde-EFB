@@ -154,6 +154,141 @@
         border: 1px dashed var(--stroke);
         color: var(--muted);
       }
+
+      .support-card {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 18px;
+        padding: 20px 24px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, rgba(56, 189, 248, 0.08), rgba(110, 231, 183, 0.08));
+        border: 1px solid var(--accent);
+        box-shadow: 0 18px 40px -32px rgba(0, 0, 0, 0.8);
+      }
+
+      .support-card h3 {
+        margin: 0 0 6px 0;
+        font-size: 16px;
+        color: var(--accent);
+      }
+
+      .support-card p {
+        margin: 0;
+        font-size: 13px;
+        color: var(--muted);
+        max-width: 500px;
+      }
+
+      .support-actions {
+        display: flex;
+        gap: 12px;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 16px;
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        border: none;
+        transition: all 0.2s;
+      }
+
+      .btn-patreon {
+        background: #FF424D;
+        color: white;
+      }
+
+      .btn-patreon:hover {
+        background: #e0323c;
+        transform: translateY(-1px);
+      }
+
+      .btn-upi {
+        background: rgba(255, 255, 255, 0.08);
+        color: white;
+        border: 1px solid var(--stroke);
+      }
+
+      .btn-upi:hover {
+        background: rgba(255, 255, 255, 0.15);
+        transform: translateY(-1px);
+      }
+
+      .ad-container {
+        display: flex;
+        justify-content: center;
+        padding: 12px;
+        border-radius: 18px;
+        background: var(--card);
+        border: 1px solid var(--stroke);
+      }
+
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 99999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(13, 15, 23, 0.85);
+        backdrop-filter: blur(10px);
+        align-items: center;
+        justify-content: center;
+      }
+
+      .modal-content {
+        background: var(--bg-2);
+        margin: auto;
+        padding: 28px 24px;
+        border: 1px solid var(--accent);
+        width: min(340px, 90%);
+        border-radius: 20px;
+        text-align: center;
+        position: relative;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+      }
+
+      .close-modal {
+        position: absolute;
+        right: 18px;
+        top: 14px;
+        color: var(--muted);
+        font-size: 24px;
+        font-weight: bold;
+        cursor: pointer;
+      }
+
+      .close-modal:hover {
+        color: var(--accent);
+      }
+
+      .qr-image {
+        margin: 16px 0;
+        border-radius: 12px;
+        background: white;
+        padding: 12px;
+        width: 180px;
+        height: 180px;
+      }
+
+      .upi-text {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 12px;
+        color: var(--accent);
+        background: rgba(255, 255, 255, 0.05);
+        padding: 8px;
+        border-radius: 8px;
+        border: 1px solid var(--stroke);
+        margin: 0;
+      }
     </style>
   </head>
   <body>
@@ -166,6 +301,26 @@
         </p>
       </section>
 
+      <section class="support-card">
+        <div class="support-content">
+          <h3>Support Concorde EFB</h3>
+          <p>This project is maintained for free. If you enjoy flying supersonic with this EFB, consider supporting the developer!</p>
+        </div>
+        <div class="support-actions">
+          <a href="https://www.patreon.com/c/theawesomeray" target="_blank" class="btn btn-patreon">Support on Patreon</a>
+          <button onclick="showQrModal()" class="btn btn-upi">Show UPI QR</button>
+        </div>
+      </section>
+
+      <!-- BEGIN AADS AD UNIT 2446475 -->
+      <section class="ad-container">
+        <div id="frame" style="width: 100%;margin: auto;position: relative; z-index: 99998;">
+          <iframe data-aa='2446475' src='//acceptable.a-ads.com/2446475/?size=Adaptive'
+                            style='border:0; padding:0; width:70%; height:auto; overflow:hidden;display: block;margin: auto'></iframe>
+        </div>
+      </section>
+      <!-- END AADS AD UNIT 2446475 -->
+
       <section class="toolbar">
         <span>Source: <code>public/changelog/entries.json</code></span>
         <a href="/Concorde-EFB/">Back to the app</a>
@@ -173,6 +328,16 @@
 
       <section id="timeline" class="timeline" aria-live="polite"></section>
     </main>
+
+    <!-- UPI QR Modal -->
+    <div id="qr-modal" class="modal">
+      <div class="modal-content">
+        <span class="close-modal" onclick="closeQrModal()">&times;</span>
+        <h3 style="margin: 0; font-size: 16px; color: var(--accent);">Scan to Pay via UPI</h3>
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi%3A%2F%2Fpay%3Fpa%3Ddwaipayanray95%40ptaxis%26pn%3DRay%26tn%3DConcorde%2520EFB%2520Support%26cu%3DINR" alt="UPI QR Code" class="qr-image" />
+        <p class="upi-text">dwaipayanray95@ptaxis</p>
+      </div>
+    </div>
 
     <script>
       const timeline = document.getElementById("timeline");
@@ -221,6 +386,21 @@
         .then((res) => (res.ok ? res.json() : []))
         .then((data) => renderEntries(data))
         .catch(renderEmpty);
+
+      function showQrModal() {
+        document.getElementById("qr-modal").style.display = "flex";
+      }
+
+      function closeQrModal() {
+        document.getElementById("qr-modal").style.display = "none";
+      }
+
+      window.onclick = function(event) {
+        const modal = document.getElementById("qr-modal");
+        if (event.target == modal) {
+          modal.style.display = "none";
+        }
+      }
     </script>
   </body>
 </html>
