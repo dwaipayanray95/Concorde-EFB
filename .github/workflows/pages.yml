@@ -53,8 +53,10 @@ jobs:
           mkdir -p dist/changelog
           cp public/changelog/index.html dist/index.html
           cp public/changelog/entries.json dist/entries.json
+          cp public/changelog/ads.js dist/ads.js
           cp public/changelog/index.html dist/changelog/index.html
           cp public/changelog/entries.json dist/changelog/entries.json
+          cp public/changelog/ads.js dist/changelog/ads.js
 
       - name: Disable Jekyll
         run: touch dist/.nojekyll

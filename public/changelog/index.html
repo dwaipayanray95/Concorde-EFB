@@ -290,6 +290,12 @@
         margin: 0;
       }
     </style>
+    <!-- PROPELLER ADS / MONETAG - Verification Meta Tag -->
+    <meta name="monetag" content="b4c11ee9eb77e07d53641df51ecd2858">
+    
+    <!-- PROPELLER ADS - Main Script Injection Tag (Paste script tag here) -->
+
+    <script src="./ads.js"></script>
   </head>
   <body>
     <main class="shell">
@@ -336,6 +342,21 @@
         <h3 style="margin: 0; font-size: 16px; color: var(--accent);">Scan to Pay via UPI</h3>
         <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi%3A%2F%2Fpay%3Fpa%3Ddwaipayanray95%40ptaxis%26pn%3DRay%26tn%3DConcorde%2520EFB%2520Support%26cu%3DINR" alt="UPI QR Code" class="qr-image" />
         <p class="upi-text">dwaipayanray95@ptaxis</p>
+      </div>
+    </div>
+
+    <!-- Adblock Warning Modal -->
+    <div id="adblock-modal" class="modal">
+      <div class="modal-content" style="border-color: var(--accent-2);">
+        <span class="close-modal" onclick="closeAdblockModal()">&times;</span>
+        <h3 style="margin: 0; font-size: 16px; color: var(--accent-2);">Ad Blocker Detected</h3>
+        <p style="margin: 16px 0; font-size: 13px; color: var(--muted); line-height: 1.5; text-align: center;">
+          It looks like you're using an ad blocker. This project is maintained for free. Please consider whitelisting our site in your ad blocker, or support directly to keep this EFB updated!
+        </p>
+        <div style="display: flex; gap: 12px; justify-content: center;">
+          <button onclick="closeAdblockModal()" class="btn btn-upi" style="background: var(--accent-2); color: black; border: none;">I'll Whitelist</button>
+          <a href="https://www.patreon.com/c/theawesomeray" target="_blank" class="btn btn-patreon">Patreon Support</a>
+        </div>
       </div>
     </div>
 
@@ -395,10 +416,27 @@
         document.getElementById("qr-modal").style.display = "none";
       }
 
+      function closeAdblockModal() {
+        document.getElementById("adblock-modal").style.display = "none";
+      }
+
+      window.addEventListener('load', () => {
+        // Check after 1 second to allow adblocker extensions to block ads.js
+        setTimeout(() => {
+          if (window.canShowAds === undefined) {
+            document.getElementById("adblock-modal").style.display = "flex";
+          }
+        }, 1000);
+      });
+
       window.onclick = function(event) {
-        const modal = document.getElementById("qr-modal");
-        if (event.target == modal) {
-          modal.style.display = "none";
+        const qrModal = document.getElementById("qr-modal");
+        const abModal = document.getElementById("adblock-modal");
+        if (event.target == qrModal) {
+          qrModal.style.display = "none";
+        }
+        if (event.target == abModal) {
+          abModal.style.display = "none";
         }
       }
     </script>

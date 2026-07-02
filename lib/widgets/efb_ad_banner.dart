@@ -120,6 +120,35 @@ class _EfbAdBannerState extends State<EfbAdBanner> {
                 elevation: 0,
               ),
             ),
+            const SizedBox(height: 12),
+            // Changelog Web Button
+            ElevatedButton.icon(
+              onPressed: () async {
+                final url = Uri.parse('https://dwaipayanray95.github.io/Concorde-EFB/changelog/');
+                try {
+                  await launchUrl(url, mode: LaunchMode.externalApplication);
+                } catch (_) {
+                  try {
+                    await launchUrl(url);
+                  } catch (_) {}
+                }
+                if (context.mounted) Navigator.of(context).pop();
+              },
+              icon: const Icon(Icons.history, color: Colors.white, size: 20),
+              label: Text(
+                'Click to Support (Web)',
+                style: GoogleFonts.plusJakartaSans(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0EA5E9), // Sky Blue Accent
+                minimumSize: const Size(double.infinity, 48),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+              ),
+            ),
             const SizedBox(height: 24),
             const Divider(color: Colors.white10),
             const SizedBox(height: 16),
