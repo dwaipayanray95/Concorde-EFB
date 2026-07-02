@@ -1,16 +1,15 @@
 [
     {
         "date": "2026-07-01",
-        "title": "New Flight Monitor System",
+        "title": "ui and FL Monitor changes",
         "items": [
             "reduced glass brightness effects",
-            "Added a Flight Monitoring System",
             "Draws realtime flight telemetry from the flight sim"
         ]
     },
     {
         "date": "2026-06-30",
-        "title": "Release v3.2.0 (Flutter Migration)",
+        "title": "v3.2.0 (Flutter Migration + Flight Monitor System)",
         "items": [
             "Architecture: complete rewrite/migration from React/Tauri to Flutter, supporting Web, Desktop, and Mobile platforms",
             "Flight Monitor: added a real-time Flight Monitor tab with SimConnect integration and an interactive CG envelope chart",
