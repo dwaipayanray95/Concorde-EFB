@@ -103,6 +103,25 @@
         box-shadow: 0 18px 40px -32px rgba(0, 0, 0, 0.8);
       }
 
+      .entry.release-entry {
+        border-color: var(--accent);
+        background: rgba(110, 231, 183, 0.05);
+        box-shadow: 0 0 20px -5px rgba(110, 231, 183, 0.3), 0 18px 40px -32px rgba(0, 0, 0, 0.8);
+      }
+
+      .release-badge {
+        display: inline-block;
+        font-size: 9px;
+        text-transform: uppercase;
+        font-weight: 700;
+        background: rgba(110, 231, 183, 0.15);
+        color: var(--accent);
+        border: 1px solid var(--accent);
+        padding: 2px 6px;
+        border-radius: 99px;
+        letter-spacing: 0.1em;
+      }
+
       .entry header {
         display: flex;
         justify-content: space-between;
@@ -176,10 +195,19 @@
               ? `<ul>${items.map((item) => `<li>${item}</li>`).join("")}</ul>`
               : "<div class='empty'>No notes added.</div>";
 
+            const isRelease = title.toLowerCase().includes("release") || title.toLowerCase().startsWith("v");
+            const entryClass = isRelease ? "entry release-entry" : "entry";
+            const badge = isRelease 
+              ? `<span class="release-badge">Official Release</span>` 
+              : "";
+
             return `
-              <article class="entry">
-                <header>
-                  <h2>${title}</h2>
+              <article class="${entryClass}">
+                <header style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <h2 style="margin: 0; font-size: 16px;">${title}</h2>
+                    ${badge}
+                  </div>
                   <span class="date">${entry.date || "Unknown date"}</span>
                 </header>
                 ${list}
