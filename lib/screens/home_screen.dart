@@ -506,6 +506,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                 ],
               ),
             ),
+            TextButton.icon(
+              icon: const Icon(Icons.favorite, color: UiTokens.accent, size: 14),
+              label: Text(
+                'CLICK TO SUPPORT',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  color: UiTokens.accent,
+                  letterSpacing: 1.0,
+                ),
+              ),
+              onPressed: () async {
+                final url = Uri.parse('https://dwaipayanray95.github.io/Concorde-EFB/changelog/');
+                try {
+                  await launchUrl(url, mode: LaunchMode.externalApplication);
+                } catch (_) {
+                  try {
+                    await launchUrl(url);
+                  } catch (_) {}
+                }
+              },
+            ),
+            const SizedBox(width: 32),
             _buildHeaderStat('NAV DB', 'Loaded', valueColor: UiTokens.success),
             const SizedBox(width: 32),
             _buildHeaderStat('TAS', '1164 kt'),
