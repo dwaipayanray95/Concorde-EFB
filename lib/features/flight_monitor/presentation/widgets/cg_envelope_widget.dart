@@ -181,17 +181,20 @@ class CgEnvelopeWidget extends StatelessWidget {
                     ),
                     // Current position dot
                     LineChartBarData(
-                      spots: [FlSpot(mach.clamp(0.0, 2.2), cgPct.clamp(50.0, 62.0))],
+                      spots: [
+                        FlSpot(mach.clamp(0.0, 2.2), cgPct.clamp(50.0, 62.0)),
+                        FlSpot(mach.clamp(0.0, 2.2), cgPct.clamp(50.0, 62.0)),
+                      ],
                       isCurved: false,
                       color: isOut ? Colors.redAccent : Colors.greenAccent,
                       barWidth: 0,
                       dotData: FlDotData(
                         show: true,
                         getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
-                          radius: 6,
+                          radius: index == 0 ? 6 : 0,
                           color: isOut ? Colors.red : Colors.greenAccent,
                           strokeColor: Colors.white,
-                          strokeWidth: 2,
+                          strokeWidth: index == 0 ? 2 : 0,
                         ),
                       ),
                     ),
