@@ -242,6 +242,8 @@ This section summarizes what has been built. Full raw history is in:
 - Cruise-climb mission profile now directly drives ETE/trip/endurance calculations.
 - METAR/elevation-aware takeoff/landing requirement corrections.
 - Operational Alerts panel for fuel, alternate, weight, runway, and tailwind constraints.
+- Integrated high-contrast electric-cyan LCD Cockpit telemetry screen inside `concorde_lcd_panel.dart` displaying real-time engine EICAS, fuel, PFD pitch/roll, and Concorde droop nose/gear.
+- Implemented uniform row height snapping across the flight monitor grid using IntrinsicHeight rows.
 
 ### Commit-wave notes from raw changelog
 

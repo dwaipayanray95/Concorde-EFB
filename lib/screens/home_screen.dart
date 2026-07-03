@@ -19,16 +19,14 @@ import '../widgets/wind_arrow.dart';
 import '../widgets/efb_glass_container.dart';
 import '../widgets/efb_ad_banner.dart';
 import '../widgets/entrance_fader.dart';
+import '../widgets/smooth_scroll_wrapper.dart';
 import '../core/ui_tokens.dart';
 import '../core/concorde_constants.dart';
 import '../core/metar_parser.dart';
 import '../models/concorde_models.dart';
 import '../features/flight_monitor/presentation/controllers/telemetry_provider.dart';
-import '../features/flight_monitor/presentation/widgets/concorde_dial_gauges.dart';
-import '../features/flight_monitor/presentation/widgets/cg_envelope_widget.dart';
-import '../features/flight_monitor/presentation/widgets/thermal_panel_widget.dart';
-import '../features/flight_monitor/presentation/widgets/fuel_status_panel.dart';
-import '../features/flight_monitor/presentation/widgets/landing_reporter.dart';
+import '../features/flight_monitor/data/models/telemetry_model.dart';
+import '../features/flight_monitor/presentation/widgets/concorde_lcd_panel.dart';
 import '../features/flight_monitor/presentation/widgets/flight_history_dashboard.dart';
 import '../services/simbrief_service.dart';
 import '../models/airport.dart';
@@ -52,6 +50,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
   String? _latestVersion;
   bool _hasUpdate = false;
 
+  final ScrollController _tab0Controller = ScrollController();
+  final ScrollController _tab2Controller = ScrollController();
+
   @override
   void initState() {
     super.initState();
@@ -62,6 +63,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
   @override
   void dispose() {
     windowManager.removeListener(this);
+    _tab0Controller.dispose();
+    _tab2Controller.dispose();
     super.dispose();
   }
 
@@ -325,32 +328,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                               // Dynamic tab views (cascade anims play on tab switches)
                               Expanded(
                                 child: selectedTab == 0
-                                    ? SingleChildScrollView(
-                                        key: const ValueKey('scroll-tab-0'),
-                                        scrollDirection: Axis.vertical,
-                                        physics: const BouncingScrollPhysics(),
-                                        padding: const EdgeInsets.only(left: 40, right: 40, bottom: 48),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            EntranceFader(
-                                              key: ValueKey('plan-row-$selectedTab'),
-                                              delay: const Duration(milliseconds: 100),
-                                              child: _buildFlightPlanAndCruiseRow(ref),
-                                            ),
-                                            const SizedBox(height: 32),
-                                            EntranceFader(
-                                              key: ValueKey('perf-section-$selectedTab'),
-                                              delay: const Duration(milliseconds: 220),
-                                              child: _buildPerformanceCalculatorSection(ref),
-                                            ),
-                                            const SizedBox(height: 64),
-                                            EntranceFader(
-                                              key: ValueKey('footer-$selectedTab'),
-                                              delay: const Duration(milliseconds: 340),
-                                              child: _buildFooter(),
-                                            ),
-                                          ],
+                                    ? SmoothScrollWrapper(
+                                        controller: _tab0Controller,
+                                        child: SingleChildScrollView(
+                                          controller: _tab0Controller,
+                                          key: const ValueKey('scroll-tab-0'),
+                                          scrollDirection: Axis.vertical,
+                                          physics: const BouncingScrollPhysics(),
+                                          padding: const EdgeInsets.only(left: 40, right: 40, bottom: 48),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                                            children: [
+                                              EntranceFader(
+                                                key: ValueKey('plan-row-$selectedTab'),
+                                                delay: const Duration(milliseconds: 100),
+                                                child: _buildFlightPlanAndCruiseRow(ref),
+                                              ),
+                                              const SizedBox(height: 32),
+                                              EntranceFader(
+                                                key: ValueKey('perf-section-$selectedTab'),
+                                                delay: const Duration(milliseconds: 220),
+                                                child: _buildPerformanceCalculatorSection(ref),
+                                              ),
+                                              const SizedBox(height: 64),
+                                              EntranceFader(
+                                                key: ValueKey('footer-$selectedTab'),
+                                                delay: const Duration(milliseconds: 340),
+                                                child: _buildFooter(),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       )
                                     : selectedTab == 1
@@ -363,26 +370,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                                               child: _buildChecklistsSection(ref),
                                             ),
                                           )
-                                        : SingleChildScrollView(
-                                            key: const ValueKey('scroll-tab-2'),
-                                            scrollDirection: Axis.vertical,
-                                            physics: const BouncingScrollPhysics(),
-                                            padding: const EdgeInsets.only(left: 40, right: 40, bottom: 48),
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                EntranceFader(
-                                                  key: ValueKey('monitor-section-$selectedTab'),
-                                                  delay: const Duration(milliseconds: 100),
-                                                  child: _buildFlightMonitorSection(ref),
-                                                ),
-                                                const SizedBox(height: 64),
-                                                EntranceFader(
-                                                  key: ValueKey('monitor-footer-$selectedTab'),
-                                                  delay: const Duration(milliseconds: 220),
-                                                  child: _buildFooter(),
-                                                ),
-                                              ],
+                                        : SmoothScrollWrapper(
+                                            controller: _tab2Controller,
+                                            child: SingleChildScrollView(
+                                              controller: _tab2Controller,
+                                              key: const ValueKey('scroll-tab-2'),
+                                              scrollDirection: Axis.vertical,
+                                              physics: const BouncingScrollPhysics(),
+                                              padding: const EdgeInsets.only(left: 40, right: 40, bottom: 48),
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                                children: [
+                                                  EntranceFader(
+                                                    key: ValueKey('monitor-section-$selectedTab'),
+                                                    delay: const Duration(milliseconds: 100),
+                                                    child: _buildFlightMonitorSection(ref),
+                                                  ),
+                                                  const SizedBox(height: 64),
+                                                  EntranceFader(
+                                                    key: ValueKey('monitor-footer-$selectedTab'),
+                                                    delay: const Duration(milliseconds: 220),
+                                                    child: _buildFooter(),
+                                                  ),
+                                                ],
+                                              ),
                                             ),
                                           ),
                               ),
@@ -2083,7 +2094,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
     final monitorState = ref.watch(flightMonitorProvider);
     final notifier = ref.read(flightMonitorProvider.notifier);
 
-    // Header Row with Controls
     Widget controlsHeader;
     if (monitorState.isPlaybackMode) {
       controlsHeader = Row(
@@ -2153,10 +2163,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
       );
     }
 
-    final hasData = monitorState.currentTelemetry != null;
+    final telemetry = monitorState.currentTelemetry ?? TelemetryModel.empty();
+    final isLiveOrPlayback = monitorState.currentTelemetry != null;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         controlsHeader,
         const SizedBox(height: 24),
@@ -2195,99 +2206,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
           ),
           const SizedBox(height: 16),
         ],
-        if (hasData) ...[
-          // Main Dashboard Grid
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Left Column: Dials + Landing Reporter
-              Expanded(
-                flex: 4,
-                child: Column(
-                  children: [
-                    EfbGlassContainer(
-                      padding: const EdgeInsets.all(20),
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.white10, width: 1.5),
-                        ),
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'FLIGHT DECK INSTRUMENTS',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white30,
-                                letterSpacing: 1.5,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                ConcordeAirspeedGauge(
-                                  ias: monitorState.currentTelemetry!.ias,
-                                  mach: monitorState.currentTelemetry!.mach,
-                                ),
-                                ConcordeAltimeterGauge(
-                                  altitude: monitorState.currentTelemetry!.altitude,
-                                ),
-                                ConcordeVerticalSpeedGauge(
-                                  vs: monitorState.currentTelemetry!.vs,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    LandingReporter(
-                      currentPitch: monitorState.currentTelemetry!.pitch,
-                      isLanding: monitorState.currentTelemetry!.isLanding,
-                      touchdownVS: monitorState.currentTelemetry!.touchdownVS,
-                      touchdownPitch: monitorState.currentTelemetry!.touchdownPitch,
-                      touchdownGForce: monitorState.currentTelemetry!.touchdownGForce,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 24),
-              // Right Column: CG Chart + Thermal + Fuel
-              Expanded(
-                flex: 3,
-                child: Column(
-                  children: [
-                    CgEnvelopeWidget(
-                      mach: monitorState.currentTelemetry!.mach,
-                      cgPct: monitorState.currentTelemetry!.cgPct,
-                    ),
-                    const SizedBox(height: 24),
-                    ThermalPanelWidget(
-                      tat: monitorState.currentTelemetry!.tat,
-                    ),
-                    const SizedBox(height: 24),
-                    FuelStatusPanel(
-                      left: monitorState.currentTelemetry!.fuelLeftTank,
-                      right: monitorState.currentTelemetry!.fuelRightTank,
-                      center: monitorState.currentTelemetry!.fuelCenterTank,
-                      trimFwd: monitorState.currentTelemetry!.fuelTrimForward,
-                      trimAft: monitorState.currentTelemetry!.fuelTrimAft,
-                      fuelFlowKgh: monitorState.currentTelemetry!.fuelBurnTotal,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+
+        // Always show the Concorde Glass LCD Avionics Cockpit panel
+        AbsorbPointer(
+          absorbing: !isLiveOrPlayback,
+          child: Opacity(
+            opacity: isLiveOrPlayback ? 1.0 : 0.45,
+            child: ConcordeLcdPanel(
+              telemetry: telemetry,
+              isConnected: isLiveOrPlayback,
+            ),
           ),
-          const SizedBox(height: 48),
-        ],
-        // Log history widget at the bottom or if no live data is active
+        ),
+
+        const SizedBox(height: 48),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [

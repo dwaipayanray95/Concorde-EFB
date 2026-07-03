@@ -75,6 +75,43 @@ class TelemetryModel {
     required this.touchdownGForce,
   });
 
+  factory TelemetryModel.empty() {
+    return TelemetryModel(
+      timestamp: 0,
+      altitude: 0.0,
+      ias: 0.0,
+      tas: 0.0,
+      gs: 0.0,
+      heading: 0.0,
+      vs: 0.0,
+      pitch: 0.0,
+      roll: 0.0,
+      latitude: 0.0,
+      longitude: 0.0,
+      gForce: 1.0,
+      gearPosition: 0.0,
+      flapsPosition: 0,
+      zuluTime: "00:00:00",
+      mach: 0.0,
+      tat: 15.0,
+      cgPct: 53.0,
+      cgAftLimit: 59.0,
+      cgFwdLimit: 52.0,
+      fuelBurnTotal: 0.0,
+      reheatActive: const [false, false, false, false],
+      snootAngle: 0.0,
+      fuelLeftTank: 0.0,
+      fuelRightTank: 0.0,
+      fuelCenterTank: 0.0,
+      fuelTrimForward: 0.0,
+      fuelTrimAft: 0.0,
+      isLanding: false,
+      touchdownVS: 0.0,
+      touchdownPitch: 0.0,
+      touchdownGForce: 0.0,
+    );
+  }
+
   factory TelemetryModel.fromJson(Map<String, dynamic> json) {
     final basic = json['basic'] ?? {};
     final concorde = json['concorde'] ?? {};
