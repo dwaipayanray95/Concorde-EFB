@@ -1,5 +1,12 @@
 [
     {
+        "date": "2026-07-03",
+        "title": "Commits",
+        "items": [
+            "a4ceea9 fix flight monitor tab and add .mds for agents"
+        ]
+    },
+    {
         "date": "2026-07-02",
         "title": "Commits",
         "items": [
