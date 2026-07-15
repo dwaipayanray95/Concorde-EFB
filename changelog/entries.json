@@ -3,6 +3,7 @@
         "date": "2026-07-15",
         "title": "Commits",
         "items": [
+            "6b9d98f refactor: split files so its easier to maintain the codebase",
             "afb6574 code fixes & airport db is now local so app works offline as well"
         ]
     },
