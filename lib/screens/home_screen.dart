@@ -14,6 +14,7 @@ import '../widgets/smooth_scroll_wrapper.dart';
 import '../widgets/ambient_glow.dart';
 import '../core/ui_tokens.dart';
 import '../core/app_version.dart';
+import '../core/sim_bridge_launcher.dart';
 import 'widgets/app_header.dart';
 import 'tabs/flight_planner_tab.dart';
 import 'tabs/checklists_tab.dart';
@@ -150,6 +151,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
               TextButton(
                 onPressed: () async {
                   Navigator.of(context).pop();
+                  SimBridgeLauncher.stop();
                   await windowManager.destroy();
                 },
                 child: Text(
@@ -164,6 +166,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                     await launchUrl(url);
                   } catch (_) {}
                   if (context.mounted) Navigator.of(context).pop();
+                  SimBridgeLauncher.stop();
                   await windowManager.destroy();
                 },
                 style: ElevatedButton.styleFrom(
@@ -181,6 +184,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
       }
     } else {
       await prefs.setBool('is_first_launch', false);
+      SimBridgeLauncher.stop();
       await windowManager.destroy();
     }
   }

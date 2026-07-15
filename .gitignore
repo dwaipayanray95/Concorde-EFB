@@ -50,5 +50,4 @@ app.*.map.json
 
 # Dependencies and Build Cache
 node_modules/
-src-tauri/target/
 
