@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,16 +6,21 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'core/ui_tokens.dart';
+import 'core/sim_bridge_launcher.dart';
 import 'screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize AdMob for Mobile platforms
   if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
     await MobileAds.instance.initialize();
   }
-  
+
+  // Launch the bundled SimConnect telemetry bridge so Flight Monitor works
+  // without the user installing Python or running anything manually.
+  unawaited(SimBridgeLauncher.start());
+
   // Initialize window manager for Desktop platforms
   await windowManager.ensureInitialized();
 
