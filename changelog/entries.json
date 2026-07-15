@@ -3,6 +3,8 @@
         "date": "2026-07-15",
         "title": "Commits",
         "items": [
+            "d6e01d1 ci: fix broken Windows build pipeline in GitHub Actions",
+            "6e17380 feat: bundle SimConnect bridge into app and fix telemetry bugs",
             "6bbb338 feat: add ez-github-scripts",
             "6b0e215 update dependancies",
             "6b9d98f refactor: split files so its easier to maintain the codebase",
