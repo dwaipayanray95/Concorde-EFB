@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -97,7 +96,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
         final tagName = data['tag_name'] as String?;
         if (tagName != null) {
           final remoteVersion = tagName.replaceAll(RegExp(r'^[vV]'), '');
-          if (_isNewerVersion(remoteVersion, AppVersion.full)) {
+          if (mounted && _isNewerVersion(remoteVersion, AppVersion.full)) {
             setState(() {
               _latestVersion = remoteVersion;
               _hasUpdate = true;
@@ -241,52 +240,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
           body: SafeArea(
             child: Stack(
               children: [
-                // Dynamic Background for Refraction
+                // Static ambient background. Radial gradients give the same
+                // soft-glow look as the old blurred circles without paying for
+                // a full-screen BackdropFilter every frame.
                 Positioned.fill(
                   child: Container(
                     decoration: const BoxDecoration(color: UiTokens.bg),
-                    child: Stack(
+                    child: const Stack(
                       children: [
-                        Positioned(
-                          top: -100,
-                          left: -100,
-                          child: Container(
-                            width: 400,
-                            height: 400,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: const Color(0xFF1E3A8A).withValues(alpha: 0.15),
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 100,
-                          right: -50,
-                          child: Container(
-                            width: 500,
-                            height: 500,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: const Color(0xFF4C1D95).withValues(alpha: 0.12),
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          top: 200,
-                          right: 200,
-                          child: Container(
-                            width: 300,
-                            height: 300,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: const Color(0xFF0369A1).withValues(alpha: 0.12),
-                            ),
-                          ),
-                        ),
-                        BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
-                          child: Container(color: Colors.transparent),
-                        ),
+                        _AmbientGlow(top: -300, left: -300, size: 800, color: Color(0xFF1E3A8A), alpha: 0.15),
+                        _AmbientGlow(bottom: -100, right: -250, size: 900, color: Color(0xFF4C1D95), alpha: 0.12),
+                        _AmbientGlow(top: 0, right: 0, size: 700, color: Color(0xFF0369A1), alpha: 0.12),
                       ],
                     ),
                   ),
@@ -674,6 +638,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                         
                         ref.read(simbriefRouteProvider.notifier).set(ofp['general']?['route'] ?? '--');
                         ref.read(simbriefLoadedProvider.notifier).set(true);
+                      } else if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'SimBrief import failed. Check your username/ID and internet connection.',
+                              style: GoogleFonts.plusJakartaSans(color: Colors.white),
+                            ),
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: UiTokens.error.withValues(alpha: 0.9),
+                          ),
+                        );
                       }
                     } finally {
                       ref.read(simbriefLoadingProvider.notifier).set(false);
@@ -1507,14 +1482,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (metarStr.isNotEmpty) ...[
-                          Text(
-                            metarStr,
-                            style: GoogleFonts.jetBrainsMono(
-                              fontSize: 13,
-                              color: Colors.white.withValues(alpha: 0.95),
-                              fontWeight: FontWeight.w500,
+                          if (showRaw)
+                            Text(
+                              metarStr,
+                              style: GoogleFonts.jetBrainsMono(
+                                fontSize: 13,
+                                color: Colors.white.withValues(alpha: 0.95),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            )
+                          else
+                            Text(
+                              'TAP TO SHOW RAW METAR',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 9,
+                                color: UiTokens.textDim,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1,
+                              ),
                             ),
-                          ),
                           const SizedBox(height: 10),
                         ],
                         Wrap(
@@ -2253,4 +2239,49 @@ class ChecklistItem {
     required this.status,
     this.note,
   });
+}
+
+/// A soft radial glow used in the screen background — visually equivalent to
+/// a heavily blurred circle but rendered as a cheap gradient.
+class _AmbientGlow extends StatelessWidget {
+  final double? top;
+  final double? bottom;
+  final double? left;
+  final double? right;
+  final double size;
+  final Color color;
+  final double alpha;
+
+  const _AmbientGlow({
+    this.top,
+    this.bottom,
+    this.left,
+    this.right,
+    required this.size,
+    required this.color,
+    required this.alpha,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: top,
+      bottom: bottom,
+      left: left,
+      right: right,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: RadialGradient(
+            colors: [
+              color.withValues(alpha: alpha),
+              color.withValues(alpha: 0.0),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

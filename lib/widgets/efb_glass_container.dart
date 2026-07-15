@@ -34,12 +34,12 @@ class _EfbGlassContainerState extends State<EfbGlassContainer> {
   @override
   Widget build(BuildContext context) {
     final radius = widget.borderRadius ?? BorderRadius.circular(16);
-    
+
     // Animate border color and neon glows on hover
-    final borderCol = _isHovered 
-        ? UiTokens.accent.withValues(alpha: 0.22) 
+    final borderCol = _isHovered
+        ? UiTokens.accent.withValues(alpha: 0.22)
         : Colors.white.withValues(alpha: 0.1);
-        
+
     final hoverGlow = [
       if (_isHovered)
         BoxShadow(
@@ -49,6 +49,38 @@ class _EfbGlassContainerState extends State<EfbGlassContainer> {
         ),
       ...?widget.boxShadow,
     ];
+
+    Widget inner = AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      padding: widget.padding,
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        border: Border.all(color: borderCol, width: 1.0),
+        color: widget.color,
+        gradient: widget.color == null && widget.gradient == null
+            ? LinearGradient(
+                colors: [
+                  Colors.white.withValues(alpha: 0.08),
+                  Colors.white.withValues(alpha: 0.03),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : widget.gradient,
+      ),
+      child: widget.child,
+    );
+
+    // BackdropFilter is one of the most expensive raster ops in Flutter and
+    // this container is used dozens of times per screen. Only the large cards
+    // (blur >= 15) get a real blur; small chips and fields are visually
+    // identical with just the translucent fill on this dark theme.
+    if (widget.blur >= 15) {
+      inner = BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: widget.blur, sigmaY: widget.blur),
+        child: inner,
+      );
+    }
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -63,29 +95,7 @@ class _EfbGlassContainerState extends State<EfbGlassContainer> {
           ),
           child: ClipRRect(
             borderRadius: radius,
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: widget.blur, sigmaY: widget.blur),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: widget.padding,
-                decoration: BoxDecoration(
-                  borderRadius: radius,
-                  border: Border.all(color: borderCol, width: 1.0),
-                  color: widget.color,
-                  gradient: widget.color == null && widget.gradient == null
-                      ? LinearGradient(
-                          colors: [
-                            Colors.white.withValues(alpha: 0.08),
-                            Colors.white.withValues(alpha: 0.03),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        )
-                      : widget.gradient,
-                ),
-                child: widget.child,
-              ),
-            ),
+            child: inner,
           ),
         ),
       ),

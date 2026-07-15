@@ -7,12 +7,12 @@ class SimBriefService {
   Future<Map<String, dynamic>?> fetchLatestOFP(String username) async {
     try {
       final url = baseUrl.replaceAll('{USERNAME}', Uri.encodeComponent(username));
-      final response = await http.get(Uri.parse(url));
+      final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
       if (response.statusCode == 200) {
         return json.decode(response.body);
       }
-    } catch (e) {
-      // Handle error
+    } catch (_) {
+      // Fall through to null: caller surfaces the failure to the user.
     }
     return null;
   }

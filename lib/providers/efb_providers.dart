@@ -57,7 +57,9 @@ class SimbriefUserNotifier extends Notifier<String> {
   void _loadPrefs() async {
     _prefs = await SharedPreferences.getInstance();
     final saved = _prefs?.getString('simbrief_username');
-    if (saved != null && saved.isNotEmpty) {
+    // Only apply the saved value if the user hasn't typed anything yet,
+    // so a slow prefs load can't clobber live input.
+    if (saved != null && saved.isNotEmpty && state.isEmpty) {
       state = saved;
     }
   }
