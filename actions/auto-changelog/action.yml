@@ -1,0 +1,44 @@
+name: 'EZ Auto Changelog'
+description: 'Automatically generates or updates the CHANGELOG.md file based on your git commit log.'
+inputs:
+  commit-changes:
+    description: 'Commit and push CHANGELOG.md updates back to the repo (true/false)'
+    required: false
+    default: 'true'
+  branch:
+    description: 'Branch to push changes to. Defaults to checking active default branch.'
+    required: false
+    default: 'main'
+runs:
+  using: 'composite'
+  steps:
+    - name: Ensure git history is fetched
+      run: git fetch --prune --unshallow || git fetch --tags || true
+      shell: bash
+
+    - name: Generate Changelog
+      run: node "${{ github.action_path }}/update-changelog.js"
+      shell: bash
+
+    - name: Commit and Push Changes
+      if: ${{ inputs.commit-changes == 'true' }}
+      run: |
+        git config --local user.name "github-actions[bot]"
+        git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        
+        # Check if we are in detached HEAD state (e.g. triggered by tag push)
+        if git symbolic-ref -q HEAD >/dev/null; then
+          echo "On branch. Normal commit."
+        else
+          echo "Detached HEAD state. Checking out branch: ${{ inputs.branch }}"
+          git checkout ${{ inputs.branch }} || git checkout -b ${{ inputs.branch }}
+        fi
+
+        if [ -n "$(git status --porcelain CHANGELOG.md)" ]; then
+          git add CHANGELOG.md
+          git commit -m "chore: update CHANGELOG.md [skip ci]"
+          git push origin ${{ inputs.branch }}
+        else
+          echo "No changes to CHANGELOG.md detected."
+        fi
+      shell: bash

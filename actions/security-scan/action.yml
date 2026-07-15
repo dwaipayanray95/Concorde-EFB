@@ -1,0 +1,35 @@
+name: 'EZ Security Scan'
+description: 'Scans your codebase for accidentally committed secrets, API keys, or security vulnerabilities.'
+runs:
+  using: 'composite'
+  steps:
+    - name: Scan for committed secrets (Pattern matching)
+      run: |
+        echo "Scanning codebase for high-risk strings (API keys, Private keys, AWS keys)..."
+        
+        SECRETS_FOUND=0
+        DIFF_RANGE="HEAD~1..HEAD"
+        
+        # Check if running in a GitHub PR context to scan PR history, or standard push
+        if [ -n "${{ github.base_ref }}" ]; then
+          DIFF_RANGE="origin/${{ github.base_ref }}..origin/${{ github.head_ref }}"
+        elif [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+          DIFF_RANGE="${{ github.event.before }}..${{ github.sha }}"
+        fi
+
+        echo "Scanning commit range: $DIFF_RANGE"
+        
+        # Simple patterns list (AWS access keys, Private keys, Google API Keys, GitHub Tokens)
+        # Use grep -q to prevent secrets printing to logs!
+        if git diff "$DIFF_RANGE" 2>/dev/null | grep -qE "AKIA[0-9A-Z]{16}|-----BEGIN PRIVATE KEY-----|AIza[0-9A-Za-z_-]{35}|ghp_[a-zA-Z0-9]{36,40}"; then
+          SECRETS_FOUND=1
+        fi
+        
+        if [ "$SECRETS_FOUND" -eq 1 ]; then
+          echo "❌ ERROR: Potential secrets or API credentials detected in your changes!"
+          echo "Please review the files changed before pushing code online."
+          exit 1
+        else
+          echo "✅ Secret patterns check passed."
+        fi
+      shell: bash

@@ -1,0 +1,14 @@
+{
+  "version": "0.1.1",
+  "installationDate": "2026-07-15T15:18:31Z",
+  "settings": {
+    "aio": true,
+    "releaseNotes": true,
+    "flutterBuild": true,
+    "changelog": true,
+    "licenseGuard": true,
+    "prPilot": true,
+    "securityScan": true,
+    "gitHooks": true
+  }
+}

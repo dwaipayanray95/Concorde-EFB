@@ -1,0 +1,31 @@
+name: 'EZ License Guard'
+description: 'Checks Dart/Flutter and JS/Node project lockfiles for dependency licenses compliance.'
+inputs:
+  allowed-licenses:
+    description: 'Comma separated list of allowed licenses (e.g. MIT, BSD, Apache-2.0)'
+    required: false
+  blocked-licenses:
+    description: 'Comma separated list of blocked copyleft licenses (e.g. GPL, AGPL)'
+    required: false
+  fail-on-violation:
+    description: 'Fail the build if a blocked license is discovered (true/false)'
+    required: false
+    default: 'false'
+runs:
+  using: 'composite'
+  steps:
+    - name: Run License Check Script
+      run: node "${{ github.action_path }}/check-licenses.js"
+      env:
+        ALLOWED_LICENSES: ${{ inputs.allowed-licenses }}
+        BLOCKED_LICENSES: ${{ inputs.blocked-licenses }}
+        FAIL_ON_VIOLATION: ${{ inputs.fail-on-violation }}
+      shell: bash
+
+    - name: Publish Summary
+      if: always()
+      run: |
+        if [ -f "license_report.md" ]; then
+          cat license_report.md >> $GITHUB_STEP_SUMMARY
+        fi
+      shell: bash

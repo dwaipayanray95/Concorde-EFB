@@ -1,0 +1,38 @@
+name: 'EZ AI Release Notes'
+description: 'Generates beautiful release notes from git diffs using Google Gemini AI, with a clean offline fallback.'
+inputs:
+  gemini-api-key:
+    description: 'Google Gemini API key. If omitted, uses template-based offline generation.'
+    required: false
+  publish:
+    description: 'Whether to create/update the GitHub release automatically (true/false)'
+    required: false
+    default: 'false'
+runs:
+  using: 'composite'
+  steps:
+    - name: Ensure Git History is Fetched
+      run: |
+        # Ensure deep history is loaded so we can find commits and tags
+        git fetch --prune --unshallow || git fetch --tags || true
+      shell: bash
+
+    - name: Run Release Notes Script
+      run: node "${{ github.action_path }}/generate-release-notes.js"
+      env:
+        GEMINI_API_KEY: ${{ inputs.gemini-api-key }}
+      shell: bash
+
+    - name: Create GitHub Release (Optional)
+      if: ${{ inputs.publish == 'true' }}
+      run: |
+        TAG_NAME=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0.0")
+        if [ -f "release_notes.md" ]; then
+          echo "Publishing release for tag $TAG_NAME"
+          gh release create "$TAG_NAME" -F release_notes.md --title "$TAG_NAME Release" || gh release edit "$TAG_NAME" -F release_notes.md --title "$TAG_NAME Release"
+        else
+          echo "No release_notes.md found. Skipping release creation."
+        fi
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      shell: bash
