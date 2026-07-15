@@ -60,13 +60,15 @@ runs:
           echo "${{ inputs.keystore-base64 }}" | base64 -d > android/app/release.jks
         fi
         
-        # Write properties strictly with no leading indentations
-        cat <<EOF > android/key.properties
-storePassword=${{ inputs.keystore-password }}
-keyPassword=${{ inputs.key-password }}
-keyAlias=${{ inputs.key-alias }}
-storeFile=release.jks
-EOF
+        # Write properties via printf (not an unindented heredoc) so the
+        # block scalar's indentation stays consistent and this parses as
+        # valid YAML.
+        {
+          printf 'storePassword=%s\n' "${{ inputs.keystore-password }}"
+          printf 'keyPassword=%s\n' "${{ inputs.key-password }}"
+          printf 'keyAlias=%s\n' "${{ inputs.key-alias }}"
+          printf 'storeFile=release.jks\n'
+        } > android/key.properties
       shell: bash
 
     - name: Get Pub Dependencies
@@ -122,7 +124,7 @@ EOF
           build/app/outputs/bundle/release/*.aab
           build/web/**
           build/macos/Build/Products/Release/*.app
-          build/windows/runner/Release/**
+          build/windows/x64/runner/Release/**
         if-no-files-found: ignore
 
     - name: Clean up Android Keystore Config
