@@ -10,6 +10,17 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+# ---------------------------------------------------------
+# ⚙️ EASY CONFIGURATION
+# Set the platforms you want to build to 'true' or 'false'
+# ---------------------------------------------------------
+env:
+  BUILD_ANDROID_APK: 'false'
+  BUILD_ANDROID_AAB: 'false'
+  BUILD_WEB: 'false'
+  BUILD_MACOS: 'false'
+  BUILD_WINDOWS: 'true'
+
 permissions:
   contents: write
   pull-requests: write
@@ -36,8 +47,8 @@ jobs:
         with:
           fail-on-violation: 'false'
 
-  release:
-    name: Production Build & Release
+  release-management:
+    name: Release Notes & Changelog
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
@@ -54,41 +65,6 @@ jobs:
         with:
           fail-on-violation: 'true'
 
-      # --- Build Targets ---
-      # Below are all the supported build targets. The Android APK is enabled by default.
-      # To build other platforms, simply uncomment the blocks below.
-      # ⚠️ Note: If you uncomment macOS or Windows, you must change the `runs-on` property
-      # of this job (line 42) from `ubuntu-latest` to `macos-latest` or `windows-latest`.
-
-      #- name: Build Android App (APK)
-       # uses: ./actions/flutter-build
-        #with:
-         # platform: 'android-apk'
-          #split-apk: 'true'
-          # If using signing keys, supply secrets here:
-          # keystore-base64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          # keystore-password: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          # key-alias: ${{ secrets.ANDROID_KEY_ALIAS }}
-          # key-password: ${{ secrets.ANDROID_KEY_PASSWORD }}
-
-      # - name: Build Android App (AAB)
-      #   uses: ./actions/flutter-build
-      #   with:
-      #     platform: 'android-aab'
-
-      # - name: Build Web App
-      #   uses: ./actions/flutter-build
-      #   with:
-      #     platform: 'web'
-
-      # - name: Build macOS App
-      #   uses: ./actions/flutter-build
-      #   with:
-      #     platform: 'macos'
-
-      # Windows is built separately by the release-windows job below since
-      # it requires a windows-latest runner (this job runs on ubuntu-latest).
-
       - name: Generate AI Release Notes
         uses: ./actions/ai-release-notes
         with:
@@ -100,28 +76,59 @@ jobs:
         with:
           commit-changes: 'true'
 
-  release-windows:
-    name: Build Windows App
-    if: startsWith(github.ref, 'refs/tags/v')
+  build-ubuntu:
+    name: Build Android & Web
+    if: startsWith(github.ref, 'refs/tags/v') && (env.BUILD_ANDROID_APK == 'true' || env.BUILD_ANDROID_AAB == 'true' || env.BUILD_WEB == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Build Android App (APK)
+        if: env.BUILD_ANDROID_APK == 'true'
+        uses: ./actions/flutter-build
+        with:
+          platform: 'android-apk'
+          split-apk: 'true'
+          # keystore-base64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          # keystore-password: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          # key-alias: ${{ secrets.ANDROID_KEY_ALIAS }}
+          # key-password: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      - name: Build Android App (AAB)
+        if: env.BUILD_ANDROID_AAB == 'true'
+        uses: ./actions/flutter-build
+        with:
+          platform: 'android-aab'
+
+      - name: Build Web App
+        if: env.BUILD_WEB == 'true'
+        uses: ./actions/flutter-build
+        with:
+          platform: 'web'
+
+  build-macos:
+    name: Build macOS
+    if: startsWith(github.ref, 'refs/tags/v') && env.BUILD_MACOS == 'true'
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Build macOS App
+        uses: ./actions/flutter-build
+        with:
+          platform: 'macos'
+
+  build-windows:
+    name: Build Windows
+    if: startsWith(github.ref, 'refs/tags/v') && env.BUILD_WINDOWS == 'true'
     runs-on: windows-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Build Windows App
         uses: ./actions/flutter-build
         with:
           platform: 'windows'
-
-      - name: Compile Windows Installer (Inno Setup)
-        run: |
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" inno_setup.iss
-        shell: powershell
-
-      - name: Upload Windows Installer Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Concorde-EFB-Windows-Installer
-          path: build/windows/Concorde-EFB-Installer.exe
