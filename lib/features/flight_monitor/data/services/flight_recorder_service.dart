@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/telemetry_model.dart';
 
@@ -44,10 +45,16 @@ class FlightRecordHeader {
 }
 
 class FlightRecorderService {
+  /// The bridge streams at ~25 Hz; recording every frame balloons memory
+  /// (a 3.5 h flight would be ~315k frames). 2 Hz is plenty for playback
+  /// scrubbing, so frames closer together than this are dropped.
+  static const Duration _recordInterval = Duration(milliseconds: 500);
+
   final List<TelemetryModel> _currentSessionFrames = [];
   bool _isRecording = false;
   DateTime? _sessionStartTime;
-  
+  DateTime? _lastFrameTime;
+
   // Touchdown stats permanently stored for the session
   double? _sessionTouchdownVS;
   double? _sessionTouchdownPitch;
@@ -59,6 +66,7 @@ class FlightRecorderService {
   void startRecording() {
     _currentSessionFrames.clear();
     _sessionStartTime = DateTime.now();
+    _lastFrameTime = null;
     _isRecording = true;
     _sessionTouchdownVS = null;
     _sessionTouchdownPitch = null;
@@ -67,14 +75,25 @@ class FlightRecorderService {
 
   void addFrame(TelemetryModel frame) {
     if (!_isRecording) return;
-    _currentSessionFrames.add(frame);
-    
+
     // Capture and permanently record touchdown variables if they occur
     if (frame.isLanding) {
       _sessionTouchdownVS = frame.touchdownVS;
       _sessionTouchdownPitch = frame.touchdownPitch;
       _sessionTouchdownGForce = frame.touchdownGForce;
     }
+
+    // Downsample to 2 Hz, but never drop a touchdown frame.
+    final now = DateTime.now();
+    final isFirstTouchdownFrame = frame.isLanding &&
+        (_currentSessionFrames.isEmpty || !_currentSessionFrames.last.isLanding);
+    if (!isFirstTouchdownFrame &&
+        _lastFrameTime != null &&
+        now.difference(_lastFrameTime!) < _recordInterval) {
+      return;
+    }
+    _lastFrameTime = now;
+    _currentSessionFrames.add(frame);
   }
 
   Future<FlightRecordHeader?> stopAndSaveRecording() async {
@@ -96,18 +115,19 @@ class FlightRecorderService {
       touchdownGForce: _sessionTouchdownGForce,
     );
 
-    // Save full flight log file
+    // Save full flight log file. Serialization runs in a background isolate
+    // so a long recording can't freeze the UI while it encodes.
     final dir = await _getFlightsDirectory();
     final file = File('${dir.path}/$id.json');
-    final Map<String, dynamic> fullData = {
-      'header': header.toJson(),
-      'frames': _currentSessionFrames.map((f) => f.toJson()).toList(),
-    };
-    await file.writeAsString(jsonEncode(fullData));
+    final encoded = await compute(
+      _encodeFlightLog,
+      _FlightLogPayload(header.toJson(), List.of(_currentSessionFrames)),
+    );
+    await file.writeAsString(encoded);
 
     // Update master flights index file
     await _registerInIndex(header);
-    
+
     _currentSessionFrames.clear();
     return header;
   }
@@ -195,4 +215,19 @@ class FlightRecorderService {
       } catch (_) {}
     }
   }
+}
+
+// ── Isolate entry point (must be top-level for compute) ─────────────────────
+
+class _FlightLogPayload {
+  final Map<String, dynamic> headerJson;
+  final List<TelemetryModel> frames;
+  const _FlightLogPayload(this.headerJson, this.frames);
+}
+
+String _encodeFlightLog(_FlightLogPayload payload) {
+  return jsonEncode({
+    'header': payload.headerJson,
+    'frames': payload.frames.map((f) => f.toJson()).toList(),
+  });
 }

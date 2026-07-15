@@ -29,19 +29,3 @@ class Runway {
     this.elevationFt,
   });
 }
-
-class Navaid {
-  final String ident;
-  final String name;
-  final String type;
-  final double lat;
-  final double lon;
-
-  Navaid({
-    required this.ident,
-    required this.name,
-    required this.type,
-    required this.lat,
-    required this.lon,
-  });
-}

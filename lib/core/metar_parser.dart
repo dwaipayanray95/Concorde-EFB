@@ -75,32 +75,52 @@ class MetarParser {
   }
 
   static double? parseVisibilityKm(String raw) {
-    final mRegex = RegExp(r'\b(\d{4})\b');
+    if (raw.contains('CAVOK')) return 10.0;
+
+    // Statute miles first (US format), handling whole ("10SM"),
+    // fraction ("1/2SM"), mixed ("1 1/2SM") and "less than" ("M1/4SM") forms.
+    final smRegex = RegExp(r'(?:^|\s)M?(?:(\d+)\s)?(\d+)(?:/(\d+))?SM\b');
+    final matchSm = smRegex.firstMatch(raw);
+    if (matchSm != null) {
+      final whole = double.tryParse(matchSm.group(1) ?? '') ?? 0.0;
+      final numerator = double.parse(matchSm.group(2)!);
+      final denominator = double.tryParse(matchSm.group(3) ?? '');
+      final miles = denominator != null && denominator > 0
+          ? whole + numerator / denominator
+          : whole + numerator;
+      return miles * 1.60934;
+    }
+
+    // Metric visibility: standalone 4-digit group (optionally with NDV),
+    // anchored on whitespace so wind/time/QNH groups can't match.
+    final mRegex = RegExp(r'(?:^|\s)(\d{4})(?:NDV)?(?=\s|$)');
     final matchM = mRegex.firstMatch(raw);
     if (matchM != null) {
       final val = double.parse(matchM.group(1)!);
       if (val == 9999) return 10.0;
       return val / 1000.0;
     }
-
-    final smRegex = RegExp(r'\b(\d+)(?:/(\d+))?SM\b');
-    final matchSm = smRegex.firstMatch(raw);
-    if (matchSm != null) {
-      double val = double.parse(matchSm.group(1)!);
-      if (matchSm.group(2) != null) {
-        val += double.parse(matchSm.group(2)!) / 10.0; // Approximation for fractions
-      }
-      return val * 1.60934;
-    }
     return null;
+  }
+
+  /// Lowest broken/overcast/obscured layer in feet AGL, or null if none.
+  static double? parseCeilingFt(String raw) {
+    final regex = RegExp(r'\b(?:BKN|OVC|VV)(\d{3})');
+    double? lowest;
+    for (final m in regex.allMatches(raw)) {
+      final ft = double.parse(m.group(1)!) * 100;
+      if (lowest == null || ft < lowest) lowest = ft;
+    }
+    return lowest;
   }
 
   static String parseFlightCategory(String raw) {
     final vis = parseVisibilityKm(raw) ?? 10.0;
-    // Simplified category logic for visuals
-    if (vis < 1.6) return 'LIFR';
-    if (vis < 4.8) return 'IFR';
-    if (vis < 8.0) return 'MVFR';
+    final ceiling = parseCeilingFt(raw) ?? double.infinity;
+    // Standard US categories: worse of visibility and ceiling wins.
+    if (vis < 1.6 || ceiling < 500) return 'LIFR';
+    if (vis < 4.8 || ceiling < 1000) return 'IFR';
+    if (vis < 8.0 || ceiling <= 3000) return 'MVFR';
     return 'VFR';
   }
 

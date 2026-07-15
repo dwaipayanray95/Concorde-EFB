@@ -47,10 +47,15 @@ class FlightMonitorState {
 }
 
 class FlightMonitorNotifier extends Notifier<FlightMonitorState> {
+  /// The bridge streams at ~25 Hz; repainting the whole LCD panel that often
+  /// is wasted work. 10 Hz is visually indistinguishable on a dashboard.
+  static const Duration _uiUpdateInterval = Duration(milliseconds: 100);
+
   late WebSocketClient _wsClient;
   final FlightRecorderService _recorderService = FlightRecorderService();
   StreamSubscription<TelemetryModel>? _wsSubscription;
   Timer? _pingTimer;
+  DateTime _lastUiUpdate = DateTime.fromMillisecondsSinceEpoch(0);
 
   @override
   FlightMonitorState build() {
@@ -83,8 +88,14 @@ class FlightMonitorNotifier extends Notifier<FlightMonitorState> {
     if (state.isPlaybackMode) return; // Do not overwrite state during log playback
 
     if (state.isRecording) {
+      // The recorder sees every frame and does its own downsampling, so
+      // touchdown events are never missed by the UI throttle below.
       _recorderService.addFrame(telemetry);
     }
+
+    final now = DateTime.now();
+    if (now.difference(_lastUiUpdate) < _uiUpdateInterval) return;
+    _lastUiUpdate = now;
 
     state = state.copyWith(
       currentTelemetry: telemetry,
