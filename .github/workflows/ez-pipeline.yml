@@ -1,0 +1,118 @@
+name: 'EZ All-in-One Pipeline'
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  pr-check:
+    name: PR Verification
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: PR Pilot Size Labeler
+        uses: ./actions/pr-pilot
+
+      - name: Run Security Scan
+        uses: ./actions/security-scan
+
+      - name: Scan Licenses
+        uses: ./actions/license-guard
+        with:
+          fail-on-violation: 'false'
+
+  release:
+    name: Production Build & Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Security Scan Verification
+        uses: ./actions/security-scan
+
+      - name: Verify Package Licenses
+        uses: ./actions/license-guard
+        with:
+          fail-on-violation: 'true'
+
+      # --- Build Targets ---
+      # Below are all the supported build targets. The Android APK is enabled by default.
+      # To build other platforms, simply uncomment the blocks below.
+      # ⚠️ Note: If you uncomment macOS or Windows, you must change the `runs-on` property
+      # of this job (line 42) from `ubuntu-latest` to `macos-latest` or `windows-latest`.
+
+      #- name: Build Android App (APK)
+       # uses: ./actions/flutter-build
+        #with:
+         # platform: 'android-apk'
+          #split-apk: 'true'
+          # If using signing keys, supply secrets here:
+          # keystore-base64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          # keystore-password: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          # key-alias: ${{ secrets.ANDROID_KEY_ALIAS }}
+          # key-password: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      # - name: Build Android App (AAB)
+      #   uses: ./actions/flutter-build
+      #   with:
+      #     platform: 'android-aab'
+
+      # - name: Build Web App
+      #   uses: ./actions/flutter-build
+      #   with:
+      #     platform: 'web'
+
+      # - name: Build macOS App
+      #   uses: ./actions/flutter-build
+      #   with:
+      #     platform: 'macos'
+
+      - name: Build Windows App
+         uses: ./actions/flutter-build
+         with:
+           platform: 'windows'
+
+      - name: Generate AI Release Notes
+        uses: ./actions/ai-release-notes
+        with:
+          gemini-api-key: ${{ secrets.GEMINI_API_KEY }}
+          publish: 'true'
+
+      - name: Update Changelog
+        uses: ./actions/auto-changelog
+        with:
+          commit-changes: 'true'
+
+  release-windows:
+    name: Build Windows App
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build Windows App
+        uses: ./actions/flutter-build
+        with:
+          platform: 'windows'

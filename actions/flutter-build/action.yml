@@ -1,0 +1,133 @@
+name: 'EZ Flutter Build'
+description: 'Builds your Flutter applications for multiple platforms (Android, macOS, Windows, Web).'
+inputs:
+  platform:
+    description: 'Target platform to build. Options: android-apk, android-aab, macos, windows, web'
+    required: true
+    default: 'android-apk'
+  split-apk:
+    description: 'Whether to split the APK per ABI (true/false)'
+    required: false
+    default: 'true'
+  flutter-channel:
+    description: 'Flutter channel to use (stable, beta, master)'
+    required: false
+    default: 'stable'
+  run-tests:
+    description: 'Whether to run flutter test before building (true/false)'
+    required: false
+    default: 'true'
+  run-analyze:
+    description: 'Whether to run flutter analyze before building (true/false)'
+    required: false
+    default: 'true'
+  keystore-base64:
+    description: 'Base64 encoded JKS keystore for signing Android builds'
+    required: false
+  keystore-password:
+    description: 'Password for the keystore'
+    required: false
+  key-alias:
+    description: 'Alias for the key'
+    required: false
+  key-password:
+    description: 'Password for the key'
+    required: false
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Java (JDK 17)
+      if: ${{ inputs.platform == 'android-apk' || inputs.platform == 'android-aab' }}
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        channel: ${{ inputs.flutter-channel }}
+        cache: true
+
+    - name: Decode Android Keystore
+      if: ${{ (inputs.platform == 'android-apk' || inputs.platform == 'android-aab') && inputs.keystore-base64 != '' }}
+      run: |
+        echo "Decoding Android signing keystore..."
+        # Decode compatibility flag that works on Linux/macOS
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+          echo "${{ inputs.keystore-base64 }}" | base64 -D > android/app/release.jks
+        else
+          echo "${{ inputs.keystore-base64 }}" | base64 -d > android/app/release.jks
+        fi
+        
+        # Write properties strictly with no leading indentations
+        cat <<EOF > android/key.properties
+storePassword=${{ inputs.keystore-password }}
+keyPassword=${{ inputs.key-password }}
+keyAlias=${{ inputs.key-alias }}
+storeFile=release.jks
+EOF
+      shell: bash
+
+    - name: Get Pub Dependencies
+      run: flutter pub get
+      shell: bash
+
+    - name: Run Code Analysis
+      if: ${{ inputs.run-analyze == 'true' }}
+      run: flutter analyze
+      shell: bash
+
+    - name: Run Unit Tests
+      if: ${{ inputs.run-tests == 'true' }}
+      run: flutter test
+      shell: bash
+
+    - name: Build Android APK
+      if: ${{ inputs.platform == 'android-apk' }}
+      run: |
+        OPTS=""
+        if [ "${{ inputs.split-apk }}" = "true" ]; then
+          OPTS="--split-per-abi"
+        fi
+        flutter build apk --release $OPTS
+      shell: bash
+
+    - name: Build Android AAB
+      if: ${{ inputs.platform == 'android-aab' }}
+      run: flutter build appbundle --release
+      shell: bash
+
+    - name: Build Web
+      if: ${{ inputs.platform == 'web' }}
+      run: flutter build web --release
+      shell: bash
+
+    - name: Build macOS
+      if: ${{ inputs.platform == 'macos' }}
+      run: flutter build macos --release
+      shell: bash
+
+    - name: Build Windows
+      if: ${{ inputs.platform == 'windows' }}
+      run: flutter build windows --release
+      shell: bash
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: flutter-build-${{ inputs.platform }}
+        path: |
+          build/app/outputs/flutter-apk/*.apk
+          build/app/outputs/bundle/release/*.aab
+          build/web/**
+          build/macos/Build/Products/Release/*.app
+          build/windows/runner/Release/**
+        if-no-files-found: ignore
+
+    - name: Clean up Android Keystore Config
+      if: always() && (inputs.platform == 'android-apk' || inputs.platform == 'android-aab')
+      run: |
+        rm -f android/app/release.jks
+        rm -f android/key.properties
+      shell: bash

@@ -1,0 +1,43 @@
+name: 'EZ PR Pilot'
+description: 'Automates pull requests checkouts, auto-labeling by size (xs, s, m, l, xl), and configures path templates.'
+runs:
+  using: 'composite'
+  steps:
+    - name: Label PR based on Lines Changed (Size)
+      run: |
+        if [ -z "${{ github.event.pull_request.number }}" ]; then
+          echo "⚠️ Not running in a Pull Request context. Skipping labeling."
+          exit 0
+        fi
+
+        # Calculate line changes in PR
+        DIFF=$(git diff origin/${{ github.base_ref }}..origin/${{ github.head_ref }} --numstat 2>/dev/null | awk '{add += $1; remove += $2} END {print add + remove}')
+        DIFF=${DIFF:-0}
+        echo "Total modifications (added + removed lines): $DIFF"
+        
+        # Categorize
+        if [ "$DIFF" -lt 20 ]; then
+          LABEL="size/xs"
+        elif [ "$DIFF" -lt 100 ]; then
+          LABEL="size/s"
+        elif [ "$DIFF" -lt 500 ]; then
+          LABEL="size/m"
+        elif [ "$DIFF" -lt 1000 ]; then
+          LABEL="size/l"
+        else
+          LABEL="size/xl"
+        fi
+        
+        echo "Inferred Size Label: $LABEL"
+        echo "### PR Size Classification: $LABEL" >> $GITHUB_STEP_SUMMARY
+
+        # Apply the label to the PR via GitHub CLI
+        if [ -n "$GITHUB_TOKEN" ]; then
+          echo "Applying label to PR..."
+          gh pr edit ${{ github.event.pull_request.number }} --add-label "$LABEL" || echo "⚠️ Could not apply label (check if label exists in repo settings)."
+        else
+          echo "⚠️ GITHUB_TOKEN not set. Cannot apply label automatically."
+        fi
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      shell: bash
