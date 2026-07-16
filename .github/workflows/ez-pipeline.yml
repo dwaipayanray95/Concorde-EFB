@@ -16,7 +16,7 @@ on:
 # ---------------------------------------------------------
 env:
   BUILD_ANDROID_APK: 'false'
-  BUILD_ANDROID_AAB: 'false'
+  BUILD_ANDROID_AAB: 'true'
   BUILD_WEB: 'false'
   BUILD_MACOS: 'false'
   BUILD_WINDOWS: 'true'
@@ -46,6 +46,26 @@ jobs:
         uses: ./actions/license-guard
         with:
           fail-on-violation: 'false'
+
+  # Setup job parses the top-level env variables so they can be used in job-level `if` conditions
+  setup:
+    name: Parse Configuration
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    outputs:
+      apk: ${{ steps.cfg.outputs.apk }}
+      aab: ${{ steps.cfg.outputs.aab }}
+      web: ${{ steps.cfg.outputs.web }}
+      macos: ${{ steps.cfg.outputs.macos }}
+      windows: ${{ steps.cfg.outputs.windows }}
+    steps:
+      - id: cfg
+        run: |
+          echo "apk=${{ env.BUILD_ANDROID_APK }}" >> "$GITHUB_OUTPUT"
+          echo "aab=${{ env.BUILD_ANDROID_AAB }}" >> "$GITHUB_OUTPUT"
+          echo "web=${{ env.BUILD_WEB }}" >> "$GITHUB_OUTPUT"
+          echo "macos=${{ env.BUILD_MACOS }}" >> "$GITHUB_OUTPUT"
+          echo "windows=${{ env.BUILD_WINDOWS }}" >> "$GITHUB_OUTPUT"
 
   release-management:
     name: Release Notes & Changelog
@@ -78,7 +98,8 @@ jobs:
 
   build-ubuntu:
     name: Build Android & Web
-    if: startsWith(github.ref, 'refs/tags/v') && (env.BUILD_ANDROID_APK == 'true' || env.BUILD_ANDROID_AAB == 'true' || env.BUILD_WEB == 'true')
+    needs: setup
+    if: needs.setup.outputs.apk == 'true' || needs.setup.outputs.aab == 'true' || needs.setup.outputs.web == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -90,10 +111,6 @@ jobs:
         with:
           platform: 'android-apk'
           split-apk: 'true'
-          # keystore-base64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          # keystore-password: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          # key-alias: ${{ secrets.ANDROID_KEY_ALIAS }}
-          # key-password: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
       - name: Build Android App (AAB)
         if: env.BUILD_ANDROID_AAB == 'true'
@@ -109,7 +126,8 @@ jobs:
 
   build-macos:
     name: Build macOS
-    if: startsWith(github.ref, 'refs/tags/v') && env.BUILD_MACOS == 'true'
+    needs: setup
+    if: needs.setup.outputs.macos == 'true'
     runs-on: macos-latest
     steps:
       - name: Checkout Code
@@ -122,7 +140,8 @@ jobs:
 
   build-windows:
     name: Build Windows
-    if: startsWith(github.ref, 'refs/tags/v') && env.BUILD_WINDOWS == 'true'
+    needs: setup
+    if: needs.setup.outputs.windows == 'true'
     runs-on: windows-latest
     steps:
       - name: Checkout Code

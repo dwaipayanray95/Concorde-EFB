@@ -14,7 +14,7 @@ function run(cmd) {
 
 // Get the latest tag or a fallback
 function getTags() {
-  const tags = run('git tag --sort=-creatordate').split('\n').filter(Boolean);
+  const tags = run('git tag --sort=-v:refname').split('\n').filter(Boolean);
   return tags;
 }
 
