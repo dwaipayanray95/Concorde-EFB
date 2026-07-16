@@ -1,6 +1,6 @@
 {
-  "version": "0.1.1",
-  "installationDate": "2026-07-15T20:34:03Z",
+  "version": "0.1.4",
+  "installationDate": "2026-07-16T03:59:10Z",
   "settings": {
     "aio": true,
     "releaseNotes": true,
@@ -9,6 +9,13 @@
     "licenseGuard": true,
     "prPilot": true,
     "securityScan": true,
-    "gitHooks": false
+    "gitHooks": true,
+    "platforms": {
+      "apk": false,
+      "aab": true,
+      "web": false,
+      "macos": false,
+      "windows": true
+    }
   }
 }
