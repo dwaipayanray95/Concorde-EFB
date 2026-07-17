@@ -15,6 +15,7 @@ import '../widgets/ambient_glow.dart';
 import '../core/ui_tokens.dart';
 import '../core/app_version.dart';
 import '../core/sim_bridge_launcher.dart';
+import '../core/app_links.dart';
 import 'widgets/app_header.dart';
 import 'tabs/flight_planner_tab.dart';
 import 'tabs/checklists_tab.dart';
@@ -73,7 +74,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
   void _checkForUpdates() async {
     try {
       final response = await http.get(
-        Uri.parse('https://api.github.com/repos/dwaipayanray95/Concorde-EFB/releases/latest'),
+        Uri.parse(AppLinks.githubReleasesLatestApi),
         headers: {'Accept': 'application/vnd.github.v3+json'},
       ).timeout(const Duration(seconds: 5));
 
@@ -161,7 +162,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
               ),
               ElevatedButton(
                 onPressed: () async {
-                  final url = Uri.parse('https://flightsim.to/addon/101890/concorde-efb');
+                  final url = Uri.parse(AppLinks.flightsimTo);
                   try {
                     await launchUrl(url);
                   } catch (_) {}
@@ -322,7 +323,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                   right: 0,
                   child: InkWell(
                     onTap: () async {
-                      final url = Uri.parse('https://dwaipayanray95.github.io/Concorde-EFB/changelog/');
+                      final url = Uri.parse(AppLinks.changelog);
                       try {
                         await launchUrl(url);
                       } catch (_) {}

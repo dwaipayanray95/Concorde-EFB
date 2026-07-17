@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import '../core/app_links.dart';
 
 final visitorCountProvider = FutureProvider<int>((ref) async {
   try {
-    const path = "https://dwaipayanray95.github.io/Concorde-EFB/";
-    final encodedPath = Uri.encodeComponent(path);
+    final encodedPath = Uri.encodeComponent(AppLinks.siteRoot);
     final badgeUrl = "https://api.visitorbadge.io/api/visitors?path=$encodedPath";
 
     final response = await http.get(

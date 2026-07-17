@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/ui_tokens.dart';
+import '../../core/app_links.dart';
 import '../../widgets/efb_launches_badge.dart';
 import '../../widgets/efb_ad_banner.dart';
 
@@ -29,7 +30,7 @@ class AppFooter extends StatelessWidget {
         const SizedBox(height: 16),
         InkWell(
           onTap: () async {
-            final url = Uri.parse('https://dwaipayanray95.github.io/Concorde-EFB/changelog/');
+            final url = Uri.parse(AppLinks.changelog);
             try {
               await launchUrl(url);
             } catch (_) {}

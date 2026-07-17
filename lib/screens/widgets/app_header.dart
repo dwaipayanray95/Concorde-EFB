@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/ui_tokens.dart';
 import '../../core/concorde_constants.dart';
 import '../../core/formatters.dart';
+import '../../core/app_links.dart';
 
 /// App title/logo row with quick stats (NAV DB, TAS, MTOW, MLW) and, when
 /// [hasUpdate] is true, an "update available" banner above it.
@@ -59,7 +60,7 @@ class AppHeader extends StatelessWidget {
                 const SizedBox(width: 24),
                 ElevatedButton(
                   onPressed: () async {
-                    final url = Uri.parse('https://flightsim.to/addon/101890/concorde-efb');
+                    final url = Uri.parse(AppLinks.flightsimTo);
                     try {
                       await launchUrl(url);
                     } catch (_) {}
@@ -124,7 +125,7 @@ class AppHeader extends StatelessWidget {
                 ),
               ),
               onPressed: () async {
-                final url = Uri.parse('https://dwaipayanray95.github.io/Concorde-EFB/changelog/');
+                final url = Uri.parse(AppLinks.changelog);
                 try {
                   await launchUrl(url, mode: LaunchMode.externalApplication);
                 } catch (_) {

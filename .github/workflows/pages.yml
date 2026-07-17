@@ -1,15 +1,20 @@
-name: Deploy (stable + beta) to GitHub Pages
+name: Deploy website (changelog + donate) to GitHub Pages
 
+# This workflow only ever touches the /changelog and /donate subfolders of
+# the gh-pages branch. Everything else already published there (the site
+# root, /beta, etc.) is left untouched via `keep_files: true` — gh-pages is
+# the standalone source of truth for the deployed site; this app repo just
+# supplies the changelog content and its git history.
 on:
   push:
-    branches: [ main, beta, flutter ]
+    branches: [ main ]
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: pages-${{ github.ref_name }}
+  group: pages-deploy
   cancel-in-progress: true
 
 jobs:
@@ -21,63 +26,23 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Generate Dynamic Git Changelog
-        run: python scripts/generate_changelog.py
+      - name: Generate changelog from git history
+        run: python3 scripts/generate_changelog.py
 
-      - name: Setup Node
-        if: github.ref_name != 'flutter'
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install
-        if: github.ref_name != 'flutter'
-        run: npm ci
-
-      - name: Typecheck
-        if: github.ref_name != 'flutter'
-        run: npx tsc -b
-
-      - name: Build (stable)
-        if: github.ref_name == 'main'
-        run: npx vite build --base=/${{ github.event.repository.name }}/
-
-      - name: Build (beta)
-        if: github.ref_name == 'beta'
-        run: npx vite build --base=/${{ github.event.repository.name }}/beta/
-
-      - name: Build Static Changelog Page (flutter branch)
-        if: github.ref_name == 'flutter'
-        run: |
-          mkdir -p dist/changelog
-          cp public/changelog/index.html dist/index.html
-          cp public/changelog/entries.json dist/entries.json
-          cp public/changelog/ads.js dist/ads.js
-          cp public/sw.js dist/sw.js
-          cp public/changelog/index.html dist/changelog/index.html
-          cp public/changelog/entries.json dist/changelog/entries.json
-          cp public/changelog/ads.js dist/changelog/ads.js
-          cp public/changelog/sw.js dist/changelog/sw.js
-
-      - name: Disable Jekyll
-        run: touch dist/.nojekyll
-
-      - name: Deploy (stable/flutter)
-        if: github.ref_name == 'main' || github.ref_name == 'flutter'
+      - name: Deploy changelog page
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
-          publish_dir: ./dist
+          publish_dir: ./public/changelog
+          destination_dir: changelog
           keep_files: true
 
-      - name: Deploy (beta)
-        if: github.ref_name == 'beta'
+      - name: Deploy donate page
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
-          publish_dir: ./dist
-          destination_dir: beta
+          publish_dir: ./public/donate
+          destination_dir: donate
           keep_files: true
