@@ -1,8 +1,16 @@
 [
     {
+        "date": "2026-07-18",
+        "title": "Commits",
+        "items": [
+            "0e9a6d7 ci: rebuild GitHub Pages deploy as isolated changelog+donate pipeline"
+        ]
+    },
+    {
         "date": "2026-07-16",
         "title": "Commits",
         "items": [
+            "64f074d chore: update scripts again",
             "7ad9c07 chore: fix workflow"
         ]
     },
