@@ -1,5 +1,12 @@
 [
     {
+        "date": "2026-07-26",
+        "title": "Commits",
+        "items": [
+            "5c3719e feat: add a proper landing page for the official Concorde EFB website"
+        ]
+    },
+    {
         "date": "2026-07-18",
         "title": "Commits",
         "items": [
