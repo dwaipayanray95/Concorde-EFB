@@ -1,10 +1,10 @@
-name: Deploy website (changelog + donate) to GitHub Pages
+name: Deploy website (landing + changelog + donate) to GitHub Pages
 
-# This workflow only ever touches the /changelog and /donate subfolders of
-# the gh-pages branch. Everything else already published there (the site
-# root, /beta, etc.) is left untouched via `keep_files: true` — gh-pages is
-# the standalone source of truth for the deployed site; this app repo just
-# supplies the changelog content and its git history.
+# This workflow only ever touches the site root (landing page), /changelog,
+# and /donate on the gh-pages branch. Everything else already published
+# there (/beta, etc.) is left untouched via `keep_files: true` — gh-pages
+# is the standalone source of truth for the deployed site; this app repo
+# just supplies the page content and changelog data.
 on:
   push:
     branches: [ main ]
@@ -45,4 +45,12 @@ jobs:
           publish_branch: gh-pages
           publish_dir: ./public/donate
           destination_dir: donate
+          keep_files: true
+
+      - name: Deploy landing page (site root)
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./public/landing
           keep_files: true
