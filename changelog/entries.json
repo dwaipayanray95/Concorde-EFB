@@ -1,5 +1,12 @@
 [
     {
+        "date": "2026-08-17",
+        "title": "Commits",
+        "items": [
+            "2878e3e fix: correct checklist data and unify triplicated fuel/FL logic; refactor: split flight_planner_tab.dart into flight_planner/ sections"
+        ]
+    },
+    {
         "date": "2026-07-26",
         "title": "Commits",
         "items": [
