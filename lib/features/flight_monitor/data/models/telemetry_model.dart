@@ -1,3 +1,5 @@
+import '../../../../core/concorde_constants.dart';
+
 class TelemetryModel {
   final int timestamp;
   
@@ -39,6 +41,18 @@ class TelemetryModel {
   final double touchdownVS;
   final double touchdownPitch;
   final double touchdownGForce;
+
+  /// Total fuel on board in kg, derived from tank fill fractions (0-1) and
+  /// the shared tank capacities in [ConcordeConstants.fuel.tankCapacitiesKg].
+  /// Single source of truth so LCD modules can't compute divergent totals.
+  double get totalFuelKg {
+    final caps = ConcordeConstants.fuel.tankCapacitiesKg;
+    return fuelLeftTank * caps['left']! +
+        fuelRightTank * caps['right']! +
+        fuelCenterTank * caps['center']! +
+        fuelTrimForward * caps['trimForward']! +
+        fuelTrimAft * caps['trimAft']!;
+  }
 
   TelemetryModel({
     required this.timestamp,

@@ -142,7 +142,8 @@ class ConcordeLogic {
     final useSupersonicAccel = targetFL >= cruiseClimbStartFl;
     final accelDistNM = useSupersonicAccel ? math.min(suprAccelNm, coreRemainingNM * 0.4) : 0.0;
     final accelTimeH = (useSupersonicAccel && suprAccelNm > 0) ? suprAccelTimeH * (accelDistNM / suprAccelNm) : 0.0;
-    final accelBurnKg = accelDistNM * (cruiseBurnKgPerNmAtFL(initialCruiseFL) * 2.1);
+    final accelBurnKg = accelDistNM *
+        (cruiseBurnKgPerNmAtFL(initialCruiseFL) * ConcordeConstants.fuel.reheatBurnMultiplier);
 
     final cruiseNM = math.max(coreRemainingNM - accelDistNM, 0.0);
     final cruiseLevels = buildCruiseClimbLevels(initialCruiseFL, targetFL);
@@ -223,6 +224,10 @@ class ConcordeLogic {
   }
 
   static Map<String, double> computeTakeoffSpeeds(double towKg) {
+    // Reference speeds (V1=180/VR=195/V2=220 kt) are assumed at this
+    // reference weight. The manual quotes a V1 example of 170 kt but does
+    // not state the weight it applies to, so this pairing is not directly
+    // traceable to source — treat as an approximation pending real POH data.
     const refKg = 170000.0;
     final s = weightScale(towKg, refKg);
     final v1 = math.max(160.0, (180.0 * s).roundToDouble());

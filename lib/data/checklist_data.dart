@@ -41,7 +41,7 @@ Map<String, List<ChecklistItem>> buildChecklistData({
     'before_start': [
       ChecklistItem(id: 'bs_beacon', item: 'Beacon Lights', status: 'ON'),
       ChecklistItem(id: 'bs_pumps', item: 'Fuel Pumps', status: 'ON'),
-      ChecklistItem(id: 'bs_eng_start', item: 'Engine Start Selectors', status: 'START', note: 'Standard Concorde Sequence: 3, 4, 2, 1 or 3, 2, 1, 4'),
+      ChecklistItem(id: 'bs_eng_start', item: 'Engine Start Selectors', status: 'START', note: 'Community-standard sim sequence: 3, 4, 2, 1 (not specified by the manual)'),
       ChecklistItem(id: 'bs_throttle', item: 'Throttle Levers', status: 'IDLE'),
       ChecklistItem(id: 'bs_csd_on', item: 'CSD Generators 1-4', status: 'ON', note: 'Engage once engines are stabilized'),
       ChecklistItem(id: 'bs_gnd_pwr_off', item: 'Ground Power', status: 'OFF / DISCONNECT'),
@@ -68,12 +68,12 @@ Map<String, List<ChecklistItem>> buildChecklistData({
     'descent': [
       ChecklistItem(id: 'de_reheat', item: 'Reheats', status: 'OFF'),
       ChecklistItem(id: 'de_throttle', item: 'Throttles', status: 'SET SPEED & SELECT IAS ACQ (or IDLE / RETRACT)'),
-      ChecklistItem(id: 'de_cg', item: 'Fuel Transfer (CG Management)', status: 'PUMP FORWARD', note: 'Target 53% MAC before landfall'),
+      ChecklistItem(id: 'de_cg', item: 'Fuel Transfer (CG Management)', status: 'PUMP FORWARD', note: 'Target 54% MAC before landfall'),
     ],
     'approach': [
       ChecklistItem(id: 'ap_speed', item: 'Approach Speed', status: 'SET $vappStr'),
-      ChecklistItem(id: 'ap_visor', item: 'Nose Visor', status: 'DOWN (17.5°)', note: 'Move to 5° or 17.5° depending on speed/glideslope'),
-      ChecklistItem(id: 'ap_gear', item: 'Landing Gear', status: 'DOWN', note: 'Extend below 270 KIAS'),
+      ChecklistItem(id: 'ap_visor', item: 'Nose Visor', status: 'DOWN (12.5°)', note: 'Move to 5° or 12.5° depending on speed/glideslope'),
+      ChecklistItem(id: 'ap_gear', item: 'Landing Gear', status: 'DOWN', note: 'Extend below 270 KIAS (visor deployment speed cue; gear limit not explicitly stated in manual)'),
     ],
   };
 }

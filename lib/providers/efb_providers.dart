@@ -160,7 +160,18 @@ final flightDirectionProvider = Provider<String?>((ref) {
 // --- Cruise & Payload State ---
 class CruiseFLNotifier extends Notifier<double> {
   @override
-  double build() => 590.0;
+  double build() {
+    // Flight direction resolves asynchronously (airport DB load). If the
+    // user edits cruise FL before it's known, re-snap once direction
+    // becomes available so the FL matches the correct E/W RVSM table.
+    ref.listen(flightDirectionProvider, (previous, next) {
+      if (next != null && next != previous) {
+        state = ConcordeLogic.snapToNonRvsm(state, next);
+      }
+    });
+    return 590.0;
+  }
+
   void set(double val, String? direction) {
     state = ConcordeLogic.snapToNonRvsm(val, direction);
   }
@@ -398,6 +409,11 @@ final landingFeasibilityProvider = Provider<RunwayFeasibility?>((ref) {
 class ChecklistNotifier extends Notifier<Map<String, bool>> {
   @override
   Map<String, bool> build() => {};
+
+  /// Clears all checked items — call this when a new flight plan (e.g. a
+  /// fresh SimBrief import) is loaded, so stale progress from the previous
+  /// flight doesn't carry over.
+  void resetAll() => state = {};
 
   void toggle(String itemId) {
     state = {

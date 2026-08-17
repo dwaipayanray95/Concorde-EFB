@@ -14,10 +14,7 @@ class EnduranceModule extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final totalFuelKg = isConnected
-        ? (t.fuelLeftTank * 17483 + t.fuelRightTank * 17483 + t.fuelCenterTank * 11793 +
-              t.fuelTrimForward * 10000 + t.fuelTrimAft * 5681)
-        : 0.0;
+    final totalFuelKg = isConnected ? t.totalFuelKg : 0.0;
     final burnRate = isConnected ? t.fuelBurnTotal : 0.0;
     final alt = isConnected ? t.altitude : 0.0;
     final mach = isConnected ? t.mach : 0.0;

@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../../data/models/telemetry_model.dart';
+import '../../../../../core/concorde_constants.dart';
 import 'lcd_theme.dart';
 import 'lcd_shell.dart';
+
+final _kgFormat = NumberFormat('#,##0');
 
 /// 06 // FUEL MANAGEMENT
 class FuelModule extends StatelessWidget {
@@ -12,13 +16,14 @@ class FuelModule extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // The model stores fill percentages 0→1; convert to indicative kg using max capacities
-    final lKg = (isConnected ? t.fuelLeftTank : 0.0) * 17483.0;
-    final rKg = (isConnected ? t.fuelRightTank : 0.0) * 17483.0;
-    final cKg = (isConnected ? t.fuelCenterTank : 0.0) * 11793.0;
-    final fwdKg = (isConnected ? t.fuelTrimForward : 0.0) * 10000.0;
-    final aftKg = (isConnected ? t.fuelTrimAft : 0.0) * 5681.0;
-    final total = lKg + rKg + cKg + fwdKg + aftKg;
+    // The model stores fill percentages 0→1; convert to indicative kg using shared tank capacities
+    final caps = ConcordeConstants.fuel.tankCapacitiesKg;
+    final lKg = (isConnected ? t.fuelLeftTank : 0.0) * caps['left']!;
+    final rKg = (isConnected ? t.fuelRightTank : 0.0) * caps['right']!;
+    final cKg = (isConnected ? t.fuelCenterTank : 0.0) * caps['center']!;
+    final fwdKg = (isConnected ? t.fuelTrimForward : 0.0) * caps['trimForward']!;
+    final aftKg = (isConnected ? t.fuelTrimAft : 0.0) * caps['trimAft']!;
+    final total = isConnected ? t.totalFuelKg : 0.0;
     final imbalance = (lKg - rKg).abs();
     final burnRate = isConnected ? t.fuelBurnTotal : 0.0;
     final endurance = burnRate > 0 ? total / burnRate : 0.0;
@@ -59,9 +64,9 @@ class FuelModule extends StatelessWidget {
           // Wing tanks
           Row(
             children: [
-              Expanded(child: _tankCell('L WING', lKg, 17483.0)),
+              Expanded(child: _tankCell('L WING', lKg, caps['left']!)),
               const SizedBox(width: 6),
-              Expanded(child: _tankCell('R WING', rKg, 17483.0)),
+              Expanded(child: _tankCell('R WING', rKg, caps['right']!)),
             ],
           ),
           const SizedBox(height: 6),
@@ -69,11 +74,11 @@ class FuelModule extends StatelessWidget {
           // Center + trim tanks
           Row(
             children: [
-              Expanded(child: _tankCell('CENTER', cKg, 11793.0)),
+              Expanded(child: _tankCell('CENTER', cKg, caps['center']!)),
               const SizedBox(width: 6),
-              Expanded(child: _tankCell('TRIM FWD', fwdKg, 10000.0)),
+              Expanded(child: _tankCell('TRIM FWD', fwdKg, caps['trimForward']!)),
               const SizedBox(width: 6),
-              Expanded(child: _tankCell('TRIM AFT', aftKg, 5681.0)),
+              Expanded(child: _tankCell('TRIM AFT', aftKg, caps['trimAft']!)),
             ],
           ),
           const SizedBox(height: 8),
@@ -123,15 +128,5 @@ class FuelModule extends StatelessWidget {
     );
   }
 
-  String _fmtKg(double v) {
-    final str = v.round().toString();
-    final buf = StringBuffer();
-    int c = 0;
-    for (int i = str.length - 1; i >= 0; i--) {
-      if (c > 0 && c % 3 == 0) buf.write(',');
-      buf.write(str[i]);
-      c++;
-    }
-    return buf.toString().split('').reversed.join();
-  }
+  String _fmtKg(double v) => _kgFormat.format(v.round());
 }
