@@ -1,5 +1,12 @@
 [
     {
+        "date": "2026-08-19",
+        "title": "Commits",
+        "items": [
+            "14623c3 feat: rebuild Flight Monitor tab from new design, real 13-tank fuel schematic"
+        ]
+    },
+    {
         "date": "2026-08-17",
         "title": "Commits",
         "items": [
