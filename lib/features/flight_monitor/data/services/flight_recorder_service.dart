@@ -11,6 +11,9 @@ class FlightRecordHeader {
   final double? touchdownVS;
   final double? touchdownPitch;
   final double? touchdownGForce;
+  final String route;
+  final double? maxMach;
+  final double? maxAltitudeFt;
 
   FlightRecordHeader({
     required this.id,
@@ -19,6 +22,9 @@ class FlightRecordHeader {
     this.touchdownVS,
     this.touchdownPitch,
     this.touchdownGForce,
+    this.route = '',
+    this.maxMach,
+    this.maxAltitudeFt,
   });
 
   factory FlightRecordHeader.fromJson(Map<String, dynamic> json) {
@@ -29,6 +35,9 @@ class FlightRecordHeader {
       touchdownVS: json['touchdownVS']?.toDouble(),
       touchdownPitch: json['touchdownPitch']?.toDouble(),
       touchdownGForce: json['touchdownGForce']?.toDouble(),
+      route: json['route'] ?? '',
+      maxMach: json['maxMach']?.toDouble(),
+      maxAltitudeFt: json['maxAltitudeFt']?.toDouble(),
     );
   }
 
@@ -40,6 +49,9 @@ class FlightRecordHeader {
       'touchdownVS': touchdownVS,
       'touchdownPitch': touchdownPitch,
       'touchdownGForce': touchdownGForce,
+      'route': route,
+      'maxMach': maxMach,
+      'maxAltitudeFt': maxAltitudeFt,
     };
   }
 }
@@ -59,11 +71,14 @@ class FlightRecorderService {
   double? _sessionTouchdownVS;
   double? _sessionTouchdownPitch;
   double? _sessionTouchdownGForce;
+  String _sessionRoute = '';
+  double _sessionMaxMach = 0.0;
+  double _sessionMaxAltitudeFt = 0.0;
 
   bool get isRecording => _isRecording;
   int get currentFrameCount => _currentSessionFrames.length;
 
-  void startRecording() {
+  void startRecording({String route = ''}) {
     _currentSessionFrames.clear();
     _sessionStartTime = DateTime.now();
     _lastFrameTime = null;
@@ -71,6 +86,9 @@ class FlightRecorderService {
     _sessionTouchdownVS = null;
     _sessionTouchdownPitch = null;
     _sessionTouchdownGForce = null;
+    _sessionRoute = route;
+    _sessionMaxMach = 0.0;
+    _sessionMaxAltitudeFt = 0.0;
   }
 
   void addFrame(TelemetryModel frame) {
@@ -82,6 +100,9 @@ class FlightRecorderService {
       _sessionTouchdownPitch = frame.touchdownPitch;
       _sessionTouchdownGForce = frame.touchdownGForce;
     }
+
+    if (frame.mach > _sessionMaxMach) _sessionMaxMach = frame.mach;
+    if (frame.altitude > _sessionMaxAltitudeFt) _sessionMaxAltitudeFt = frame.altitude;
 
     // Downsample to 2 Hz, but never drop a touchdown frame.
     final now = DateTime.now();
@@ -113,6 +134,9 @@ class FlightRecorderService {
       touchdownVS: _sessionTouchdownVS,
       touchdownPitch: _sessionTouchdownPitch,
       touchdownGForce: _sessionTouchdownGForce,
+      route: _sessionRoute,
+      maxMach: _sessionMaxMach > 0 ? _sessionMaxMach : null,
+      maxAltitudeFt: _sessionMaxAltitudeFt > 0 ? _sessionMaxAltitudeFt : null,
     );
 
     // Save full flight log file. Serialization runs in a background isolate
