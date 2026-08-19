@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/telemetry_model.dart';
 import '../../data/services/websocket_client.dart';
 import '../../data/services/flight_recorder_service.dart';
+import '../../../../providers/efb_providers.dart';
 
 class FlightMonitorState {
   final TelemetryModel? currentTelemetry;
@@ -112,7 +113,10 @@ class FlightMonitorNotifier extends Notifier<FlightMonitorState> {
 
   void startRecording() {
     if (state.isPlaybackMode) return;
-    _recorderService.startRecording();
+    final dep = ref.read(departureIcaoProvider);
+    final arr = ref.read(arrivalIcaoProvider);
+    final route = dep.isNotEmpty && arr.isNotEmpty ? '$dep-$arr' : '';
+    _recorderService.startRecording(route: route);
     state = state.copyWith(
       isRecording: true,
       recordedFramesCount: 0,
