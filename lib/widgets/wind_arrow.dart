@@ -68,20 +68,20 @@ class WindArrow extends StatelessWidget {
           Transform.rotate(
             angle: runwayRadians,
             child: Container(
-              width: size * 0.18,
-              height: size * 0.95,
+              width: size * 0.16,
+              height: size * 1.08,
               decoration: BoxDecoration(
-                color: colors.dividerStrong.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(2),
+                color: colors.dividerStrong.withValues(alpha: 0.85),
+                borderRadius: BorderRadius.circular(3),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: List.generate(
-                  4,
+                  5,
                   (index) => Container(
                     width: 2,
-                    height: size * 0.12,
-                    color: colors.textDim.withValues(alpha: 0.8),
+                    height: size * 0.10,
+                    color: colors.textDim.withValues(alpha: 0.85),
                   ),
                 ),
               ),
