@@ -26,21 +26,21 @@ class EfbCard extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Popping folder tab sitting on top of the card
+        // Popping folder tab perfectly merged with the card's left edge
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Container(
               padding: const EdgeInsets.symmetric(
-                horizontal: 20,
+                horizontal: 22,
                 vertical: 8,
               ),
               decoration: BoxDecoration(
                 color: tabBg,
                 borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  topRight: Radius.circular(12),
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(14),
                 ),
               ),
               child: Text(
@@ -61,8 +61,13 @@ class EfbCard extends StatelessWidget {
               ),
           ],
         ),
-        // Main card body below the tab
+        // Main card body with flush top-left corner merging directly into the tab
         EfbFlatCard(
+          borderRadius: const BorderRadius.only(
+            topRight: Radius.circular(20),
+            bottomLeft: Radius.circular(20),
+            bottomRight: Radius.circular(20),
+          ),
           padding: const EdgeInsets.all(24),
           child: child,
         ),
