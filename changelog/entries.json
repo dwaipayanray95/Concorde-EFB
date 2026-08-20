@@ -3,6 +3,7 @@
         "date": "2026-08-20",
         "title": "Commits",
         "items": [
+            "6a8393b style: fix borders in performance calculator",
             "d5770e3 style: bigger runway and wind indicator now",
             "f3b9d0e style(ui): new light / dark ui. dropped glass ui and stuff",
             "1d24dba style(theme): update accent to deep violet #651FFF",
