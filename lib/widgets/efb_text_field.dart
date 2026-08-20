@@ -81,6 +81,8 @@ class _EfbTextFieldState extends State<EfbTextField> {
             fontWeight: FontWeight.bold,
             letterSpacing: 0.5,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: 6),
         EfbGlassContainer(
