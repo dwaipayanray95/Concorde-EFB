@@ -28,15 +28,11 @@ class EfbCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Attached flightstrip header
+          // Bold flat flightstrip header
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
             decoration: BoxDecoration(
-              color: colors.surface,
-              border: Border(
-                left: BorderSide(color: accentColor, width: 5),
-                bottom: BorderSide(color: colors.divider),
-              ),
+              color: accentColor,
             ),
             child: Row(
               children: [
@@ -44,10 +40,10 @@ class EfbCard extends StatelessWidget {
                   title.toUpperCase(),
                   style: uiText(
                     context,
-                    size: 12,
+                    size: 11,
                     weight: FontWeight.w900,
                     letterSpacing: 2,
-                    color: accentColor,
+                    color: Colors.white,
                   ),
                 ),
                 const Spacer(),
