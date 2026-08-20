@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import '../../../../../core/app_colors.dart';
+import '../../../../../core/ui_text.dart';
 import '../../../../../core/concorde_logic.dart';
 import '../../../../../models/concorde_models.dart';
+import '../../../../../widgets/efb_flat_card.dart';
 import '../../../data/models/telemetry_model.dart';
-import 'fm_theme.dart';
 
 /// CENTER OF GRAVITY compact card.
 class CgCard extends StatelessWidget {
@@ -11,25 +13,51 @@ class CgCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final warn = t.cgPct > t.cgAftLimit - 1.5 || t.cgPct < t.cgFwdLimit + 1.5;
-    final color = warn ? fmRed : fmTextPrimary;
+    final color = warn ? colors.error : colors.textPrimary;
     final range = t.cgAftLimit - t.cgFwdLimit;
-    final markerPct = range > 0 ? ((t.cgPct - t.cgFwdLimit) / range * 100).clamp(0.0, 100.0) : 0.0;
+    final markerPct = range > 0
+        ? ((t.cgPct - t.cgFwdLimit) / range * 100).clamp(0.0, 100.0)
+        : 0.0;
 
-    return Container(
-      decoration: fmCardDecoration(border: warn ? fmRedDeep : fmBorder),
+    return EfbFlatCard(
       padding: const EdgeInsets.all(16),
+      accentTop: warn ? colors.error : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('CENTER OF GRAVITY', style: fmLabel(size: 10, letterSpacing: 1.2)),
+          Text(
+            'CENTER OF GRAVITY',
+            style: uiText(
+              context,
+              size: 10,
+              weight: FontWeight.w800,
+              color: colors.textDim,
+              letterSpacing: 1.2,
+            ),
+          ),
           const SizedBox(height: 10),
-          Text('${t.cgPct.toStringAsFixed(1)}%', style: fmMono(size: 24, color: color)),
+          Text(
+            '${t.cgPct.toStringAsFixed(1)}%',
+            style: uiText(
+              context,
+              size: 24,
+              weight: FontWeight.w800,
+              color: color,
+            ),
+          ),
           const SizedBox(height: 10),
           Stack(
             clipBehavior: Clip.none,
             children: [
-              Container(height: 6, decoration: BoxDecoration(color: const Color(0xFF141B29), borderRadius: BorderRadius.circular(4))),
+              Container(
+                height: 6,
+                decoration: BoxDecoration(
+                  color: colors.inputBg,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
               Positioned(
                 left: 0,
                 top: -2,
@@ -49,13 +77,40 @@ class CgCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('FWD ${t.cgFwdLimit.toStringAsFixed(1)}', style: fmLabel(size: 9, weight: FontWeight.w700, letterSpacing: 0)),
-              Text('AFT ${t.cgAftLimit.toStringAsFixed(1)}', style: fmLabel(size: 9, weight: FontWeight.w700, letterSpacing: 0)),
+              Text(
+                'FWD ${t.cgFwdLimit.toStringAsFixed(1)}',
+                style: uiText(
+                  context,
+                  size: 9,
+                  weight: FontWeight.w700,
+                  color: colors.textDim,
+                  letterSpacing: 0,
+                ),
+              ),
+              Text(
+                'AFT ${t.cgAftLimit.toStringAsFixed(1)}',
+                style: uiText(
+                  context,
+                  size: 9,
+                  weight: FontWeight.w700,
+                  color: colors.textDim,
+                  letterSpacing: 0,
+                ),
+              ),
             ],
           ),
           if (warn) ...[
             const SizedBox(height: 8),
-            Text('⚠ NEAR LIMIT', style: fmLabel(size: 9, color: fmRed, weight: FontWeight.w800, letterSpacing: 0)),
+            Text(
+              '⚠ NEAR LIMIT',
+              style: uiText(
+                context,
+                size: 9,
+                color: colors.error,
+                weight: FontWeight.w800,
+                letterSpacing: 0,
+              ),
+            ),
           ],
         ],
       ),
@@ -70,47 +125,81 @@ class EnvironmentalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // No dedicated icing simvar is streamed yet; infer a coarse risk band
-    // from total air temperature so the indicator isn't just a dead "NIL".
+    final colors = context.colors;
     final icingIdx = t.tat <= 2 ? (t.tat <= -10 ? 2 : 1) : 0;
     const icingLabels = ['NIL', 'POSSIBLE', 'ACTIVE'];
-    const icingColors = [fmTextPrimary, fmAmber, fmRed];
+    final icingColors = [colors.textPrimary, colors.mvfr, colors.error];
 
-    return Container(
-      decoration: fmCardDecoration(),
+    return EfbFlatCard(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('ENVIRONMENTAL', style: fmLabel(size: 10, letterSpacing: 1.2)),
+          Text(
+            'ENVIRONMENTAL',
+            style: uiText(
+              context,
+              size: 10,
+              weight: FontWeight.w800,
+              color: colors.textDim,
+              letterSpacing: 1.2,
+            ),
+          ),
           const SizedBox(height: 10),
-          _kvRow('SAT', '${t.sat.round()}°C'),
+          _kvRow(context, 'SAT', '${t.sat.round()}°C'),
           const SizedBox(height: 6),
-          _kvRow('TAT', '${t.tat.round()}°C'),
+          _kvRow(context, 'TAT', '${t.tat.round()}°C'),
           const SizedBox(height: 6),
-          _kvRow('ICING', icingLabels[icingIdx], valueColor: icingColors[icingIdx], valueSize: 11),
+          _kvRow(
+            context,
+            'ICING',
+            icingLabels[icingIdx],
+            valueColor: icingColors[icingIdx],
+            valueSize: 11,
+          ),
         ],
       ),
     );
   }
 
-  Widget _kvRow(String k, String v, {Color valueColor = fmTextPrimary, double valueSize = 14}) {
+  Widget _kvRow(
+    BuildContext context,
+    String k,
+    String v, {
+    Color? valueColor,
+    double valueSize = 14,
+  }) {
+    final colors = context.colors;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.baseline,
       textBaseline: TextBaseline.alphabetic,
       children: [
-        Text(k, style: fmLabel(size: 10, color: fmTextSecondary, weight: FontWeight.w700, letterSpacing: 0)),
-        Text(v, style: fmMono(size: valueSize, color: valueColor)),
+        Text(
+          k,
+          style: uiText(
+            context,
+            size: 10,
+            color: colors.textDim,
+            weight: FontWeight.w700,
+            letterSpacing: 0,
+          ),
+        ),
+        Text(
+          v,
+          style: uiText(
+            context,
+            size: valueSize,
+            weight: FontWeight.bold,
+            color: valueColor ?? colors.textPrimary,
+          ),
+        ),
       ],
     );
   }
 }
 
 extension on TelemetryModel {
-  /// SAT isn't streamed by the bridge (only TAT is) — recover it from the
-  /// standard ram-rise relation TAT = SAT * (1 + 0.2 * M^2) (recovery
-  /// factor of 1, in Kelvin) rather than approximating in Celsius directly.
   double get sat {
     final tatK = tat + 273.15;
     final satK = tatK / (1 + 0.2 * mach * mach);
@@ -134,35 +223,78 @@ class FuelBurnCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Projects remaining air time from the aircraft's CURRENT phase and FL
-    // rather than naively dividing by the instantaneous sim fuel-flow
-    // reading, which is noisy/unrepresentative mid-climb or mid-reheat
-    // burst -- this is what actually helps a pilot judge diversion options:
-    // "at what I'm doing right now, how long can I stay up".
+    final colors = context.colors;
     final phase = ConcordeLogic.classifyBurnPhase(
       altitudeFt: t.altitude,
       vsFpm: t.vs,
       reheatActive: t.reheatActive,
     );
     final flowKgH = ConcordeLogic.phaseFuelFlowKgH(phase, t.altitude / 100);
-    final airtime = flowKgH > 0 ? '${(totalFuelKg / flowKgH).toStringAsFixed(1)} HRS' : '—';
-    final flText = phase == FlightBurnPhase.ground ? '' : ' · FL${(t.altitude / 100).round()}';
+    final airtime = flowKgH > 0
+        ? '${(totalFuelKg / flowKgH).toStringAsFixed(1)} HRS'
+        : '—';
+    final flText = phase == FlightBurnPhase.ground
+        ? ''
+        : ' · FL${(t.altitude / 100).round()}';
 
-    return Container(
-      decoration: fmCardDecoration(),
+    return EfbFlatCard(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('FUEL BURN RATE', style: fmLabel(size: 10, letterSpacing: 1.2)),
+          Text(
+            'FUEL BURN RATE',
+            style: uiText(
+              context,
+              size: 10,
+              weight: FontWeight.w800,
+              color: colors.textDim,
+              letterSpacing: 1.2,
+            ),
+          ),
           const SizedBox(height: 10),
-          Text(t.fuelBurnTotal.round().toString(), style: fmMono(size: 24)),
+          Text(
+            t.fuelBurnTotal.round().toString(),
+            style: uiText(
+              context,
+              size: 24,
+              weight: FontWeight.w800,
+              color: colors.textPrimary,
+            ),
+          ),
           const SizedBox(height: 6),
-          Text('KG/HR', style: fmLabel(size: 10, weight: FontWeight.w700, letterSpacing: 0)),
+          Text(
+            'KG/HR',
+            style: uiText(
+              context,
+              size: 10,
+              weight: FontWeight.w700,
+              color: colors.textDim,
+              letterSpacing: 0,
+            ),
+          ),
           const SizedBox(height: 10),
-          Text('EST. AIRTIME $airtime', style: fmLabel(size: 10, color: fmAccent, weight: FontWeight.w800, letterSpacing: 0)),
+          Text(
+            'EST. AIRTIME $airtime',
+            style: uiText(
+              context,
+              size: 10,
+              color: colors.accent,
+              weight: FontWeight.w800,
+              letterSpacing: 0,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text('AT ${_phaseLabel[phase]}$flText', style: fmLabel(size: 9, color: fmTextDim, weight: FontWeight.w700, letterSpacing: 0.3)),
+          Text(
+            'AT ${_phaseLabel[phase]}$flText',
+            style: uiText(
+              context,
+              size: 9,
+              color: colors.textDim,
+              weight: FontWeight.w700,
+              letterSpacing: 0.3,
+            ),
+          ),
         ],
       ),
     );
@@ -176,26 +308,64 @@ class TouchdownCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final hasTouchdown = t.isLanding;
     final vs = hasTouchdown ? t.touchdownVS.round() : null;
-    final border = vs != null && vs < -600 ? fmRedDeep : fmBorder;
-    final color = vs == null ? fmTextPrimary : (vs < -600 ? fmRed : (vs < -400 ? fmAmber : fmTextPrimary));
+    final color = vs == null
+        ? colors.textPrimary
+        : (vs < -600
+            ? colors.error
+            : (vs < -400 ? colors.mvfr : colors.arrival));
 
-    return Container(
-      decoration: fmCardDecoration(border: border),
+    return EfbFlatCard(
       padding: const EdgeInsets.all(16),
+      accentTop: vs != null && vs < -600 ? colors.error : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('LANDING TOUCHDOWN', style: fmLabel(size: 10, letterSpacing: 1.2)),
-          const SizedBox(height: 10),
-          Text(vs?.toString() ?? '—', style: fmMono(size: 24, color: color)),
-          const SizedBox(height: 6),
-          Text('FPM', style: fmLabel(size: 10, weight: FontWeight.w700, letterSpacing: 0)),
+          Text(
+            'LANDING TOUCHDOWN',
+            style: uiText(
+              context,
+              size: 10,
+              weight: FontWeight.w800,
+              color: colors.textDim,
+              letterSpacing: 1.2,
+            ),
+          ),
           const SizedBox(height: 10),
           Text(
-            hasTouchdown ? 'PITCH ${t.touchdownPitch.toStringAsFixed(1)}° · ${t.touchdownGForce.toStringAsFixed(2)}G' : '—',
-            style: fmLabel(size: 9, weight: FontWeight.w700, letterSpacing: 0),
+            vs?.toString() ?? '—',
+            style: uiText(
+              context,
+              size: 24,
+              weight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'FPM',
+            style: uiText(
+              context,
+              size: 10,
+              weight: FontWeight.w700,
+              color: colors.textDim,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            hasTouchdown
+                ? 'PITCH ${t.touchdownPitch.toStringAsFixed(1)}° · ${t.touchdownGForce.toStringAsFixed(2)}G'
+                : '—',
+            style: uiText(
+              context,
+              size: 9,
+              weight: FontWeight.w700,
+              color: colors.textDim,
+              letterSpacing: 0,
+            ),
           ),
         ],
       ),
@@ -210,15 +380,32 @@ class GForceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: fmCardDecoration(),
+    final colors = context.colors;
+    return EfbFlatCard(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('G-FORCE', style: fmLabel(size: 10, letterSpacing: 1.2)),
+          Text(
+            'G-FORCE',
+            style: uiText(
+              context,
+              size: 10,
+              weight: FontWeight.w800,
+              color: colors.textDim,
+              letterSpacing: 1.2,
+            ),
+          ),
           const SizedBox(height: 10),
-          Text(t.gForce.toStringAsFixed(2), style: fmMono(size: 24)),
+          Text(
+            t.gForce.toStringAsFixed(2),
+            style: uiText(
+              context,
+              size: 24,
+              weight: FontWeight.w800,
+              color: colors.textPrimary,
+            ),
+          ),
         ],
       ),
     );
@@ -232,13 +419,22 @@ class EnginesReheatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: fmCardDecoration(),
+    final colors = context.colors;
+    return EfbFlatCard(
       padding: const EdgeInsets.all(22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('ENGINES / REHEAT', style: fmLabel()),
+          Text(
+            'ENGINES / REHEAT',
+            style: uiText(
+              context,
+              size: 11,
+              weight: FontWeight.w800,
+              color: colors.textDim,
+              letterSpacing: 1.6,
+            ),
+          ),
           const SizedBox(height: 14),
           Row(
             children: List.generate(4, (i) {
@@ -248,16 +444,40 @@ class EnginesReheatCard extends StatelessWidget {
                   padding: EdgeInsets.only(right: i < 3 ? 10 : 0),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: on ? fmAmberBg : const Color(0xFF0F1520),
-                      border: Border.all(color: on ? fmAmberDeep : fmBorder),
+                      color: on ? colors.mvfrBg : colors.inputBg,
+                      border: Border.all(
+                        color: on
+                            ? colors.mvfr.withValues(alpha: 0.5)
+                            : colors.dividerStrong,
+                      ),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 8,
+                    ),
                     child: Column(
                       children: [
-                        Text('ENG ${i + 1}', style: fmLabel(size: 10, weight: FontWeight.w800, letterSpacing: 0)),
+                        Text(
+                          'ENG ${i + 1}',
+                          style: uiText(
+                            context,
+                            size: 10,
+                            weight: FontWeight.w800,
+                            color: on ? colors.mvfr : colors.textDim,
+                            letterSpacing: 0,
+                          ),
+                        ),
                         const SizedBox(height: 6),
-                        Text(on ? 'REHEAT' : 'DRY', style: fmMono(size: 13, color: on ? fmAmber : fmTextSecondary)),
+                        Text(
+                          on ? 'REHEAT' : 'DRY',
+                          style: uiText(
+                            context,
+                            size: 13,
+                            weight: FontWeight.bold,
+                            color: on ? colors.mvfr : colors.textPrimary,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -278,29 +498,51 @@ class GearFlapsDroopCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // gearPosition streams as an extension percent 0-100; treat 0 as up,
-    // 100 as down, anything between as in transit.
-    final gearLabel = t.gearPosition <= 0.5 ? 'UP' : (t.gearPosition >= 99.5 ? 'DOWN' : 'TRANSIT');
-    final gearColor = gearLabel == 'DOWN' ? fmGreen : (gearLabel == 'UP' ? fmTextSecondary : fmAmber);
+    final colors = context.colors;
+    final gearLabel = t.gearPosition <= 0.5
+        ? 'UP'
+        : (t.gearPosition >= 99.5 ? 'DOWN' : 'TRANSIT');
+    final gearColor = gearLabel == 'DOWN'
+        ? colors.arrival
+        : (gearLabel == 'UP' ? colors.textPrimary : colors.mvfr);
     final flapsLabel = t.flapsPosition == 0 ? 'UP' : t.flapsPosition.toString();
 
-    return Container(
-      decoration: fmCardDecoration(),
+    return EfbFlatCard(
       padding: const EdgeInsets.all(22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('GEAR · FLAPS · DROOP NOSE · VISOR', style: fmLabel()),
+          Text(
+            'GEAR · FLAPS · DROOP NOSE · VISOR',
+            style: uiText(
+              context,
+              size: 11,
+              weight: FontWeight.w800,
+              color: colors.textDim,
+              letterSpacing: 1.6,
+            ),
+          ),
           const SizedBox(height: 14),
           Row(
             children: [
-              Expanded(child: _stat('GEAR', gearLabel, gearColor)),
-              Expanded(child: _stat('FLAPS', flapsLabel, fmTextPrimary)),
-              // The bridge streams a single nose-actuator simvar (visor)
-              // and has no separate droop-nose reading, so both cells
-              // reflect the same live value.
-              Expanded(child: _stat('DROOP', '${t.snootAngle.round()}°', fmTextPrimary)),
-              Expanded(child: _stat('VISOR/SNOOT', '${t.snootAngle.round()}°', fmTextPrimary)),
+              Expanded(child: _stat(context, 'GEAR', gearLabel, gearColor)),
+              Expanded(child: _stat(context, 'FLAPS', flapsLabel, colors.textPrimary)),
+              Expanded(
+                child: _stat(
+                  context,
+                  'DROOP',
+                  '${t.snootAngle.round()}°',
+                  colors.textPrimary,
+                ),
+              ),
+              Expanded(
+                child: _stat(
+                  context,
+                  'VISOR/SNOOT',
+                  '${t.snootAngle.round()}°',
+                  colors.textPrimary,
+                ),
+              ),
             ],
           ),
         ],
@@ -308,12 +550,30 @@ class GearFlapsDroopCard extends StatelessWidget {
     );
   }
 
-  Widget _stat(String label, String value, Color color) {
+  Widget _stat(BuildContext context, String label, String value, Color color) {
+    final colors = context.colors;
     return Column(
       children: [
-        Text(label, style: fmLabel(size: 10, weight: FontWeight.w800, letterSpacing: 0)),
+        Text(
+          label,
+          style: uiText(
+            context,
+            size: 10,
+            weight: FontWeight.w800,
+            color: colors.textDim,
+            letterSpacing: 0,
+          ),
+        ),
         const SizedBox(height: 6),
-        Text(value, style: fmMono(size: 14, color: color)),
+        Text(
+          value,
+          style: uiText(
+            context,
+            size: 14,
+            weight: FontWeight.bold,
+            color: color,
+          ),
+        ),
       ],
     );
   }

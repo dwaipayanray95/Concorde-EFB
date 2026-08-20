@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../../../../core/app_colors.dart';
+import '../../../../../core/ui_text.dart';
 import '../../../../../core/formatters.dart';
+import '../../../../../widgets/efb_flat_card.dart';
 import '../../../data/models/telemetry_model.dart';
-import 'fm_theme.dart';
 
 /// Top row: airspeed/Mach, altitude/VS, and a compact attitude+heading dial.
 class HeroPfdRow extends StatelessWidget {
@@ -33,21 +35,46 @@ class _AirspeedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: fmCardDecoration(),
+    final colors = context.colors;
+    return EfbFlatCard(
       padding: const EdgeInsets.all(22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('AIRSPEED / MACH', style: fmLabel()),
+          Text(
+            'AIRSPEED / MACH',
+            style: uiText(
+              context,
+              size: 11,
+              weight: FontWeight.w800,
+              color: colors.textDim,
+              letterSpacing: 1.6,
+            ),
+          ),
           const SizedBox(height: 14),
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text(t.ias.round().toString(), style: fmMono(size: 52)),
+              Text(
+                t.ias.round().toString(),
+                style: uiText(
+                  context,
+                  size: 52,
+                  weight: FontWeight.w800,
+                  color: colors.textPrimary,
+                ),
+              ),
               const SizedBox(width: 8),
-              Text('KT IAS', style: fmLabel(size: 13, weight: FontWeight.w700, letterSpacing: 0)),
+              Text(
+                'KT IAS',
+                style: uiText(
+                  context,
+                  size: 13,
+                  weight: FontWeight.w700,
+                  color: colors.textDim,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -55,9 +82,25 @@ class _AirspeedCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text('M${t.mach.toStringAsFixed(2)}', style: fmMono(size: 26, color: fmAccent, weight: FontWeight.w700)),
+              Text(
+                'M${t.mach.toStringAsFixed(2)}',
+                style: uiText(
+                  context,
+                  size: 26,
+                  color: colors.accent,
+                  weight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(width: 8),
-              Text('TAS ${t.tas.round()} KT', style: fmLabel(size: 12, weight: FontWeight.w700, letterSpacing: 0)),
+              Text(
+                'TAS ${t.tas.round()} KT',
+                style: uiText(
+                  context,
+                  size: 12,
+                  weight: FontWeight.w700,
+                  color: colors.textDim,
+                ),
+              ),
             ],
           ),
         ],
@@ -72,25 +115,50 @@ class _AltitudeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final vs = t.vs.round();
-    final vsColor = vs > 100 ? fmGreen : (vs < -100 ? fmRed : fmTextSecondary);
+    final vsColor = vs > 100 ? colors.arrival : (vs < -100 ? colors.error : colors.textSecondary);
     final vsDisplay = (vs > 0 ? '+' : '') + vs.toString();
 
-    return Container(
-      decoration: fmCardDecoration(),
+    return EfbFlatCard(
       padding: const EdgeInsets.all(22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('ALTITUDE / VS', style: fmLabel()),
+          Text(
+            'ALTITUDE / VS',
+            style: uiText(
+              context,
+              size: 11,
+              weight: FontWeight.w800,
+              color: colors.textDim,
+              letterSpacing: 1.6,
+            ),
+          ),
           const SizedBox(height: 14),
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text(numFormat.format(t.altitude.round()), style: fmMono(size: 52)),
+              Text(
+                numFormat.format(t.altitude.round()),
+                style: uiText(
+                  context,
+                  size: 52,
+                  weight: FontWeight.w800,
+                  color: colors.textPrimary,
+                ),
+              ),
               const SizedBox(width: 8),
-              Text('FT', style: fmLabel(size: 13, weight: FontWeight.w700, letterSpacing: 0)),
+              Text(
+                'FT',
+                style: uiText(
+                  context,
+                  size: 13,
+                  weight: FontWeight.w700,
+                  color: colors.textDim,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -98,9 +166,25 @@ class _AltitudeCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text(vsDisplay, style: fmMono(size: 26, color: vsColor, weight: FontWeight.w700)),
+              Text(
+                vsDisplay,
+                style: uiText(
+                  context,
+                  size: 26,
+                  color: vsColor,
+                  weight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(width: 8),
-              Text('FPM  ·  GS ${t.gs.round()} KT', style: fmLabel(size: 12, weight: FontWeight.w700, letterSpacing: 0)),
+              Text(
+                'FPM  ·  GS ${t.gs.round()} KT',
+                style: uiText(
+                  context,
+                  size: 12,
+                  weight: FontWeight.w700,
+                  color: colors.textDim,
+                ),
+              ),
             ],
           ),
         ],
@@ -115,13 +199,22 @@ class _AttitudeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: fmCardDecoration(),
+    final colors = context.colors;
+    return EfbFlatCard(
       padding: const EdgeInsets.all(22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('ATTITUDE & HEADING', style: fmLabel()),
+          Text(
+            'ATTITUDE & HEADING',
+            style: uiText(
+              context,
+              size: 11,
+              weight: FontWeight.w800,
+              color: colors.textDim,
+              letterSpacing: 1.6,
+            ),
+          ),
           const SizedBox(height: 14),
           Expanded(
             child: Row(
@@ -137,14 +230,46 @@ class _AttitudeCard extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('PITCH ${t.pitch.toStringAsFixed(1)}°', style: fmMono(size: 12, color: fmTextSecondary, weight: FontWeight.w700)),
-                          Text('ROLL ${t.roll.toStringAsFixed(1)}°', style: fmMono(size: 12, color: fmTextSecondary, weight: FontWeight.w700)),
+                          Text(
+                            'PITCH ${t.pitch.toStringAsFixed(1)}°',
+                            style: uiText(
+                              context,
+                              size: 12,
+                              color: colors.textSecondary,
+                              weight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            'ROLL ${t.roll.toStringAsFixed(1)}°',
+                            style: uiText(
+                              context,
+                              size: 12,
+                              color: colors.textSecondary,
+                              weight: FontWeight.w700,
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 6),
-                      Text('${t.heading.round()}°', style: fmMono(size: 32)),
+                      Text(
+                        '${t.heading.round()}°',
+                        style: uiText(
+                          context,
+                          size: 32,
+                          weight: FontWeight.w800,
+                          color: colors.textPrimary,
+                        ),
+                      ),
                       const SizedBox(height: 4),
-                      Text('HDG', style: fmLabel(size: 11, weight: FontWeight.w700, letterSpacing: 0)),
+                      Text(
+                        'HDG',
+                        style: uiText(
+                          context,
+                          size: 11,
+                          weight: FontWeight.w700,
+                          color: colors.textDim,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -163,8 +288,7 @@ class _HorizonDial extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Sky above / ground below the horizon line, shifted by pitch — mirrors
-    // the design's CSS gradient split exactly.
+    final colors = context.colors;
     final skyStop = (50 - pitch).clamp(0.0, 100.0);
     return Container(
       width: 96,
@@ -172,7 +296,7 @@ class _HorizonDial extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: fmBorder, width: 2),
+        border: Border.all(color: colors.dividerStrong, width: 2),
       ),
       child: Stack(
         children: [
@@ -197,7 +321,7 @@ class _HorizonDial extends StatelessWidget {
             left: 8,
             right: 8,
             top: 47,
-            child: Container(height: 2, color: fmAccent),
+            child: Container(height: 2, color: colors.accent),
           ),
         ],
       ),
