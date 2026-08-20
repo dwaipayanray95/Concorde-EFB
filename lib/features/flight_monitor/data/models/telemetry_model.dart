@@ -1,5 +1,3 @@
-import '../../../../core/concorde_constants.dart';
-
 class TelemetryModel {
   final int timestamp;
   
@@ -29,30 +27,27 @@ class TelemetryModel {
   final List<bool> reheatActive;
   final double snootAngle;
   
-  // Fuel Tanks fill percentages
+  // Fuel tank levels, as sent by the bridge: 0-100 percent (NOT a 0-1
+  // fraction — divide by 100 before treating as a fill fraction).
   final double fuelLeftTank;
   final double fuelRightTank;
   final double fuelCenterTank;
   final double fuelTrimForward;
   final double fuelTrimAft;
 
+  /// Real per-tank fuel weight in kg, keyed by tank id ('1'..'11', '5A',
+  /// '7A') — read directly from MSFS's FUELSYSTEM TANK WEIGHT:N
+  /// SimVar for each of the Concorde's 13 tanks. Empty on older recordings
+  /// made before this was added, or if the bridge/aircraft doesn't expose
+  /// it (see [ConcordeFuelSchematic.computeTankFills], which falls back to
+  /// the aggregate 5-channel approximation above when a tank is missing).
+  final Map<String, double> fuelTanksKg;
+
   // Landing touchdown events
   final bool isLanding;
   final double touchdownVS;
   final double touchdownPitch;
   final double touchdownGForce;
-
-  /// Total fuel on board in kg, derived from tank fill fractions (0-1) and
-  /// the shared tank capacities in [ConcordeConstants.fuel.tankCapacitiesKg].
-  /// Single source of truth so LCD modules can't compute divergent totals.
-  double get totalFuelKg {
-    final caps = ConcordeConstants.fuel.tankCapacitiesKg;
-    return fuelLeftTank * caps['left']! +
-        fuelRightTank * caps['right']! +
-        fuelCenterTank * caps['center']! +
-        fuelTrimForward * caps['trimForward']! +
-        fuelTrimAft * caps['trimAft']!;
-  }
 
   TelemetryModel({
     required this.timestamp,
@@ -83,6 +78,7 @@ class TelemetryModel {
     required this.fuelCenterTank,
     required this.fuelTrimForward,
     required this.fuelTrimAft,
+    this.fuelTanksKg = const {},
     required this.isLanding,
     required this.touchdownVS,
     required this.touchdownPitch,
@@ -161,6 +157,9 @@ class TelemetryModel {
       fuelCenterTank: (fuelTanks['center'] ?? 0.0).toDouble(),
       fuelTrimForward: (fuelTanks['trimForward'] ?? 0.0).toDouble(),
       fuelTrimAft: (fuelTanks['trimAft'] ?? 0.0).toDouble(),
+      fuelTanksKg: (concorde['fuelTanksKg'] as Map<String, dynamic>?)
+              ?.map((id, kg) => MapEntry(id, (kg as num).toDouble())) ??
+          const {},
       isLanding: events['isLanding'] ?? false,
       touchdownVS: (events['touchdownVS'] ?? 0.0).toDouble(),
       touchdownPitch: (events['touchdownPitch'] ?? 0.0).toDouble(),
@@ -202,7 +201,8 @@ class TelemetryModel {
           'center': fuelCenterTank,
           'trimForward': fuelTrimForward,
           'trimAft': fuelTrimAft,
-        }
+        },
+        'fuelTanksKg': fuelTanksKg,
       },
       'events': {
         'isLanding': isLanding,

@@ -173,10 +173,32 @@ class _TankChip extends StatelessWidget {
         border: Border.all(color: _color),
         borderRadius: BorderRadius.circular(3),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-      child: Text(
-        '${chip.pct}%',
-        style: fmMono(size: 7, color: _color, weight: FontWeight.w800),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${chip.pct}% · ${numFormat.format(chip.kg.round())}kg',
+            style: fmMono(size: 7, color: _color, weight: FontWeight.w800),
+          ),
+          const SizedBox(height: 2),
+          // Live fill-level bar — grows/shrinks with the tank's telemetry.
+          SizedBox(
+            width: 46,
+            height: 2,
+            child: Stack(
+              children: [
+                Container(color: _color.withValues(alpha: 0.2)),
+                FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: (chip.pct / 100).clamp(0.0, 1.0),
+                  child: Container(color: _color),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -10,6 +10,15 @@ from SimConnect import SimConnect, AircraftRequests, Request
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("MSFS_SimConnect_Bridge")
 
+# DC Designs Concorde's 13 physical fuel tanks, mapped to their
+# FUELSYSTEM TANK WEIGHT:<index> SimVar index. Reverse-engineered from the
+# addon's own model behavior XML (modelbehaviordefs/concorde/dc_designs_instruments.xml),
+# where each tank's digital readout gauge reads this exact indexed SimVar.
+FUEL_TANK_INDEX = {
+    "9": 1, "10": 2, "1": 3, "2": 4, "3": 5, "4": 6,
+    "5": 7, "6": 8, "7": 9, "8": 10, "5A": 11, "7A": 12, "11": 13,
+}
+
 class SimConnectBridge:
     def __init__(self):
         self.sm = None
@@ -41,6 +50,12 @@ class SimConnectBridge:
                 "REHEAT:3": Request((b'TURB ENG AFTERBURNER STAGE ACTIVE:3', b'Number'), self.sm, _time=50),
                 "REHEAT:4": Request((b'TURB ENG AFTERBURNER STAGE ACTIVE:4', b'Number'), self.sm, _time=50),
             }
+            # One real per-tank fuel weight reading per Concorde tank (13
+            # total), keyed the same way as FUEL_TANK_INDEX above.
+            for tank_id, idx in FUEL_TANK_INDEX.items():
+                self.custom_requests[f"FUEL_TANK_WEIGHT:{tank_id}"] = Request(
+                    (f'FUELSYSTEM TANK WEIGHT:{idx}'.encode(), b'pounds'), self.sm, _time=50
+                )
             self.connected = True
             logger.info("Successfully connected to MSFS SimConnect!")
             self.last_on_ground = None
@@ -113,12 +128,19 @@ class SimConnectBridge:
             ff4 = self.get_var("TURB_ENG_FUEL_FLOW_PPH:4")
             fuel_burn = (ff1 + ff2 + ff3 + ff4) * 0.45359237  # PPH to kg/h
 
-            # Fuel Tanks Fill Level %
+            # Fuel Tanks Fill Level % (aggregate fallback, kept for older
+            # aircraft/recordings that predate per-tank readings below)
             tank_left = self.get_var("FUEL_TANK_LEFT_MAIN_LEVEL")
             tank_right = self.get_var("FUEL_TANK_RIGHT_MAIN_LEVEL")
             tank_center = self.get_var("FUEL_TANK_CENTER_LEVEL")
             tank_center2 = self.get_var("FUEL_TANK_CENTER2_LEVEL")
             tank_center3 = self.get_var("FUEL_TANK_CENTER3_LEVEL")
+
+            # Real per-tank fuel weight (kg) for all 13 Concorde tanks.
+            tank_weights_kg = {
+                tank_id: self.get_var(f"FUEL_TANK_WEIGHT:{tank_id}") * 0.45359237
+                for tank_id in FUEL_TANK_INDEX
+            }
 
             # Reheat active (afterburners stage > 0)
             reheat1 = self.get_var("REHEAT:1") > 0
@@ -186,6 +208,7 @@ class SimConnectBridge:
                         "trimForward": tank_center2 * 100.0,
                         "trimAft": tank_center3 * 100.0
                     },
+                    "fuelTanksKg": tank_weights_kg,
                     "reheatActive": [reheat1, reheat2, reheat3, reheat4],
                     "snootAngle": visor,
                     "engineRamps": 0.0
