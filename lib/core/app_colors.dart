@@ -54,7 +54,7 @@ class AppColors extends ThemeExtension<AppColors> {
     bg: Color(0xFF1E212B),
     surface: Color(0xFFD0D7E6),
     resultsBg: Color(0xFFFFFFFF),
-    inputBg: Color(0xFFFFFFFF),
+    inputBg: Color(0xFFF2F5FC),
     textPrimary: Color(0xFF0A0D18),
     textSecondary: Color(0xFF323A4E),
     textDim: Color(0xFF4F576E),

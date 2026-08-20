@@ -89,6 +89,7 @@ class _EfbTextFieldState extends State<EfbTextField> {
           decoration: BoxDecoration(
             color: colors.inputBg,
             borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: colors.dividerStrong, width: 1.5),
           ),
           child: TextField(
             controller: _controller,

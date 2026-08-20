@@ -140,6 +140,8 @@ class _LegCard extends ConsumerWidget {
     final isWeightFeasible = weightKg <= maxWeightKg;
     final isFeasible =
         (feasibility?.feasible ?? true) && isWeightFeasible && !isFuelOver;
+    final metarStr = metarAsync.asData?.value ?? '';
+    final parsedWind = MetarParser.parseWind(metarStr);
 
     return Container(
       decoration: BoxDecoration(
@@ -198,55 +200,105 @@ class _LegCard extends ConsumerWidget {
               ],
             ),
           ),
-          // Strip 2: airport inputs
+          // Strip 2: airport inputs & weather (left) with prominent wind indicator (right)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 22),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
             decoration: BoxDecoration(
               border: Border(bottom: BorderSide(color: colors.divider)),
             ),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                // Left Column: ICAO + Runway (Row 1) and METAR Weather (Row 2)
                 Expanded(
-                  child: _IcaoField(value: icao, onChanged: onIcaoChanged),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: _IcaoField(
+                              value: icao,
+                              onChanged: onIcaoChanged,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            flex: 3,
+                            child: _RunwaySelect(
+                              airport: airport,
+                              currentId: currentRunwayId,
+                              onChanged: onRunwayChanged,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      metarAsync.when(
+                        data:
+                            (metar) => _WeatherStrip(
+                              metarStr: metar,
+                              runway: runway,
+                              showRaw: showRaw,
+                              onToggleRaw: onToggleRaw,
+                              onRefresh: onRefreshMetar,
+                            ),
+                        loading:
+                            () => Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  color: colors.accent,
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            ),
+                        error:
+                            (_, _) => _WeatherStrip(
+                              metarStr: '',
+                              runway: runway,
+                              showRaw: showRaw,
+                              onToggleRaw: onToggleRaw,
+                              onRefresh: onRefreshMetar,
+                            ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  flex: 2,
-                  child: _RunwaySelect(
-                    airport: airport,
-                    currentId: currentRunwayId,
-                    onChanged: onRunwayChanged,
+                const SizedBox(width: 24),
+                Container(
+                  width: 1,
+                  height: 100,
+                  color: colors.divider,
+                ),
+                const SizedBox(width: 24),
+                // Right: Wind Indicator spanning both rows
+                Container(
+                  width: 110,
+                  height: 110,
+                  decoration: BoxDecoration(
+                    color: colors.inputBg,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: colors.dividerStrong,
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Center(
+                    child: WindArrow(
+                      runwayHeading: runway?.heading.toDouble(),
+                      windDir: parsedWind.windDirDeg,
+                      windSpeedKt: parsedWind.windSpeedKt,
+                      color: colors.accent,
+                      size: 80,
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
-          // Strip 3: weather
-          metarAsync.when(
-            data:
-                (metar) => _WeatherStrip(
-                  metarStr: metar,
-                  runway: runway,
-                  showRaw: showRaw,
-                  onToggleRaw: onToggleRaw,
-                  onRefresh: onRefreshMetar,
-                ),
-            loading:
-                () => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 30),
-                  child: Center(
-                    child: CircularProgressIndicator(color: colors.accent),
-                  ),
-                ),
-            error:
-                (_, _) => _WeatherStrip(
-                  metarStr: '',
-                  runway: runway,
-                  showRaw: showRaw,
-                  onToggleRaw: onToggleRaw,
-                  onRefresh: onRefreshMetar,
-                ),
           ),
           // Strip 4: results
           Container(
@@ -359,6 +411,7 @@ class _IcaoField extends StatelessWidget {
           decoration: BoxDecoration(
             color: colors.inputBg,
             borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: colors.dividerStrong, width: 1.5),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: TextField(
@@ -416,6 +469,7 @@ class _RunwaySelect extends StatelessWidget {
           decoration: BoxDecoration(
             color: colors.inputBg,
             borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: colors.dividerStrong, width: 1.5),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16),
           height: 44,
@@ -490,7 +544,6 @@ class _WeatherStrip extends StatelessWidget {
     final vis = MetarParser.parseVisibilityKm(metarStr);
     final cat = MetarParser.parseFlightCategory(metarStr);
     final summary = MetarParser.parseWeatherSummary(metarStr);
-    final rwyHeading = runway?.heading.toDouble();
 
     Color catBg = colors.successBg;
     Color catColor = colors.success;
@@ -507,40 +560,17 @@ class _WeatherStrip extends StatelessWidget {
 
     return InkWell(
       onTap: metarStr.isNotEmpty ? onToggleRaw : null,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
-        decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: colors.divider)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: colors.inputBg,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Center(
-                    child: WindArrow(
-                      runwayHeading: rwyHeading,
-                      windDir: parsed.windDirDeg,
-                      windSpeedKt: parsed.windSpeedKt,
-                      color: colors.accent,
-                      size: 26,
-                    ),
-                  ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 13,
+                  vertical: 5,
                 ),
-                const SizedBox(width: 20),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 13,
-                    vertical: 5,
-                  ),
                   decoration: BoxDecoration(
                     color: catBg,
                     borderRadius: BorderRadius.circular(20),
@@ -556,7 +586,7 @@ class _WeatherStrip extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 20),
+                const SizedBox(width: 16),
                 Text(
                   '${tempC?.round() ?? '--'}°C, $summary',
                   style: uiText(
@@ -566,9 +596,9 @@ class _WeatherStrip extends StatelessWidget {
                     color: colors.textSecondary,
                   ),
                 ),
-                const SizedBox(width: 20),
+                const SizedBox(width: 16),
                 Container(width: 1, height: 20, color: colors.dividerStrong),
-                const SizedBox(width: 20),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Wrap(
                     spacing: 20,
@@ -627,10 +657,9 @@ class _WeatherStrip extends StatelessWidget {
             ],
           ],
         ),
-      ),
-    );
+      );
+    }
   }
-}
 
 class _WeatherStat extends StatelessWidget {
   final String label;
