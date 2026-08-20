@@ -258,24 +258,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Global static header and tab selector (Animates only once on app startup)
+                              // Global static header, with the tab selector sharing its
+                              // row (via AppHeader's `trailing`) instead of eating a
+                              // separate one. (Animates only once on app startup.)
                               Padding(
                                 padding: const EdgeInsets.only(left: 40, right: 40, top: 48),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    EntranceFader(
-                                      key: const ValueKey('global-header'),
-                                      delay: Duration.zero,
-                                      child: AppHeader(hasUpdate: _hasUpdate, latestVersion: _latestVersion),
-                                    ),
-                                    const SizedBox(height: 32),
-                                    EntranceFader(
-                                      key: const ValueKey('global-tabs'),
-                                      delay: const Duration(milliseconds: 100),
-                                      child: _buildTabSelector(),
-                                    ),
-                                  ],
+                                child: EntranceFader(
+                                  key: const ValueKey('global-header'),
+                                  delay: Duration.zero,
+                                  child: AppHeader(
+                                    hasUpdate: _hasUpdate,
+                                    latestVersion: _latestVersion,
+                                    trailing: _buildTabSelector(),
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 32),
