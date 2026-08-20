@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:window_manager/window_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -11,8 +10,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../providers/efb_providers.dart';
 import '../widgets/entrance_fader.dart';
 import '../widgets/smooth_scroll_wrapper.dart';
-import '../widgets/ambient_glow.dart';
-import '../core/ui_tokens.dart';
+import '../core/app_colors.dart';
+import '../core/ui_text.dart';
 import '../core/app_version.dart';
 import '../core/sim_bridge_launcher.dart';
 import '../core/app_links.dart';
@@ -96,11 +95,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
 
   @override
   void onWindowClose() async {
-    final isDesktop = !kIsWeb && (
-      defaultTargetPlatform == TargetPlatform.windows ||
-      defaultTargetPlatform == TargetPlatform.macOS ||
-      defaultTargetPlatform == TargetPlatform.linux
-    );
+    final isDesktop =
+        !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.windows ||
+            defaultTargetPlatform == TargetPlatform.macOS ||
+            defaultTargetPlatform == TargetPlatform.linux);
 
     if (!isDesktop) {
       Navigator.of(context).pop();
@@ -116,71 +115,84 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
       await prefs.setBool('is_first_launch', false);
 
       if (mounted) {
+        final colors = context.colors;
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) => AlertDialog(
-            backgroundColor: const Color(0xFF0F172A),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-              side: BorderSide(color: Colors.white.withValues(alpha: 0.1), width: 1.5),
-            ),
-            title: Text(
-              'RATE CONCORDE EFB',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.plusJakartaSans(
-                color: Colors.white,
-                fontWeight: FontWeight.w900,
-                fontSize: 16,
-                letterSpacing: 1.5,
-              ),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'We hope you enjoyed using the EFB! Would you like to leave a 5-star rating on flightsim.to before you go?',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.plusJakartaSans(
-                    color: UiTokens.textSecondary,
-                    fontSize: 13,
+          builder:
+              (context) => AlertDialog(
+                backgroundColor: colors.surface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(
+                    color: colors.dividerStrong,
+                    width: 1.5,
                   ),
                 ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () async {
-                  Navigator.of(context).pop();
-                  SimBridgeLauncher.stop();
-                  await windowManager.destroy();
-                },
-                child: Text(
-                  'NO THANKS',
-                  style: GoogleFonts.plusJakartaSans(color: UiTokens.textDim),
+                title: Text(
+                  'RATE CONCORDE EFB',
+                  textAlign: TextAlign.center,
+                  style: uiText(
+                    context,
+                    color: colors.textPrimary,
+                    weight: FontWeight.w900,
+                    size: 16,
+                    letterSpacing: 1.5,
+                  ),
                 ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'We hope you enjoyed using the EFB! Would you like to leave a 5-star rating on flightsim.to before you go?',
+                      textAlign: TextAlign.center,
+                      style: uiText(
+                        context,
+                        color: colors.textSecondary,
+                        size: 13,
+                      ),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () async {
+                      Navigator.of(context).pop();
+                      SimBridgeLauncher.stop();
+                      await windowManager.destroy();
+                    },
+                    child: Text(
+                      'NO THANKS',
+                      style: uiText(context, color: colors.textDim),
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      final url = Uri.parse(AppLinks.flightsimTo);
+                      try {
+                        await launchUrl(url);
+                      } catch (_) {}
+                      if (context.mounted) Navigator.of(context).pop();
+                      SimBridgeLauncher.stop();
+                      await windowManager.destroy();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colors.accent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text(
+                      'RATE 5 STARS',
+                      style: uiText(
+                        context,
+                        color: Colors.white,
+                        weight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              ElevatedButton(
-                onPressed: () async {
-                  final url = Uri.parse(AppLinks.flightsimTo);
-                  try {
-                    await launchUrl(url);
-                  } catch (_) {}
-                  if (context.mounted) Navigator.of(context).pop();
-                  SimBridgeLauncher.stop();
-                  await windowManager.destroy();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: UiTokens.accent,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                child: Text(
-                  'RATE 5 STARS',
-                  style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
         );
       }
     } else {
@@ -192,59 +204,48 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final airportDbAsync = ref.watch(airportDbProvider);
 
     return airportDbAsync.when(
-      loading: () => Scaffold(
-        backgroundColor: UiTokens.bg,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircularProgressIndicator(color: UiTokens.accent),
-              const SizedBox(height: 24),
-              Text(
-                'LOADING AIRPORT DATABASE...',
-                style: GoogleFonts.plusJakartaSans(
-                  color: UiTokens.textSecondary,
-                  letterSpacing: 3,
-                  fontWeight: FontWeight.w900,
-                ),
+      loading:
+          () => Scaffold(
+            backgroundColor: colors.bg,
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(color: colors.accent),
+                  const SizedBox(height: 24),
+                  Text(
+                    'LOADING AIRPORT DATABASE...',
+                    style: uiText(
+                      context,
+                      color: colors.textSecondary,
+                      letterSpacing: 3,
+                      weight: FontWeight.w900,
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
-      error: (err, stack) => Scaffold(
-        backgroundColor: UiTokens.bg,
-        body: Center(
-          child: Text(
-            'Error loading database: $err',
-            style: GoogleFonts.plusJakartaSans(color: UiTokens.error),
+      error:
+          (err, stack) => Scaffold(
+            backgroundColor: colors.bg,
+            body: Center(
+              child: Text(
+                'Error loading database: $err',
+                style: uiText(context, color: colors.error),
+              ),
+            ),
           ),
-        ),
-      ),
       data: (db) {
         return Scaffold(
-          backgroundColor: UiTokens.bg,
+          backgroundColor: colors.bg,
           body: SafeArea(
             child: Stack(
               children: [
-                // Static ambient background. Radial gradients give the same
-                // soft-glow look as blurred circles without paying for a
-                // full-screen BackdropFilter every frame.
-                Positioned.fill(
-                  child: Container(
-                    decoration: const BoxDecoration(color: UiTokens.bg),
-                    child: const Stack(
-                      children: [
-                        AmbientGlow(top: -300, left: -300, size: 800, color: Color(0xFF1E3A8A), alpha: 0.15),
-                        AmbientGlow(bottom: -100, right: -250, size: 900, color: Color(0xFF4C1D95), alpha: 0.12),
-                        AmbientGlow(top: 0, right: 0, size: 700, color: Color(0xFF0369A1), alpha: 0.12),
-                      ],
-                    ),
-                  ),
-                ),
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final height = constraints.maxHeight;
@@ -253,65 +254,83 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                         scrollDirection: Axis.horizontal,
                         physics: const BouncingScrollPhysics(),
                         child: SizedBox(
-                          width: MediaQuery.of(context).size.width > 1080 ? MediaQuery.of(context).size.width : 1080,
+                          width:
+                              MediaQuery.of(context).size.width > 1080
+                                  ? MediaQuery.of(context).size.width
+                                  : 1080,
                           height: height,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Global static header, with the tab selector sharing its
-                              // row (via AppHeader's `trailing`) instead of eating a
-                              // separate one. (Animates only once on app startup.)
                               Padding(
-                                padding: const EdgeInsets.only(left: 40, right: 40, top: 48),
+                                padding: const EdgeInsets.only(
+                                  left: 40,
+                                  right: 40,
+                                  top: 48,
+                                ),
                                 child: EntranceFader(
                                   key: const ValueKey('global-header'),
                                   delay: Duration.zero,
                                   child: AppHeader(
                                     hasUpdate: _hasUpdate,
                                     latestVersion: _latestVersion,
-                                    trailing: _buildTabSelector(),
+                                    trailing: _buildTabSelector(context),
                                   ),
                                 ),
                               ),
                               const SizedBox(height: 32),
-                              // Dynamic tab views (cascade anims play on tab switches)
                               Expanded(
-                                child: selectedTab == 0
-                                    ? SmoothScrollWrapper(
-                                        controller: _tab0Controller,
-                                        child: SingleChildScrollView(
+                                child:
+                                    selectedTab == 0
+                                        ? SmoothScrollWrapper(
                                           controller: _tab0Controller,
-                                          key: const ValueKey('scroll-tab-0'),
-                                          scrollDirection: Axis.vertical,
-                                          physics: const BouncingScrollPhysics(),
-                                          padding: const EdgeInsets.only(left: 40, right: 40, bottom: 48),
-                                          child: const FlightPlannerTab(),
-                                        ),
-                                      )
-                                    : selectedTab == 1
-                                        ? Padding(
-                                            key: const ValueKey('padding-tab-1'),
-                                            padding: const EdgeInsets.only(left: 40, right: 40, bottom: 48),
-                                            child: const ChecklistsTab(),
-                                          )
-                                        : SmoothScrollWrapper(
-                                            controller: _tab2Controller,
-                                            child: SingleChildScrollView(
-                                              controller: _tab2Controller,
-                                              key: const ValueKey('scroll-tab-2'),
-                                              scrollDirection: Axis.vertical,
-                                              physics: const BouncingScrollPhysics(),
-                                              padding: const EdgeInsets.only(left: 40, right: 40, bottom: 48),
-                                              child: const FlightMonitorTab(),
+                                          child: SingleChildScrollView(
+                                            controller: _tab0Controller,
+                                            key: const ValueKey('scroll-tab-0'),
+                                            scrollDirection: Axis.vertical,
+                                            physics:
+                                                const BouncingScrollPhysics(),
+                                            padding: const EdgeInsets.only(
+                                              left: 40,
+                                              right: 40,
+                                              bottom: 48,
                                             ),
+                                            child: const FlightPlannerTab(),
                                           ),
+                                        )
+                                        : selectedTab == 1
+                                        ? Padding(
+                                          key: const ValueKey('padding-tab-1'),
+                                          padding: const EdgeInsets.only(
+                                            left: 40,
+                                            right: 40,
+                                            bottom: 48,
+                                          ),
+                                          child: const ChecklistsTab(),
+                                        )
+                                        : SmoothScrollWrapper(
+                                          controller: _tab2Controller,
+                                          child: SingleChildScrollView(
+                                            controller: _tab2Controller,
+                                            key: const ValueKey('scroll-tab-2'),
+                                            scrollDirection: Axis.vertical,
+                                            physics:
+                                                const BouncingScrollPhysics(),
+                                            padding: const EdgeInsets.only(
+                                              left: 40,
+                                              right: 40,
+                                              bottom: 48,
+                                            ),
+                                            child: const FlightMonitorTab(),
+                                          ),
+                                        ),
                               ),
                             ],
                           ),
                         ),
                       ),
                     );
-                  }
+                  },
                 ),
                 Positioned(
                   bottom: 16,
@@ -329,32 +348,38 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                     ),
                     mouseCursor: SystemMouseCursors.click,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.5),
+                        color: colors.surface,
                         borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(8),
                           bottomLeft: Radius.circular(8),
                         ),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
+                        border: Border.all(
+                          color: colors.dividerStrong,
+                          width: 1,
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             AppVersion.display,
-                            style: GoogleFonts.jetBrainsMono(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: UiTokens.textDim,
-                              fontFeatures: const [FontFeature.enable('smcp')],
+                            style: uiText(
+                              context,
+                              size: 11,
+                              weight: FontWeight.bold,
+                              color: colors.textDim,
                             ),
                           ),
                           const SizedBox(width: 6),
-                          const Icon(
+                          Icon(
                             Icons.open_in_new,
                             size: 10,
-                            color: UiTokens.textDim,
+                            color: colors.textDim,
                           ),
                         ],
                       ),
@@ -369,19 +394,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
     );
   }
 
-  Widget _buildTabSelector() {
+  Widget _buildTabSelector(BuildContext context) {
     return Row(
       children: [
-        _buildTabButton(0, 'FLIGHT PLANNER', Icons.flight_takeoff),
+        _buildTabButton(context, 0, 'FLIGHT PLANNER', Icons.flight_takeoff),
         const SizedBox(width: 16),
-        _buildTabButton(1, 'CHECKLISTS', Icons.playlist_add_check),
+        _buildTabButton(context, 1, 'CHECKLISTS', Icons.playlist_add_check),
         const SizedBox(width: 16),
-        _buildTabButton(2, 'FLIGHT MONITOR', Icons.monitor_heart),
+        _buildTabButton(context, 2, 'FLIGHT MONITOR', Icons.monitor_heart),
       ],
     );
   }
 
-  Widget _buildTabButton(int index, String label, IconData icon) {
+  Widget _buildTabButton(
+    BuildContext context,
+    int index,
+    String label,
+    IconData icon,
+  ) {
+    final colors = context.colors;
     final isSelected = selectedTab == index;
     return InkWell(
       onTap: () => setState(() => selectedTab = index),
@@ -391,33 +422,45 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? UiTokens.accent.withValues(alpha: 0.15) : Colors.transparent,
+          color: isSelected ? colors.accent : colors.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? UiTokens.accent : Colors.white.withValues(alpha: 0.05),
+            color: isSelected ? colors.accent : colors.dividerStrong,
             width: 1.5,
           ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: UiTokens.accent.withValues(alpha: 0.25),
-                    blurRadius: 12,
-                    spreadRadius: -2,
-                  )
-                ]
-              : null,
+          boxShadow:
+              isSelected
+                  ? [
+                    BoxShadow(
+                      color: colors.accent.withValues(alpha: 0.35),
+                      blurRadius: 12,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                  : [
+                    BoxShadow(
+                      color: colors.textPrimary.withValues(alpha: 0.04),
+                      blurRadius: 6,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: isSelected ? Colors.white : UiTokens.textDim, size: 18),
+            Icon(
+              icon,
+              color: isSelected ? Colors.white : colors.textDim,
+              size: 18,
+            ),
             const SizedBox(width: 8),
             Text(
               label,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white : UiTokens.textDim,
+              style: uiText(
+                context,
+                size: 13,
+                weight: FontWeight.bold,
+                color: isSelected ? Colors.white : colors.textDim,
                 letterSpacing: 1,
               ),
             ),
