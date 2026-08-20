@@ -3,6 +3,7 @@
         "date": "2026-08-20",
         "title": "Commits",
         "items": [
+            "d5770e3 style: bigger runway and wind indicator now",
             "f3b9d0e style(ui): new light / dark ui. dropped glass ui and stuff",
             "1d24dba style(theme): update accent to deep violet #651FFF",
             "12303aa fix(ui): seamlessly merge folder tab with card body without gap or misaligned curvature",
