@@ -5,8 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'core/ui_tokens.dart';
+import 'core/app_colors.dart';
 import 'core/sim_bridge_launcher.dart';
+import 'providers/efb_providers.dart';
 import 'screens/home_screen.dart';
 
 void main() async {
@@ -24,14 +25,10 @@ void main() async {
   // Initialize window manager for Desktop platforms
   await windowManager.ensureInitialized();
 
-  WindowOptions windowOptions = const WindowOptions(
+  WindowOptions windowOptions = WindowOptions(
     size: Size(1300, 900), // Defined size to fit all widgets comfortably
     center: true,
-    // Transparent here lets the native title bar area show through with no
-    // fill on macOS (defaults to light chrome, clashing with the app's dark
-    // theme) while Windows' opaque native title bar hides the difference --
-    // use the app's actual background so both platforms match.
-    backgroundColor: UiTokens.bg,
+    backgroundColor: AppColors.light.bg,
     skipTaskbar: false,
     titleBarStyle: TitleBarStyle.normal,
     title: 'Concorde EFB',
@@ -50,26 +47,45 @@ void main() async {
   );
 }
 
-class ConcordeEfbApp extends StatelessWidget {
+class ConcordeEfbApp extends ConsumerWidget {
   const ConcordeEfbApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+
     return MaterialApp(
       title: 'Concorde EFB',
       debugShowCheckedModeBanner: false,
+      themeMode: themeMode,
       theme: ThemeData(
+        brightness: Brightness.light,
+        scaffoldBackgroundColor: AppColors.light.bg,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.light.accent,
+          brightness: Brightness.light,
+        ),
+        extensions: const [AppColors.light],
+        textTheme: GoogleFonts.jetBrainsMonoTextTheme(
+          ThemeData.light().textTheme,
+        ).apply(
+          bodyColor: AppColors.light.textPrimary,
+          displayColor: AppColors.light.textPrimary,
+        ),
+      ),
+      darkTheme: ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: UiTokens.bg,
-        textTheme: GoogleFonts.plusJakartaSansTextTheme(
+        scaffoldBackgroundColor: AppColors.dark.bg,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.dark.accent,
+          brightness: Brightness.dark,
+        ),
+        extensions: const [AppColors.dark],
+        textTheme: GoogleFonts.jetBrainsMonoTextTheme(
           ThemeData.dark().textTheme,
         ).apply(
-          bodyColor: UiTokens.textPrimary,
-          displayColor: UiTokens.textPrimary,
-        ),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: UiTokens.accent,
-          brightness: Brightness.dark,
+          bodyColor: AppColors.dark.textPrimary,
+          displayColor: AppColors.dark.textPrimary,
         ),
       ),
       home: const HomeScreen(),
