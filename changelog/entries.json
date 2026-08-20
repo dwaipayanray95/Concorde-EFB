@@ -3,6 +3,7 @@
         "date": "2026-08-20",
         "title": "Commits",
         "items": [
+            "56c93c0 fix: match title bar tint to app theme on macOS",
             "62bf7c0 refactor: move nav tabs into header row, drop header stats",
             "d28b75f fix: auto-select longest runway on ICAO change, fix dropdown crash",
             "de9cbc0 fix: recalibrate fuel burn model to real Concorde performance data",
