@@ -51,15 +51,15 @@ class AppColors extends ThemeExtension<AppColors> {
   });
 
   static const light = AppColors(
-    bg: Color(0xFFF2F4FC),
-    surface: Color(0xFFFFFFFF),
-    resultsBg: Color(0xFFF8F9FF),
-    inputBg: Color(0xFFF2F4FC),
+    bg: Color(0xFFE4E8F2),
+    surface: Color(0xFFF9FAFD),
+    resultsBg: Color(0xFFEEF2FA),
+    inputBg: Color(0xFFE3E8F3),
     textPrimary: Color(0xFF1A1C2E),
     textSecondary: Color(0xFF6B6F8A),
     textDim: Color(0xFF8A8DA8),
-    divider: Color(0xFFEEF0FA),
-    dividerStrong: Color(0xFFE4E7F5),
+    divider: Color(0xFFDCE2EF),
+    dividerStrong: Color(0xFFCED6E5),
     accent: Color(0xFF3D5AFE),
     departure: Color(0xFFFF3D57),
     arrival: Color(0xFF00C853),
