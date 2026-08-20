@@ -27,49 +27,24 @@ class FuelSchematicCard extends StatelessWidget {
             style: fmLabel(size: 9, color: fmTextDim, letterSpacing: 0.5),
           ),
           const SizedBox(height: 10),
+          const _SchematicImage(),
+          const SizedBox(height: 16),
+          // Single-line legend + total — it's just a reference key, doesn't
+          // need a third of the card's width beside the diagram.
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Expanded(flex: 3, child: _SchematicImage(chips: chips)),
-              const SizedBox(width: 24),
-              Expanded(
-                flex: 1,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _LegendRow(color: fmRed, label: 'FUEL TRANSFER — TANKS 1 · 2 · 3 · 4'),
-                    const SizedBox(height: 10),
-                    _LegendRow(color: fmBlue, label: 'MAIN TANKS — 5 · 5A · 6 · 7 · 7A · 8'),
-                    const SizedBox(height: 10),
-                    _LegendRow(color: fmMint, label: 'TRIM TRANSFER — 9 · 10 · 11'),
-                    const SizedBox(height: 10),
-                    _LegendRow(color: fmYellow, label: 'ENGINE COLLECTOR TANKS'),
-                    const SizedBox(height: 18),
-                    Container(
-                      padding: const EdgeInsets.only(top: 14),
-                      decoration: const BoxDecoration(
-                        border: Border(top: BorderSide(color: fmBorder)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('TOTAL FUEL ON BOARD', style: fmLabel(size: 10, letterSpacing: 0)),
-                          const SizedBox(height: 6),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              Text(numFormat.format(totalKg.round()), style: fmMono(size: 30)),
-                              const SizedBox(width: 4),
-                              Text(' KG', style: fmLabel(size: 14, color: fmMuted, weight: FontWeight.w600, letterSpacing: 0)),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+              _LegendDot(color: fmRed, label: 'FUEL TRANSFER — 1·2·3·4'),
+              const SizedBox(width: 16),
+              _LegendDot(color: fmBlue, label: 'MAIN — 5·5A·6·7·7A·8'),
+              const SizedBox(width: 16),
+              _LegendDot(color: fmMint, label: 'TRIM — 9·10·11'),
+              const SizedBox(width: 16),
+              _LegendDot(color: fmYellow, label: 'ENGINE COLLECTOR'),
+              const Spacer(),
+              Text('TOTAL FUEL ', style: fmLabel(size: 10, letterSpacing: 0)),
+              Text(
+                '${numFormat.format(totalKg.round())} KG',
+                style: fmMono(size: 15, weight: FontWeight.w900),
               ),
             ],
           ),
@@ -79,32 +54,30 @@ class FuelSchematicCard extends StatelessWidget {
   }
 }
 
-class _LegendRow extends StatelessWidget {
+class _LegendDot extends StatelessWidget {
   final Color color;
   final String label;
-  const _LegendRow({required this.color, required this.label});
+  const _LegendDot({required this.color, required this.label});
 
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Container(width: 10, height: 10, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
-        const SizedBox(width: 8),
-        Expanded(child: Text(label, style: fmLabel(size: 10, color: fmTextSecondary, weight: FontWeight.w700, letterSpacing: 0))),
+        Container(width: 8, height: 8, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
+        const SizedBox(width: 6),
+        Text(label, style: fmLabel(size: 9, color: fmTextSecondary, weight: FontWeight.w700, letterSpacing: 0.3)),
       ],
     );
   }
 }
 
 /// The real manual diagram, rotated 90° counter-clockwise to landscape
-/// (nose left) so it reads naturally in a wide card. [ConcordeFuelSchematic.tankPositions]
-/// was pixel-measured directly off this same source image, and
-/// [ConcordeFuelSchematic.landscapeFraction] is exactly the fractional
-/// equivalent of this rotation — so the live percentage chips always land
-/// on the right tank regardless of layout size.
+/// (nose left) so it reads naturally in a wide card. Shown plain, with no
+/// overlays — [ConcordeFuelSchematic.tankPositions] is kept around for
+/// whatever's wired back on top of it next.
 class _SchematicImage extends StatelessWidget {
-  final List<FuelTankChip> chips;
-  const _SchematicImage({required this.chips});
+  const _SchematicImage();
 
   // Source raster is 1446x2048 (portrait); after the 90° rotation the
   // landscape box's true aspect ratio is height:width of the source image.
@@ -119,86 +92,12 @@ class _SchematicImage extends StatelessWidget {
     // tab that measures this subtree.
     return AspectRatio(
       aspectRatio: _aspectRatio,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned.fill(
-            child: RotatedBox(
-              quarterTurns: 3, // 90° counter-clockwise: nose-up source -> nose-left
-              child: Image.asset(
-                'assets/fuel_tank_schematic.png',
-                fit: BoxFit.fill,
-              ),
-            ),
-          ),
-          for (final chip in chips)
-            _positionedAt(chip.left, chip.top, _TankChip(chip: chip)),
-        ],
-      ),
-    );
-  }
-
-  /// Positions a chip fractionally within the Stack using [Align] rather
-  /// than pixel offsets — this needs no explicit width, so it works
-  /// regardless of how much space the Expanded parent ends up giving it.
-  Widget _positionedAt(double xPct, double yPct, Widget child) {
-    final f = ConcordeFuelSchematic.landscapeFraction(xPct, yPct);
-    return Align(
-      alignment: Alignment(f.fx * 2 - 1, f.fy * 2 - 1),
-      // Offset below the point rather than centered on it, so the chip
-      // doesn't sit directly on top of the diagram's own numbered circle.
-      child: FractionalTranslation(
-        translation: const Offset(0, 0.9),
-        child: child,
-      ),
-    );
-  }
-}
-
-class _TankChip extends StatelessWidget {
-  final FuelTankChip chip;
-  const _TankChip({required this.chip});
-
-  Color get _color => switch (chip.group) {
-        FuelTankGroup.fuelTransfer => fmRed,
-        FuelTankGroup.main => fmBlue,
-        FuelTankGroup.trim => fmMint,
-      };
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF05070C),
-        border: Border.all(color: _color),
-        borderRadius: BorderRadius.circular(3),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '${chip.pct}% · ${numFormat.format(chip.kg.round())}kg',
-            style: fmMono(size: 7, color: _color, weight: FontWeight.w800),
-          ),
-          const SizedBox(height: 2),
-          // Live fill-level bar — grows/shrinks with the tank's telemetry.
-          SizedBox(
-            width: 46,
-            height: 2,
-            child: Stack(
-              children: [
-                Container(color: _color.withValues(alpha: 0.2)),
-                FractionallySizedBox(
-                  alignment: Alignment.centerLeft,
-                  widthFactor: (chip.pct / 100).clamp(0.0, 1.0),
-                  child: Container(color: _color),
-                ),
-              ],
-            ),
-          ),
-        ],
+      child: RotatedBox(
+        quarterTurns: 3, // 90° counter-clockwise: nose-up source -> nose-left
+        child: Image.asset(
+          'assets/fuel_tank_schematic.png',
+          fit: BoxFit.fill,
+        ),
       ),
     );
   }
