@@ -393,10 +393,56 @@ final takeoffFeasibilityProvider = Provider<RunwayFeasibility?>((ref) {
   );
   
   return ConcordeLogic.takeoffFeasibleM(
-    runway.lengthM, 
-    weights['TOW']!, 
+    runway.lengthM,
+    weights['TOW']!,
     env: env,
     useReheat: useReheat,
+  );
+});
+
+/// Same takeoff feasibility check, but always forced to no-reheat -- lets
+/// the UI tell the pilot when reheat isn't actually required for this
+/// takeoff, regardless of [useReheatTakeoffProvider]'s own setting.
+final takeoffFeasibilityNoReheatProvider = Provider<RunwayFeasibility?>((ref) {
+  final runway = ref.watch(departureRunwayProvider);
+  final weights = ref.watch(weightsProvider);
+  if (runway == null) return null;
+
+  final metarAsync = ref.watch(departureMetarFutureProvider);
+  final metar = metarAsync.value ?? '';
+
+  final tempC = mp.MetarParser.parseTempC(metar);
+  final parsedQnh = mp.MetarParser.parseQnh(metar);
+  final parsedWind = mp.MetarParser.parseWind(metar);
+
+  double headwind = 0.0;
+  final windDirection = parsedWind.windDirDeg;
+  final windSpeed = parsedWind.windSpeedKt;
+  if (windDirection != null && windSpeed != null) {
+    final angleRad = (windDirection - runway.heading) * math.pi / 180.0;
+    headwind = windSpeed * math.cos(angleRad);
+  }
+
+  MetarQnh? qnhInput;
+  if (parsedQnh != null) {
+    qnhInput = MetarQnh(
+      unit: parsedQnh.unit,
+      value: parsedQnh.value,
+    );
+  }
+
+  final env = RunwayEnvironmentInputs(
+    runwayElevFt: runway.elevationFt?.toDouble(),
+    qnh: qnhInput,
+    oatC: tempC,
+    headwindKt: headwind,
+  );
+
+  return ConcordeLogic.takeoffFeasibleM(
+    runway.lengthM,
+    weights['TOW']!,
+    env: env,
+    useReheat: false,
   );
 });
 
