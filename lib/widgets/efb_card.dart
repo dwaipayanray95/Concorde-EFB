@@ -20,54 +20,53 @@ class EfbCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final accentColor = accentTop ?? colors.accent;
+    final tabBg = accentTop ?? colors.accent;
 
-    return EfbFlatCard(
-      padding: EdgeInsets.zero,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Folder tab header row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: accentColor,
-                  borderRadius: const BorderRadius.only(
-                    bottomRight: Radius.circular(14),
-                  ),
-                ),
-                child: Text(
-                  title.toUpperCase(),
-                  style: uiText(
-                    context,
-                    size: 11,
-                    weight: FontWeight.w900,
-                    letterSpacing: 2,
-                    color: Colors.white,
-                  ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Popping folder tab sitting on top of the card
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 8,
+              ),
+              decoration: BoxDecoration(
+                color: tabBg,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  topRight: Radius.circular(12),
                 ),
               ),
-              if (right != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8, right: 16),
-                  child: right!,
+              child: Text(
+                title.toUpperCase(),
+                style: uiText(
+                  context,
+                  size: 11,
+                  weight: FontWeight.w900,
+                  letterSpacing: 2,
+                  color: Colors.white,
                 ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-            child: child,
-          ),
-        ],
-      ),
+              ),
+            ),
+            if (right != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6, right: 8),
+                child: right!,
+              ),
+          ],
+        ),
+        // Main card body below the tab
+        EfbFlatCard(
+          padding: const EdgeInsets.all(24),
+          child: child,
+        ),
+      ],
     );
   }
 }

@@ -60,7 +60,7 @@ class AppColors extends ThemeExtension<AppColors> {
     textDim: Color(0xFF4F576E),
     divider: Color(0xFFB8C2D6),
     dividerStrong: Color(0xFFA2AFC8),
-    accent: Color(0xFF304FFE),
+    accent: Color(0xFFFF9800),
     departure: Color(0xFFFF2D4E),
     arrival: Color(0xFF00B848),
     errorBg: Color(0xFFFFEBEE),
