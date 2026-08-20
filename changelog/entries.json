@@ -3,6 +3,7 @@
         "date": "2026-08-20",
         "title": "Commits",
         "items": [
+            "f8be436 feat: wire fuel schematic to real per-tank MSFS telemetry",
             "59717ba feat: rebuild flight monitor tab with real fuel schematic"
         ]
     },
