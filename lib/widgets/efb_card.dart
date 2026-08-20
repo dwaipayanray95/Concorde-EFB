@@ -28,15 +28,23 @@ class EfbCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Bold flat flightstrip header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-            decoration: BoxDecoration(
-              color: accentColor,
-            ),
-            child: Row(
-              children: [
-                Text(
+          // Folder tab header row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: accentColor,
+                  borderRadius: const BorderRadius.only(
+                    bottomRight: Radius.circular(14),
+                  ),
+                ),
+                child: Text(
                   title.toUpperCase(),
                   style: uiText(
                     context,
@@ -46,13 +54,16 @@ class EfbCard extends StatelessWidget {
                     color: Colors.white,
                   ),
                 ),
-                const Spacer(),
-                ?right,
-              ],
-            ),
+              ),
+              if (right != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8, right: 16),
+                  child: right!,
+                ),
+            ],
           ),
           Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
             child: child,
           ),
         ],
