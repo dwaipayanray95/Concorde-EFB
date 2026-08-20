@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/efb_providers.dart';
 import '../../../widgets/wind_arrow.dart';
+import '../../../widgets/efb_card.dart';
 import '../../../widgets/efb_flat_card.dart';
 import '../../../core/app_colors.dart';
 import '../../../core/ui_text.dart';
@@ -31,59 +32,12 @@ class _PerformanceCalculatorSectionState
   Widget build(BuildContext context) {
     final colors = context.colors;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: colors.textPrimary.withValues(alpha: 0.06),
-            blurRadius: 24,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(32),
+    return EfbCard(
+      title: 'PERFORMANCE CALCULATOR',
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: colors.accent,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: colors.accent.withValues(alpha: 0.35),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.flight_takeoff,
-                  color: Colors.white,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Text(
-                'Performance Calculator',
-                style: uiText(
-                  context,
-                  size: 22,
-                  weight: FontWeight.w900,
-                  color: colors.textPrimary,
-                  letterSpacing: 0.3,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 28),
           _LegCard(
             legLabel: 'DEPARTURE / TAKEOFF',
             accent: colors.departure,
