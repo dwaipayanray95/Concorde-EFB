@@ -397,11 +397,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
   Widget _buildTabSelector(BuildContext context) {
     return Row(
       children: [
-        _buildTabButton(context, 0, 'FLIGHT PLANNER', Icons.flight_takeoff),
+        _buildTabButton(context, 0, 'PLANNER', Icons.flight_takeoff),
         const SizedBox(width: 16),
         _buildTabButton(context, 1, 'CHECKLISTS', Icons.playlist_add_check),
         const SizedBox(width: 16),
-        _buildTabButton(context, 2, 'FLIGHT MONITOR', Icons.monitor_heart),
+        _buildTabButton(context, 2, 'MONITOR', Icons.monitor_heart),
       ],
     );
   }
