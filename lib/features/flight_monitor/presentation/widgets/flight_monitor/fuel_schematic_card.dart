@@ -3,9 +3,9 @@ import '../../../../../core/concorde_fuel_schematic.dart';
 import '../../../../../core/formatters.dart';
 import 'fm_theme.dart';
 
-/// FUEL SYSTEM card: the 13-tank plan-view schematic (from the DC Designs
-/// ops manual) with live fill-percent chips overlaid, a group legend, and
-/// total fuel on board.
+/// FUEL SYSTEM card: the real "Fuel Tank Layout Schematic" diagram (page 54
+/// of the DC Designs ops manual, extracted directly from the source PDF)
+/// with live fill-percent chips overlaid, a group legend, and total fuel.
 class FuelSchematicCard extends StatelessWidget {
   final List<FuelTankChip> chips;
   final double totalKg;
@@ -23,25 +23,28 @@ class FuelSchematicCard extends StatelessWidget {
           Text('FUEL SYSTEM  ·  13-TANK SCHEMATIC', style: fmLabel()),
           const SizedBox(height: 10),
           Text(
-            'TANK LAYOUT PER DC DESIGNS OPS MANUAL FUEL SCHEMATIC',
+            'FUEL TANK LAYOUT SCHEMATIC — DC DESIGNS OPS MANUAL, PG. 54',
             style: fmLabel(size: 9, color: fmTextDim, letterSpacing: 0.5),
           ),
           const SizedBox(height: 10),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _SchematicImage(chips: chips),
+              Expanded(flex: 3, child: _SchematicImage(chips: chips)),
               const SizedBox(width: 24),
               Expanded(
+                flex: 1,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _LegendRow(color: fmAccent, label: 'FUEL TRANSFER (COLLECTOR) — TANKS 1 · 2 · 3 · 4'),
+                    _LegendRow(color: fmRed, label: 'FUEL TRANSFER — TANKS 1 · 2 · 3 · 4'),
                     const SizedBox(height: 10),
                     _LegendRow(color: fmBlue, label: 'MAIN TANKS — 5 · 5A · 6 · 7 · 7A · 8'),
                     const SizedBox(height: 10),
                     _LegendRow(color: fmMint, label: 'TRIM TRANSFER — 9 · 10 · 11'),
+                    const SizedBox(height: 10),
+                    _LegendRow(color: fmYellow, label: 'ENGINE COLLECTOR TANKS'),
                     const SizedBox(height: 18),
                     Container(
                       padding: const EdgeInsets.only(top: 14),
@@ -93,87 +96,63 @@ class _LegendRow extends StatelessWidget {
   }
 }
 
+/// The real manual diagram, rotated 90° counter-clockwise to landscape
+/// (nose left) so it reads naturally in a wide card. [ConcordeFuelSchematic.tankPositions]
+/// was pixel-measured directly off this same source image, and
+/// [ConcordeFuelSchematic.landscapeFraction] is exactly the fractional
+/// equivalent of this rotation — so the live percentage chips always land
+/// on the right tank regardless of layout size.
 class _SchematicImage extends StatelessWidget {
   final List<FuelTankChip> chips;
   const _SchematicImage({required this.chips});
 
+  // Source raster is 1446x2048 (portrait); after the 90° rotation the
+  // landscape box's true aspect ratio is height:width of the source image.
+  static const double _aspectRatio = 2048 / 1446;
+
   @override
   Widget build(BuildContext context) {
-    const width = 190.0;
-    const height = 250.0;
-    return Container(
-      width: width,
-      height: height,
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(10),
-      ),
+    // Fill whatever width the row gives this card's flex share, sized by
+    // the image's real aspect ratio so it's never stretched/squished.
+    // AspectRatio (unlike LayoutBuilder) supports intrinsic-dimension
+    // queries, so it's safe inside the IntrinsicHeight elsewhere in this
+    // tab that measures this subtree.
+    return AspectRatio(
+      aspectRatio: _aspectRatio,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Positioned.fill(
-            child: CustomPaint(painter: _AircraftOutlinePainter()),
-          ),
-          for (final chip in chips)
-            Positioned(
-              left: (width - 12) * chip.left / 100.0,
-              top: (height - 12) * chip.top / 100.0,
-              child: FractionalTranslation(
-                translation: const Offset(-0.5, 0.6),
-                child: _TankChip(chip: chip),
+            child: RotatedBox(
+              quarterTurns: 3, // 90° counter-clockwise: nose-up source -> nose-left
+              child: Image.asset(
+                'assets/fuel_tank_schematic.png',
+                fit: BoxFit.fill,
               ),
             ),
+          ),
+          for (final chip in chips)
+            _positionedAt(chip.left, chip.top, _TankChip(chip: chip)),
         ],
       ),
     );
   }
-}
 
-/// Simplified Concorde plan-view (delta wing + slender fuselage) drawn as a
-/// vector outline, sized to match the percent-coordinate tank positions in
-/// [ConcordeFuelSchematic.tankPositions]. Used instead of a raster manual
-/// scan so the schematic has no external asset dependency.
-class _AircraftOutlinePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    Offset pt(double xPct, double yPct) => Offset(size.width * xPct / 100, size.height * yPct / 100);
-
-    final fill = Paint()
-      ..color = const Color(0xFFE2E8F0)
-      ..style = PaintingStyle.fill;
-    final stroke = Paint()
-      ..color = const Color(0xFF94A3B8)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.4;
-
-    // Delta wing + fuselage outline, symmetric about the vertical centerline.
-    final outline = Path()
-      ..moveTo(pt(48, 6).dx, pt(48, 6).dy) // nose tip
-      ..lineTo(pt(44, 24).dx, pt(44, 24).dy)
-      ..lineTo(pt(4, 68).dx, pt(4, 68).dy) // left wingtip
-      ..lineTo(pt(24, 68).dx, pt(24, 68).dy)
-      ..lineTo(pt(43, 82).dx, pt(43, 82).dy)
-      ..lineTo(pt(43, 94).dx, pt(43, 94).dy) // tail left
-      ..lineTo(pt(53, 94).dx, pt(53, 94).dy) // tail right
-      ..lineTo(pt(53, 82).dx, pt(53, 82).dy)
-      ..lineTo(pt(72, 68).dx, pt(72, 68).dy)
-      ..lineTo(pt(92, 68).dx, pt(92, 68).dy) // right wingtip
-      ..lineTo(pt(52, 24).dx, pt(52, 24).dy)
-      ..close();
-
-    canvas.drawPath(outline, fill);
-    canvas.drawPath(outline, stroke);
-
-    // Fuselage centerline, for reference.
-    final centerline = Paint()
-      ..color = const Color(0xFFCBD5E1)
-      ..strokeWidth = 1;
-    canvas.drawLine(pt(48, 6), pt(48, 94), centerline);
+  /// Positions a chip fractionally within the Stack using [Align] rather
+  /// than pixel offsets — this needs no explicit width, so it works
+  /// regardless of how much space the Expanded parent ends up giving it.
+  Widget _positionedAt(double xPct, double yPct, Widget child) {
+    final f = ConcordeFuelSchematic.landscapeFraction(xPct, yPct);
+    return Align(
+      alignment: Alignment(f.fx * 2 - 1, f.fy * 2 - 1),
+      // Offset below the point rather than centered on it, so the chip
+      // doesn't sit directly on top of the diagram's own numbered circle.
+      child: FractionalTranslation(
+        translation: const Offset(0, 0.9),
+        child: child,
+      ),
+    );
   }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _TankChip extends StatelessWidget {
@@ -181,7 +160,7 @@ class _TankChip extends StatelessWidget {
   const _TankChip({required this.chip});
 
   Color get _color => switch (chip.group) {
-        FuelTankGroup.collector => fmAccent,
+        FuelTankGroup.fuelTransfer => fmRed,
         FuelTankGroup.main => fmBlue,
         FuelTankGroup.trim => fmMint,
       };

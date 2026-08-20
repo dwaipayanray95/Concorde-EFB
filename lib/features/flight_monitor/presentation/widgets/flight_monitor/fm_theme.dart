@@ -20,6 +20,7 @@ const Color fmRed = Color(0xFFEF4444);
 const Color fmAmber = Color(0xFFF59E0B);
 const Color fmBlue = Color(0xFF3B82F6);
 const Color fmMint = Color(0xFF22C55E);
+const Color fmYellow = Color(0xFFFACC15); // engine collector tanks (fuel schematic)
 
 const Color fmRedDeep = Color(0xFF7F1D1D);
 const Color fmAmberDeep = Color(0xFF7C4A05);

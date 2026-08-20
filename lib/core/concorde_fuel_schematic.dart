@@ -5,7 +5,7 @@ class FuelTankChip {
   final String id;
   final int pct;
   final double capacityKg;
-  final double left; // percent, matches the vector aircraft outline drawn behind the chips
+  final double left; // percent, matches the manual fuel schematic image drawn behind the chips
   final double top;
   final FuelTankGroup group;
 
@@ -21,7 +21,7 @@ class FuelTankChip {
   double get kg => capacityKg * pct / 100.0;
 }
 
-enum FuelTankGroup { collector, main, trim }
+enum FuelTankGroup { fuelTransfer, main, trim }
 
 /// The real DC Designs Concorde fuel system models 13 physical tanks, laid
 /// out and captioned in the ops manual's fuel schematic. Capacities are
@@ -29,27 +29,28 @@ enum FuelTankGroup { collector, main, trim }
 /// (matching [ConcordeConstants.weights.fuelCapacityKg]).
 class ConcordeFuelSchematic {
   static const Map<String, double> tankCapacitiesKg = {
-    '1': 4800, '2': 4800, '3': 4800, '4': 4800, // collector
+    '1': 4800, '2': 4800, '3': 4800, '4': 4800, // fuel transfer
     '5': 11000, '6': 11000, '7': 11000, '8': 11000, // main
     '5A': 3000, '7A': 3000, // main (wing tip)
     '9': 4000, '10': 5000, '11': 17480, // trim
   };
 
   static const Map<String, FuelTankGroup> tankGroups = {
-    '1': FuelTankGroup.collector, '2': FuelTankGroup.collector,
-    '3': FuelTankGroup.collector, '4': FuelTankGroup.collector,
+    '1': FuelTankGroup.fuelTransfer, '2': FuelTankGroup.fuelTransfer,
+    '3': FuelTankGroup.fuelTransfer, '4': FuelTankGroup.fuelTransfer,
     '5': FuelTankGroup.main, '5A': FuelTankGroup.main, '6': FuelTankGroup.main,
     '7': FuelTankGroup.main, '7A': FuelTankGroup.main, '8': FuelTankGroup.main,
     '9': FuelTankGroup.trim, '10': FuelTankGroup.trim, '11': FuelTankGroup.trim,
   };
 
-  /// Plan-view chip positions (percent of the schematic image), taken
-  /// directly from the DC Designs ops manual's fuel schematic layout.
+  /// Plan-view chip positions (percent of the schematic outline), measured
+  /// directly off the "Fuel Tank Layout Schematic" diagram on page 54 of the
+  /// DC Designs ops manual (pixel-analyzed from the source PDF render).
   static const Map<String, List<double>> tankPositions = {
-    '9': [48.8, 19.3], '10': [36, 27.8], '1': [34.4, 33.8], '4': [62, 33.8],
-    '5': [35.8, 41.6], '8': [62.8, 41.6], '6': [28, 55.3], '7': [67.9, 55.3],
-    '5A': [10.4, 63.5], '7A': [86.4, 63.5], '2': [37.6, 65.7], '3': [58.4, 65.7],
-    '11': [47.7, 78.1],
+    '9': [49.0, 24.5], '10': [49.4, 30.9], '1': [40.3, 36.2], '4': [57.5, 36.3],
+    '5': [40.5, 42.0], '8': [56.0, 41.6], '6': [35.0, 51.5], '7': [63.5, 51.1],
+    '5A': [23.5, 57.5], '7A': [74.4, 57.7], '2': [41.1, 58.5], '3': [56.3, 58.4],
+    '11': [48.6, 69.6],
   };
 
   static double get totalCapacityKg =>
@@ -65,7 +66,7 @@ class ConcordeFuelSchematic {
   static List<FuelTankChip> computeTankFills(TelemetryModel t) {
     double fillFor(String id) {
       switch (id) {
-        // Collector tanks 1&2 feed from the left side, 3&4 from the right.
+        // Fuel transfer tanks 1&2 feed from the left side, 3&4 from the right.
         case '1':
         case '2':
           return t.fuelLeftTank;
@@ -109,4 +110,15 @@ class ConcordeFuelSchematic {
 
   static double totalFuelKg(List<FuelTankChip> chips) =>
       chips.fold(0.0, (s, c) => s + c.kg);
+
+  /// [tankPositions] is authored nose-up (x% = left/right across the
+  /// wingspan, y% = nose-to-tail) to match the source manual image. The card
+  /// renders that same image rotated 90° counter-clockwise to landscape
+  /// (nose left) so more of the airframe is visible in a wide card — this
+  /// fractional transform is the exact equivalent of that rotation, used by
+  /// the chip overlay so labels always land on the right tank. Returns
+  /// fractional (0-1) coordinates.
+  static ({double fx, double fy}) landscapeFraction(double xPct, double yPct) {
+    return (fx: yPct / 100, fy: 1 - xPct / 100);
+  }
 }

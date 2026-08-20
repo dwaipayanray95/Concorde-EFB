@@ -53,7 +53,11 @@ class _FlightMonitorSection extends StatelessWidget {
 
     final telemetry = monitorState.currentTelemetry ?? TelemetryModel.empty();
     final isLiveOrPlayback = monitorState.currentTelemetry != null;
-    final chips = isLiveOrPlayback ? ConcordeFuelSchematic.computeTankFills(telemetry) : const <FuelTankChip>[];
+    // Always compute chips (even when disconnected, off empty/zeroed
+    // telemetry) so tank labels stay visible — the whole section is already
+    // dimmed via Opacity below when not live, so an empty list here would
+    // just hide the tank IDs entirely rather than showing 0%.
+    final chips = ConcordeFuelSchematic.computeTankFills(telemetry);
     final totalFuelKg = ConcordeFuelSchematic.totalFuelKg(chips);
 
     return Column(
