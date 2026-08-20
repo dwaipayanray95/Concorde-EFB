@@ -1,3 +1,9 @@
+/// The aircraft's current fuel-burn phase, classified live from telemetry
+/// (see [ConcordeLogic.classifyBurnPhase]) so the Flight Monitor's
+/// estimated-air-time readout can use the real hourly fuel flow for
+/// whatever the aircraft is actually doing right now.
+enum FlightBurnPhase { ground, climb, reheatAccel, cruise, descent }
+
 class ProfileSegment {
   final double timeH;
   final double distNm;
