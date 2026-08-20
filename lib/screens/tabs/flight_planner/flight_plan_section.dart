@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../providers/efb_providers.dart';
 import '../../../widgets/efb_card.dart';
 import '../../../widgets/efb_text_field.dart';
-import '../../../widgets/efb_glass_container.dart';
-import '../../../core/ui_tokens.dart';
+import '../../../core/app_colors.dart';
+import '../../../core/ui_text.dart';
 import '../../../services/simbrief_service.dart';
 
 /// FLIGHT PLAN card: SimBrief import, callsign/registration/passenger
@@ -16,7 +15,9 @@ class FlightPlanSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.colors;
     final isLoading = ref.watch(simbriefLoadingProvider);
+    final isLoaded = ref.watch(simbriefLoadedProvider);
 
     return EfbCard(
       title: 'FLIGHT PLAN',
@@ -41,9 +42,9 @@ class FlightPlanSection extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: UiTokens.accent.withValues(alpha: 0.35),
+                      color: colors.accent.withValues(alpha: 0.25),
                       blurRadius: 16,
-                      spreadRadius: 1,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
@@ -74,10 +75,10 @@ class FlightPlanSection extends ConsumerWidget {
                           SnackBar(
                             content: Text(
                               'SimBrief import failed. Check your username/ID and internet connection.',
-                              style: GoogleFonts.plusJakartaSans(color: Colors.white),
+                              style: uiText(context, color: Colors.white),
                             ),
                             behavior: SnackBarBehavior.floating,
-                            backgroundColor: UiTokens.error.withValues(alpha: 0.9),
+                            backgroundColor: colors.error,
                           ),
                         );
                       }
@@ -85,13 +86,19 @@ class FlightPlanSection extends ConsumerWidget {
                       ref.read(simbriefLoadingProvider.notifier).set(false);
                     }
                   },
-                  icon: isLoading ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.download, size: 16),
+                  icon: isLoading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.download, size: 16),
                   label: Text(
                     'Import',
-                    style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.bold),
+                    style: uiText(context, size: 14, weight: FontWeight.bold, color: Colors.white),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: UiTokens.accent,
+                    backgroundColor: colors.accent,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -104,18 +111,9 @@ class FlightPlanSection extends ConsumerWidget {
                 child: _InfoChip(
                   label: 'CALL SIGN',
                   value: ref.watch(callSignProvider),
-                  glassColor: ref.watch(simbriefLoadedProvider)
-                      ? const Color(0x3310B981) // Solid glass green (Emerald)
-                      : null,
-                  boxShadow: ref.watch(simbriefLoadedProvider)
-                      ? [
-                          BoxShadow(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.45),
-                            blurRadius: 20,
-                            spreadRadius: 2,
-                          )
-                        ]
-                      : null,
+                  backgroundColor: isLoaded ? colors.successBg : null,
+                  textColor: isLoaded ? colors.success : null,
+                  borderColor: isLoaded ? colors.success.withValues(alpha: 0.3) : null,
                 ),
               ),
               const SizedBox(width: 16),
@@ -123,22 +121,19 @@ class FlightPlanSection extends ConsumerWidget {
                 child: _InfoChip(
                   label: 'REGISTRATION',
                   value: ref.watch(registrationProvider),
-                  glassColor: ref.watch(simbriefLoadedProvider)
-                      ? const Color(0x33F59E0B) // Solid glass yellow (Amber)
-                      : null,
-                  boxShadow: ref.watch(simbriefLoadedProvider)
-                      ? [
-                          BoxShadow(
-                            color: const Color(0xFFF59E0B).withValues(alpha: 0.45),
-                            blurRadius: 20,
-                            spreadRadius: 2,
-                          )
-                        ]
-                      : null,
+                  backgroundColor: isLoaded ? colors.mvfrBg : null,
+                  textColor: isLoaded ? colors.mvfr : null,
+                  borderColor: isLoaded ? colors.mvfr.withValues(alpha: 0.3) : null,
                 ),
               ),
               const SizedBox(width: 16),
-              Expanded(child: _InfoChip(label: 'PASSENGERS', value: '${ref.watch(paxCountProvider)}', isNumeric: true)),
+              Expanded(
+                child: _InfoChip(
+                  label: 'PASSENGERS',
+                  value: '${ref.watch(paxCountProvider)}',
+                  isNumeric: true,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 24),
@@ -146,37 +141,39 @@ class FlightPlanSection extends ConsumerWidget {
             children: [
               Expanded(
                 flex: 1,
-                child: EfbGlassContainer(
-                  blur: 10,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    height: 48,
-                    width: double.infinity,
-                    alignment: Alignment.centerLeft,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${ref.watch(departureIcaoProvider)} → ${ref.watch(arrivalIcaoProvider)}',
-                          style: GoogleFonts.jetBrainsMono(
-                            color: UiTokens.textSecondary,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
+                child: Container(
+                  height: 48,
+                  width: double.infinity,
+                  alignment: Alignment.centerLeft,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: colors.inputBg,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${ref.watch(departureIcaoProvider)} → ${ref.watch(arrivalIcaoProvider)}',
+                        style: uiText(
+                          context,
+                          color: colors.textPrimary,
+                          size: 13,
+                          weight: FontWeight.w600,
                         ),
-                        const SizedBox(height: 1),
-                        Text(
-                          'ALT: ${ref.watch(alternateIcaoProvider)}',
-                          style: GoogleFonts.jetBrainsMono(
-                            color: UiTokens.textDim,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        'ALT: ${ref.watch(alternateIcaoProvider)}',
+                        style: uiText(
+                          context,
+                          color: colors.textDim,
+                          size: 10,
+                          weight: FontWeight.bold,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -192,32 +189,38 @@ class FlightPlanSection extends ConsumerWidget {
                         SnackBar(
                           content: Text(
                             'Route copied to clipboard!',
-                            style: GoogleFonts.plusJakartaSans(color: Colors.white),
+                            style: uiText(context, color: Colors.white),
                           ),
                           behavior: SnackBarBehavior.floating,
-                          backgroundColor: UiTokens.surface,
+                          backgroundColor: colors.surface,
                         ),
                       );
 
                       showDialog(
                         context: context,
                         builder: (context) => AlertDialog(
-                          backgroundColor: UiTokens.surface,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          backgroundColor: colors.surface,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(color: colors.dividerStrong, width: 1.5),
+                          ),
                           title: Text(
                             'FULL ROUTE',
-                            style: GoogleFonts.plusJakartaSans(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
+                            style: uiText(
+                              context,
+                              color: colors.textPrimary,
+                              weight: FontWeight.w900,
+                              size: 16,
                               letterSpacing: 1.5,
                             ),
                           ),
                           content: SingleChildScrollView(
                             child: SelectableText(
                               route,
-                              style: GoogleFonts.jetBrainsMono(
-                                color: UiTokens.textSecondary,
-                                fontSize: 14,
+                              style: uiText(
+                                context,
+                                color: colors.textSecondary,
+                                size: 14,
                                 height: 1.5,
                               ),
                             ),
@@ -227,9 +230,10 @@ class FlightPlanSection extends ConsumerWidget {
                               onPressed: () => Navigator.of(context).pop(),
                               child: Text(
                                 'CLOSE',
-                                style: GoogleFonts.plusJakartaSans(
-                                  color: UiTokens.textDim,
-                                  fontWeight: FontWeight.bold,
+                                style: uiText(
+                                  context,
+                                  color: colors.textDim,
+                                  weight: FontWeight.bold,
                                 ),
                               ),
                             ),
@@ -240,41 +244,42 @@ class FlightPlanSection extends ConsumerWidget {
                   },
                   mouseCursor: SystemMouseCursors.click,
                   borderRadius: BorderRadius.circular(12),
-                  child: EfbGlassContainer(
-                    blur: 10,
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      height: 48,
-                      width: double.infinity,
-                      alignment: Alignment.centerLeft,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.route, color: UiTokens.textDim, size: 16),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              ref.watch(simbriefRouteProvider),
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.jetBrainsMono(
-                                color: ref.watch(simbriefRouteProvider) == '--'
-                                    ? UiTokens.textDim
-                                    : UiTokens.textSecondary,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
+                  child: Container(
+                    height: 48,
+                    width: double.infinity,
+                    alignment: Alignment.centerLeft,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: colors.inputBg,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.route, color: colors.textDim, size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            ref.watch(simbriefRouteProvider),
+                            overflow: TextOverflow.ellipsis,
+                            style: uiText(
+                              context,
+                              color: ref.watch(simbriefRouteProvider) == '--'
+                                  ? colors.textDim
+                                  : colors.textPrimary,
+                              size: 13,
+                              weight: FontWeight.w600,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Icon(
-                            Icons.copy_all,
-                            color: ref.watch(simbriefRouteProvider) == '--'
-                                ? UiTokens.textDim.withValues(alpha: 0.5)
-                                : UiTokens.accent,
-                            size: 16,
-                          ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(
+                          Icons.copy_all,
+                          color: ref.watch(simbriefRouteProvider) == '--'
+                              ? colors.textDim.withValues(alpha: 0.5)
+                              : colors.accent,
+                          size: 16,
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -282,7 +287,12 @@ class FlightPlanSection extends ConsumerWidget {
               const SizedBox(width: 16),
               Expanded(
                 flex: 1,
-                child: _InfoChip(label: 'ROUTE DISTANCE', value: '${ref.watch(plannedDistanceProvider).round()} NM', alignLeft: true, isNumeric: true),
+                child: _InfoChip(
+                  label: 'ROUTE DISTANCE',
+                  value: '${ref.watch(plannedDistanceProvider).round()} NM',
+                  alignLeft: true,
+                  isNumeric: true,
+                ),
               ),
             ],
           ),
@@ -297,53 +307,57 @@ class _InfoChip extends StatelessWidget {
   final String value;
   final bool alignLeft;
   final bool isNumeric;
-  final Color? glassColor;
-  final List<BoxShadow>? boxShadow;
+  final Color? backgroundColor;
+  final Color? textColor;
+  final Color? borderColor;
 
   const _InfoChip({
     required this.label,
     required this.value,
     this.alignLeft = false,
     this.isNumeric = false,
-    this.glassColor,
-    this.boxShadow,
+    this.backgroundColor,
+    this.textColor,
+    this.borderColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    return EfbGlassContainer(
-      blur: 10,
-      borderRadius: BorderRadius.circular(12),
-      color: glassColor,
-      boxShadow: boxShadow,
-      child: Container(
-        height: 48,
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: alignLeft ? CrossAxisAlignment.start : CrossAxisAlignment.center,
-          children: [
-            Text(
-              label,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 9,
-                fontWeight: FontWeight.bold,
-                color: glassColor != null ? Colors.white.withValues(alpha: 0.6) : UiTokens.textDim,
-                letterSpacing: 1,
-              ),
+    final colors = context.colors;
+    return Container(
+      height: 48,
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: backgroundColor ?? colors.inputBg,
+        borderRadius: BorderRadius.circular(12),
+        border: borderColor != null ? Border.all(color: borderColor!, width: 1.5) : null,
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: alignLeft ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+        children: [
+          Text(
+            label,
+            style: uiText(
+              context,
+              size: 9,
+              weight: FontWeight.bold,
+              color: textColor?.withValues(alpha: 0.7) ?? colors.textDim,
+              letterSpacing: 1,
             ),
-            const SizedBox(height: 2),
-            Text(
-              value,
-              style: (isNumeric ? GoogleFonts.jetBrainsMono : GoogleFonts.plusJakartaSans)(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: glassColor != null ? Colors.white : UiTokens.textSecondary,
-              ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: uiText(
+              context,
+              size: 14,
+              weight: FontWeight.bold,
+              color: textColor ?? colors.textPrimary,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

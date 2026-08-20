@@ -1,12 +1,11 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../providers/efb_providers.dart';
 import '../../../widgets/efb_card.dart';
 import '../../../widgets/efb_text_field.dart';
-import '../../../widgets/efb_glass_container.dart';
-import '../../../core/ui_tokens.dart';
+import '../../../core/app_colors.dart';
+import '../../../core/ui_text.dart';
 import '../../../core/concorde_constants.dart';
 import '../../../core/formatters.dart';
 import '../../../models/concorde_models.dart';
@@ -18,6 +17,7 @@ class CruiseAndFuelSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.colors;
     final fuel = ref.watch(fuelBreakdownProvider);
     final mission = ref.watch(missionProfileProvider);
     final weights = ref.watch(weightsProvider);
@@ -67,7 +67,7 @@ class CruiseAndFuelSection extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      const Divider(color: Colors.white10, thickness: 1),
+                      Divider(color: colors.divider, thickness: 1),
                       const SizedBox(height: 16),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -111,9 +111,10 @@ class CruiseAndFuelSection extends ConsumerWidget {
                                       : direction == "W"
                                       ? "Westbound"
                                       : "unknown"}. snap to Non-RVSM.',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    color: UiTokens.textDim,
-                                    fontSize: 10,
+                                  style: uiText(
+                                    context,
+                                    color: colors.textDim,
+                                    size: 10,
                                   ),
                                 ),
                               ],
@@ -207,7 +208,7 @@ class CruiseAndFuelSection extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      const Divider(color: Colors.white10, thickness: 1),
+                      Divider(color: colors.divider, thickness: 1),
                       const SizedBox(height: 16),
                       _StatGroup(
                         stats: [
@@ -236,8 +237,8 @@ class CruiseAndFuelSection extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 24),
-                const VerticalDivider(
-                  color: Colors.white10,
+                VerticalDivider(
+                  color: colors.divider,
                   thickness: 1,
                   width: 1,
                 ),
@@ -264,13 +265,14 @@ class CruiseAndFuelSection extends ConsumerWidget {
             children: [
               Text(
                 'Reheat safety: climb reheat within ${ConcordeConstants.fuel.reheatMinutesCap} min cap.',
-                style: GoogleFonts.plusJakartaSans(
+                style: uiText(
+                  context,
                   color:
                       mission.climb.timeH * 60 <=
-                          ConcordeConstants.fuel.reheatMinutesCap
-                      ? UiTokens.textDim
-                      : UiTokens.error,
-                  fontSize: 12,
+                              ConcordeConstants.fuel.reheatMinutesCap
+                          ? colors.textDim
+                          : colors.error,
+                  size: 12,
                 ),
               ),
               if (fuelEnduranceH < etePlusReservesH)
@@ -278,9 +280,10 @@ class CruiseAndFuelSection extends ConsumerWidget {
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
                     'Fuel endurance is less than required ETE + reserves.',
-                    style: GoogleFonts.plusJakartaSans(
-                      color: UiTokens.error,
-                      fontSize: 12,
+                    style: uiText(
+                      context,
+                      color: colors.error,
+                      size: 12,
                     ),
                   ),
                 ),
@@ -291,10 +294,11 @@ class CruiseAndFuelSection extends ConsumerWidget {
                     'Warning: this plan needs ${numFormat.format((totalFuel - ConcordeConstants.weights.fuelCapacityKg).round())} kg more fuel than '
                     'the aircraft can carry (capacity ${numFormat.format(ConcordeConstants.weights.fuelCapacityKg)} kg). '
                     'Reduce contingency/alternate/reserve, or plan a technical fuel stop.',
-                    style: GoogleFonts.plusJakartaSans(
-                      color: UiTokens.error,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
+                    style: uiText(
+                      context,
+                      color: colors.error,
+                      size: 12,
+                      weight: FontWeight.bold,
                     ),
                   ),
                 ),
@@ -312,38 +316,38 @@ String _formatHoursMinutes(double hoursDecimal) {
   return '${h}h ${m.toString().padLeft(2, '0')}m';
 }
 
-/// TOTAL FLIGHT TIME / CLIMB / CRUISE / DESCENT sharing one border, each phase's time stacked
-/// above its label rather than three separate boxes.
+/// TOTAL FLIGHT TIME / CLIMB / CRUISE / DESCENT sharing one strip
 class _PhaseTimeGroup extends StatelessWidget {
   final List<MapEntry<String, double>> phases;
   const _PhaseTimeGroup({required this.phases});
 
   @override
   Widget build(BuildContext context) {
-    return EfbGlassContainer(
-      blur: 10,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            for (var i = 0; i < phases.length; i++) ...[
-              if (i > 0)
-                Container(
-                  width: 1,
-                  height: 34,
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  color: Colors.white10,
-                ),
-              Expanded(
-                child: _PhaseTimeColumn(
-                  label: phases[i].key,
-                  hoursDecimal: phases[i].value,
-                ),
+    final colors = context.colors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: colors.inputBg,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          for (var i = 0; i < phases.length; i++) ...[
+            if (i > 0)
+              Container(
+                width: 1,
+                height: 34,
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                color: colors.dividerStrong,
               ),
-            ],
+            Expanded(
+              child: _PhaseTimeColumn(
+                label: phases[i].key,
+                hoursDecimal: phases[i].value,
+              ),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -356,6 +360,7 @@ class _PhaseTimeColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final h = hoursDecimal.floor();
     final m = ((hoursDecimal - h) * 60).round();
     return Column(
@@ -364,18 +369,20 @@ class _PhaseTimeColumn extends StatelessWidget {
       children: [
         RichText(
           text: TextSpan(
-            style: GoogleFonts.jetBrainsMono(
-              color: Colors.white,
-              fontWeight: FontWeight.w900,
+            style: uiText(
+              context,
+              color: colors.textPrimary,
+              weight: FontWeight.w900,
             ),
             children: [
               TextSpan(text: '$h', style: const TextStyle(fontSize: 20)),
               TextSpan(
                 text: ' h  ',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  color: UiTokens.textSecondary,
-                  fontWeight: FontWeight.w600,
+                style: uiText(
+                  context,
+                  size: 11,
+                  color: colors.textDim,
+                  weight: FontWeight.w600,
                 ),
               ),
               TextSpan(
@@ -384,10 +391,11 @@ class _PhaseTimeColumn extends StatelessWidget {
               ),
               TextSpan(
                 text: ' m',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  color: UiTokens.textSecondary,
-                  fontWeight: FontWeight.w600,
+                style: uiText(
+                  context,
+                  size: 11,
+                  color: colors.textDim,
+                  weight: FontWeight.w600,
                 ),
               ),
             ],
@@ -396,10 +404,11 @@ class _PhaseTimeColumn extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           label,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-            color: UiTokens.textDim,
+          style: uiText(
+            context,
+            size: 10,
+            weight: FontWeight.bold,
+            color: colors.textDim,
             letterSpacing: 1,
           ),
           maxLines: 1,
@@ -417,34 +426,35 @@ class _StatEntry {
   const _StatEntry({required this.label, required this.value, this.subtext});
 }
 
-/// COMPUTED TOW / FUEL ENDURANCE / ETE + RESERVES / PASSENGERS sharing one
-/// border, matching [_PhaseTimeGroup]'s treatment.
+/// COMPUTED TOW / FUEL ENDURANCE / ETE + RESERVES / PASSENGERS sharing one strip
 class _StatGroup extends StatelessWidget {
   final List<_StatEntry> stats;
   const _StatGroup({required this.stats});
 
   @override
   Widget build(BuildContext context) {
-    return EfbGlassContainer(
-      blur: 10,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (var i = 0; i < stats.length; i++) ...[
-              if (i > 0)
-                Container(
-                  width: 1,
-                  height: 34,
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  color: Colors.white10,
-                ),
-              Expanded(child: _StatColumn(entry: stats[i])),
-            ],
+    final colors = context.colors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: colors.resultsBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.dividerStrong, width: 1),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < stats.length; i++) ...[
+            if (i > 0)
+              Container(
+                width: 1,
+                height: 34,
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                color: colors.dividerStrong,
+              ),
+            Expanded(child: _StatColumn(entry: stats[i])),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -456,16 +466,18 @@ class _StatColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           entry.label,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 9,
-            fontWeight: FontWeight.bold,
-            color: UiTokens.textDim,
+          style: uiText(
+            context,
+            size: 9,
+            weight: FontWeight.bold,
+            color: colors.textDim,
             letterSpacing: 1,
           ),
           maxLines: 1,
@@ -474,10 +486,11 @@ class _StatColumn extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           entry.value,
-          style: GoogleFonts.jetBrainsMono(
-            fontSize: 16,
-            fontWeight: FontWeight.w900,
-            color: Colors.white,
+          style: uiText(
+            context,
+            size: 16,
+            weight: FontWeight.w900,
+            color: colors.textPrimary,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -486,10 +499,11 @@ class _StatColumn extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             entry.subtext!,
-            style: GoogleFonts.jetBrainsMono(
-              fontSize: 10,
-              color: UiTokens.textDim,
-              fontWeight: FontWeight.w500,
+            style: uiText(
+              context,
+              size: 10,
+              color: colors.textDim,
+              weight: FontWeight.w500,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -500,8 +514,7 @@ class _StatColumn extends StatelessWidget {
   }
 }
 
-/// The fuel breakdown/"Total Required" panel, pulled out so it can sit
-/// beside the phase-time group instead of below the input fields.
+/// The fuel breakdown/"Total Required" panel matching _LegCard's strip pattern
 class _FuelBreakdownPanel extends StatelessWidget {
   final BlockFuelBreakdown fuel;
   final double trim;
@@ -521,87 +534,93 @@ class _FuelBreakdownPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return EfbGlassContainer(
-      blur: 15,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _FuelRow(label: 'Trip Fuel', value: fuel.tripKg),
-            const _FuelDivider(),
-            _FuelRow(label: 'Taxi Fuel', value: fuel.taxiKg),
-            const _FuelDivider(),
-            _FuelRow(label: 'Contingency', value: fuel.contingencyKg),
-            const _FuelDivider(),
-            _FuelRow(label: 'Extra Trim Fuel', value: trim),
-            const _FuelDivider(),
-            _FuelRow(label: 'Extra Fuel', value: extra),
-            const _FuelDivider(),
-            _FuelRow(
-              label: 'Alt Fuel ($alternateDistanceNm NM)',
-              value: fuel.alternateKg,
-            ),
-            const _FuelDivider(),
-            _FuelRow(label: 'Block Fuel', value: fuel.blockKg, isBold: true),
-            const SizedBox(height: 32),
-            const Divider(color: Colors.white10, thickness: 1),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Total Required',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: UiTokens.textPrimary,
-                      ),
+    final colors = context.colors;
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: colors.resultsBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.dividerStrong, width: 1.5),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _FuelRow(label: 'Trip Fuel', value: fuel.tripKg),
+          const _FuelDivider(),
+          _FuelRow(label: 'Taxi Fuel', value: fuel.taxiKg),
+          const _FuelDivider(),
+          _FuelRow(label: 'Contingency', value: fuel.contingencyKg),
+          const _FuelDivider(),
+          _FuelRow(label: 'Extra Trim Fuel', value: trim),
+          const _FuelDivider(),
+          _FuelRow(label: 'Extra Fuel', value: extra),
+          const _FuelDivider(),
+          _FuelRow(
+            label: 'Alt Fuel ($alternateDistanceNm NM)',
+            value: fuel.alternateKg,
+          ),
+          const _FuelDivider(),
+          _FuelRow(label: 'Block Fuel', value: fuel.blockKg, isBold: true),
+          const SizedBox(height: 32),
+          Divider(color: colors.dividerStrong, thickness: 1),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Total Required',
+                    style: uiText(
+                      context,
+                      size: 14,
+                      weight: FontWeight.bold,
+                      color: colors.textPrimary,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Block + Trim + Extra (${numFormat.format(trim + extra)} kg)',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 10,
-                        color: UiTokens.textSecondary.withValues(alpha: 0.5),
-                      ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Block + Trim + Extra (${numFormat.format(trim + extra)} kg)',
+                    style: uiText(
+                      context,
+                      size: 10,
+                      color: colors.textDim,
                     ),
-                  ],
-                ),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Text(
-                      numFormat.format(totalFuel),
-                      style: GoogleFonts.jetBrainsMono(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        color: isOverCapacity
-                            ? UiTokens.error
-                            : UiTokens.success,
-                      ),
+                  ),
+                ],
+              ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    numFormat.format(totalFuel),
+                    style: uiText(
+                      context,
+                      size: 28,
+                      weight: FontWeight.w900,
+                      color: isOverCapacity
+                          ? colors.error
+                          : colors.success,
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'kg',
-                      style: GoogleFonts.jetBrainsMono(
-                        fontSize: 14,
-                        color: UiTokens.textSecondary,
-                      ),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'kg',
+                    style: uiText(
+                      context,
+                      size: 14,
+                      color: colors.textDim,
                     ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -619,6 +638,7 @@ class _FuelRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -626,18 +646,20 @@ class _FuelRow extends StatelessWidget {
         children: [
           Text(
             label,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 14,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-              color: isBold ? Colors.white : UiTokens.textSecondary,
+            style: uiText(
+              context,
+              size: 14,
+              weight: isBold ? FontWeight.bold : FontWeight.normal,
+              color: isBold ? colors.textPrimary : colors.textSecondary,
             ),
           ),
           Text(
             numFormat.format(value.round()),
-            style: GoogleFonts.jetBrainsMono(
-              fontSize: isBold ? 18 : 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+            style: uiText(
+              context,
+              size: isBold ? 18 : 16,
+              weight: FontWeight.bold,
+              color: colors.textPrimary,
             ),
           ),
         ],
@@ -649,6 +671,8 @@ class _FuelRow extends StatelessWidget {
 class _FuelDivider extends StatelessWidget {
   const _FuelDivider();
   @override
-  Widget build(BuildContext context) =>
-      const Divider(color: Colors.white10, height: 16);
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Divider(color: colors.divider, height: 16);
+  }
 }
