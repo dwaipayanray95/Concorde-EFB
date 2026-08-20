@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../../../../core/concorde_fuel_schematic.dart';
+import '../../../../../core/concorde_fuel_svg_data.dart';
 import '../../../../../core/formatters.dart';
 import 'fm_theme.dart';
+import 'fuel_schematic_painter.dart';
 
-/// FUEL SYSTEM card: the real "Fuel Tank Layout Schematic" diagram (page 54
-/// of the DC Designs ops manual, extracted directly from the source PDF)
-/// with live fill-percent chips overlaid, a group legend, and total fuel.
+/// FUEL SYSTEM card: the real Concorde fuel tank diagram (traced from the
+/// Wikimedia Commons vector source, see [ConcordeFuelSvgData]), with each of
+/// the 13 tanks filling/draining live as fuel burns, a group legend, and
+/// total fuel.
 class FuelSchematicCard extends StatelessWidget {
   final List<FuelTankChip> chips;
   final double totalKg;
@@ -23,11 +26,11 @@ class FuelSchematicCard extends StatelessWidget {
           Text('FUEL SYSTEM  ·  13-TANK SCHEMATIC', style: fmLabel()),
           const SizedBox(height: 10),
           Text(
-            'FUEL TANK LAYOUT SCHEMATIC — DC DESIGNS OPS MANUAL, PG. 54',
+            'FUEL TANK LAYOUT — LIVE PER-TANK LEVELS',
             style: fmLabel(size: 9, color: fmTextDim, letterSpacing: 0.5),
           ),
           const SizedBox(height: 10),
-          const _SchematicImage(),
+          _SchematicPaint(chips: chips),
           const SizedBox(height: 16),
           // Single-line legend + total — it's just a reference key, doesn't
           // need a third of the card's width beside the diagram.
@@ -38,8 +41,6 @@ class FuelSchematicCard extends StatelessWidget {
               _LegendDot(color: fmBlue, label: 'MAIN — 5·5A·6·7·7A·8'),
               const SizedBox(width: 16),
               _LegendDot(color: fmMint, label: 'TRIM — 9·10·11'),
-              const SizedBox(width: 16),
-              _LegendDot(color: fmYellow, label: 'ENGINE COLLECTOR'),
               const Spacer(),
               Text('TOTAL FUEL ', style: fmLabel(size: 10, letterSpacing: 0)),
               Text(
@@ -72,21 +73,20 @@ class _LegendDot extends StatelessWidget {
   }
 }
 
-/// The real manual diagram, rotated 90° counter-clockwise to landscape
-/// (nose left) so it reads naturally in a wide card. Shown plain, with no
-/// overlays — [ConcordeFuelSchematic.tankPositions] is kept around for
-/// whatever's wired back on top of it next.
-class _SchematicImage extends StatelessWidget {
-  const _SchematicImage();
+/// The real vector diagram (see [ConcordeFuelSvgData]), rotated 90°
+/// counter-clockwise to landscape (nose left) so it reads naturally in a
+/// wide card, each tank shape filled live from [chips].
+class _SchematicPaint extends StatelessWidget {
+  final List<FuelTankChip> chips;
+  const _SchematicPaint({required this.chips});
 
-  // Source raster is 1446x2048 (portrait); after the 90° rotation the
-  // landscape box's true aspect ratio is height:width of the source image.
-  static const double _aspectRatio = 2048 / 1446;
+  // Source canvas is portrait (nose-up); after the 90° rotation the
+  // landscape box's true aspect ratio is height:width of the source canvas.
+  static const double _aspectRatio =
+      ConcordeFuelSvgData.canvasHeight / ConcordeFuelSvgData.canvasWidth;
 
   @override
   Widget build(BuildContext context) {
-    // Fill whatever width the row gives this card's flex share, sized by
-    // the image's real aspect ratio so it's never stretched/squished.
     // AspectRatio (unlike LayoutBuilder) supports intrinsic-dimension
     // queries, so it's safe inside the IntrinsicHeight elsewhere in this
     // tab that measures this subtree.
@@ -94,9 +94,9 @@ class _SchematicImage extends StatelessWidget {
       aspectRatio: _aspectRatio,
       child: RotatedBox(
         quarterTurns: 3, // 90° counter-clockwise: nose-up source -> nose-left
-        child: Image.asset(
-          'assets/fuel_tank_schematic.png',
-          fit: BoxFit.fill,
+        child: CustomPaint(
+          painter: FuelSchematicPainter(chips),
+          size: Size(ConcordeFuelSvgData.canvasWidth, ConcordeFuelSvgData.canvasHeight),
         ),
       ),
     );
