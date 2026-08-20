@@ -22,6 +22,7 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color mvfr;
   final Color ifrBg;
   final Color ifr;
+  final Color lifrBg;
   final Color lifr;
 
   const AppColors({
@@ -45,6 +46,7 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.mvfr,
     required this.ifrBg,
     required this.ifr,
+    required this.lifrBg,
     required this.lifr,
   });
 
@@ -69,7 +71,8 @@ class AppColors extends ThemeExtension<AppColors> {
     mvfr: Color(0xFFFF9800),
     ifrBg: Color(0xFFFFE8E0),
     ifr: Color(0xFFFF5722),
-    lifr: Color(0xFFB300D0),
+    lifrBg: Color(0xFFF3E5F5),
+    lifr: Color(0xFFAA00FF),
   );
 
   static const dark = AppColors(
@@ -93,7 +96,8 @@ class AppColors extends ThemeExtension<AppColors> {
     mvfr: Color(0xFFFFB74D),
     ifrBg: Color(0xFF3A2016),
     ifr: Color(0xFFFF7A50),
-    lifr: Color(0xFFDB5FFF),
+    lifrBg: Color(0xFF38153D),
+    lifr: Color(0xFFE040FB),
   );
 
   @override
@@ -118,6 +122,7 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? mvfr,
     Color? ifrBg,
     Color? ifr,
+    Color? lifrBg,
     Color? lifr,
   }) {
     return AppColors(
@@ -141,6 +146,7 @@ class AppColors extends ThemeExtension<AppColors> {
       mvfr: mvfr ?? this.mvfr,
       ifrBg: ifrBg ?? this.ifrBg,
       ifr: ifr ?? this.ifr,
+      lifrBg: lifrBg ?? this.lifrBg,
       lifr: lifr ?? this.lifr,
     );
   }
@@ -169,6 +175,7 @@ class AppColors extends ThemeExtension<AppColors> {
       mvfr: Color.lerp(mvfr, other.mvfr, t)!,
       ifrBg: Color.lerp(ifrBg, other.ifrBg, t)!,
       ifr: Color.lerp(ifr, other.ifr, t)!,
+      lifrBg: Color.lerp(lifrBg, other.lifrBg, t)!,
       lifr: Color.lerp(lifr, other.lifr, t)!,
     );
   }

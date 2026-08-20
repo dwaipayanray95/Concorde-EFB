@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/efb_providers.dart';
 import '../../../widgets/efb_card.dart';
+import '../../../widgets/efb_flat_card.dart';
 import '../../../widgets/efb_text_field.dart';
 import '../../../core/app_colors.dart';
 import '../../../core/ui_text.dart';
@@ -316,7 +317,7 @@ String _formatHoursMinutes(double hoursDecimal) {
   return '${h}h ${m.toString().padLeft(2, '0')}m';
 }
 
-/// TOTAL FLIGHT TIME / CLIMB / CRUISE / DESCENT sharing one strip
+/// TOTAL FLIGHT TIME / CLIMB / CRUISE / DESCENT sharing one strip with shadow card styling
 class _PhaseTimeGroup extends StatelessWidget {
   final List<MapEntry<String, double>> phases;
   const _PhaseTimeGroup({required this.phases});
@@ -324,12 +325,10 @@ class _PhaseTimeGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return Container(
+    return EfbFlatCard(
+      background: colors.inputBg,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        color: colors.inputBg,
-        borderRadius: BorderRadius.circular(16),
-      ),
+      borderRadius: BorderRadius.circular(16),
       child: Row(
         children: [
           for (var i = 0; i < phases.length; i++) ...[
@@ -426,7 +425,7 @@ class _StatEntry {
   const _StatEntry({required this.label, required this.value, this.subtext});
 }
 
-/// COMPUTED TOW / FUEL ENDURANCE / ETE + RESERVES / PASSENGERS sharing one strip
+/// COMPUTED TOW / FUEL ENDURANCE / ETE + RESERVES / PASSENGERS sharing one strip with shadow card styling
 class _StatGroup extends StatelessWidget {
   final List<_StatEntry> stats;
   const _StatGroup({required this.stats});
@@ -434,13 +433,10 @@ class _StatGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return Container(
+    return EfbFlatCard(
+      background: colors.resultsBg,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        color: colors.resultsBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.dividerStrong, width: 1),
-      ),
+      borderRadius: BorderRadius.circular(16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -514,7 +510,7 @@ class _StatColumn extends StatelessWidget {
   }
 }
 
-/// The fuel breakdown/"Total Required" panel matching _LegCard's strip pattern
+/// The fuel breakdown/"Total Required" panel matching _LegCard's strip pattern with shadow card styling
 class _FuelBreakdownPanel extends StatelessWidget {
   final BlockFuelBreakdown fuel;
   final double trim;
@@ -535,13 +531,10 @@ class _FuelBreakdownPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return Container(
+    return EfbFlatCard(
+      background: colors.resultsBg,
+      borderRadius: BorderRadius.circular(16),
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: colors.resultsBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.dividerStrong, width: 1.5),
-      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -562,7 +555,7 @@ class _FuelBreakdownPanel extends StatelessWidget {
           ),
           const _FuelDivider(),
           _FuelRow(label: 'Block Fuel', value: fuel.blockKg, isBold: true),
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
           Divider(color: colors.dividerStrong, thickness: 1),
           const SizedBox(height: 16),
           Row(

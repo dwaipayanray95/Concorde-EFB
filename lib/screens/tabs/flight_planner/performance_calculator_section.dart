@@ -541,8 +541,8 @@ class _WeatherStrip extends StatelessWidget {
       catBg = colors.ifrBg;
       catColor = colors.ifr;
     } else if (cat == 'LIFR') {
-      catBg = colors.errorBg;
-      catColor = colors.error;
+      catBg = colors.lifrBg;
+      catColor = colors.lifr;
     }
 
     return InkWell(
