@@ -156,8 +156,23 @@ class FlightRecorderService {
     return header;
   }
 
+  /// Where flight logs are stored. On Windows this is the folder the app is
+  /// installed/run from (next to the .exe, matching [SimBridgeLauncher]'s
+  /// own resolution of that folder) rather than the user's Documents
+  /// folder — Windows Defender's "Controlled folder access" protects common
+  /// user folders like Documents by default and silently blocks writes
+  /// there for unrecognized apps, which was dropping recordings. Other
+  /// platforms (dev builds on macOS/Linux) keep using the app documents
+  /// directory, since there's no install folder to write next to.
+  Future<Directory> _appDataRoot() async {
+    if (!kIsWeb && Platform.isWindows) {
+      return Directory(File(Platform.resolvedExecutable).parent.path);
+    }
+    return getApplicationDocumentsDirectory();
+  }
+
   Future<Directory> _getFlightsDirectory() async {
-    final appDir = await getApplicationDocumentsDirectory();
+    final appDir = await _appDataRoot();
     final flightsDir = Directory('${appDir.path}/concorde_efb/flights');
     if (!await flightsDir.exists()) {
       await flightsDir.create(recursive: true);
@@ -166,7 +181,7 @@ class FlightRecorderService {
   }
 
   Future<List<FlightRecordHeader>> loadFlightHistory() async {
-    final appDir = await getApplicationDocumentsDirectory();
+    final appDir = await _appDataRoot();
     final indexFile = File('${appDir.path}/concorde_efb/flights_index.json');
     if (!await indexFile.exists()) return [];
 
@@ -180,7 +195,7 @@ class FlightRecorderService {
   }
 
   Future<void> _registerInIndex(FlightRecordHeader header) async {
-    final appDir = await getApplicationDocumentsDirectory();
+    final appDir = await _appDataRoot();
     final indexFile = File('${appDir.path}/concorde_efb/flights_index.json');
     List<FlightRecordHeader> currentList = [];
 
@@ -222,7 +237,7 @@ class FlightRecorderService {
     }
 
     // Remove from index
-    final appDir = await getApplicationDocumentsDirectory();
+    final appDir = await _appDataRoot();
     final indexFile = File('${appDir.path}/concorde_efb/flights_index.json');
     if (await indexFile.exists()) {
       try {
