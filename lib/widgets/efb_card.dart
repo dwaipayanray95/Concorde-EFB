@@ -1,26 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import '../core/ui_tokens.dart';
-import 'efb_glass_container.dart';
+import '../core/app_colors.dart';
+import '../core/ui_text.dart';
+import 'efb_flat_card.dart';
 
 class EfbCard extends StatelessWidget {
   final String title;
   final Widget child;
   final Widget? right;
+  final Color? accentTop;
 
   const EfbCard({
     super.key,
     required this.title,
     required this.child,
     this.right,
+    this.accentTop,
   });
 
   @override
   Widget build(BuildContext context) {
-    return EfbGlassContainer(
+    final colors = context.colors;
+    return EfbFlatCard(
       padding: const EdgeInsets.all(24),
-      blur: 20,
-      borderRadius: UiTokens.borderRadius,
+      accentTop: accentTop,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -30,14 +32,15 @@ class EfbCard extends StatelessWidget {
             children: [
               Text(
                 title.toUpperCase(),
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
+                style: uiText(
+                  context,
+                  size: 14,
+                  weight: FontWeight.w800,
                   letterSpacing: 1.5,
-                  color: UiTokens.textPrimary,
+                  color: colors.textPrimary,
                 ),
               ),
-              if (right != null) right ?? const SizedBox.shrink(),
+              ?right,
             ],
           ),
           const SizedBox(height: 24),
