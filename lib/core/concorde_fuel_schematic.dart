@@ -1,9 +1,12 @@
 import '../features/flight_monitor/data/models/telemetry_model.dart';
 
-/// One chip on the 13-tank fuel schematic overlay.
+/// One chip on the 13-tank fuel schematic overlay. [kg] is the
+/// authoritative value (real telemetry when available); [pct] is derived
+/// from it for display, rather than the other way around, so real per-tank
+/// readings aren't lossy-rounded through a percentage first.
 class FuelTankChip {
   final String id;
-  final int pct;
+  final double kg;
   final double capacityKg;
   final double left; // percent, matches the manual fuel schematic image drawn behind the chips
   final double top;
@@ -11,14 +14,14 @@ class FuelTankChip {
 
   const FuelTankChip({
     required this.id,
-    required this.pct,
+    required this.kg,
     required this.capacityKg,
     required this.left,
     required this.top,
     required this.group,
   });
 
-  double get kg => capacityKg * pct / 100.0;
+  int get pct => capacityKg > 0 ? (kg / capacityKg * 100).round().clamp(0, 100) : 0;
 }
 
 enum FuelTankGroup { fuelTransfer, main, trim }
@@ -56,15 +59,15 @@ class ConcordeFuelSchematic {
   static double get totalCapacityKg =>
       tankCapacitiesKg.values.fold(0.0, (s, v) => s + v);
 
-  /// The SimConnect bridge only exposes MSFS's 5 stock tank levels (left
-  /// main, right main, center ×3) — the DC Designs addon's 13 individual
-  /// tanks aren't available as named SimVars. Each of the 13 schematic tanks
-  /// is therefore approximated from whichever real channel feeds its group
-  /// and side, on the assumption that tanks within a feed group drain
-  /// roughly together. This keeps the schematic live and representative
-  /// without fabricating independent random values.
+  /// Real per-tank weight, read directly from MSFS's
+  /// FUELSYSTEM TANK WEIGHT:N SimVar for each of the 13 Concorde
+  /// tanks (see [TelemetryModel.fuelTanksKg] / `tools/simbridge/msfs_bridge.py`),
+  /// is used whenever present. Falls back to approximating from the 5
+  /// aggregate stock SimVars (left main, right main, center ×3) — spread
+  /// across each tank's feed group — only for tanks the bridge hasn't
+  /// reported (e.g. an older recording made before this was added).
   static List<FuelTankChip> computeTankFills(TelemetryModel t) {
-    double fillFor(String id) {
+    double approxFillFor(String id) {
       switch (id) {
         // Fuel transfer tanks 1&2 feed from the left side, 3&4 from the right.
         case '1':
@@ -95,12 +98,16 @@ class ConcordeFuelSchematic {
     }
 
     return tankCapacitiesKg.keys.map((id) {
-      final fill = fillFor(id).clamp(0.0, 1.0);
+      final capacity = tankCapacitiesKg[id]!;
+      final realKg = t.fuelTanksKg[id];
+      // approxFillFor() returns the raw telemetry value, which the bridge
+      // sends as a 0-100 percent (not a 0-1 fraction) — divide before use.
+      final kg = realKg ?? (approxFillFor(id) / 100.0).clamp(0.0, 1.0) * capacity;
       final pos = tankPositions[id]!;
       return FuelTankChip(
         id: id,
-        pct: (fill * 100).round(),
-        capacityKg: tankCapacitiesKg[id]!,
+        kg: kg.clamp(0.0, capacity),
+        capacityKg: capacity,
         left: pos[0],
         top: pos[1],
         group: tankGroups[id]!,
