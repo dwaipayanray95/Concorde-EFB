@@ -51,7 +51,7 @@ class AppColors extends ThemeExtension<AppColors> {
   });
 
   static const light = AppColors(
-    bg: Color(0xFFF0F3FA),
+    bg: Color(0xFF0B0D14),
     surface: Color(0xFFFFFFFF),
     resultsBg: Color(0xFFF2F5FB),
     inputBg: Color(0xFFF5F7FC),
@@ -67,7 +67,7 @@ class AppColors extends ThemeExtension<AppColors> {
     error: Color(0xFFD50032),
     successBg: Color(0xFFE4F9EE),
     success: Color(0xFF00A651),
-    mvfrBg: Color(0xFFFFF4E0),
+    mvfrBg: Color(0xFFFFEDCE),
     mvfr: Color(0xFFFF9800),
     ifrBg: Color(0xFFFFE8E0),
     ifr: Color(0xFFFF5722),
