@@ -151,15 +151,14 @@ class _LegCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Strip 1: identity row with top accent border
+          // Top accent strip that conforms to rounded corners
+          Container(height: 4, color: accent),
+          // Strip 1: identity row
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             decoration: BoxDecoration(
-              color: colors.surface,
-              border: Border(
-                top: BorderSide(color: accent, width: 4),
-                bottom: BorderSide(color: colors.divider),
-              ),
+              color: colors.resultsBg,
+              border: Border(bottom: BorderSide(color: colors.divider)),
             ),
             child: Row(
               children: [
