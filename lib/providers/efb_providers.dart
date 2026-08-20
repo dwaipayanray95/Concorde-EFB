@@ -109,16 +109,43 @@ class SimbriefLoadedNotifier extends Notifier<bool> {
 final simbriefLoadedProvider = NotifierProvider<SimbriefLoadedNotifier, bool>(SimbriefLoadedNotifier.new);
 
 // --- Runways State ---
+/// Longest runway at [airport] (matches the biggest ID for a tie), or ''
+/// if it has none / isn't resolved yet.
+String _longestRunwayId(Airport? airport) {
+  if (airport == null || airport.runways.isEmpty) return '';
+  return airport.runways.reduce((a, b) => b.lengthM > a.lengthM ? b : a).id;
+}
+
 class DepartureRunwayIdNotifier extends Notifier<String> {
   @override
-  String build() => '';
+  String build() {
+    // The runway dropdown's `items` are rebuilt from the new airport as
+    // soon as the ICAO resolves to it, but this id (e.g. "26L") may be from
+    // the OLD airport's runway list -- if it doesn't exist in the new list,
+    // DropdownButton's "exactly one matching item" assertion crashes.
+    // Re-pick (longest runway, a sensible default) whenever the resolved
+    // departure airport changes -- covers both the user typing a new ICAO
+    // and the airport DB finishing its async load after this provider's
+    // first build.
+    ref.listen(depAirportProvider, (previous, next) {
+      if (next?.icao != previous?.icao) state = _longestRunwayId(next);
+    });
+    return _longestRunwayId(ref.read(depAirportProvider));
+  }
+
   void set(String val) => state = val;
 }
 final departureRunwayIdProvider = NotifierProvider<DepartureRunwayIdNotifier, String>(DepartureRunwayIdNotifier.new);
 
 class ArrivalRunwayIdNotifier extends Notifier<String> {
   @override
-  String build() => '';
+  String build() {
+    ref.listen(arrAirportProvider, (previous, next) {
+      if (next?.icao != previous?.icao) state = _longestRunwayId(next);
+    });
+    return _longestRunwayId(ref.read(arrAirportProvider));
+  }
+
   void set(String val) => state = val;
 }
 final arrivalRunwayIdProvider = NotifierProvider<ArrivalRunwayIdNotifier, String>(ArrivalRunwayIdNotifier.new);
