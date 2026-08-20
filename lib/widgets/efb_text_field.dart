@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import '../core/ui_tokens.dart';
-import 'efb_glass_container.dart';
+import '../core/app_colors.dart';
+import '../core/ui_text.dart';
 
 class EfbTextField extends StatefulWidget {
   final String label;
@@ -39,9 +38,8 @@ class _EfbTextFieldState extends State<EfbTextField> {
   @override
   void didUpdateWidget(EfbTextField oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.initialValue != oldWidget.initialValue && 
+    if (widget.initialValue != oldWidget.initialValue &&
         widget.initialValue != _controller.text) {
-      
       if (widget.keyboardType == TextInputType.number) {
         final currentVal = double.tryParse(_controller.text);
         final newVal = double.tryParse(widget.initialValue);
@@ -49,7 +47,7 @@ class _EfbTextFieldState extends State<EfbTextField> {
           return;
         }
       }
-      
+
       final selection = _controller.selection;
       _controller.text = widget.initialValue;
       try {
@@ -70,42 +68,50 @@ class _EfbTextFieldState extends State<EfbTextField> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           widget.label,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 11,
-            color: UiTokens.textSecondary,
-            fontWeight: FontWeight.bold,
+          style: uiText(
+            context,
+            color: colors.textSecondary,
+            size: 11,
+            weight: FontWeight.bold,
             letterSpacing: 0.5,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: 6),
-        EfbGlassContainer(
-          blur: 10,
-          borderRadius: BorderRadius.circular(12),
+        Container(
+          decoration: BoxDecoration(
+            color: colors.inputBg,
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: TextField(
             controller: _controller,
             onChanged: widget.onChanged,
             keyboardType: widget.keyboardType,
             textCapitalization: widget.textCapitalization,
             readOnly: widget.readOnly,
-            style: GoogleFonts.jetBrainsMono(
-              color: UiTokens.textPrimary,
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
+            style: uiText(
+              context,
+              color: colors.textPrimary,
+              weight: FontWeight.bold,
+              size: 15,
             ),
             decoration: InputDecoration(
               hintText: widget.placeholder,
-              hintStyle: GoogleFonts.plusJakartaSans(color: UiTokens.textDim),
+              hintStyle: uiText(context, color: colors.textDim, size: 15),
               filled: false,
               border: InputBorder.none,
               focusedBorder: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
             ),
           ),
         ),

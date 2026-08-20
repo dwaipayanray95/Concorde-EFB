@@ -1,13 +1,14 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../core/app_colors.dart';
+import '../core/ui_text.dart';
 
 class WindArrow extends StatelessWidget {
   final double? runwayHeading;
   final double? windDir;
   final double? windSpeedKt;
   final double size;
-  final Color color;
+  final Color? color;
 
   const WindArrow({
     super.key,
@@ -15,11 +16,13 @@ class WindArrow extends StatelessWidget {
     required this.windDir,
     this.windSpeedKt,
     this.size = 24.0,
-    this.color = Colors.white,
+    this.color,
   });
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     if (runwayHeading == null || windDir == null) {
       return SizedBox(
         width: size,
@@ -27,40 +30,32 @@ class WindArrow extends StatelessWidget {
         child: Center(
           child: Text(
             'VRB',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
+            style: uiText(
+              context,
+              size: 10,
+              weight: FontWeight.bold,
+              color: colors.textSecondary,
             ),
           ),
         ),
       );
     }
 
-    // Calculate wind direction relative to the runway.
-    // windDir is where the wind is coming FROM.
-    // runwayHeading is where the nose of the plane points.
     final relWind = ((windDir! - runwayHeading!) % 360 + 360) % 360;
-    
-    // We want the runway graphic to always be straight UP (vertical).
-    // The runway graphic is drawn vertically by default, so rotation is 0.
-    final runwayRadians = 0.0;
-    
-    // The arrow icon points UP by default.
-    // If we have a direct headwind (relWind = 0), the wind is coming FROM straight ahead,
-    // meaning the arrow should point DOWN (180 degrees) towards the bottom of the runway.
+    const runwayRadians = 0.0;
     final arrowRotation = (relWind + 180) % 360;
     final arrowRadians = arrowRotation * math.pi / 180;
 
-    Color arrowColor = color;
+    Color arrowColor = color ?? colors.arrival;
     if (windSpeedKt != null) {
       if (windSpeedKt! < 6) {
-        arrowColor = const Color(0xFF10B981); // Green
+        arrowColor = colors.arrival;
       } else if (windSpeedKt! < 16) {
-        arrowColor = const Color(0xFF3B82F6); // Blue
+        arrowColor = colors.accent;
       } else if (windSpeedKt! < 26) {
-        arrowColor = const Color(0xFFF59E0B); // Yellow
+        arrowColor = colors.mvfr;
       } else {
-        arrowColor = const Color(0xFFEF4444); // Red
+        arrowColor = colors.error;
       }
     }
 
@@ -70,32 +65,36 @@ class WindArrow extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Runway Indicator Graphic (Longer/Thicker for visibility)
           Transform.rotate(
             angle: runwayRadians,
             child: Container(
               width: size * 0.18,
               height: size * 0.95,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: colors.dividerStrong.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(2),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: List.generate(4, (index) => Container(
-                  width: 2,
-                  height: size * 0.12,
-                  color: Colors.white.withValues(alpha: 0.8),
-                )),
+                children: List.generate(
+                  4,
+                  (index) => Container(
+                    width: 2,
+                    height: size * 0.12,
+                    color: colors.textDim.withValues(alpha: 0.8),
+                  ),
+                ),
               ),
             ),
           ),
-          // Wind Arrow Indicator (Custom Painted with a longer, thicker tail for legibility)
           Transform.rotate(
             angle: arrowRadians,
             child: CustomPaint(
               size: Size(size * 0.8, size * 0.8),
-              painter: _ArrowPainter(color: arrowColor),
+              painter: _ArrowPainter(
+                color: arrowColor,
+                maskColor: colors.surface,
+              ),
             ),
           ),
         ],
@@ -106,32 +105,25 @@ class WindArrow extends StatelessWidget {
 
 class _ArrowPainter extends CustomPainter {
   final Color color;
+  final Color maskColor;
 
-  const _ArrowPainter({required this.color});
+  const _ArrowPainter({required this.color, required this.maskColor});
 
   @override
   void paint(Canvas canvas, Size size) {
-    final double startY = size.height * 0.85; // Arrow tail start
-    final double endY = size.height * 0.15;   // Arrow head tip
+    final double startY = size.height * 0.85;
+    final double endY = size.height * 0.15;
     final double centerX = size.width / 2;
     final double headSize = size.width * 0.28;
 
-    // 1. Draw a dark "masking outline" (halo) using the background color
-    // to clear the runway dashes underneath the arrow.
-    final maskPaint = Paint()
-      ..color = const Color(0xFF090D16) // Matches the new deep space background color
-      ..strokeWidth = size.width * 0.22 // Thicker stroke to create the border gap
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
+    final maskPaint =
+        Paint()
+          ..color = maskColor
+          ..strokeWidth = size.width * 0.22
+          ..strokeCap = StrokeCap.round
+          ..style = PaintingStyle.stroke;
 
-    // Draw mask tail
-    canvas.drawLine(
-      Offset(centerX, startY),
-      Offset(centerX, endY),
-      maskPaint,
-    );
-
-    // Draw mask head barbs
+    canvas.drawLine(Offset(centerX, startY), Offset(centerX, endY), maskPaint);
     canvas.drawLine(
       Offset(centerX, endY),
       Offset(centerX - headSize, endY + headSize),
@@ -143,21 +135,14 @@ class _ArrowPainter extends CustomPainter {
       maskPaint,
     );
 
-    // 2. Draw the actual colored arrow on top
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = size.width * 0.10 // Thicker, visible tail stroke
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
+    final paint =
+        Paint()
+          ..color = color
+          ..strokeWidth = size.width * 0.10
+          ..strokeCap = StrokeCap.round
+          ..style = PaintingStyle.stroke;
 
-    // Draw the long vertical tail
-    canvas.drawLine(
-      Offset(centerX, startY),
-      Offset(centerX, endY),
-      paint,
-    );
-
-    // Draw the arrow head
+    canvas.drawLine(Offset(centerX, startY), Offset(centerX, endY), paint);
     canvas.drawLine(
       Offset(centerX, endY),
       Offset(centerX - headSize, endY + headSize),
@@ -171,5 +156,6 @@ class _ArrowPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _ArrowPainter oldDelegate) => oldDelegate.color != color;
+  bool shouldRepaint(covariant _ArrowPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.maskColor != maskColor;
 }
