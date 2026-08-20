@@ -51,7 +51,7 @@ class AppColors extends ThemeExtension<AppColors> {
   });
 
   static const light = AppColors(
-    bg: Color(0xFF0B0D14),
+    bg: Color(0xFF1E212B),
     surface: Color(0xFFD0D7E6),
     resultsBg: Color(0xFFFFFFFF),
     inputBg: Color(0xFFFFFFFF),
