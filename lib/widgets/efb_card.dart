@@ -20,31 +20,45 @@ class EfbCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final accentColor = accentTop ?? colors.accent;
+
     return EfbFlatCard(
-      padding: const EdgeInsets.all(24),
-      accentTop: accentTop,
+      padding: EdgeInsets.zero,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title.toUpperCase(),
-                style: uiText(
-                  context,
-                  size: 14,
-                  weight: FontWeight.w800,
-                  letterSpacing: 1.5,
-                  color: colors.textPrimary,
-                ),
+          // Attached flightstrip header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.12),
+              border: Border(
+                left: BorderSide(color: accentColor, width: 5),
+                bottom: BorderSide(color: colors.divider),
               ),
-              ?right,
-            ],
+            ),
+            child: Row(
+              children: [
+                Text(
+                  title.toUpperCase(),
+                  style: uiText(
+                    context,
+                    size: 12,
+                    weight: FontWeight.w900,
+                    letterSpacing: 2,
+                    color: accentColor,
+                  ),
+                ),
+                const Spacer(),
+                ?right,
+              ],
+            ),
           ),
-          const SizedBox(height: 24),
-          child,
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: child,
+          ),
         ],
       ),
     );
