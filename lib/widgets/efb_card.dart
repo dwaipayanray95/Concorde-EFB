@@ -32,7 +32,7 @@ class EfbCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             decoration: BoxDecoration(
-              color: accentColor.withValues(alpha: 0.12),
+              color: colors.surface,
               border: Border(
                 left: BorderSide(color: accentColor, width: 5),
                 bottom: BorderSide(color: colors.divider),
