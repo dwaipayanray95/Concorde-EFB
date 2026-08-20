@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -513,3 +514,52 @@ class ChecklistNotifier extends Notifier<Map<String, bool>> {
   }
 }
 final checklistProvider = NotifierProvider<ChecklistNotifier, Map<String, bool>>(ChecklistNotifier.new);
+
+
+// --- Theme Mode State ---
+class ThemeModeNotifier extends Notifier<ThemeMode> {
+  SharedPreferences? _prefs;
+
+  @override
+  ThemeMode build() {
+    _loadPrefs();
+    return ThemeMode.light;
+  }
+
+  void _loadPrefs() async {
+    _prefs = await SharedPreferences.getInstance();
+    final saved = _prefs?.getString('theme_mode');
+    if (saved != null) {
+      if (saved == 'dark') {
+        state = ThemeMode.dark;
+      } else if (saved == 'light') {
+        state = ThemeMode.light;
+      } else if (saved == 'system') {
+        state = ThemeMode.system;
+      }
+    }
+  }
+
+  void set(ThemeMode mode) async {
+    state = mode;
+    _prefs ??= await SharedPreferences.getInstance();
+    await _prefs?.setString(
+      'theme_mode',
+      mode == ThemeMode.dark
+          ? 'dark'
+          : (mode == ThemeMode.light ? 'light' : 'system'),
+    );
+  }
+
+  void toggle() {
+    if (state == ThemeMode.dark) {
+      set(ThemeMode.light);
+    } else {
+      set(ThemeMode.dark);
+    }
+  }
+}
+
+final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
+  ThemeModeNotifier.new,
+);
