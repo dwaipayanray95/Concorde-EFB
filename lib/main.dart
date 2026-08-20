@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'core/app_colors.dart';
 import 'core/sim_bridge_launcher.dart';
 import 'providers/efb_providers.dart';
@@ -22,13 +23,19 @@ void main() async {
   // without the user installing Python or running anything manually.
   unawaited(SimBridgeLauncher.start());
 
+  // Determine initial window background from persisted theme preference
+  final prefs = await SharedPreferences.getInstance();
+  final savedTheme = prefs.getString('theme_mode');
+  final isDark = savedTheme == 'dark';
+  final windowBg = isDark ? AppColors.dark.bg : AppColors.light.bg;
+
   // Initialize window manager for Desktop platforms
   await windowManager.ensureInitialized();
 
   WindowOptions windowOptions = WindowOptions(
-    size: Size(1300, 900), // Defined size to fit all widgets comfortably
+    size: const Size(1300, 900), // Defined size to fit all widgets comfortably
     center: true,
-    backgroundColor: AppColors.light.bg,
+    backgroundColor: windowBg,
     skipTaskbar: false,
     titleBarStyle: TitleBarStyle.normal,
     title: 'Concorde EFB',
