@@ -111,9 +111,8 @@ class FlightPlanSection extends ConsumerWidget {
                 child: _InfoChip(
                   label: 'CALL SIGN',
                   value: ref.watch(callSignProvider),
-                  backgroundColor: isLoaded ? colors.successBg : null,
-                  textColor: isLoaded ? colors.success : null,
-                  borderColor: isLoaded ? colors.success.withValues(alpha: 0.3) : null,
+                  backgroundColor: isLoaded ? colors.success : null,
+                  textColor: isLoaded ? Colors.white : null,
                 ),
               ),
               const SizedBox(width: 16),
@@ -121,9 +120,8 @@ class FlightPlanSection extends ConsumerWidget {
                 child: _InfoChip(
                   label: 'REGISTRATION',
                   value: ref.watch(registrationProvider),
-                  backgroundColor: isLoaded ? colors.mvfrBg : null,
-                  textColor: isLoaded ? colors.mvfr : null,
-                  borderColor: isLoaded ? colors.mvfr.withValues(alpha: 0.3) : null,
+                  backgroundColor: isLoaded ? const Color(0xFFFF9800) : null,
+                  textColor: isLoaded ? Colors.white : null,
                 ),
               ),
               const SizedBox(width: 16),
@@ -149,6 +147,7 @@ class FlightPlanSection extends ConsumerWidget {
                   decoration: BoxDecoration(
                     color: colors.inputBg,
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: colors.dividerStrong, width: 1.5),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -252,6 +251,7 @@ class FlightPlanSection extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: colors.inputBg,
                       borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: colors.dividerStrong, width: 1.5),
                     ),
                     child: Row(
                       children: [
@@ -309,7 +309,6 @@ class _InfoChip extends StatelessWidget {
   final bool isNumeric;
   final Color? backgroundColor;
   final Color? textColor;
-  final Color? borderColor;
 
   const _InfoChip({
     required this.label,
@@ -318,12 +317,12 @@ class _InfoChip extends StatelessWidget {
     this.isNumeric = false,
     this.backgroundColor,
     this.textColor,
-    this.borderColor,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final isColored = backgroundColor != null;
     return Container(
       height: 48,
       width: double.infinity,
@@ -331,7 +330,9 @@ class _InfoChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: backgroundColor ?? colors.inputBg,
         borderRadius: BorderRadius.circular(12),
-        border: borderColor != null ? Border.all(color: borderColor!, width: 1.5) : null,
+        border: isColored
+            ? null
+            : Border.all(color: colors.dividerStrong, width: 1.5),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -343,7 +344,7 @@ class _InfoChip extends StatelessWidget {
               context,
               size: 9,
               weight: FontWeight.bold,
-              color: textColor?.withValues(alpha: 0.7) ?? colors.textDim,
+              color: textColor != null ? textColor!.withValues(alpha: 0.85) : colors.textDim,
               letterSpacing: 1,
             ),
           ),

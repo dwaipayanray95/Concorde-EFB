@@ -138,23 +138,28 @@ class _LegCard extends ConsumerWidget {
     final totalFuel = ref.watch(weightsProvider)['FUEL'] ?? 0.0;
     final isFuelOver = totalFuel > ConcordeConstants.weights.fuelCapacityKg;
     final isWeightFeasible = weightKg <= maxWeightKg;
-    final isFeasible =
-        (feasibility?.feasible ?? true) && isWeightFeasible && !isFuelOver;
+    final isFeasible = (feasibility?.feasible ?? true) && isWeightFeasible;
     final metarStr = metarAsync.asData?.value ?? '';
     final parsedWind = MetarParser.parseWind(metarStr);
+    final statusColor = isFeasible ? colors.arrival : colors.departure;
 
     return Container(
       decoration: BoxDecoration(
         color: colors.resultsBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.dividerStrong),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colors.dividerStrong, width: 1.5),
       ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Top accent strip that conforms to rounded corners
-          Container(height: 4, color: accent),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18.5),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top reactive status band
+            Container(
+              height: 6,
+              width: double.infinity,
+              color: statusColor,
+            ),
           // Strip 1: identity row
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -164,7 +169,7 @@ class _LegCard extends ConsumerWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.flight_takeoff, size: 18, color: accent),
+                Icon(Icons.flight_takeoff, size: 18, color: statusColor),
                 const SizedBox(width: 10),
                 Text(
                   legLabel,
@@ -381,8 +386,9 @@ class _LegCard extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class _IcaoField extends StatelessWidget {
@@ -726,18 +732,6 @@ class _RunwayMarginText extends StatelessWidget {
         ),
       );
     }
-    if (isFuelOver) {
-      return Text(
-        'EXCEEDS FUEL CAPACITY (${numFormat.format(ConcordeConstants.weights.fuelCapacityKg)} kg)',
-        textAlign: TextAlign.right,
-        style: uiText(
-          context,
-          size: 12,
-          weight: FontWeight.w800,
-          color: colors.error,
-        ),
-      );
-    }
     if (f == null) {
       return Text(
         '--',
@@ -770,6 +764,19 @@ class _RunwayMarginText extends StatelessWidget {
             ],
           ),
         ),
+        if (isFuelOver) ...[
+          const SizedBox(height: 4),
+          Text(
+            'EXCEEDS FUEL CAPACITY (${numFormat.format(ConcordeConstants.weights.fuelCapacityKg)} kg)',
+            textAlign: TextAlign.right,
+            style: uiText(
+              context,
+              size: 11,
+              weight: FontWeight.w800,
+              color: colors.error,
+            ),
+          ),
+        ],
         if (noReheatFeasible) ...[
           const SizedBox(height: 4),
           Text(

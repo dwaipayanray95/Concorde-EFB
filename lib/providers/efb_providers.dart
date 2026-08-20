@@ -326,16 +326,21 @@ final weightsProvider = Provider<Map<String, double>>((ref) {
   final trim = ref.watch(trimTankFuelProvider);
   final extra = ref.watch(extraFuelProvider);
   final totalFuel = fuel.blockKg + trim + extra;
+  final effectiveFuel = math.min(
+    totalFuel,
+    ConcordeConstants.weights.fuelCapacityKg,
+  );
   final paxWeight = ref.watch(paxWeightProvider);
-  
-  final tow = ConcordeConstants.weights.oewKg + paxWeight + totalFuel;
+
+  final tow = ConcordeConstants.weights.oewKg + paxWeight + effectiveFuel;
   final mission = ref.watch(missionProfileProvider);
-  final lw = tow - mission.tripKg;
-  
+  final lw = math.max(0.0, tow - mission.tripKg);
+
   return {
     'TOW': tow,
     'LW': lw,
     'FUEL': totalFuel,
+    'EFFECTIVE_FUEL': effectiveFuel,
     'PAX': paxWeight,
   };
 });
