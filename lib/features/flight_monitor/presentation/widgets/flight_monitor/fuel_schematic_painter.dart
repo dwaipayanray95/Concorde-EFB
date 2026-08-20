@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:path_drawing/path_drawing.dart';
+import '../../../../../core/app_colors.dart';
 import '../../../../../core/concorde_fuel_schematic.dart';
 import '../../../../../core/concorde_fuel_svg_data.dart';
-import 'fm_theme.dart';
 
 /// Paints the real Concorde fuel tank diagram (traced from the Wikimedia
 /// Commons vector source, see [ConcordeFuelSvgData]) with each of the 13
@@ -11,8 +11,10 @@ import 'fm_theme.dart';
 /// raster with overlays.
 class FuelSchematicPainter extends CustomPainter {
   final List<FuelTankChip> chips;
+  final AppColors colors;
 
-  FuelSchematicPainter(this.chips) : super(repaint: null);
+  FuelSchematicPainter({required this.chips, required this.colors})
+      : super(repaint: null);
 
   static final Path _outlinePath = parseSvgPathData(ConcordeFuelSvgData.outline);
   static final List<Path> _wallPaths =
@@ -20,11 +22,16 @@ class FuelSchematicPainter extends CustomPainter {
   static final Map<String, Path> _tankPaths = ConcordeFuelSvgData.tankPaths
       .map((id, d) => MapEntry(id, parseSvgPathData(d)));
 
-  static const Map<FuelTankGroup, Color> _groupColor = {
-    FuelTankGroup.fuelTransfer: fmRed,
-    FuelTankGroup.main: fmBlue,
-    FuelTankGroup.trim: fmMint,
-  };
+  Color _groupColor(FuelTankGroup group) {
+    switch (group) {
+      case FuelTankGroup.fuelTransfer:
+        return colors.departure;
+      case FuelTankGroup.main:
+        return colors.accent;
+      case FuelTankGroup.trim:
+        return colors.mvfr;
+    }
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -35,19 +42,20 @@ class FuelSchematicPainter extends CustomPainter {
     final wallPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5
-      ..color = fmBorder;
+      ..color = colors.dividerStrong;
     final outlinePaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.8
-      ..color = fmTextDim;
+      ..color = colors.textDim;
 
     final byId = {for (final c in chips) c.id: c};
     for (final entry in _tankPaths.entries) {
       final tankId = entry.key;
       final tankPath = entry.value;
       final chip = byId[tankId];
-      final group = ConcordeFuelSchematic.tankGroups[tankId] ?? FuelTankGroup.main;
-      final color = _groupColor[group] ?? fmBlue;
+      final group =
+          ConcordeFuelSchematic.tankGroups[tankId] ?? FuelTankGroup.main;
+      final color = _groupColor(group);
       final pct = chip == null ? 0.0 : (chip.pct / 100.0).clamp(0.0, 1.0);
 
       // Empty-tank outline so unfilled tanks are still visible.
@@ -62,7 +70,8 @@ class FuelSchematicPainter extends CustomPainter {
       final bounds = ConcordeFuelSvgData.tankBounds[tankId]!;
       final top = bounds[1], bottom = bounds[3];
       final fillTop = bottom - (bottom - top) * pct;
-      final clipRect = Rect.fromLTRB(bounds[0] - 4, fillTop, bounds[2] + 4, bottom + 4);
+      final clipRect =
+          Rect.fromLTRB(bounds[0] - 4, fillTop, bounds[2] + 4, bottom + 4);
 
       canvas.save();
       canvas.clipPath(tankPath);
@@ -102,7 +111,11 @@ class FuelSchematicPainter extends CustomPainter {
     final tp = TextPainter(
       text: TextSpan(
         text: text,
-        style: const TextStyle(color: Colors.black, fontSize: 15, fontWeight: FontWeight.w800),
+        style: const TextStyle(
+          color: Colors.black,
+          fontSize: 15,
+          fontWeight: FontWeight.w800,
+        ),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
@@ -111,6 +124,7 @@ class FuelSchematicPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant FuelSchematicPainter oldDelegate) {
+    if (oldDelegate.colors != colors) return true;
     if (oldDelegate.chips.length != chips.length) return true;
     for (var i = 0; i < chips.length; i++) {
       if (oldDelegate.chips[i].kg != chips[i].kg) return true;
