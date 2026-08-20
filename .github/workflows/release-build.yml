@@ -1,0 +1,126 @@
+name: Release-Build
+
+# Single workflow covering both PR gating and shipping a Windows release.
+#
+# - On a pull request: PR size labeling + secret scan + a soft (warn-only)
+#   license check, same as the old ez-pipeline.yml's pr-check job.
+# - On a `v*` tag push: a blocking secret/license gate, then builds
+#   windows/simbridge/msfs_bridge/ fresh from tools/simbridge/msfs_bridge.py
+#   via PyInstaller (never committed — it only ever exists in this runner's
+#   checkout), builds the Flutter Windows app (which bundles that freshly
+#   built bridge via windows/CMakeLists.txt's install() rule), packages the
+#   Inno Setup installer, generates release notes with Gemini from the diff
+#   since the last tag, and opens a draft GitHub release with the installer
+#   attached. Nothing here needs a human to remember to rebuild the bridge
+#   exe before shipping.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  pr-checks:
+    name: PR Verification
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: PR Size Labeler
+        uses: ./actions/pr-pilot
+
+      - name: Security Scan
+        uses: ./actions/security-scan
+
+      - name: License Check (warn-only)
+        uses: ./actions/license-guard
+        with:
+          fail-on-violation: 'false'
+
+  release:
+    name: Build & Release Windows
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Security Scan
+        uses: ./actions/security-scan
+
+      - name: License Check (blocking)
+        uses: ./actions/license-guard
+        with:
+          fail-on-violation: 'true'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install SimConnect bridge build deps
+        run: pip install pyinstaller -r tools/simbridge/requirements.txt
+
+      - name: Build msfs_bridge.exe
+        run: |
+          pyinstaller --noconfirm --clean --onedir --console `
+            --distpath windows/simbridge `
+            --name msfs_bridge `
+            tools/simbridge/msfs_bridge.py
+        shell: pwsh
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Get Dependencies
+        run: flutter pub get
+
+      - name: Run Tests
+        run: flutter test
+
+      - name: Run Analyzer
+        run: flutter analyze
+
+      - name: Build Windows Release
+        run: flutter build windows --release
+
+      - name: Compile Windows Installer (Inno Setup)
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" inno_setup.iss
+        shell: powershell
+
+      - name: Generate AI Release Notes (Gemini)
+        uses: ./actions/ai-release-notes
+        with:
+          gemini-api-key: ${{ secrets.GEMINI_API_KEY }}
+          publish: 'false'
+
+      - name: Update Changelog
+        uses: ./actions/auto-changelog
+        with:
+          commit-changes: 'true'
+
+      - name: Create Draft GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" `
+            "build/windows/Concorde-EFB-Installer.exe" `
+            --title "${{ github.ref_name }}" `
+            --notes-file release_notes.md `
+            --draft
+        shell: pwsh
