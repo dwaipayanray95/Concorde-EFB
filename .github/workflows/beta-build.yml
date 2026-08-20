@@ -1,0 +1,104 @@
+name: Beta-Build
+
+# On-demand test build: run manually from the Actions tab (no tag needed),
+# builds the Windows app + bridge the same way Release-Build does, and drops
+# it straight into a GitHub *pre-release* so it can be downloaded and tested
+# without cutting an official version tag. Tag/name is derived from
+# pubspec.yaml's version plus this run's number, e.g. beta-3.3.4-build42, so
+# repeated manual runs never collide on an existing tag. Deliberately does
+# NOT start with "v" — that's reserved for Release-Build's `v*` tag trigger,
+# and a beta tag starting with "v" would double-fire that workflow too.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  beta:
+    name: Build & Publish Beta
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Security Scan
+        uses: ./actions/security-scan
+
+      - name: Resolve beta tag from pubspec.yaml
+        id: ver
+        run: |
+          $pubspec = Get-Content pubspec.yaml -Raw
+          if ($pubspec -notmatch 'version:\s*([0-9]+\.[0-9]+\.[0-9]+)') {
+            throw "Could not parse a version out of pubspec.yaml"
+          }
+          $version = $Matches[1]
+          $tag = "beta-$version-build${{ github.run_number }}"
+          Write-Host "Beta tag: $tag"
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+        shell: pwsh
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install SimConnect bridge build deps
+        run: pip install pyinstaller -r tools/simbridge/requirements.txt
+
+      - name: Build msfs_bridge.exe
+        run: |
+          pyinstaller --noconfirm --clean --onedir --console `
+            --distpath windows/simbridge `
+            --name msfs_bridge `
+            tools/simbridge/msfs_bridge.py
+        shell: pwsh
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Get Dependencies
+        run: flutter pub get
+
+      - name: Run Tests
+        run: flutter test
+
+      - name: Build Windows Release
+        run: flutter build windows --release
+
+      - name: Compile Windows Installer (Inno Setup)
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" inno_setup.iss
+        shell: powershell
+
+      - name: Rename installer for this beta
+        id: asset
+        run: |
+          $tag = "${{ steps.ver.outputs.tag }}"
+          $dest = "build/windows/Concorde-EFB-Installer-$tag.exe"
+          Copy-Item "build/windows/Concorde-EFB-Installer.exe" $dest
+          "path=$dest" >> $env:GITHUB_OUTPUT
+        shell: pwsh
+
+      - name: Generate AI Release Notes (Gemini)
+        uses: ./actions/ai-release-notes
+        with:
+          gemini-api-key: ${{ secrets.GEMINI_API_KEY }}
+          publish: 'false'
+
+      - name: Publish GitHub Pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.ver.outputs.tag }}" `
+            "${{ steps.asset.outputs.path }}" `
+            --title "${{ steps.ver.outputs.tag }} (test build)" `
+            --notes-file release_notes.md `
+            --prerelease `
+            --target ${{ github.sha }}
+        shell: pwsh
