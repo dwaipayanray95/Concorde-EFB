@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../../../core/concorde_logic.dart';
+import '../../../../../models/concorde_models.dart';
 import '../../../data/models/telemetry_model.dart';
 import 'fm_theme.dart';
 
@@ -122,9 +124,29 @@ class FuelBurnCard extends StatelessWidget {
   final double totalFuelKg;
   const FuelBurnCard({super.key, required this.t, required this.totalFuelKg});
 
+  static const _phaseLabel = {
+    FlightBurnPhase.ground: 'GROUND',
+    FlightBurnPhase.climb: 'CLIMB',
+    FlightBurnPhase.reheatAccel: 'REHEAT',
+    FlightBurnPhase.cruise: 'CRUISE',
+    FlightBurnPhase.descent: 'DESCENT',
+  };
+
   @override
   Widget build(BuildContext context) {
-    final airtime = t.fuelBurnTotal > 0 ? '${(totalFuelKg / t.fuelBurnTotal).toStringAsFixed(1)} HRS' : '—';
+    // Projects remaining air time from the aircraft's CURRENT phase and FL
+    // rather than naively dividing by the instantaneous sim fuel-flow
+    // reading, which is noisy/unrepresentative mid-climb or mid-reheat
+    // burst -- this is what actually helps a pilot judge diversion options:
+    // "at what I'm doing right now, how long can I stay up".
+    final phase = ConcordeLogic.classifyBurnPhase(
+      altitudeFt: t.altitude,
+      vsFpm: t.vs,
+      reheatActive: t.reheatActive,
+    );
+    final flowKgH = ConcordeLogic.phaseFuelFlowKgH(phase, t.altitude / 100);
+    final airtime = flowKgH > 0 ? '${(totalFuelKg / flowKgH).toStringAsFixed(1)} HRS' : '—';
+    final flText = phase == FlightBurnPhase.ground ? '' : ' · FL${(t.altitude / 100).round()}';
 
     return Container(
       decoration: fmCardDecoration(),
@@ -139,6 +161,8 @@ class FuelBurnCard extends StatelessWidget {
           Text('KG/HR', style: fmLabel(size: 10, weight: FontWeight.w700, letterSpacing: 0)),
           const SizedBox(height: 10),
           Text('EST. AIRTIME $airtime', style: fmLabel(size: 10, color: fmAccent, weight: FontWeight.w800, letterSpacing: 0)),
+          const SizedBox(height: 2),
+          Text('AT ${_phaseLabel[phase]}$flText', style: fmLabel(size: 9, color: fmTextDim, weight: FontWeight.w700, letterSpacing: 0.3)),
         ],
       ),
     );

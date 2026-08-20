@@ -71,10 +71,16 @@ class ConcordeLogic {
     return input.clamp(0, 590).toDouble();
   }
 
-  static double altitudeBurnFactor(double cruiseFL) {
-    final fl = cruiseFL.clamp(300, 650).toDouble();
-    final x = (fl - 450) / (600 - 450);
-    return 1.2 - 0.2 * math.max(0.0, math.min(1.0, x));
+  /// Steady-state Mach 2 supercruise fuel flow (4 engines, kg/h) at a given
+  /// FL. Tapers from ~20,500 kg/h at the lowest usable cruise level (heavier
+  /// aircraft, more drag) down to ~17,000 kg/h at FL600 (lightest, final
+  /// cruise-climb step) -- see [ConcordeConstants.fuel] for sourcing.
+  static double cruiseFuelFlowKgHAtFL(double fl) {
+    final clamped = fl.clamp(410, 600).toDouble();
+    final x = (clamped - 410) / (600 - 410);
+    final hi = ConcordeConstants.fuel.cruiseFuelFlowKgHAtFl500;
+    final lo = ConcordeConstants.fuel.cruiseFuelFlowKgHAtFl600;
+    return hi - (hi - lo) * x;
   }
 
   static double cruiseTimeHours(double distanceNM, {double? tasKT}) {
@@ -111,12 +117,6 @@ class ConcordeLogic {
     return 1135 + 55 * x;
   }
 
-  static double cruiseBurnKgPerNmAtFL(double fl) {
-    final base = ConcordeConstants.fuel.burnKgPerNm * altitudeBurnFactor(fl);
-    final shortSectorPenalty = fl < 500 ? 1.15 : 1.0;
-    return base * shortSectorPenalty;
-  }
-
   static List<int> buildCruiseClimbLevels(double initialFL, double targetFL) {
     final start = clampCruiseFL(initialFL).toInt();
     final end = clampCruiseFL(targetFL).toInt();
@@ -142,8 +142,10 @@ class ConcordeLogic {
     final useSupersonicAccel = targetFL >= cruiseClimbStartFl;
     final accelDistNM = useSupersonicAccel ? math.min(suprAccelNm, coreRemainingNM * 0.4) : 0.0;
     final accelTimeH = (useSupersonicAccel && suprAccelNm > 0) ? suprAccelTimeH * (accelDistNM / suprAccelNm) : 0.0;
-    final accelBurnKg = accelDistNM *
-        (cruiseBurnKgPerNmAtFL(initialCruiseFL) * ConcordeConstants.fuel.reheatBurnMultiplier);
+    // Reheat/transonic-acceleration burn: real full-reheat fuel flow (4
+    // engines) x the time actually spent in that burst, not a multiplier on
+    // top of the cruise rate.
+    final accelBurnKg = accelTimeH * ConcordeConstants.fuel.reheatFuelFlowKgH;
 
     final cruiseNM = math.max(coreRemainingNM - accelDistNM, 0.0);
     final cruiseLevels = buildCruiseClimbLevels(initialCruiseFL, targetFL);
@@ -159,9 +161,14 @@ class ConcordeLogic {
       final fl = cruiseLevels[i];
       final segmentNM = cruiseNM * (weights[i] / weightSum);
       final tasKT = math.max(cruiseTasKtForFL(fl.toDouble()), 1.0);
-      final burnKgPerNm = cruiseBurnKgPerNmAtFL(fl.toDouble());
+      final flowKgH = cruiseFuelFlowKgHAtFL(fl.toDouble());
       final timeH = segmentNM / tasKT;
-      final burnKg = segmentNM * burnKgPerNm;
+      // Cruise burn is fundamentally a rate over TIME (fuel flow), not
+      // distance -- matches the manual's own "fuel remaining / burn rate
+      // per hour = endurance" method. burnKgPerNm below is a derived
+      // display value only, not what drives the calculation.
+      final burnKg = timeH * flowKgH;
+      final burnKgPerNm = segmentNM > 0 ? burnKg / segmentNM : flowKgH / tasKT;
       return CruiseClimbSegment(
         fl: fl,
         distNm: segmentNM,
@@ -175,10 +182,13 @@ class ConcordeLogic {
     final cruiseTimeH = cruiseSegments.fold(0.0, (s, seg) => s + seg.timeH);
     final cruiseKg = cruiseSegments.fold(0.0, (s, seg) => s + seg.burnKg);
 
-    final climbKg = climb.distNm * cruiseBurnKgPerNmAtFL(initialCruiseFL) * ConcordeConstants.fuel.climbFactor;
-    final descentKg = descent.distNm * cruiseBurnKgPerNmAtFL(math.max(targetFL, initialCruiseFL)) * ConcordeConstants.fuel.descentFactor;
+    // Climb (subsonic/low-supersonic, pre-reheat-burst) and descent
+    // (throttled back near idle) both driven by their own real fuel flow x
+    // segment time -- see ConcordeConstants.fuel for sourcing.
+    final climbKg = climb.timeH * ConcordeConstants.fuel.climbFuelFlowKgH;
+    final descentKg = descent.timeH * ConcordeConstants.fuel.descentFuelFlowKgH;
 
-    final avgCruiseBurnKgPerNm = cruiseNM > 0 ? cruiseKg / cruiseNM : cruiseBurnKgPerNmAtFL(targetFL);
+    final avgCruiseBurnKgPerNm = cruiseNM > 0 ? cruiseKg / cruiseNM : cruiseFuelFlowKgHAtFL(targetFL) / math.max(cruiseTasKtForFL(targetFL), 1.0);
     final avgCruiseTasKt = cruiseTimeH > 0 ? cruiseNM / cruiseTimeH : cruiseTasKtForFL(targetFL);
 
     final tripKg = math.max(climbKg + accelBurnKg + cruiseKg + descentKg, 0.0);
@@ -204,7 +214,7 @@ class ConcordeLogic {
   }
 
   static BlockFuelBreakdown blockFuelKg(BlockFuelInputs inputs) {
-    final burn = inputs.burnKgPerNm ?? ConcordeConstants.fuel.burnKgPerNm;
+    final burn = inputs.burnKgPerNm ?? ConcordeConstants.fuel.alternateBurnKgPerNm;
     final altKg = math.max(inputs.alternateNm ?? 0.0, 0.0) * burn;
     final contKg = inputs.tripKg * math.max((inputs.contingencyPct ?? 0.0) / 100.0, 0.0);
     final total = inputs.tripKg + (inputs.taxiKg ?? 0.0) + contKg + (inputs.finalReserveKg ?? 0.0) + altKg;
@@ -216,6 +226,44 @@ class ConcordeLogic {
       alternateKg: altKg,
       blockKg: total,
     );
+  }
+
+  /// Classifies the aircraft's current fuel-burn phase from live telemetry,
+  /// so a live "estimated air time" readout can use the real hourly fuel
+  /// flow for what the aircraft is actually doing right now (climbing,
+  /// in reheat, level cruise, or descending) instead of one flat number.
+  /// Reheat is read directly from the sim rather than inferred, since
+  /// [TelemetryModel.reheatActive] is a genuine per-engine signal.
+  static FlightBurnPhase classifyBurnPhase({
+    required double altitudeFt,
+    required double vsFpm,
+    required List<bool> reheatActive,
+  }) {
+    if (altitudeFt < 1000) return FlightBurnPhase.ground;
+    if (reheatActive.any((r) => r)) return FlightBurnPhase.reheatAccel;
+    if (vsFpm > 300) return FlightBurnPhase.climb;
+    if (vsFpm < -300) return FlightBurnPhase.descent;
+    return FlightBurnPhase.cruise;
+  }
+
+  /// Real 4-engine fuel flow (kg/h) for the given phase, FL-sensitive for
+  /// cruise (see [cruiseFuelFlowKgHAtFL]). Used to project "estimated air
+  /// time" from current fuel + current phase/altitude, rather than naively
+  /// dividing by whatever the instantaneous sim fuel-flow reading is (which
+  /// is noisy/unrepresentative mid-climb or mid-reheat-burst).
+  static double phaseFuelFlowKgH(FlightBurnPhase phase, double currentFL) {
+    switch (phase) {
+      case FlightBurnPhase.ground:
+        return ConcordeConstants.fuel.idleFuelFlowKgH;
+      case FlightBurnPhase.climb:
+        return ConcordeConstants.fuel.climbFuelFlowKgH;
+      case FlightBurnPhase.reheatAccel:
+        return ConcordeConstants.fuel.reheatFuelFlowKgH;
+      case FlightBurnPhase.descent:
+        return ConcordeConstants.fuel.descentFuelFlowKgH;
+      case FlightBurnPhase.cruise:
+        return cruiseFuelFlowKgHAtFL(currentFL);
+    }
   }
 
   static double weightScale(double actual, double reference) {

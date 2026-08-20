@@ -3,13 +3,20 @@ import 'package:concorde_efb/core/concorde_logic.dart';
 
 void main() {
   group('ConcordeLogic Tests', () {
-    test('Altitude Burn Factor should be lower at higher FL', () {
-      final f450 = ConcordeLogic.altitudeBurnFactor(450);
-      final f600 = ConcordeLogic.altitudeBurnFactor(600);
-      
-      expect(f600, lessThan(f450));
-      expect(f450, closeTo(1.2, 0.01));
-      expect(f600, closeTo(1.0, 0.01));
+    test('Cruise fuel flow should taper down at higher FL', () {
+      final f500 = ConcordeLogic.cruiseFuelFlowKgHAtFL(500);
+      final f600 = ConcordeLogic.cruiseFuelFlowKgHAtFL(600);
+
+      expect(f600, lessThan(f500));
+      expect(f600, closeTo(17000, 1));
+    });
+
+    test('Mission trip fuel for a long transatlantic sector should not exceed tank capacity', () {
+      // JFK-EDDM class sector (~3630 nm) at max cruise FL -- this is the
+      // exact case that used to compute ~114,000 kg, above the 95,681 kg
+      // the aircraft can actually carry.
+      final profile = ConcordeLogic.buildCruiseMissionProfile(3630, 590);
+      expect(profile.tripKg, lessThan(95681));
     });
 
     test('Mission Profile trip fuel should scale with distance', () {

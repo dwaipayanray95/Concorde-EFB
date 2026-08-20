@@ -29,7 +29,7 @@ class CruiseAndFuelSection extends ConsumerWidget {
     // Calculate dynamic flight burn rate (kg/hour) and fuel endurance
     final double averageBurnRate = mission.totalTimeH > 0 && mission.tripKg > 0
         ? (mission.tripKg / mission.totalTimeH)
-        : (ConcordeConstants.fuel.burnKgPerNm * ConcordeConstants.speeds.cruiseTasKt);
+        : ConcordeConstants.fuel.cruiseFuelFlowKgHAtFl500;
 
     final double airborneFuel = math.max(0.0, totalFuel - fuel.taxiKg);
     final double fuelEnduranceH = averageBurnRate > 0 ? (airborneFuel / averageBurnRate) : 0.0;
@@ -127,7 +127,7 @@ class CruiseAndFuelSection extends ConsumerWidget {
                       children: [
                         Expanded(child: EfbTextField(label: 'FINAL RESERVE (KG)', initialValue: ref.watch(finalReserveFuelProvider).round().toString(), onChanged: (v) => ref.read(finalReserveFuelProvider.notifier).set(double.tryParse(v) ?? 0.0), keyboardType: TextInputType.number)),
                         const SizedBox(width: 16),
-                        Expanded(child: EfbTextField(label: 'TRIM TANK FUEL (KG)', initialValue: ref.watch(trimTankFuelProvider).round().toString(), onChanged: (v) => ref.read(trimTankFuelProvider.notifier).set(double.tryParse(v) ?? 0.0), keyboardType: TextInputType.number)),
+                        Expanded(child: EfbTextField(label: 'EXTRA TRIM TANK FUEL (KG)', initialValue: ref.watch(trimTankFuelProvider).round().toString(), onChanged: (v) => ref.read(trimTankFuelProvider.notifier).set(double.tryParse(v) ?? 0.0), keyboardType: TextInputType.number)),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -171,7 +171,7 @@ class CruiseAndFuelSection extends ConsumerWidget {
                         const _FuelDivider(),
                         _FuelRow(label: 'Contingency', value: fuel.contingencyKg),
                         const _FuelDivider(),
-                        _FuelRow(label: 'Trim Fuel', value: trim),
+                        _FuelRow(label: 'Extra Trim Fuel', value: trim),
                         const _FuelDivider(),
                         _FuelRow(label: 'Extra Fuel', value: extra),
                         const _FuelDivider(),
@@ -246,7 +246,9 @@ class CruiseAndFuelSection extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
-                    'Warning: Total fuel exceeds Concorde fuel capacity of ${numFormat.format(ConcordeConstants.weights.fuelCapacityKg)} kg.',
+                    'Warning: this plan needs ${numFormat.format((totalFuel - ConcordeConstants.weights.fuelCapacityKg).round())} kg more fuel than '
+                    'the aircraft can carry (capacity ${numFormat.format(ConcordeConstants.weights.fuelCapacityKg)} kg). '
+                    'Reduce contingency/alternate/reserve, or plan a technical fuel stop.',
                     style: GoogleFonts.plusJakartaSans(color: UiTokens.error, fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                 ),
