@@ -27,7 +27,11 @@ void main() async {
   WindowOptions windowOptions = const WindowOptions(
     size: Size(1300, 900), // Defined size to fit all widgets comfortably
     center: true,
-    backgroundColor: Colors.transparent,
+    // Transparent here lets the native title bar area show through with no
+    // fill on macOS (defaults to light chrome, clashing with the app's dark
+    // theme) while Windows' opaque native title bar hides the difference --
+    // use the app's actual background so both platforms match.
+    backgroundColor: UiTokens.bg,
     skipTaskbar: false,
     titleBarStyle: TitleBarStyle.normal,
     title: 'Concorde EFB',
