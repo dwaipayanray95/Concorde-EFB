@@ -3,6 +3,7 @@
         "date": "2026-08-20",
         "title": "Commits",
         "items": [
+            "2ca6b1b style(ui): rework perf calc card, now shows when takeoff possible without reheat",
             "ba53fbe style(ui): rework Cruise and fuel management card",
             "56c93c0 fix: match title bar tint to app theme on macOS",
             "62bf7c0 refactor: move nav tabs into header row, drop header stats",
