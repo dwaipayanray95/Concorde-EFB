@@ -69,8 +69,20 @@ class AirportDatabaseService {
     }
   }
 
+  /// On Windows this is the install folder (next to the .exe) rather than
+  /// Documents -- Windows Defender's Controlled Folder Access protects
+  /// Documents by default and blocks writes there from unrecognized apps
+  /// (same reasoning as FlightRecorderService's flight-log storage). Other
+  /// platforms keep using the app documents directory.
+  Future<Directory> _appDataRoot() async {
+    if (!kIsWeb && Platform.isWindows) {
+      return Directory(File(Platform.resolvedExecutable).parent.path);
+    }
+    return getApplicationDocumentsDirectory();
+  }
+
   Future<File> _cacheFile() async {
-    final appDir = await getApplicationDocumentsDirectory();
+    final appDir = await _appDataRoot();
     return File('${appDir.path}/concorde_efb/airport_db.json.gz');
   }
 }
