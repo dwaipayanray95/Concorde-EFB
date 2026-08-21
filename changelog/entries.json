@@ -1,5 +1,12 @@
 [
     {
+        "date": "2026-08-21",
+        "title": "Commits",
+        "items": [
+            "c26c2b2 fix: surface SimConnect bridge launch failures in Flight Monitor UI"
+        ]
+    },
+    {
         "date": "2026-08-20",
         "title": "Commits",
         "items": [
