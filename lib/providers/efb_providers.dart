@@ -198,7 +198,13 @@ class CruiseFLNotifier extends Notifier<double> {
         state = ConcordeLogic.snapToNonRvsm(state, next);
       }
     });
-    return 590.0;
+    // ref.listen above only reacts to FUTURE transitions -- if the
+    // departure/arrival ICAOs (and therefore direction) were already set
+    // before this notifier is first built (e.g. the user picked both
+    // airports before ever opening the Cruise & Fuel card), the direction
+    // is already resolved right now and no "change" will ever fire to
+    // correct the default. Snap eagerly against whatever's already known.
+    return ConcordeLogic.snapToNonRvsm(590.0, ref.read(flightDirectionProvider));
   }
 
   void set(double val, String? direction) {
