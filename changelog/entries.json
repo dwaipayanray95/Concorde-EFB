@@ -3,6 +3,7 @@
         "date": "2026-08-21",
         "title": "Commits",
         "items": [
+            "f2b19ef fix: move airport DB cache off Documents on Windows",
             "130e86c fix: eagerly snap default cruise FL to known flight direction",
             "c26c2b2 fix: surface SimConnect bridge launch failures in Flight Monitor UI"
         ]
