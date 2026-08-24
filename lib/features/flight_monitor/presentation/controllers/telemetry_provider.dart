@@ -1,49 +1,38 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/telemetry_model.dart';
+import '../../data/models/flight_log_entry.dart';
 import '../../data/services/websocket_client.dart';
-import '../../data/services/flight_recorder_service.dart';
+import '../../data/services/flight_log_service.dart';
+import '../../data/services/flight_log_tracker.dart';
+import '../../../../core/concorde_logic.dart';
 import '../../../../core/sim_bridge_launcher.dart';
 import '../../../../providers/efb_providers.dart';
 
 class FlightMonitorState {
   final TelemetryModel? currentTelemetry;
-  final bool isRecording;
-  final int recordedFramesCount;
   final bool isConnected;
 
-  // Playback/History timeline parameters
-  final bool isPlaybackMode;
-  final List<TelemetryModel> playbackFrames;
-  final int playbackIndex;
+  /// True from the moment a takeoff is auto-detected until the matching
+  /// landing is detected and the flight is saved -- purely informational
+  /// (there's no manual record control any more).
+  final bool isLoggingFlight;
 
   FlightMonitorState({
     this.currentTelemetry,
-    this.isRecording = false,
-    this.recordedFramesCount = 0,
     this.isConnected = false,
-    this.isPlaybackMode = false,
-    this.playbackFrames = const [],
-    this.playbackIndex = 0,
+    this.isLoggingFlight = false,
   });
 
   FlightMonitorState copyWith({
     TelemetryModel? currentTelemetry,
-    bool? isRecording,
-    int? recordedFramesCount,
     bool? isConnected,
-    bool? isPlaybackMode,
-    List<TelemetryModel>? playbackFrames,
-    int? playbackIndex,
+    bool? isLoggingFlight,
   }) {
     return FlightMonitorState(
       currentTelemetry: currentTelemetry ?? this.currentTelemetry,
-      isRecording: isRecording ?? this.isRecording,
-      recordedFramesCount: recordedFramesCount ?? this.recordedFramesCount,
       isConnected: isConnected ?? this.isConnected,
-      isPlaybackMode: isPlaybackMode ?? this.isPlaybackMode,
-      playbackFrames: playbackFrames ?? this.playbackFrames,
-      playbackIndex: playbackIndex ?? this.playbackIndex,
+      isLoggingFlight: isLoggingFlight ?? this.isLoggingFlight,
     );
   }
 }
@@ -61,7 +50,8 @@ class FlightMonitorNotifier extends Notifier<FlightMonitorState> {
   static const _maxAutoRestarts = 3;
 
   late WebSocketClient _wsClient;
-  final FlightRecorderService _recorderService = FlightRecorderService();
+  late FlightLogTracker _tracker;
+  final FlightLogService _logService = FlightLogService();
   StreamSubscription<TelemetryModel>? _wsSubscription;
   Timer? _pingTimer;
   DateTime _lastUiUpdate = DateTime.fromMillisecondsSinceEpoch(0);
@@ -71,6 +61,7 @@ class FlightMonitorNotifier extends Notifier<FlightMonitorState> {
   @override
   FlightMonitorState build() {
     _wsClient = WebSocketClient('ws://localhost:8082');
+    _tracker = FlightLogTracker(nearestAirportIcao: _nearestAirportIcao);
 
     // Connect websocket stream in background
     _wsSubscription = _wsClient.connect().listen(
@@ -111,14 +102,34 @@ class FlightMonitorNotifier extends Notifier<FlightMonitorState> {
     return FlightMonitorState();
   }
 
-  void _handleLiveTelemetry(TelemetryModel telemetry) {
-    if (state.isPlaybackMode)
-      return; // Do not overwrite state during log playback
+  /// Beyond this, "nearest airport" stops meaning anything useful (e.g. an
+  /// add-on-only strip with no real-world counterpart in the offline DB,
+  /// or a remote area) -- better to show nothing than a confidently wrong
+  /// airport hundreds of miles away.
+  static const double _maxSaneAirportDistanceNm = 100;
 
-    if (state.isRecording) {
-      // The recorder sees every frame and does its own downsampling, so
-      // touchdown events are never missed by the UI throttle below.
-      _recorderService.addFrame(telemetry);
+  String _nearestAirportIcao(double lat, double lon) {
+    final airports = ref.read(airportDbProvider).value?.airports;
+    if (airports == null || airports.isEmpty) return '';
+    String best = '';
+    double bestNm = double.infinity;
+    for (final a in airports.values) {
+      final d = ConcordeLogic.greatCircleNM(lat, lon, a.lat, a.lon);
+      if (d < bestNm) {
+        bestNm = d;
+        best = a.icao;
+      }
+    }
+    return bestNm <= _maxSaneAirportDistanceNm ? best : '';
+  }
+
+  void _handleLiveTelemetry(TelemetryModel telemetry) {
+    // The tracker sees every frame (not just UI-throttled updates) so
+    // distance/reheat-time integration and the takeoff/landing edges are
+    // never missed or double-counted.
+    final entry = _tracker.ingest(telemetry, DateTime.now());
+    if (entry != null) {
+      unawaited(_saveEntry(entry));
     }
 
     final now = DateTime.now();
@@ -128,10 +139,13 @@ class FlightMonitorNotifier extends Notifier<FlightMonitorState> {
     state = state.copyWith(
       currentTelemetry: telemetry,
       isConnected: true,
-      recordedFramesCount: state.isRecording
-          ? _recorderService.currentFrameCount
-          : 0,
+      isLoggingFlight: _tracker.isAirborne,
     );
+  }
+
+  Future<void> _saveEntry(FlightLogEntry entry) async {
+    await _logService.saveEntry(entry);
+    ref.invalidate(flightLogHistoryFutureProvider);
   }
 
   void _handleDisconnect() {
@@ -140,59 +154,9 @@ class FlightMonitorNotifier extends Notifier<FlightMonitorState> {
     }
   }
 
-  void startRecording() {
-    if (state.isPlaybackMode) return;
-    final dep = ref.read(departureIcaoProvider);
-    final arr = ref.read(arrivalIcaoProvider);
-    final route = dep.isNotEmpty && arr.isNotEmpty ? '$dep-$arr' : '';
-    _recorderService.startRecording(route: route);
-    state = state.copyWith(isRecording: true, recordedFramesCount: 0);
-  }
-
-  Future<FlightRecordHeader?> stopRecording() async {
-    if (!state.isRecording) return null;
-    final header = await _recorderService.stopAndSaveRecording();
-    state = state.copyWith(isRecording: false, recordedFramesCount: 0);
-    // Refresh history list implicitly by forcing updates where needed
-    ref.invalidate(flightHistoryFutureProvider);
-    return header;
-  }
-
-  Future<void> startPlayback(String flightId) async {
-    final frames = await _recorderService.loadFlightFrames(flightId);
-    if (frames.isEmpty) return;
-
-    state = state.copyWith(
-      isPlaybackMode: true,
-      playbackFrames: frames,
-      playbackIndex: 0,
-      currentTelemetry: frames.first,
-    );
-  }
-
-  void setPlaybackIndex(int index) {
-    if (!state.isPlaybackMode ||
-        index < 0 ||
-        index >= state.playbackFrames.length)
-      return;
-    state = state.copyWith(
-      playbackIndex: index,
-      currentTelemetry: state.playbackFrames[index],
-    );
-  }
-
-  void exitPlayback() {
-    state = state.copyWith(
-      isPlaybackMode: false,
-      playbackFrames: [],
-      playbackIndex: 0,
-      currentTelemetry: null,
-    );
-  }
-
-  Future<void> deleteRecordedFlight(String flightId) async {
-    await _recorderService.deleteFlight(flightId);
-    ref.invalidate(flightHistoryFutureProvider);
+  Future<void> deleteFlightLogEntry(String id) async {
+    await _logService.deleteEntry(id);
+    ref.invalidate(flightLogHistoryFutureProvider);
   }
 }
 
@@ -202,9 +166,9 @@ final flightMonitorProvider =
       FlightMonitorNotifier.new,
     );
 
-final flightHistoryFutureProvider = FutureProvider<List<FlightRecordHeader>>((
+final flightLogHistoryFutureProvider = FutureProvider<List<FlightLogEntry>>((
   ref,
 ) async {
-  final service = FlightRecorderService();
-  return service.loadFlightHistory();
+  final service = FlightLogService();
+  return service.loadHistory();
 });

@@ -4,22 +4,19 @@ import '../../../../../core/sim_bridge_launcher.dart';
 import '../../../../../core/ui_text.dart';
 import '../../../data/models/telemetry_model.dart';
 
-/// Top status/controls bar: connection dot + Zulu clock, playback-log
-/// button, and record button.
+/// Top status/controls bar: connection dot + Zulu clock, and an
+/// auto-logging indicator (a flight is logged automatically on
+/// takeoff/landing detection -- there's no manual record control).
 class FmToolbar extends StatelessWidget {
   final bool isConnected;
-  final bool isRecording;
-  final int recordedFramesCount;
+  final bool isLoggingFlight;
   final TelemetryModel telemetry;
-  final VoidCallback onToggleRecording;
 
   const FmToolbar({
     super.key,
     required this.isConnected,
-    required this.isRecording,
-    required this.recordedFramesCount,
+    required this.isLoggingFlight,
     required this.telemetry,
-    required this.onToggleRecording,
   });
 
   @override
@@ -108,71 +105,50 @@ class FmToolbar extends StatelessWidget {
             ],
           ),
         ),
-        if (isConnected)
-          _RecordButton(
-            recording: isRecording,
-            frameCount: recordedFramesCount,
-            onPressed: onToggleRecording,
-          ),
+        if (isConnected && isLoggingFlight) const _LoggingIndicator(),
       ],
     );
   }
 }
 
-class _RecordButton extends StatelessWidget {
-  final bool recording;
-  final int frameCount;
-  final VoidCallback onPressed;
-  const _RecordButton({
-    required this.recording,
-    required this.frameCount,
-    required this.onPressed,
-  });
+/// Shown while a flight is being auto-tracked (from takeoff detection to
+/// landing detection) -- purely informational, nothing to press.
+class _LoggingIndicator extends StatelessWidget {
+  const _LoggingIndicator();
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final color = recording ? colors.error : colors.textPrimary;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onPressed,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+      decoration: BoxDecoration(
+        border: Border.all(color: colors.error),
+        color: colors.errorBg,
         borderRadius: BorderRadius.circular(10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: recording ? colors.error : colors.dividerStrong,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: colors.error,
+              shape: BoxShape.circle,
             ),
-            color: recording ? colors.errorBg : colors.surface,
-            borderRadius: BorderRadius.circular(10),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: color,
-                  shape: recording ? BoxShape.rectangle : BoxShape.circle,
-                  borderRadius: recording ? BorderRadius.circular(2) : null,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                recording ? 'STOP ($frameCount)' : 'RECORD',
-                style: uiText(
-                  context,
-                  size: 12,
-                  color: color,
-                  weight: FontWeight.w800,
-                  letterSpacing: 0.4,
-                ),
-              ),
-            ],
+          const SizedBox(width: 8),
+          Text(
+            'LOGGING FLIGHT',
+            style: uiText(
+              context,
+              size: 12,
+              color: colors.error,
+              weight: FontWeight.w800,
+              letterSpacing: 0.4,
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

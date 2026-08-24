@@ -1,6 +1,6 @@
 class TelemetryModel {
   final int timestamp;
-  
+
   // Basic parameters
   final double altitude;
   final double ias;
@@ -27,7 +27,7 @@ class TelemetryModel {
   final List<bool> reheatActive;
   final List<double> throttlePct;
   final double snootAngle;
-  
+
   // Fuel tank levels, as sent by the bridge: 0-100 percent (NOT a 0-1
   // fraction — divide by 100 before treating as a fill fraction).
   final double fuelLeftTank;
@@ -49,6 +49,12 @@ class TelemetryModel {
   final double touchdownVS;
   final double touchdownPitch;
   final double touchdownGForce;
+
+  /// SIM_ON_GROUND, straight from the sim -- ground-contact truth, not
+  /// inferred from altitude/speed. Used alongside the IAS/VS thresholds to
+  /// confirm a takeoff (so a rejected-takeoff-roll bump that briefly spikes
+  /// VS while still on the ground can't false-trigger flight logging).
+  final bool onGround;
 
   TelemetryModel({
     required this.timestamp,
@@ -85,6 +91,7 @@ class TelemetryModel {
     required this.touchdownVS,
     required this.touchdownPitch,
     required this.touchdownGForce,
+    this.onGround = false,
   });
 
   factory TelemetryModel.empty() {
@@ -122,6 +129,7 @@ class TelemetryModel {
       touchdownVS: 0.0,
       touchdownPitch: 0.0,
       touchdownGForce: 0.0,
+      onGround: true,
     );
   }
 
@@ -153,8 +161,11 @@ class TelemetryModel {
       cgAftLimit: (concorde['cgAftLimit'] ?? 59.0).toDouble(),
       cgFwdLimit: (concorde['cgFwdLimit'] ?? 52.0).toDouble(),
       fuelBurnTotal: (concorde['fuelBurnTotal'] ?? 0.0).toDouble(),
-      reheatActive: List<bool>.from(concorde['reheatActive'] ?? [false, false, false, false]),
-      throttlePct: (concorde['throttlePct'] as List<dynamic>?)
+      reheatActive: List<bool>.from(
+        concorde['reheatActive'] ?? [false, false, false, false],
+      ),
+      throttlePct:
+          (concorde['throttlePct'] as List<dynamic>?)
               ?.map((v) => (v as num).toDouble())
               .toList() ??
           const [0.0, 0.0, 0.0, 0.0],
@@ -164,13 +175,16 @@ class TelemetryModel {
       fuelCenterTank: (fuelTanks['center'] ?? 0.0).toDouble(),
       fuelTrimForward: (fuelTanks['trimForward'] ?? 0.0).toDouble(),
       fuelTrimAft: (fuelTanks['trimAft'] ?? 0.0).toDouble(),
-      fuelTanksKg: (concorde['fuelTanksKg'] as Map<String, dynamic>?)
-              ?.map((id, kg) => MapEntry(id, (kg as num).toDouble())) ??
+      fuelTanksKg:
+          (concorde['fuelTanksKg'] as Map<String, dynamic>?)?.map(
+            (id, kg) => MapEntry(id, (kg as num).toDouble()),
+          ) ??
           const {},
       isLanding: events['isLanding'] ?? false,
       touchdownVS: (events['touchdownVS'] ?? 0.0).toDouble(),
       touchdownPitch: (events['touchdownPitch'] ?? 0.0).toDouble(),
       touchdownGForce: (events['touchdownGForce'] ?? 0.0).toDouble(),
+      onGround: events['onGround'] ?? false,
     );
   }
 
@@ -217,7 +231,8 @@ class TelemetryModel {
         'touchdownVS': touchdownVS,
         'touchdownPitch': touchdownPitch,
         'touchdownGForce': touchdownGForce,
-      }
+        'onGround': onGround,
+      },
     };
   }
 }
