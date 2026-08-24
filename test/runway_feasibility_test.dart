@@ -148,6 +148,79 @@ void main() {
     });
   });
 
+  group('ConcordeLogic hard limits (width / altitude / crosswind)', () {
+    test('a runway narrower than 150 ft is infeasible for takeoff', () {
+      final result = ConcordeLogic.takeoffFeasibleM(
+        4200,
+        170000,
+        runwayWidthFt: 100,
+      );
+      expect(result.widthOk, isFalse);
+      expect(result.feasible, isFalse);
+    });
+
+    test('a runway at or above 150 ft wide is fine', () {
+      final result = ConcordeLogic.takeoffFeasibleM(
+        4200,
+        170000,
+        runwayWidthFt: 150,
+      );
+      expect(result.widthOk, isTrue);
+    });
+
+    test('missing width data does not fail the check', () {
+      final result = ConcordeLogic.takeoffFeasibleM(4200, 170000);
+      expect(result.widthOk, isTrue);
+    });
+
+    test('an airfield above 8,000 ft is infeasible', () {
+      final result = ConcordeLogic.takeoffFeasibleM(
+        4200,
+        170000,
+        env: const RunwayEnvironmentInputs(runwayElevFt: 9000),
+      );
+      expect(result.altitudeOk, isFalse);
+      expect(result.feasible, isFalse);
+    });
+
+    test('an airfield below -1,000 ft is infeasible', () {
+      final result = ConcordeLogic.takeoffFeasibleM(
+        4200,
+        170000,
+        env: const RunwayEnvironmentInputs(runwayElevFt: -1500),
+      );
+      expect(result.altitudeOk, isFalse);
+    });
+
+    test('an airfield within -1,000 to 8,000 ft is fine', () {
+      final result = ConcordeLogic.takeoffFeasibleM(
+        4200,
+        170000,
+        env: const RunwayEnvironmentInputs(runwayElevFt: 2000),
+      );
+      expect(result.altitudeOk, isTrue);
+    });
+
+    test('a crosswind over 30 kt is infeasible', () {
+      final result = ConcordeLogic.landingFeasibleM(
+        2500,
+        ConcordeConstants.weights.mlwKg,
+        env: const RunwayEnvironmentInputs(crosswindKt: 35),
+      );
+      expect(result.crosswindOk, isFalse);
+      expect(result.feasible, isFalse);
+    });
+
+    test('a crosswind at or under 30 kt is fine', () {
+      final result = ConcordeLogic.landingFeasibleM(
+        2500,
+        ConcordeConstants.weights.mlwKg,
+        env: const RunwayEnvironmentInputs(crosswindKt: 30),
+      );
+      expect(result.crosswindOk, isTrue);
+    });
+  });
+
   group('ConcordeLogic.landingFeasibleM', () {
     test('a long runway at MLW is feasible', () {
       final result = ConcordeLogic.landingFeasibleM(

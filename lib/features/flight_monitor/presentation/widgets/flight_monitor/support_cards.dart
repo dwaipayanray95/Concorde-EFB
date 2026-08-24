@@ -438,48 +438,82 @@ class EnginesReheatCard extends StatelessWidget {
           const SizedBox(height: 14),
           Row(
             children: List.generate(4, (i) {
-              final on = i < t.reheatActive.length && t.reheatActive[i];
+              final reheatOn = i < t.reheatActive.length && t.reheatActive[i];
+              final throttle = i < t.throttlePct.length
+                  ? t.throttlePct[i]
+                  : 0.0;
+              final running = throttle > 2.0;
+
+              // Reheat lit takes priority (amber caution), then a running
+              // engine (accent), then idle/off (neutral).
+              final boxBg = reheatOn
+                  ? colors.mvfrBg
+                  : (running ? colors.resultsBg : colors.inputBg);
+              final boxBorder = reheatOn
+                  ? colors.mvfr.withValues(alpha: 0.5)
+                  : (running
+                      ? colors.accent.withValues(alpha: 0.4)
+                      : colors.dividerStrong);
+              final valueColor = reheatOn
+                  ? colors.mvfr
+                  : (running ? colors.accent : colors.textDim);
+
               return Expanded(
                 child: Padding(
                   padding: EdgeInsets.only(right: i < 3 ? 10 : 0),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: on ? colors.mvfrBg : colors.inputBg,
-                      border: Border.all(
-                        color: on
-                            ? colors.mvfr.withValues(alpha: 0.5)
-                            : colors.dividerStrong,
+                  child: Column(
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: boxBg,
+                          border: Border.all(color: boxBorder),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 14,
+                          horizontal: 8,
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '${throttle.round()}%',
+                              style: uiText(
+                                context,
+                                size: 18,
+                                weight: FontWeight.w800,
+                                color: valueColor,
+                              ),
+                            ),
+                            if (reheatOn) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                'REHEAT',
+                                style: uiText(
+                                  context,
+                                  size: 9,
+                                  weight: FontWeight.w800,
+                                  color: colors.mvfr,
+                                  letterSpacing: 0.6,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 12,
-                      horizontal: 8,
-                    ),
-                    child: Column(
-                      children: [
-                        Text(
-                          'ENG ${i + 1}',
-                          style: uiText(
-                            context,
-                            size: 10,
-                            weight: FontWeight.w800,
-                            color: on ? colors.mvfr : colors.textDim,
-                            letterSpacing: 0,
-                          ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'ENG ${i + 1}',
+                        style: uiText(
+                          context,
+                          size: 10,
+                          weight: FontWeight.w800,
+                          color: colors.textDim,
+                          letterSpacing: 0,
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          on ? 'REHEAT' : 'DRY',
-                          style: uiText(
-                            context,
-                            size: 13,
-                            weight: FontWeight.bold,
-                            color: on ? colors.mvfr : colors.textPrimary,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               );

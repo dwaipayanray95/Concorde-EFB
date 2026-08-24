@@ -25,6 +25,7 @@ class TelemetryModel {
   final double cgFwdLimit;
   final double fuelBurnTotal;
   final List<bool> reheatActive;
+  final List<double> throttlePct;
   final double snootAngle;
   
   // Fuel tank levels, as sent by the bridge: 0-100 percent (NOT a 0-1
@@ -72,6 +73,7 @@ class TelemetryModel {
     required this.cgFwdLimit,
     required this.fuelBurnTotal,
     required this.reheatActive,
+    this.throttlePct = const [0.0, 0.0, 0.0, 0.0],
     required this.snootAngle,
     required this.fuelLeftTank,
     required this.fuelRightTank,
@@ -109,6 +111,7 @@ class TelemetryModel {
       cgFwdLimit: 52.0,
       fuelBurnTotal: 0.0,
       reheatActive: const [false, false, false, false],
+      throttlePct: const [0.0, 0.0, 0.0, 0.0],
       snootAngle: 0.0,
       fuelLeftTank: 0.0,
       fuelRightTank: 0.0,
@@ -151,6 +154,10 @@ class TelemetryModel {
       cgFwdLimit: (concorde['cgFwdLimit'] ?? 52.0).toDouble(),
       fuelBurnTotal: (concorde['fuelBurnTotal'] ?? 0.0).toDouble(),
       reheatActive: List<bool>.from(concorde['reheatActive'] ?? [false, false, false, false]),
+      throttlePct: (concorde['throttlePct'] as List<dynamic>?)
+              ?.map((v) => (v as num).toDouble())
+              .toList() ??
+          const [0.0, 0.0, 0.0, 0.0],
       snootAngle: (concorde['snootAngle'] ?? 0.0).toDouble(),
       fuelLeftTank: (fuelTanks['left'] ?? 0.0).toDouble(),
       fuelRightTank: (fuelTanks['right'] ?? 0.0).toDouble(),
@@ -194,6 +201,7 @@ class TelemetryModel {
         'cgFwdLimit': cgFwdLimit,
         'fuelBurnTotal': fuelBurnTotal,
         'reheatActive': reheatActive,
+        'throttlePct': throttlePct,
         'snootAngle': snootAngle,
         'fuelTanks': {
           'left': fuelLeftTank,

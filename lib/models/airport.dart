@@ -21,11 +21,13 @@ class Runway {
   final int heading;
   final double lengthM;
   final double? elevationFt;
+  final double? widthFt;
 
   Runway({
     required this.id,
     required this.heading,
     required this.lengthM,
     this.elevationFt,
+    this.widthFt,
   });
 }

@@ -18,8 +18,10 @@ import '../models/airport.dart';
 /// A background refresh from OurAirports then updates the data and the disk
 /// cache when the network allows; failures are silently ignored.
 class AirportDatabaseService {
-  static const String airportsUrl = 'https://raw.githubusercontent.com/davidmegginson/ourairports-data/master/airports.csv';
-  static const String runwaysUrl = 'https://raw.githubusercontent.com/davidmegginson/ourairports-data/master/runways.csv';
+  static const String airportsUrl =
+      'https://raw.githubusercontent.com/davidmegginson/ourairports-data/master/airports.csv';
+  static const String runwaysUrl =
+      'https://raw.githubusercontent.com/davidmegginson/ourairports-data/master/runways.csv';
   static const String bundledAssetPath = 'assets/airport_db.json.gz';
 
   Map<String, Airport> airports = {};
@@ -30,7 +32,10 @@ class AirportDatabaseService {
       airports = cached;
     } else {
       final assetBytes = await rootBundle.load(bundledAssetPath);
-      airports = await compute(_parseGzippedDb, assetBytes.buffer.asUint8List());
+      airports = await compute(
+        _parseGzippedDb,
+        assetBytes.buffer.asUint8List(),
+      );
     }
 
     // Refresh in the background; startup never waits on the network.
@@ -56,7 +61,10 @@ class AirportDatabaseService {
       ]);
       if (responses.any((r) => r.statusCode != 200)) return;
 
-      final result = await compute(_parseCsvsAndSerialize, [responses[0].body, responses[1].body]);
+      final result = await compute(_parseCsvsAndSerialize, [
+        responses[0].body,
+        responses[1].body,
+      ]);
       if (result.airports.isEmpty) return;
 
       airports = result.airports;
@@ -90,7 +98,8 @@ class AirportDatabaseService {
 // ── Isolate entry points (must be top-level for compute) ────────────────────
 
 Map<String, Airport> _parseGzippedDb(Uint8List bytes) {
-  final decoded = jsonDecode(utf8.decode(gzip.decode(bytes))) as Map<String, dynamic>;
+  final decoded =
+      jsonDecode(utf8.decode(gzip.decode(bytes))) as Map<String, dynamic>;
   final rawAirports = decoded['airports'] as Map<String, dynamic>;
   final out = <String, Airport>{};
   rawAirports.forEach((icao, value) {
@@ -102,12 +111,15 @@ Map<String, Airport> _parseGzippedDb(Uint8List bytes) {
       lon: (a[2] as num).toDouble(),
       elevationFt: (a[3] as num?)?.toDouble(),
       runways: (a[4] as List)
-          .map((r) => Runway(
-                id: r[0] as String,
-                heading: (r[1] as num).round(),
-                lengthM: (r[2] as num).toDouble(),
-                elevationFt: (r[3] as num?)?.toDouble(),
-              ))
+          .map(
+            (r) => Runway(
+              id: r[0] as String,
+              heading: (r[1] as num).round(),
+              lengthM: (r[2] as num).toDouble(),
+              elevationFt: (r[3] as num?)?.toDouble(),
+              widthFt: r.length > 4 ? (r[4] as num?)?.toDouble() : null,
+            ),
+          )
           .toList(),
     );
   });
@@ -132,7 +144,9 @@ _RefreshResult _parseCsvsAndSerialize(List<String> csvs) {
       a.lat,
       a.lon,
       a.elevationFt,
-      a.runways.map((r) => [r.id, r.heading, r.lengthM, r.elevationFt]).toList(),
+      a.runways
+          .map((r) => [r.id, r.heading, r.lengthM, r.elevationFt, r.widthFt])
+          .toList(),
     ];
   });
   final raw = utf8.encode(jsonEncode({'airports': serializable}));
@@ -182,6 +196,7 @@ Map<String, Airport> _parseCsvs(String airportsCsv, String runwaysCsv) {
   final heHdgIdx = rwHeader.indexOf('he_heading_degT');
   final leElevIdx = rwHeader.indexOf('le_elevation_ft');
   final heElevIdx = rwHeader.indexOf('he_elevation_ft');
+  final widthFtIdx = rwHeader.indexOf('width_ft');
 
   for (var i = 1; i < runwaysData.length; i++) {
     final row = runwaysData[i];
@@ -196,23 +211,32 @@ Map<String, Airport> _parseCsvs(String airportsCsv, String runwaysCsv) {
 
     final leIdent = row[leIdentIdx].toString().trim().toUpperCase();
     final heIdent = row[heIdentIdx].toString().trim().toUpperCase();
+    final widthFt = widthFtIdx >= 0 && row.length > widthFtIdx
+        ? double.tryParse(row[widthFtIdx].toString())
+        : null;
 
     if (leIdent.isNotEmpty) {
-      airport.runways.add(Runway(
-        id: leIdent,
-        heading: (double.tryParse(row[leHdgIdx].toString()) ?? 0.0).round(),
-        lengthM: lengthM,
-        elevationFt: double.tryParse(row[leElevIdx].toString()),
-      ));
+      airport.runways.add(
+        Runway(
+          id: leIdent,
+          heading: (double.tryParse(row[leHdgIdx].toString()) ?? 0.0).round(),
+          lengthM: lengthM,
+          elevationFt: double.tryParse(row[leElevIdx].toString()),
+          widthFt: widthFt,
+        ),
+      );
     }
 
     if (heIdent.isNotEmpty) {
-      airport.runways.add(Runway(
-        id: heIdent,
-        heading: (double.tryParse(row[heHdgIdx].toString()) ?? 0.0).round(),
-        lengthM: lengthM,
-        elevationFt: double.tryParse(row[heElevIdx].toString()),
-      ));
+      airport.runways.add(
+        Runway(
+          id: heIdent,
+          heading: (double.tryParse(row[heHdgIdx].toString()) ?? 0.0).round(),
+          lengthM: lengthM,
+          elevationFt: double.tryParse(row[heElevIdx].toString()),
+          widthFt: widthFt,
+        ),
+      );
     }
   }
 

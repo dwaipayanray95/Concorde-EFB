@@ -44,6 +44,25 @@ void main() {
       }
     });
 
+    test('parses runway width for a major airport', () async {
+      final service = AirportDatabaseService();
+      await service.initialize();
+
+      final egll = service.airports['EGLL']!;
+      // Heathrow's runways are ~50m (~164ft) wide -- just confirm width
+      // data made it through the gzip DB pipeline, not an exact figure
+      // that could drift with upstream data.
+      final withWidth = egll.runways.where((r) => r.widthFt != null);
+      expect(
+        withWidth,
+        isNotEmpty,
+        reason: 'expected at least one EGLL runway to have width data',
+      );
+      for (final rw in withWidth) {
+        expect(rw.widthFt, greaterThan(0));
+      }
+    });
+
     test('every airport key is a valid 4-character ICAO code', () async {
       final service = AirportDatabaseService();
       await service.initialize();
