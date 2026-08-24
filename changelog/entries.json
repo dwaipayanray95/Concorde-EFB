@@ -3,6 +3,7 @@
         "date": "2026-08-24",
         "title": "Commits",
         "items": [
+            "2fc7c5c ci: add Discord webhook notification for beta pre-releases",
             "4e4fa72 style: redesign downloads page with side-by-side stable/beta and collapsed history",
             "1e31baa chore: remove dead public assets and unused ez-github-scripts config",
             "069c85c fix: guarantee landing capture even when tracking starts mid-flight",
