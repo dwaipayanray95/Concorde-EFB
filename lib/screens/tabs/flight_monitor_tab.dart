@@ -243,33 +243,22 @@ class _SupportGrid extends StatelessWidget {
                 child: FuelSchematicCard(chips: chips, totalKg: totalFuelKg),
               ),
               const SizedBox(width: 16),
-              Expanded(child: CgCard(t: t)),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(child: EnvironmentalCard(t: t)),
-              const SizedBox(width: 16),
-              Expanded(child: FuelBurnCard(t: t, totalFuelKg: totalFuelKg)),
-              const SizedBox(width: 16),
-              Expanded(child: TouchdownCard(t: t)),
-              const SizedBox(width: 16),
-              Expanded(child: GForceCard(t: t)),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(child: EnginesReheatCard(t: t)),
-              const SizedBox(width: 16),
-              Expanded(child: GearFlapsDroopCard(t: t)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    CgCard(t: t),
+                    const SizedBox(height: 16),
+                    EnvironmentalCard(t: t),
+                    const SizedBox(height: 16),
+                    FuelBurnCard(t: t, totalFuelKg: totalFuelKg),
+                    const SizedBox(height: 16),
+                    GForceCard(t: t),
+                    const SizedBox(height: 16),
+                    TouchdownCard(t: t),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
