@@ -72,10 +72,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
 
   void _checkForUpdates() async {
     try {
-      final response = await http.get(
-        Uri.parse(AppLinks.githubReleasesLatestApi),
-        headers: {'Accept': 'application/vnd.github.v3+json'},
-      ).timeout(const Duration(seconds: 5));
+      final response = await http
+          .get(
+            Uri.parse(AppLinks.githubReleasesLatestApi),
+            headers: {'Accept': 'application/vnd.github.v3+json'},
+          )
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -119,85 +121,80 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder:
-              (context) => AlertDialog(
-                backgroundColor: colors.surface,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  side: BorderSide(
-                    color: colors.dividerStrong,
-                    width: 1.5,
+          builder: (context) => AlertDialog(
+            backgroundColor: colors.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(color: colors.dividerStrong, width: 1.5),
+            ),
+            title: Text(
+              'RATE CONCORDE EFB',
+              textAlign: TextAlign.center,
+              style: uiText(
+                context,
+                color: colors.textPrimary,
+                weight: FontWeight.w900,
+                size: 16,
+                letterSpacing: 1.5,
+              ),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'We hope you enjoyed using the EFB! Would you like to leave a 5-star rating on flightsim.to before you go?',
+                  textAlign: TextAlign.center,
+                  style: uiText(context, color: colors.textSecondary, size: 13),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () async {
+                  Navigator.of(context).pop();
+                  SimBridgeLauncher.stop();
+                  SimBridgeLauncher.stopWatching();
+                  await windowManager.destroy();
+                },
+                child: Text(
+                  'NO THANKS',
+                  style: uiText(context, color: colors.textDim),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final url = Uri.parse(AppLinks.flightsimTo);
+                  try {
+                    await launchUrl(url);
+                  } catch (_) {}
+                  if (context.mounted) Navigator.of(context).pop();
+                  SimBridgeLauncher.stop();
+                  SimBridgeLauncher.stopWatching();
+                  await windowManager.destroy();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colors.accent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                title: Text(
-                  'RATE CONCORDE EFB',
-                  textAlign: TextAlign.center,
+                child: Text(
+                  'RATE 5 STARS',
                   style: uiText(
                     context,
-                    color: colors.textPrimary,
-                    weight: FontWeight.w900,
-                    size: 16,
-                    letterSpacing: 1.5,
+                    color: Colors.white,
+                    weight: FontWeight.bold,
                   ),
                 ),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'We hope you enjoyed using the EFB! Would you like to leave a 5-star rating on flightsim.to before you go?',
-                      textAlign: TextAlign.center,
-                      style: uiText(
-                        context,
-                        color: colors.textSecondary,
-                        size: 13,
-                      ),
-                    ),
-                  ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () async {
-                      Navigator.of(context).pop();
-                      SimBridgeLauncher.stop();
-                      await windowManager.destroy();
-                    },
-                    child: Text(
-                      'NO THANKS',
-                      style: uiText(context, color: colors.textDim),
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      final url = Uri.parse(AppLinks.flightsimTo);
-                      try {
-                        await launchUrl(url);
-                      } catch (_) {}
-                      if (context.mounted) Navigator.of(context).pop();
-                      SimBridgeLauncher.stop();
-                      await windowManager.destroy();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: colors.accent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: Text(
-                      'RATE 5 STARS',
-                      style: uiText(
-                        context,
-                        color: Colors.white,
-                        weight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
               ),
+            ],
+          ),
         );
       }
     } else {
       await prefs.setBool('is_first_launch', false);
       SimBridgeLauncher.stop();
+      SimBridgeLauncher.stopWatching();
       await windowManager.destroy();
     }
   }
@@ -208,38 +205,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
     final airportDbAsync = ref.watch(airportDbProvider);
 
     return airportDbAsync.when(
-      loading:
-          () => Scaffold(
-            backgroundColor: colors.bg,
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(color: colors.accent),
-                  const SizedBox(height: 24),
-                  Text(
-                    'LOADING AIRPORT DATABASE...',
-                    style: uiText(
-                      context,
-                      color: colors.textSecondary,
-                      letterSpacing: 3,
-                      weight: FontWeight.w900,
-                    ),
-                  ),
-                ],
+      loading: () => Scaffold(
+        backgroundColor: colors.bg,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(color: colors.accent),
+              const SizedBox(height: 24),
+              Text(
+                'LOADING AIRPORT DATABASE...',
+                style: uiText(
+                  context,
+                  color: colors.textSecondary,
+                  letterSpacing: 3,
+                  weight: FontWeight.w900,
+                ),
               ),
-            ),
+            ],
           ),
-      error:
-          (err, stack) => Scaffold(
-            backgroundColor: colors.bg,
-            body: Center(
-              child: Text(
-                'Error loading database: $err',
-                style: uiText(context, color: colors.error),
-              ),
-            ),
+        ),
+      ),
+      error: (err, stack) => Scaffold(
+        backgroundColor: colors.bg,
+        body: Center(
+          child: Text(
+            'Error loading database: $err',
+            style: uiText(context, color: colors.error),
           ),
+        ),
+      ),
       data: (db) {
         return Scaffold(
           backgroundColor: colors.bg,
@@ -254,10 +249,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                         scrollDirection: Axis.horizontal,
                         physics: const BouncingScrollPhysics(),
                         child: SizedBox(
-                          width:
-                              MediaQuery.of(context).size.width > 1080
-                                  ? MediaQuery.of(context).size.width
-                                  : 1080,
+                          width: MediaQuery.of(context).size.width > 1080
+                              ? MediaQuery.of(context).size.width
+                              : 1080,
                           height: height,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,50 +274,49 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                               ),
                               const SizedBox(height: 32),
                               Expanded(
-                                child:
-                                    selectedTab == 0
-                                        ? SmoothScrollWrapper(
+                                child: selectedTab == 0
+                                    ? SmoothScrollWrapper(
+                                        controller: _tab0Controller,
+                                        child: SingleChildScrollView(
                                           controller: _tab0Controller,
-                                          child: SingleChildScrollView(
-                                            controller: _tab0Controller,
-                                            key: const ValueKey('scroll-tab-0'),
-                                            scrollDirection: Axis.vertical,
-                                            physics:
-                                                const BouncingScrollPhysics(),
-                                            padding: const EdgeInsets.only(
-                                              left: 40,
-                                              right: 40,
-                                              bottom: 48,
-                                            ),
-                                            child: const FlightPlannerTab(),
-                                          ),
-                                        )
-                                        : selectedTab == 1
-                                        ? Padding(
-                                          key: const ValueKey('padding-tab-1'),
+                                          key: const ValueKey('scroll-tab-0'),
+                                          scrollDirection: Axis.vertical,
+                                          physics:
+                                              const BouncingScrollPhysics(),
                                           padding: const EdgeInsets.only(
                                             left: 40,
                                             right: 40,
                                             bottom: 48,
                                           ),
-                                          child: const ChecklistsTab(),
-                                        )
-                                        : SmoothScrollWrapper(
-                                          controller: _tab2Controller,
-                                          child: SingleChildScrollView(
-                                            controller: _tab2Controller,
-                                            key: const ValueKey('scroll-tab-2'),
-                                            scrollDirection: Axis.vertical,
-                                            physics:
-                                                const BouncingScrollPhysics(),
-                                            padding: const EdgeInsets.only(
-                                              left: 40,
-                                              right: 40,
-                                              bottom: 48,
-                                            ),
-                                            child: const FlightMonitorTab(),
-                                          ),
+                                          child: const FlightPlannerTab(),
                                         ),
+                                      )
+                                    : selectedTab == 1
+                                    ? Padding(
+                                        key: const ValueKey('padding-tab-1'),
+                                        padding: const EdgeInsets.only(
+                                          left: 40,
+                                          right: 40,
+                                          bottom: 48,
+                                        ),
+                                        child: const ChecklistsTab(),
+                                      )
+                                    : SmoothScrollWrapper(
+                                        controller: _tab2Controller,
+                                        child: SingleChildScrollView(
+                                          controller: _tab2Controller,
+                                          key: const ValueKey('scroll-tab-2'),
+                                          scrollDirection: Axis.vertical,
+                                          physics:
+                                              const BouncingScrollPhysics(),
+                                          padding: const EdgeInsets.only(
+                                            left: 40,
+                                            right: 40,
+                                            bottom: 48,
+                                          ),
+                                          child: const FlightMonitorTab(),
+                                        ),
+                                      ),
                               ),
                             ],
                           ),
@@ -428,22 +421,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
             color: isSelected ? colors.accent : colors.dividerStrong,
             width: 1.5,
           ),
-          boxShadow:
-              isSelected
-                  ? [
-                    BoxShadow(
-                      color: colors.accent.withValues(alpha: 0.35),
-                      blurRadius: 12,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                  : [
-                    BoxShadow(
-                      color: colors.textPrimary.withValues(alpha: 0.04),
-                      blurRadius: 6,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: colors.accent.withValues(alpha: 0.35),
+                    blurRadius: 12,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : [
+                  BoxShadow(
+                    color: colors.textPrimary.withValues(alpha: 0.04),
+                    blurRadius: 6,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

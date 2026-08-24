@@ -7,13 +7,16 @@
 class AppLinks {
   AppLinks._();
 
-  static const String siteRoot = 'https://dwaipayanray95.github.io/Concorde-EFB/';
+  static const String siteRoot =
+      'https://dwaipayanray95.github.io/Concorde-EFB/';
   static const String changelog = '${siteRoot}changelog/';
   static const String donate = '${siteRoot}donate/';
 
   static const String githubReleasesLatestApi =
       'https://api.github.com/repos/dwaipayanray95/Concorde-EFB/releases/latest';
 
-  static const String flightsimTo = 'https://flightsim.to/addon/101890/concorde-efb';
+  static const String flightsimTo =
+      'https://flightsim.to/addon/101890/concorde-efb';
   static const String patreon = 'https://www.patreon.com/c/theawesomeray';
+  static const String discord = 'https://discord.gg/xe49YpczpP';
 }

@@ -22,29 +22,62 @@ class AppFooter extends StatelessWidget {
           children: [EfbLaunchesBadge()],
         ),
         const SizedBox(height: 24),
-        InkWell(
-          onTap: () async {
-            final url = Uri.parse(AppLinks.changelog);
-            try {
-              await launchUrl(url);
-            } catch (_) {}
-          },
-          borderRadius: BorderRadius.circular(4),
-          mouseCursor: SystemMouseCursors.click,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: Text(
-              'VIEW CHANGELOG',
-              style: uiText(
-                context,
-                color: colors.accent,
-                size: 12,
-                weight: FontWeight.bold,
-                letterSpacing: 1.2,
-                decoration: TextDecoration.underline,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            InkWell(
+              onTap: () async {
+                final url = Uri.parse(AppLinks.changelog);
+                try {
+                  await launchUrl(url);
+                } catch (_) {}
+              },
+              borderRadius: BorderRadius.circular(4),
+              mouseCursor: SystemMouseCursors.click,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Text(
+                  'VIEW CHANGELOG',
+                  style: uiText(
+                    context,
+                    color: colors.accent,
+                    size: 12,
+                    weight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
               ),
             ),
-          ),
+            Text(
+              '  •  ',
+              style: uiText(context, color: colors.textDim, size: 12),
+            ),
+            InkWell(
+              onTap: () async {
+                final url = Uri.parse(AppLinks.discord);
+                try {
+                  await launchUrl(url);
+                } catch (_) {}
+              },
+              borderRadius: BorderRadius.circular(4),
+              mouseCursor: SystemMouseCursors.click,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Text(
+                  'JOIN DISCORD',
+                  style: uiText(
+                    context,
+                    color: colors.accent,
+                    size: 12,
+                    weight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
         const EfbAdBanner(),
       ],

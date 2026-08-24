@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/telemetry_model.dart';
 import '../../data/services/websocket_client.dart';
 import '../../data/services/flight_recorder_service.dart';
+import '../../../../core/sim_bridge_launcher.dart';
 import '../../../../providers/efb_providers.dart';
 
 class FlightMonitorState {
@@ -10,12 +11,12 @@ class FlightMonitorState {
   final bool isRecording;
   final int recordedFramesCount;
   final bool isConnected;
-  
+
   // Playback/History timeline parameters
   final bool isPlaybackMode;
   final List<TelemetryModel> playbackFrames;
   final int playbackIndex;
-  
+
   FlightMonitorState({
     this.currentTelemetry,
     this.isRecording = false,
@@ -52,16 +53,25 @@ class FlightMonitorNotifier extends Notifier<FlightMonitorState> {
   /// is wasted work. 10 Hz is visually indistinguishable on a dashboard.
   static const Duration _uiUpdateInterval = Duration(milliseconds: 100);
 
+  /// If the bridge process we spawned is alive but has delivered zero real
+  /// telemetry for this long, restart it -- see SimBridgeLauncher.restart
+  /// for why a stuck first-connect-before-MSFS-is-up state doesn't recover
+  /// on its own within the same process.
+  static const _watchdogTimeout = Duration(seconds: 90);
+  static const _maxAutoRestarts = 3;
+
   late WebSocketClient _wsClient;
   final FlightRecorderService _recorderService = FlightRecorderService();
   StreamSubscription<TelemetryModel>? _wsSubscription;
   Timer? _pingTimer;
   DateTime _lastUiUpdate = DateTime.fromMillisecondsSinceEpoch(0);
+  int _disconnectedSeconds = 0;
+  int _autoRestartCount = 0;
 
   @override
   FlightMonitorState build() {
     _wsClient = WebSocketClient('ws://localhost:8082');
-    
+
     // Connect websocket stream in background
     _wsSubscription = _wsClient.connect().listen(
       _handleLiveTelemetry,
@@ -73,6 +83,22 @@ class FlightMonitorNotifier extends Notifier<FlightMonitorState> {
     _pingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (state.isConnected != _wsClient.isConnected) {
         state = state.copyWith(isConnected: _wsClient.isConnected);
+      }
+
+      if (_wsClient.isConnected) {
+        _disconnectedSeconds = 0;
+        return;
+      }
+      // Only watch a bridge process WE spawned -- never touch an
+      // externally/manually run dev bridge (SimBridgeStatus.alreadyRunning).
+      if (SimBridgeLauncher.status.value != SimBridgeStatus.started) return;
+      if (_autoRestartCount >= _maxAutoRestarts) return;
+
+      _disconnectedSeconds++;
+      if (_disconnectedSeconds >= _watchdogTimeout.inSeconds) {
+        _disconnectedSeconds = 0;
+        _autoRestartCount++;
+        SimBridgeLauncher.restart();
       }
     });
 
@@ -86,7 +112,8 @@ class FlightMonitorNotifier extends Notifier<FlightMonitorState> {
   }
 
   void _handleLiveTelemetry(TelemetryModel telemetry) {
-    if (state.isPlaybackMode) return; // Do not overwrite state during log playback
+    if (state.isPlaybackMode)
+      return; // Do not overwrite state during log playback
 
     if (state.isRecording) {
       // The recorder sees every frame and does its own downsampling, so
@@ -101,7 +128,9 @@ class FlightMonitorNotifier extends Notifier<FlightMonitorState> {
     state = state.copyWith(
       currentTelemetry: telemetry,
       isConnected: true,
-      recordedFramesCount: state.isRecording ? _recorderService.currentFrameCount : 0,
+      recordedFramesCount: state.isRecording
+          ? _recorderService.currentFrameCount
+          : 0,
     );
   }
 
@@ -117,19 +146,13 @@ class FlightMonitorNotifier extends Notifier<FlightMonitorState> {
     final arr = ref.read(arrivalIcaoProvider);
     final route = dep.isNotEmpty && arr.isNotEmpty ? '$dep-$arr' : '';
     _recorderService.startRecording(route: route);
-    state = state.copyWith(
-      isRecording: true,
-      recordedFramesCount: 0,
-    );
+    state = state.copyWith(isRecording: true, recordedFramesCount: 0);
   }
 
   Future<FlightRecordHeader?> stopRecording() async {
     if (!state.isRecording) return null;
     final header = await _recorderService.stopAndSaveRecording();
-    state = state.copyWith(
-      isRecording: false,
-      recordedFramesCount: 0,
-    );
+    state = state.copyWith(isRecording: false, recordedFramesCount: 0);
     // Refresh history list implicitly by forcing updates where needed
     ref.invalidate(flightHistoryFutureProvider);
     return header;
@@ -148,7 +171,10 @@ class FlightMonitorNotifier extends Notifier<FlightMonitorState> {
   }
 
   void setPlaybackIndex(int index) {
-    if (!state.isPlaybackMode || index < 0 || index >= state.playbackFrames.length) return;
+    if (!state.isPlaybackMode ||
+        index < 0 ||
+        index >= state.playbackFrames.length)
+      return;
     state = state.copyWith(
       playbackIndex: index,
       currentTelemetry: state.playbackFrames[index],
@@ -171,11 +197,14 @@ class FlightMonitorNotifier extends Notifier<FlightMonitorState> {
 }
 
 // Global Providers
-final flightMonitorProvider = NotifierProvider<FlightMonitorNotifier, FlightMonitorState>(
-  FlightMonitorNotifier.new,
-);
+final flightMonitorProvider =
+    NotifierProvider<FlightMonitorNotifier, FlightMonitorState>(
+      FlightMonitorNotifier.new,
+    );
 
-final flightHistoryFutureProvider = FutureProvider<List<FlightRecordHeader>>((ref) async {
+final flightHistoryFutureProvider = FutureProvider<List<FlightRecordHeader>>((
+  ref,
+) async {
   final service = FlightRecorderService();
   return service.loadFlightHistory();
 });

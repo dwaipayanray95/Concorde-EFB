@@ -15,13 +15,19 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize AdMob for Mobile platforms
-  if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
+  if (!kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS)) {
     await MobileAds.instance.initialize();
   }
 
   // Launch the bundled SimConnect telemetry bridge so Flight Monitor works
-  // without the user installing Python or running anything manually.
+  // without the user installing Python or running anything manually, and
+  // start watching for MSFS's own process so the bridge gets a fresh
+  // restart the moment the game actually launches -- covers opening this
+  // app well before starting the sim (see SimBridgeLauncher.startWatching).
   unawaited(SimBridgeLauncher.start());
+  SimBridgeLauncher.startWatching();
 
   // Determine initial window background from persisted theme preference
   final prefs = await SharedPreferences.getInstance();
@@ -47,11 +53,7 @@ void main() async {
     await windowManager.setPreventClose(true);
   });
 
-  runApp(
-    const ProviderScope(
-      child: ConcordeEfbApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: ConcordeEfbApp()));
 }
 
 class ConcordeEfbApp extends ConsumerWidget {
@@ -73,12 +75,13 @@ class ConcordeEfbApp extends ConsumerWidget {
           brightness: Brightness.light,
         ),
         extensions: const [AppColors.light],
-        textTheme: GoogleFonts.jetBrainsMonoTextTheme(
-          ThemeData.light().textTheme,
-        ).apply(
-          bodyColor: AppColors.light.textPrimary,
-          displayColor: AppColors.light.textPrimary,
-        ),
+        textTheme:
+            GoogleFonts.jetBrainsMonoTextTheme(
+              ThemeData.light().textTheme,
+            ).apply(
+              bodyColor: AppColors.light.textPrimary,
+              displayColor: AppColors.light.textPrimary,
+            ),
       ),
       darkTheme: ThemeData(
         brightness: Brightness.dark,
@@ -88,12 +91,13 @@ class ConcordeEfbApp extends ConsumerWidget {
           brightness: Brightness.dark,
         ),
         extensions: const [AppColors.dark],
-        textTheme: GoogleFonts.jetBrainsMonoTextTheme(
-          ThemeData.dark().textTheme,
-        ).apply(
-          bodyColor: AppColors.dark.textPrimary,
-          displayColor: AppColors.dark.textPrimary,
-        ),
+        textTheme:
+            GoogleFonts.jetBrainsMonoTextTheme(
+              ThemeData.dark().textTheme,
+            ).apply(
+              bodyColor: AppColors.dark.textPrimary,
+              displayColor: AppColors.dark.textPrimary,
+            ),
       ),
       home: const HomeScreen(),
     );
