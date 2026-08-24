@@ -1,5 +1,12 @@
 [
     {
+        "date": "2026-08-24",
+        "title": "Commits",
+        "items": [
+            "a318b34 fix: Scrolling in checklist was broken"
+        ]
+    },
+    {
         "date": "2026-08-21",
         "title": "Commits",
         "items": [
