@@ -100,50 +100,71 @@ class _ChecklistsTabState extends ConsumerState<ChecklistsTab> {
                           width: 1.5,
                         ),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Expanded(
-                            child: Text(
-                              phase.name,
-                              style: uiText(
-                                context,
-                                size: 13,
-                                weight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.w500,
-                                color: isSelected
-                                    ? colors.accent
-                                    : colors.textSecondary,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  phase.name,
+                                  style: uiText(
+                                    context,
+                                    size: 13,
+                                    weight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.w500,
+                                    color: isSelected
+                                        ? colors.accent
+                                        : colors.textSecondary,
+                                  ),
+                                ),
                               ),
-                            ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isCompleted
+                                      ? colors.successBg
+                                      : colors.inputBg,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isCompleted
+                                        ? colors.success.withValues(alpha: 0.3)
+                                        : colors.dividerStrong,
+                                  ),
+                                ),
+                                child: Text(
+                                  '$checkedCount/$totalCount',
+                                  style: uiText(
+                                    context,
+                                    size: 10,
+                                    weight: FontWeight.bold,
+                                    color: isCompleted
+                                        ? colors.success
+                                        : colors.textDim,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isCompleted
-                                  ? colors.successBg
-                                  : colors.inputBg,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: isCompleted
-                                    ? colors.success.withValues(alpha: 0.3)
-                                    : colors.dividerStrong,
+                          const SizedBox(height: 8),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(2),
+                            child: LinearProgressIndicator(
+                              value: totalCount == 0
+                                  ? 0
+                                  : checkedCount / totalCount,
+                              minHeight: 3,
+                              backgroundColor: colors.dividerStrong.withValues(
+                                alpha: 0.4,
                               ),
-                            ),
-                            child: Text(
-                              '$checkedCount/$totalCount',
-                              style: uiText(
-                                context,
-                                size: 10,
-                                weight: FontWeight.bold,
-                                color: isCompleted
-                                    ? colors.success
-                                    : colors.textDim,
+                              valueColor: AlwaysStoppedAnimation(
+                                isCompleted ? colors.success : colors.accent,
                               ),
                             ),
                           ),
@@ -212,46 +233,58 @@ class _ChecklistsTabState extends ConsumerState<ChecklistsTab> {
                 Divider(color: colors.divider),
                 const SizedBox(height: 16),
                 Expanded(
-                  child: ListView.builder(
+                  child: ListView.separated(
                     itemCount: currentItems.length,
+                    separatorBuilder: (context, index) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: CustomPaint(
+                        size: const Size(double.infinity, 1),
+                        painter: _DashedLinePainter(color: colors.divider),
+                      ),
+                    ),
                     itemBuilder: (context, index) {
                       final item = currentItems[index];
                       final isChecked = checklistState[item.id] ?? false;
+                      final stepNo = (index + 1).toString().padLeft(2, '0');
 
                       return InkWell(
                         onTap: () => notifier.toggle(item.id),
-                        borderRadius: BorderRadius.circular(12),
                         mouseCursor: SystemMouseCursors.click,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                            vertical: 12,
-                            horizontal: 16,
+                            vertical: 14,
+                            horizontal: 8,
                           ),
-                          margin: const EdgeInsets.symmetric(vertical: 4),
                           decoration: BoxDecoration(
                             color: isChecked
-                                ? colors.inputBg.withValues(alpha: 0.5)
+                                ? colors.successBg.withValues(alpha: 0.35)
                                 : Colors.transparent,
-                            borderRadius: BorderRadius.circular(12),
+                            border: Border(
+                              left: BorderSide(
+                                color: isChecked
+                                    ? colors.success
+                                    : colors.accent.withValues(alpha: 0.5),
+                                width: 3,
+                              ),
+                            ),
                           ),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Padding(
-                                padding: const EdgeInsets.only(top: 2),
-                                child: Transform.scale(
-                                  scale: 0.9,
-                                  child: Checkbox(
-                                    value: isChecked,
-                                    onChanged: (_) => notifier.toggle(item.id),
-                                    activeColor: colors.accent,
-                                    checkColor: Colors.white,
-                                    side: BorderSide(
-                                      color: colors.dividerStrong,
-                                      width: 1.5,
-                                    ),
-                                  ),
+                              const SizedBox(width: 8),
+                              Text(
+                                stepNo,
+                                style: uiText(
+                                  context,
+                                  size: 12,
+                                  weight: FontWeight.bold,
+                                  color: colors.textDim,
                                 ),
+                              ),
+                              const SizedBox(width: 16),
+                              _ChecklistMark(
+                                checked: isChecked,
+                                onTap: () => notifier.toggle(item.id),
                               ),
                               const SizedBox(width: 16),
                               Expanded(
@@ -260,19 +293,19 @@ class _ChecklistsTabState extends ConsumerState<ChecklistsTab> {
                                   children: [
                                     Row(
                                       crossAxisAlignment:
-                                          CrossAxisAlignment.baseline,
-                                      textBaseline: TextBaseline.alphabetic,
+                                          CrossAxisAlignment.center,
                                       children: [
                                         Expanded(
                                           child: Text(
-                                            item.item,
+                                            item.item.toUpperCase(),
                                             style: uiText(
                                               context,
                                               size: 14,
-                                              weight: FontWeight.w600,
+                                              weight: FontWeight.w700,
                                               color: isChecked
                                                   ? colors.textDim
                                                   : colors.textPrimary,
+                                              letterSpacing: 0.5,
                                               decoration: isChecked
                                                   ? TextDecoration.lineThrough
                                                   : TextDecoration.none,
@@ -280,26 +313,51 @@ class _ChecklistsTabState extends ConsumerState<ChecklistsTab> {
                                           ),
                                         ),
                                         const SizedBox(width: 16),
-                                        Text(
-                                          item.status,
-                                          style: uiText(
-                                            context,
-                                            size: 13,
-                                            weight: FontWeight.bold,
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
                                             color: isChecked
-                                                ? colors.textDim
-                                                : colors.accent,
-                                            decoration: isChecked
-                                                ? TextDecoration.lineThrough
-                                                : TextDecoration.none,
+                                                ? Colors.transparent
+                                                : colors.accent.withValues(
+                                                    alpha: 0.1,
+                                                  ),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                            border: Border.all(
+                                              color: isChecked
+                                                  ? colors.dividerStrong
+                                                  : colors.accent.withValues(
+                                                      alpha: 0.4,
+                                                    ),
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            item.status,
+                                            style: uiText(
+                                              context,
+                                              size: 12,
+                                              weight: FontWeight.bold,
+                                              color: isChecked
+                                                  ? colors.textDim
+                                                  : colors.accent,
+                                              letterSpacing: 0.5,
+                                              decoration: isChecked
+                                                  ? TextDecoration.lineThrough
+                                                  : TextDecoration.none,
+                                            ),
                                           ),
                                         ),
                                       ],
                                     ),
                                     if (item.note != null) ...[
-                                      const SizedBox(height: 4),
+                                      const SizedBox(height: 6),
                                       Text(
-                                        item.note!,
+                                        '// ${item.note!}',
                                         style: uiText(
                                           context,
                                           size: 11,
@@ -325,4 +383,65 @@ class _ChecklistsTabState extends ConsumerState<ChecklistsTab> {
       ],
     );
   }
+}
+
+/// Aviation-style checklist mark: an empty bracketed box that fills with a
+/// solid accent square and checkmark once actioned, echoing paper checklist
+/// strips rather than a stock Material checkbox.
+class _ChecklistMark extends StatelessWidget {
+  final bool checked;
+  final VoidCallback onTap;
+
+  const _ChecklistMark({required this.checked, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return InkWell(
+      onTap: onTap,
+      mouseCursor: SystemMouseCursors.click,
+      borderRadius: BorderRadius.circular(3),
+      child: Container(
+        width: 20,
+        height: 20,
+        margin: const EdgeInsets.only(top: 1),
+        decoration: BoxDecoration(
+          color: checked ? colors.success : Colors.transparent,
+          borderRadius: BorderRadius.circular(3),
+          border: Border.all(
+            color: checked ? colors.success : colors.dividerStrong,
+            width: 1.5,
+          ),
+        ),
+        child: checked
+            ? const Icon(Icons.check, size: 15, color: Colors.white)
+            : null,
+      ),
+    );
+  }
+}
+
+/// Thin dashed rule used between checklist rows to mimic a torn paper strip.
+class _DashedLinePainter extends CustomPainter {
+  final Color color;
+
+  const _DashedLinePainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1;
+    const dashWidth = 4.0;
+    const dashSpace = 3.0;
+    double x = 0;
+    while (x < size.width) {
+      canvas.drawLine(Offset(x, 0), Offset(x + dashWidth, 0), paint);
+      x += dashWidth + dashSpace;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedLinePainter oldDelegate) =>
+      oldDelegate.color != color;
 }
