@@ -3,6 +3,7 @@
         "date": "2026-08-24",
         "title": "Commits",
         "items": [
+            "193b3db feat(flight-monitor): rework hero row layout, drop redundant gear/flaps card",
             "84da04d test: add coverage for fuel schematic, providers, runway feasibility, airport DB",
             "9284410 docs: refresh AGENTS.md/working.md for Flutter codebase, dedupe README changelog",
             "26969d8 feat: add screenshot showcase carousel to landing page",
