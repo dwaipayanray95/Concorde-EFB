@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_colors.dart';
 import '../../core/ui_text.dart';
@@ -64,11 +65,7 @@ class AppHeader extends ConsumerWidget {
                       const SizedBox(height: 4),
                       Text(
                         'Version v$latestVersion is now ready. Download it from flightsim.to to get the latest features.',
-                        style: uiText(
-                          context,
-                          size: 13,
-                          color: Colors.white,
-                        ),
+                        style: uiText(context, size: 13, color: Colors.white),
                       ),
                     ],
                   ),
@@ -126,12 +123,11 @@ class AppHeader extends ConsumerWidget {
                   'assets/app-icon.png',
                   width: 64,
                   height: 64,
-                  errorBuilder:
-                      (context, error, stackTrace) => Icon(
-                        Icons.airplanemode_active,
-                        color: colors.accent,
-                        size: 64,
-                      ),
+                  errorBuilder: (context, error, stackTrace) => Icon(
+                    Icons.airplanemode_active,
+                    color: colors.accent,
+                    size: 64,
+                  ),
                 ),
               ),
             ),
@@ -163,10 +159,9 @@ class AppHeader extends ConsumerWidget {
               ),
             ),
             Tooltip(
-              message:
-                  themeMode == ThemeMode.dark
-                      ? 'Switch to light mode'
-                      : 'Switch to dark mode',
+              message: themeMode == ThemeMode.dark
+                  ? 'Switch to light mode'
+                  : 'Switch to dark mode',
               child: IconButton(
                 icon: Icon(
                   themeMode == ThemeMode.dark
@@ -183,11 +178,7 @@ class AppHeader extends ConsumerWidget {
             Tooltip(
               message: 'Click to support',
               child: IconButton(
-                icon: Icon(
-                  Icons.favorite,
-                  color: colors.departure,
-                  size: 20,
-                ),
+                icon: Icon(Icons.favorite, color: colors.departure, size: 20),
                 onPressed: () async {
                   final url = Uri.parse(AppLinks.changelog);
                   try {
@@ -200,10 +191,28 @@ class AppHeader extends ConsumerWidget {
                 },
               ),
             ),
-            if (trailing != null) ...[
-              const SizedBox(width: 16),
-              trailing!,
-            ],
+            Tooltip(
+              message: 'Join our Discord',
+              child: IconButton(
+                icon: SvgPicture.asset(
+                  'assets/discord_icon.svg',
+                  width: 20,
+                  height: 20,
+                  colorFilter: ColorFilter.mode(colors.accent, BlendMode.srcIn),
+                ),
+                onPressed: () async {
+                  final url = Uri.parse(AppLinks.discord);
+                  try {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  } catch (_) {
+                    try {
+                      await launchUrl(url);
+                    } catch (_) {}
+                  }
+                },
+              ),
+            ),
+            if (trailing != null) ...[const SizedBox(width: 16), trailing!],
           ],
         ),
       ],

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 
@@ -78,6 +79,78 @@ class SimBridgeLauncher {
   static void stop() {
     _process?.kill();
     _process = null;
+  }
+
+  /// Kills and respawns the bridge as a fresh OS process. The underlying
+  /// Python SimConnect wrapper can get stuck if it first attempts to
+  /// connect before MSFS is actually running -- retrying `SimConnect()`
+  /// within that same long-lived process doesn't reliably recover, even
+  /// though the bridge's own retry loop is otherwise correct, which is
+  /// exactly why "just restart the app" was the previous workaround. A
+  /// brand new process gets fresh OS-level connection state instead. Only
+  /// ever kills a process THIS launcher spawned (`_process`) -- a no-op if
+  /// the app never started one (e.g. an externally/manually run dev bridge).
+  static Future<SimBridgeStatus> restart() async {
+    final hadOwnProcess = _process != null;
+    stop();
+    if (hadOwnProcess) {
+      // Give Windows a moment to release the port before respawning.
+      await Future.delayed(const Duration(milliseconds: 500));
+    }
+    return start();
+  }
+
+  static Timer? _watchTimer;
+  static bool _lastMsfsRunning = false;
+
+  /// Starts polling for MSFS's own process, independent of the bridge's
+  /// connection state -- lets us react to "the game just launched" as an
+  /// event rather than guessing from elapsed time. This is what makes it
+  /// safe to open the app long before starting the sim: nothing restarts
+  /// while MSFS isn't running, so there's no wasted retry budget by the
+  /// time it actually launches.
+  static void startWatching() {
+    if (!_isSupportedPlatform || _watchTimer != null) return;
+    _watchTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+      final running = await _isMsfsRunning();
+      if (running && !_lastMsfsRunning) {
+        // Rising edge: MSFS's process just appeared. Force a fresh bridge
+        // process now so its first SimConnect attempt lands against an
+        // actually-running sim -- this is the actual fix for the "opened
+        // the app 5 minutes before starting the game" case, since the
+        // bridge may have already made several failed attempts while MSFS
+        // was closed and gotten into the stuck state `restart()` documents.
+        debugPrint(
+          'SimBridgeLauncher: MSFS process detected, restarting bridge.',
+        );
+        await restart();
+      }
+      _lastMsfsRunning = running;
+    });
+  }
+
+  static void stopWatching() {
+    _watchTimer?.cancel();
+    _watchTimer = null;
+  }
+
+  /// MSFS 2020 and 2024 both ship as an executable prefixed "FlightSimulator"
+  /// (e.g. FlightSimulator.exe / FlightSimulator2024.exe across Steam/MS
+  /// Store builds) -- tasklist's IMAGENAME filter supports a trailing
+  /// wildcard, so one query covers every variant without needing the exact
+  /// per-version/per-storefront binary name.
+  static Future<bool> _isMsfsRunning() async {
+    if (!_isSupportedPlatform) return false;
+    try {
+      final result = await Process.run('tasklist', [
+        '/FI',
+        'IMAGENAME eq FlightSimulator*.exe',
+      ]);
+      final out = (result.stdout as String?)?.toLowerCase() ?? '';
+      return out.contains('flightsimulator');
+    } catch (_) {
+      return false;
+    }
   }
 
   static String? _resolveBridgeExePath() {
