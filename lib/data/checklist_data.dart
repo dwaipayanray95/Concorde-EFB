@@ -14,6 +14,7 @@ const List<ChecklistPhase> checklistPhases = [
   ChecklistPhase(id: 'cruise_accel', name: 'Cruise & Supersonic Accel'),
   ChecklistPhase(id: 'descent', name: 'Deceleration & Descent'),
   ChecklistPhase(id: 'approach', name: 'Approach'),
+  ChecklistPhase(id: 'landing', name: 'Landing'),
 ];
 
 /// Builds the per-phase checklist item lists. [vSpeedsStr] and [vappStr] are
@@ -74,6 +75,13 @@ Map<String, List<ChecklistItem>> buildChecklistData({
       ChecklistItem(id: 'ap_speed', item: 'Approach Speed', status: 'SET $vappStr'),
       ChecklistItem(id: 'ap_visor', item: 'Nose Visor', status: 'DOWN (12.5°)', note: 'Move to 5° or 12.5° depending on speed/glideslope'),
       ChecklistItem(id: 'ap_gear', item: 'Landing Gear', status: 'DOWN', note: 'Extend below 270 KIAS (visor deployment speed cue; gear limit not explicitly stated in manual)'),
+    ],
+    'landing': [
+      ChecklistItem(id: 'ld_autoland', item: 'Autoland', status: 'SELECT LAND (AFCS)', note: 'At 200 KIAS; maintain aft-biased CG similar to takeoff'),
+      ChecklistItem(id: 'ld_autothrottle', item: 'Autothrottle', status: 'DISENGAGE BELOW 2,000 FT', note: 'Hold ~85% N2, ~12° nose-up, ~500 fpm descent'),
+      ChecklistItem(id: 'ld_autopilot', item: 'Autopilot', status: 'DISENGAGE AT 250 FT RADALT', note: 'Manual control for the flare'),
+      ChecklistItem(id: 'ld_flare', item: 'Flare', status: 'CLOSE THROTTLES ~30 FT', note: 'Ease back to counter ground effect "float"; forward stick may be needed to set the nosewheel down'),
+      ChecklistItem(id: 'ld_reverse', item: 'Reverse Thrust', status: 'ENGAGE AT NOSEWHEEL TOUCHDOWN', note: 'Max dry power in reverse buckets, combined with wheel brakes'),
     ],
   };
 }
