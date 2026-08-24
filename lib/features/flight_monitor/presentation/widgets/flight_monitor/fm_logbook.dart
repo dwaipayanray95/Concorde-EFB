@@ -5,18 +5,18 @@ import '../../../../../core/ui_text.dart';
 import '../../../../../core/formatters.dart';
 import '../../../../../widgets/efb_flat_card.dart';
 import '../../controllers/telemetry_provider.dart';
-import '../../../data/services/flight_recorder_service.dart';
+import '../../../data/models/flight_log_entry.dart';
 
-/// FLIGHT RECORDER LOGBOOK: compact table matching the new design, wired to
-/// real saved recordings (with playback/delete actions preserved from the
-/// previous card-based dashboard).
+/// FLIGHT LOGBOOK: one auto-logged row per completed flight (takeoff to
+/// landing, detected from telemetry) -- no manual record button, no
+/// timeline/playback, just a summary per trip.
 class FmLogbook extends ConsumerWidget {
   const FmLogbook({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
-    final historyAsync = ref.watch(flightHistoryFutureProvider);
+    final historyAsync = ref.watch(flightLogHistoryFutureProvider);
 
     return EfbFlatCard(
       padding: const EdgeInsets.all(22),
@@ -40,7 +40,7 @@ class FmLogbook extends ConsumerWidget {
   Widget _buildTable(
     BuildContext context,
     WidgetRef ref,
-    List<FlightRecordHeader> flights,
+    List<FlightLogEntry> flights,
   ) {
     final colors = context.colors;
     return Column(
@@ -50,7 +50,7 @@ class FmLogbook extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'FLIGHT RECORDER LOGBOOK',
+              'FLIGHT LOGBOOK',
               style: uiText(
                 context,
                 size: 11,
@@ -78,10 +78,14 @@ class FmLogbook extends ConsumerWidget {
             child: Center(
               child: Column(
                 children: [
-                  Icon(Icons.history_toggle_off, size: 40, color: colors.textDim),
+                  Icon(
+                    Icons.history_toggle_off,
+                    size: 40,
+                    color: colors.textDim,
+                  ),
                   const SizedBox(height: 12),
                   Text(
-                    'NO FLIGHT LOGS RECORDED YET',
+                    'NO FLIGHTS LOGGED YET -- FLY A TAKEOFF & LANDING',
                     style: uiText(context, size: 11, color: colors.textDim),
                   ),
                 ],
@@ -94,69 +98,17 @@ class FmLogbook extends ConsumerWidget {
             decoration: BoxDecoration(
               border: Border(bottom: BorderSide(color: colors.divider)),
             ),
-            child: Row(
+            child: const Row(
               children: [
-                Expanded(
-                  flex: 12,
-                  child: Text(
-                    'DATE',
-                    style: uiText(
-                      context,
-                      size: 10,
-                      color: colors.textDim,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  flex: 10,
-                  child: Text(
-                    'ROUTE',
-                    style: uiText(
-                      context,
-                      size: 10,
-                      color: colors.textDim,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  flex: 10,
-                  child: Text(
-                    'DURATION',
-                    style: uiText(
-                      context,
-                      size: 10,
-                      color: colors.textDim,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  flex: 10,
-                  child: Text(
-                    'MAX MACH',
-                    style: uiText(
-                      context,
-                      size: 10,
-                      color: colors.textDim,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  flex: 8,
-                  child: Text(
-                    'MAX ALT',
-                    style: uiText(
-                      context,
-                      size: 10,
-                      color: colors.textDim,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 72),
+                _HeaderCell('DATE', flex: 11),
+                _HeaderCell('ROUTE', flex: 8),
+                _HeaderCell('DISTANCE', flex: 8),
+                _HeaderCell('DURATION', flex: 8),
+                _HeaderCell('MAX MACH', flex: 8),
+                _HeaderCell('MAX ALT', flex: 7),
+                _HeaderCell('FUEL', flex: 7),
+                _HeaderCell('REHEAT', flex: 7),
+                SizedBox(width: 36),
               ],
             ),
           ),
@@ -167,8 +119,31 @@ class FmLogbook extends ConsumerWidget {
   }
 }
 
+class _HeaderCell extends StatelessWidget {
+  final String label;
+  final int flex;
+  const _HeaderCell(this.label, {required this.flex});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Expanded(
+      flex: flex,
+      child: Text(
+        label,
+        style: uiText(
+          context,
+          size: 10,
+          color: colors.textDim,
+          letterSpacing: 0.8,
+        ),
+      ),
+    );
+  }
+}
+
 class _LogRow extends StatelessWidget {
-  final FlightRecordHeader flight;
+  final FlightLogEntry flight;
   final WidgetRef ref;
   const _LogRow({required this.flight, required this.ref});
 
@@ -185,6 +160,10 @@ class _LogRow extends StatelessWidget {
         vsColor = colors.mvfr;
       }
     }
+    final route = flight.departureIcao.isEmpty && flight.arrivalIcao.isEmpty
+        ? '--'
+        : '${flight.departureIcao.isEmpty ? '?' : flight.departureIcao}'
+              '-${flight.arrivalIcao.isEmpty ? '?' : flight.arrivalIcao}';
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -194,7 +173,7 @@ class _LogRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            flex: 12,
+            flex: 11,
             child: Text(
               flight.date,
               style: uiText(
@@ -207,9 +186,9 @@ class _LogRow extends StatelessWidget {
             ),
           ),
           Expanded(
-            flex: 10,
+            flex: 8,
             child: Text(
-              flight.route.isEmpty ? '--' : flight.route,
+              route,
               style: uiText(
                 context,
                 size: 12,
@@ -219,12 +198,23 @@ class _LogRow extends StatelessWidget {
             ),
           ),
           Expanded(
-            flex: 10,
+            flex: 8,
+            child: Text(
+              '${flight.distanceNm.round()} nm',
+              style: uiText(
+                context,
+                size: 12,
+                color: colors.textPrimary,
+                weight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 8,
             child: Tooltip(
-              message:
-                  hasTouchdown
-                      ? 'Touchdown: ${flight.touchdownVS!.round()} FPM / ${flight.touchdownPitch!.toStringAsFixed(1)}° / ${flight.touchdownGForce!.toStringAsFixed(2)}G'
-                      : 'No touchdown recorded',
+              message: hasTouchdown
+                  ? 'Touchdown: ${flight.touchdownVS!.round()} FPM / ${flight.touchdownPitch!.toStringAsFixed(1)}° / ${flight.touchdownGForce!.toStringAsFixed(2)}G'
+                  : 'No touchdown recorded',
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -253,7 +243,7 @@ class _LogRow extends StatelessWidget {
             ),
           ),
           Expanded(
-            flex: 10,
+            flex: 8,
             child: Text(
               flight.maxMach != null
                   ? 'M${flight.maxMach!.toStringAsFixed(2)}'
@@ -267,7 +257,7 @@ class _LogRow extends StatelessWidget {
             ),
           ),
           Expanded(
-            flex: 8,
+            flex: 7,
             child: Text(
               flight.maxAltitudeFt != null
                   ? numFormat.format(flight.maxAltitudeFt!.round())
@@ -280,28 +270,41 @@ class _LogRow extends StatelessWidget {
               ),
             ),
           ),
+          Expanded(
+            flex: 7,
+            child: Text(
+              flight.fuelBurnedKg != null
+                  ? '${numFormat.format(flight.fuelBurnedKg!.round())} kg'
+                  : '--',
+              style: uiText(
+                context,
+                size: 12,
+                color: colors.textPrimary,
+                weight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 7,
+            child: Text(
+              flight.reheatSeconds > 0
+                  ? _formatDuration(flight.reheatSeconds)
+                  : '--',
+              style: uiText(
+                context,
+                size: 12,
+                color: colors.textPrimary,
+                weight: FontWeight.w600,
+              ),
+            ),
+          ),
           SizedBox(
-            width: 72,
+            width: 36,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 IconButton(
-                  tooltip: 'Load timeline playback',
-                  icon: Icon(
-                    Icons.play_circle_fill,
-                    color: colors.arrival,
-                    size: 20,
-                  ),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  onPressed:
-                      () => ref
-                          .read(flightMonitorProvider.notifier)
-                          .startPlayback(flight.id),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  tooltip: 'Delete recording',
+                  tooltip: 'Delete flight log',
                   icon: Icon(
                     Icons.delete_outline,
                     color: colors.error,
@@ -330,71 +333,70 @@ class _LogRow extends StatelessWidget {
   void _confirmDelete(
     BuildContext context,
     WidgetRef ref,
-    FlightRecordHeader flight,
+    FlightLogEntry flight,
   ) {
     final colors = context.colors;
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            backgroundColor: colors.surface,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: colors.dividerStrong),
-            ),
-            title: Text(
-              'DELETE FLIGHT LOG?',
-              style: uiText(
-                context,
-                size: 14,
-                color: colors.textPrimary,
-                weight: FontWeight.w800,
-                letterSpacing: 0.5,
-              ),
-            ),
-            content: Text(
-              'Are you sure you want to permanently delete the flight recording from ${flight.date}?',
+      builder: (context) => AlertDialog(
+        backgroundColor: colors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: colors.dividerStrong),
+        ),
+        title: Text(
+          'DELETE FLIGHT LOG?',
+          style: uiText(
+            context,
+            size: 14,
+            color: colors.textPrimary,
+            weight: FontWeight.w800,
+            letterSpacing: 0.5,
+          ),
+        ),
+        content: Text(
+          'Are you sure you want to permanently delete the flight recording from ${flight.date}?',
+          style: uiText(
+            context,
+            size: 12,
+            color: colors.textSecondary,
+            weight: FontWeight.w600,
+            letterSpacing: 0,
+          ),
+        ),
+        actions: [
+          TextButton(
+            child: Text(
+              'CANCEL',
               style: uiText(
                 context,
                 size: 12,
-                color: colors.textSecondary,
-                weight: FontWeight.w600,
+                color: colors.textDim,
                 letterSpacing: 0,
               ),
             ),
-            actions: [
-              TextButton(
-                child: Text(
-                  'CANCEL',
-                  style: uiText(
-                    context,
-                    size: 12,
-                    color: colors.textDim,
-                    letterSpacing: 0,
-                  ),
-                ),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-              TextButton(
-                child: Text(
-                  'DELETE',
-                  style: uiText(
-                    context,
-                    size: 12,
-                    color: colors.error,
-                    weight: FontWeight.bold,
-                    letterSpacing: 0,
-                  ),
-                ),
-                onPressed: () {
-                  ref
-                      .read(flightMonitorProvider.notifier)
-                      .deleteRecordedFlight(flight.id);
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
+            onPressed: () => Navigator.of(context).pop(),
           ),
+          TextButton(
+            child: Text(
+              'DELETE',
+              style: uiText(
+                context,
+                size: 12,
+                color: colors.error,
+                weight: FontWeight.bold,
+                letterSpacing: 0,
+              ),
+            ),
+            onPressed: () {
+              ref
+                  .read(flightMonitorProvider.notifier)
+                  .deleteFlightLogEntry(flight.id);
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      ),
     );
   }
 }

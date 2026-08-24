@@ -220,7 +220,10 @@ class SimConnectBridge:
                     "snootAngle": visor,
                     "engineRamps": 0.0
                 },
-                "events": self.touchdown_data
+                "events": {
+                    **self.touchdown_data,
+                    "onGround": bool(on_ground)
+                }
             }
         except Exception as e:
             logger.warning(f"Connection to SimConnect lost: {e}")
