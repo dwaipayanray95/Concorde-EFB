@@ -1,0 +1,40 @@
+name: Discord
+
+# Shared home for Discord community automation. Each job reacts to a
+# different GitHub event and posts to a channel via a Discord webhook
+# (DISCORD_WEBHOOK_URL secret, currently pointed at #beta-releases).
+#
+# notify-prerelease: fires when a GitHub Release is published as a
+# pre-release (this is what beta-build.yml's `gh release create --prerelease`
+# triggers) and posts an announcement linking to the static downloads page,
+# not the GitHub release page.
+on:
+  release:
+    types: [prereleased]
+
+jobs:
+  notify-prerelease:
+    name: Notify Discord of Beta Pre-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post to Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_NAME: ${{ github.event.release.name }}
+        run: |
+          curl -sS -X POST "$DISCORD_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+              --arg title "🧪 New Concorde EFB Beta Build: ${RELEASE_NAME:-$RELEASE_TAG}" \
+              --arg desc "A new pre-release build is available for testing." \
+              --arg url "https://dwaipayanray95.github.io/Concorde-EFB/downloads/" \
+              '{
+                embeds: [{
+                  title: $title,
+                  description: $desc,
+                  url: $url,
+                  color: 5793266,
+                  fields: [{ name: "Download", value: $url }]
+                }]
+              }')"
