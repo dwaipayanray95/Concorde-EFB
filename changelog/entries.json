@@ -3,6 +3,7 @@
         "date": "2026-08-24",
         "title": "Commits",
         "items": [
+            "1e31baa chore: remove dead public assets and unused ez-github-scripts config",
             "069c85c fix: guarantee landing capture even when tracking starts mid-flight",
             "bad1d22 ci: rename release/beta installers to ConcordeEFB_vX.Y.Z(- beta_buildNN).exe",
             "b997498 feat: add runway width, crosswind, and airfield altitude limits sourced from BA Concorde Flying Manual",
