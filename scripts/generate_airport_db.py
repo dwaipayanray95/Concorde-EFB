@@ -76,8 +76,13 @@ def main():
                 elev = float(row[elev_col])
             except ValueError:
                 pass
-            # [id, headingDeg, lengthM, elevationFt]
-            airport[4].append([ident, heading, length_m, elev])
+            width_ft = None
+            try:
+                width_ft = float(row["width_ft"])
+            except (ValueError, KeyError):
+                pass
+            # [id, headingDeg, lengthM, elevationFt, widthFt]
+            airport[4].append([ident, heading, length_m, elev, width_ft])
             runway_count += 1
 
     payload = {"generated": date.today().isoformat(), "airports": airports}

@@ -6,29 +6,50 @@ class ConcordeLogic {
   static double toRad(double deg) => (deg * math.pi) / 180;
   static double nmFromKm(double km) => km * 0.539957;
 
-  static double greatCircleNM(double lat1, double lon1, double lat2, double lon2) {
+  static double greatCircleNM(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
     const rKm = 6371.0088;
     final phi1 = toRad(lat1);
     final phi2 = toRad(lat2);
     final dphi = toRad(lat2 - lat1);
     final dlambda = toRad(lon2 - lon1);
-    final a = math.sin(dphi / 2) * math.sin(dphi / 2) +
-        math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) * math.sin(dlambda / 2);
+    final a =
+        math.sin(dphi / 2) * math.sin(dphi / 2) +
+        math.cos(phi1) *
+            math.cos(phi2) *
+            math.sin(dlambda / 2) *
+            math.sin(dlambda / 2);
     return nmFromKm(2 * rKm * math.asin(math.sqrt(a)));
   }
 
-  static double initialBearingDeg(double lat1, double lon1, double lat2, double lon2) {
+  static double initialBearingDeg(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
     final phi1 = toRad(lat1);
     final phi2 = toRad(lat2);
     final dlambda = toRad(lon2 - lon1);
     final y = math.sin(dlambda) * math.cos(phi2);
-    final x = math.cos(phi1) * math.sin(phi2) - math.sin(phi1) * math.cos(phi2) * math.cos(dlambda);
+    final x =
+        math.cos(phi1) * math.sin(phi2) -
+        math.sin(phi1) * math.cos(phi2) * math.cos(dlambda);
     final theta = math.atan2(y, x);
     final deg = (theta * 180) / math.pi;
     return deg >= 0 ? deg % 360 : (deg % 360) + 360;
   }
 
-  static String inferDirectionEW(double lat1, double lon1, double lat2, double lon2) {
+  static String inferDirectionEW(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
     final brg = initialBearingDeg(lat1, lon1, lat2, lon2);
     return brg < 180 ? 'E' : 'W';
   }
@@ -44,7 +65,7 @@ class ConcordeLogic {
 
   static double snapToNonRvsm(double fl, String? direction) {
     if (fl < 410) return fl;
-    
+
     List<int> validLevels;
     if (direction != null) {
       validLevels = nonRvsmValidFLs(direction);
@@ -55,7 +76,7 @@ class ConcordeLogic {
 
     int best = validLevels[0];
     double bestDiff = (best - fl).abs();
-    
+
     for (final v in validLevels) {
       final d = (v - fl).abs();
       if (d < bestDiff || (d == bestDiff && v < best)) {
@@ -63,7 +84,7 @@ class ConcordeLogic {
         bestDiff = d;
       }
     }
-    
+
     return best.toDouble();
   }
 
@@ -89,13 +110,21 @@ class ConcordeLogic {
     return distanceNM / speed;
   }
 
-  static ProfileSegment estimateClimb(double cruiseAltFt, {double avgFpm = 2500, double avgGSkt = 450}) {
+  static ProfileSegment estimateClimb(
+    double cruiseAltFt, {
+    double avgFpm = 2500,
+    double avgGSkt = 450,
+  }) {
     final tH = math.max(cruiseAltFt, 0.0) / math.max(avgFpm, 100.0) / 60.0;
     final dNM = tH * math.max(avgGSkt, 200.0);
     return ProfileSegment(timeH: tH, distNm: dNM);
   }
 
-  static ProfileSegment estimateDescent(double cruiseAltFt, {double avgGSkt = 420, double bufferNM = 30}) {
+  static ProfileSegment estimateDescent(
+    double cruiseAltFt, {
+    double avgGSkt = 420,
+    double bufferNM = 30,
+  }) {
     final dRule = math.max(cruiseAltFt, 0.0) / 300.0;
     final dist = dRule + bufferNM;
     final tH = dist / math.max(avgGSkt, 200.0);
@@ -130,18 +159,30 @@ class ConcordeLogic {
     return levels;
   }
 
-  static CruiseMissionProfile buildCruiseMissionProfile(double plannedDistanceNM, double selectedCruiseFL) {
+  static CruiseMissionProfile buildCruiseMissionProfile(
+    double plannedDistanceNM,
+    double selectedCruiseFL,
+  ) {
     final distanceNM = math.max(plannedDistanceNM, 0.0);
     final targetFL = clampCruiseFL(selectedCruiseFL);
-    final initialCruiseFL = targetFL >= cruiseClimbStartFl ? cruiseClimbStartFl : targetFL;
+    final initialCruiseFL = targetFL >= cruiseClimbStartFl
+        ? cruiseClimbStartFl
+        : targetFL;
 
     final climb = estimateClimb(initialCruiseFL * 100);
     final descent = estimateDescent(math.max(targetFL, initialCruiseFL) * 100);
 
-    final coreRemainingNM = math.max(distanceNM - (climb.distNm + descent.distNm), 0.0);
+    final coreRemainingNM = math.max(
+      distanceNM - (climb.distNm + descent.distNm),
+      0.0,
+    );
     final useSupersonicAccel = targetFL >= cruiseClimbStartFl;
-    final accelDistNM = useSupersonicAccel ? math.min(suprAccelNm, coreRemainingNM * 0.4) : 0.0;
-    final accelTimeH = (useSupersonicAccel && suprAccelNm > 0) ? suprAccelTimeH * (accelDistNM / suprAccelNm) : 0.0;
+    final accelDistNM = useSupersonicAccel
+        ? math.min(suprAccelNm, coreRemainingNM * 0.4)
+        : 0.0;
+    final accelTimeH = (useSupersonicAccel && suprAccelNm > 0)
+        ? suprAccelTimeH * (accelDistNM / suprAccelNm)
+        : 0.0;
     // Reheat/transonic-acceleration burn: real full-reheat fuel flow (4
     // engines) x the time actually spent in that burst, not a multiplier on
     // top of the cruise rate.
@@ -188,11 +229,19 @@ class ConcordeLogic {
     final climbKg = climb.timeH * ConcordeConstants.fuel.climbFuelFlowKgH;
     final descentKg = descent.timeH * ConcordeConstants.fuel.descentFuelFlowKgH;
 
-    final avgCruiseBurnKgPerNm = cruiseNM > 0 ? cruiseKg / cruiseNM : cruiseFuelFlowKgHAtFL(targetFL) / math.max(cruiseTasKtForFL(targetFL), 1.0);
-    final avgCruiseTasKt = cruiseTimeH > 0 ? cruiseNM / cruiseTimeH : cruiseTasKtForFL(targetFL);
+    final avgCruiseBurnKgPerNm = cruiseNM > 0
+        ? cruiseKg / cruiseNM
+        : cruiseFuelFlowKgHAtFL(targetFL) /
+              math.max(cruiseTasKtForFL(targetFL), 1.0);
+    final avgCruiseTasKt = cruiseTimeH > 0
+        ? cruiseNM / cruiseTimeH
+        : cruiseTasKtForFL(targetFL);
 
     final tripKg = math.max(climbKg + accelBurnKg + cruiseKg + descentKg, 0.0);
-    final totalTimeH = math.max(climb.timeH + accelTimeH + cruiseTimeH + descent.timeH, 0.0);
+    final totalTimeH = math.max(
+      climb.timeH + accelTimeH + cruiseTimeH + descent.timeH,
+      0.0,
+    );
 
     return CruiseMissionProfile(
       climb: climb,
@@ -214,10 +263,17 @@ class ConcordeLogic {
   }
 
   static BlockFuelBreakdown blockFuelKg(BlockFuelInputs inputs) {
-    final burn = inputs.burnKgPerNm ?? ConcordeConstants.fuel.alternateBurnKgPerNm;
+    final burn =
+        inputs.burnKgPerNm ?? ConcordeConstants.fuel.alternateBurnKgPerNm;
     final altKg = math.max(inputs.alternateNm ?? 0.0, 0.0) * burn;
-    final contKg = inputs.tripKg * math.max((inputs.contingencyPct ?? 0.0) / 100.0, 0.0);
-    final total = inputs.tripKg + (inputs.taxiKg ?? 0.0) + contKg + (inputs.finalReserveKg ?? 0.0) + altKg;
+    final contKg =
+        inputs.tripKg * math.max((inputs.contingencyPct ?? 0.0) / 100.0, 0.0);
+    final total =
+        inputs.tripKg +
+        (inputs.taxiKg ?? 0.0) +
+        contKg +
+        (inputs.finalReserveKg ?? 0.0) +
+        altKg;
     return BlockFuelBreakdown(
       tripKg: inputs.tripKg,
       taxiKg: inputs.taxiKg ?? 0.0,
@@ -304,16 +360,23 @@ class ConcordeLogic {
     return 15 - 1.98 * (elevationFt / 1000);
   }
 
-  static Map<String, dynamic> runwayLengthCorrectionFactor(String phase, RunwayEnvironmentInputs? env) {
+  static Map<String, dynamic> runwayLengthCorrectionFactor(
+    String phase,
+    RunwayEnvironmentInputs? env,
+  ) {
     final runwayElevFt = env?.runwayElevFt ?? 0.0;
     final qnhHpa = qnhToHpa(env?.qnh);
-    final pressureAltFt = qnhHpa == null ? runwayElevFt : runwayElevFt + (1013.25 - qnhHpa) * 30;
+    final pressureAltFt = qnhHpa == null
+        ? runwayElevFt
+        : runwayElevFt + (1013.25 - qnhHpa) * 30;
     final isaTempC = isaTempCAtElevationFt(runwayElevFt);
     final oatC = env?.oatC;
     final headwindKt = env?.headwindKt;
 
     var pressurePctRaw = 0.0;
-    pressurePctRaw = phase == "takeoff" ? (pressureAltFt / 1000) * 0.012 : (pressureAltFt / 1000) * 0.007;
+    pressurePctRaw = phase == "takeoff"
+        ? (pressureAltFt / 1000) * 0.012
+        : (pressureAltFt / 1000) * 0.007;
     final pressurePct = pressurePctRaw.clamp(-0.08, 0.35);
 
     final tempDelta = oatC == null ? null : oatC - isaTempC;
@@ -330,10 +393,14 @@ class ConcordeLogic {
     var windPct = 0.0;
     if (headwindKt != null) {
       if (headwindKt >= 0) {
-        windPct = phase == "takeoff" ? -math.min(headwindKt * 0.01, 0.2) : -math.min(headwindKt * 0.01, 0.15);
+        windPct = phase == "takeoff"
+            ? -math.min(headwindKt * 0.01, 0.2)
+            : -math.min(headwindKt * 0.01, 0.15);
       } else {
         final tailwind = headwindKt.abs();
-        windPct = phase == "takeoff" ? math.min(tailwind * 0.03, 0.5) : math.min(tailwind * 0.04, 0.65);
+        windPct = phase == "takeoff"
+            ? math.min(tailwind * 0.03, 0.5)
+            : math.min(tailwind * 0.04, 0.65);
       }
     }
 
@@ -342,65 +409,122 @@ class ConcordeLogic {
 
     return {
       "factor": factor,
-      "breakdownPct": {"pressure": pressurePct, "temperature": temperaturePct, "wind": windPct, "total": totalPct},
+      "breakdownPct": {
+        "pressure": pressurePct,
+        "temperature": temperaturePct,
+        "wind": windPct,
+        "total": totalPct,
+      },
       "inputs": {
         "runway_elev_ft": runwayElevFt,
         "pressure_alt_ft": pressureAltFt,
         "isa_temp_c": isaTempC,
         "oat_c": oatC,
         "headwind_kt": headwindKt,
-      }
+      },
     };
   }
 
+  /// Runway width / crosswind / airfield altitude hard limits from the BA
+  /// Concorde Flying Manual Vol II, 01.01.02 -- shared by takeoff and
+  /// landing since the manual states them without a takeoff/landing split.
+  /// Each check defaults to true (not violated) when its input is null, so
+  /// a runway missing width data in the offline DB, or a METAR with no
+  /// usable wind, doesn't get flagged as infeasible on absence of evidence.
+  static ({bool widthOk, bool altitudeOk, bool crosswindOk}) _checkHardLimits(
+    double? runwayWidthFt,
+    RunwayEnvironmentInputs? env,
+  ) {
+    final widthOk =
+        runwayWidthFt == null ||
+        runwayWidthFt >= ConcordeConstants.runway.minRunwayWidthFt;
+    final elevFt = env?.runwayElevFt;
+    final altitudeOk =
+        elevFt == null ||
+        (elevFt >= ConcordeConstants.runway.minAirfieldAltFt &&
+            elevFt <= ConcordeConstants.runway.maxAirfieldAltFt);
+    final crosswindKt = env?.crosswindKt;
+    final crosswindOk =
+        crosswindKt == null ||
+        crosswindKt.abs() <= ConcordeConstants.runway.maxCrosswindKt;
+    return (widthOk: widthOk, altitudeOk: altitudeOk, crosswindOk: crosswindOk);
+  }
+
   static RunwayFeasibility takeoffFeasibleM(
-    double runwayLengthM, 
+    double runwayLengthM,
     double takeoffWeightKg, {
     RunwayEnvironmentInputs? env,
     bool useReheat = true,
+    double? runwayWidthFt,
   }) {
     final mtow = ConcordeConstants.weights.mtowKg;
     final baseReq = ConcordeConstants.runway.minTakeoffMAtMtow.toDouble();
     final ratio = (takeoffWeightKg / mtow).clamp(0.5, 1.2);
-    
-    // Scale required distance based on reheat availability. 
+
+    // Scale required distance based on reheat availability.
     // Without reheat, required distance increases by ~35%.
     final reheatFactor = useReheat ? 1.0 : 1.35;
-    
+
     final baseRequired = baseReq * ratio * reheatFactor;
     final correction = runwayLengthCorrectionFactor("takeoff", env);
     final required = baseRequired * (correction["factor"] as double);
-    
+    final limits = _checkHardLimits(runwayWidthFt, env);
+
     // If reheat is off and weight is too high (above 155,000 kg),
     // Concorde cannot climb out safely without afterburners, making it unfeasible.
-    final feasible = (runwayLengthM >= required) && (useReheat || takeoffWeightKg < 155000);
-    
+    final feasible =
+        (runwayLengthM >= required) &&
+        (useReheat || takeoffWeightKg < 155000) &&
+        limits.widthOk &&
+        limits.altitudeOk &&
+        limits.crosswindOk;
+
     return RunwayFeasibility(
       baseRequiredLengthMEst: baseRequired,
       requiredLengthMEst: required,
       runwayLengthM: runwayLengthM,
       feasible: feasible,
       correctionFactor: correction["factor"] as double,
-      correctionBreakdownPct: Map<String, double>.from(correction["breakdownPct"]),
+      correctionBreakdownPct: Map<String, double>.from(
+        correction["breakdownPct"],
+      ),
       correctionInputs: Map<String, dynamic>.from(correction["inputs"]),
+      widthOk: limits.widthOk,
+      altitudeOk: limits.altitudeOk,
+      crosswindOk: limits.crosswindOk,
     );
   }
 
-  static RunwayFeasibility landingFeasibleM(double runwayLengthM, double landingWeightKg, {RunwayEnvironmentInputs? env}) {
+  static RunwayFeasibility landingFeasibleM(
+    double runwayLengthM,
+    double landingWeightKg, {
+    RunwayEnvironmentInputs? env,
+    double? runwayWidthFt,
+  }) {
     final mlw = ConcordeConstants.weights.mlwKg;
     final baseReq = ConcordeConstants.runway.minLandingMAtMlw.toDouble();
     final ratio = (landingWeightKg / mlw).clamp(0.6, 1.3);
     final baseRequired = baseReq * math.pow(ratio, 1.15);
     final correction = runwayLengthCorrectionFactor("landing", env);
     final required = baseRequired * (correction["factor"] as double);
+    final limits = _checkHardLimits(runwayWidthFt, env);
     return RunwayFeasibility(
       baseRequiredLengthMEst: baseRequired,
       requiredLengthMEst: required,
       runwayLengthM: runwayLengthM,
-      feasible: runwayLengthM >= required,
+      feasible:
+          runwayLengthM >= required &&
+          limits.widthOk &&
+          limits.altitudeOk &&
+          limits.crosswindOk,
       correctionFactor: correction["factor"] as double,
-      correctionBreakdownPct: Map<String, double>.from(correction["breakdownPct"]),
+      correctionBreakdownPct: Map<String, double>.from(
+        correction["breakdownPct"],
+      ),
       correctionInputs: Map<String, dynamic>.from(correction["inputs"]),
+      widthOk: limits.widthOk,
+      altitudeOk: limits.altitudeOk,
+      crosswindOk: limits.crosswindOk,
     );
   }
 }

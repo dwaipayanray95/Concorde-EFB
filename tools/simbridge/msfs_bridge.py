@@ -148,6 +148,12 @@ class SimConnectBridge:
             reheat3 = self.get_var("REHEAT:3") > 0
             reheat4 = self.get_var("REHEAT:4") > 0
 
+            # Throttle lever position per engine, 0-100%
+            throttle1 = self.get_var("GENERAL_ENG_THROTTLE_LEVER_POSITION:1")
+            throttle2 = self.get_var("GENERAL_ENG_THROTTLE_LEVER_POSITION:2")
+            throttle3 = self.get_var("GENERAL_ENG_THROTTLE_LEVER_POSITION:3")
+            throttle4 = self.get_var("GENERAL_ENG_THROTTLE_LEVER_POSITION:4")
+
             # Nose Visor Angle mapping for DC Designs Concorde (Leading Edge Flap percent)
             visor = self.get_var("LEADING_EDGE_FLAPS_LEFT_PERCENT")
 
@@ -210,6 +216,7 @@ class SimConnectBridge:
                     },
                     "fuelTanksKg": tank_weights_kg,
                     "reheatActive": [reheat1, reheat2, reheat3, reheat4],
+                    "throttlePct": [throttle1, throttle2, throttle3, throttle4],
                     "snootAngle": visor,
                     "engineRamps": 0.0
                 },

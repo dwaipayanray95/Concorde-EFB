@@ -7,7 +7,10 @@ class ConcordeConstants {
 
 class _Weights {
   const _Weights();
-  final double mtowKg = 185066;
+  // Source: BA Concorde Flying Manual Vol II, "Operating Limitations"
+  // 01.01.01 "Maximum Permissible Weights" -- Start of Take-off 185,070 kg,
+  // Landing 111,130 kg, Zero Fuel 92,080 kg.
+  final double mtowKg = 185070;
   final double mlwKg = 111130;
   final double fuelCapacityKg = 95681;
   final double oewKg = 78700;
@@ -65,4 +68,11 @@ class _Runway {
   const _Runway();
   final int minTakeoffMAtMtow = 3597; // Math.round(11800 * 0.3048)
   final int minLandingMAtMlw = 2200;
+
+  // Source: BA Concorde Flying Manual Vol II, "Operating Limitations"
+  // 01.01.02 "Airplane General / Performance".
+  final double minRunwayWidthFt = 150;
+  final double maxCrosswindKt = 30;
+  final double minAirfieldAltFt = -1000;
+  final double maxAirfieldAltFt = 8000;
 }

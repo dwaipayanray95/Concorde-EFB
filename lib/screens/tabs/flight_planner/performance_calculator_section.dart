@@ -41,13 +41,12 @@ class _PerformanceCalculatorSectionState
             legLabel: 'DEPARTURE / TAKEOFF',
             accent: colors.departure,
             icao: ref.watch(departureIcaoProvider),
-            onIcaoChanged:
-                (v) => ref.read(departureIcaoProvider.notifier).set(v),
+            onIcaoChanged: (v) =>
+                ref.read(departureIcaoProvider.notifier).set(v),
             airport: ref.watch(depAirportProvider),
             currentRunwayId: ref.watch(departureRunwayIdProvider),
-            onRunwayChanged:
-                (v) =>
-                    ref.read(departureRunwayIdProvider.notifier).set(v ?? ''),
+            onRunwayChanged: (v) =>
+                ref.read(departureRunwayIdProvider.notifier).set(v ?? ''),
             runway: ref.watch(departureRunwayProvider),
             metarAsync: ref.watch(departureMetarFutureProvider),
             onRefreshMetar: () => ref.invalidate(departureMetarFutureProvider),
@@ -69,8 +68,8 @@ class _PerformanceCalculatorSectionState
             onIcaoChanged: (v) => ref.read(arrivalIcaoProvider.notifier).set(v),
             airport: ref.watch(arrAirportProvider),
             currentRunwayId: ref.watch(arrivalRunwayIdProvider),
-            onRunwayChanged:
-                (v) => ref.read(arrivalRunwayIdProvider.notifier).set(v ?? ''),
+            onRunwayChanged: (v) =>
+                ref.read(arrivalRunwayIdProvider.notifier).set(v ?? ''),
             runway: ref.watch(arrivalRunwayProvider),
             metarAsync: ref.watch(arrivalMetarFutureProvider),
             onRefreshMetar: () => ref.invalidate(arrivalMetarFutureProvider),
@@ -155,240 +154,228 @@ class _LegCard extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Top reactive status band
+            Container(height: 6, width: double.infinity, color: statusColor),
+            // Strip 1: identity row
             Container(
-              height: 6,
-              width: double.infinity,
-              color: statusColor,
-            ),
-          // Strip 1: identity row
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            decoration: BoxDecoration(
-              color: colors.resultsBg,
-              border: Border(bottom: BorderSide(color: colors.divider)),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.flight_takeoff, size: 18, color: statusColor),
-                const SizedBox(width: 10),
-                Text(
-                  legLabel,
-                  style: uiText(
-                    context,
-                    size: 12,
-                    weight: FontWeight.w900,
-                    color: colors.textSecondary,
-                    letterSpacing: 2,
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isFeasible ? colors.successBg : colors.errorBg,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    isFeasible ? 'WITHIN LIMITS' : 'EXCEEDS LIMITS',
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              decoration: BoxDecoration(
+                color: colors.resultsBg,
+                border: Border(bottom: BorderSide(color: colors.divider)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.flight_takeoff, size: 18, color: statusColor),
+                  const SizedBox(width: 10),
+                  Text(
+                    legLabel,
                     style: uiText(
                       context,
-                      size: 11,
-                      weight: FontWeight.w800,
-                      color: isFeasible ? colors.success : colors.error,
-                      letterSpacing: 0.5,
+                      size: 12,
+                      weight: FontWeight.w900,
+                      color: colors.textSecondary,
+                      letterSpacing: 2,
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          // Strip 2: airport inputs & weather (left) with prominent wind indicator (right)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
-            decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: colors.divider)),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Left Column: ICAO + Runway (Row 1) and METAR Weather (Row 2)
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            flex: 2,
-                            child: _IcaoField(
-                              value: icao,
-                              onChanged: onIcaoChanged,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            flex: 3,
-                            child: _RunwaySelect(
-                              airport: airport,
-                              currentId: currentRunwayId,
-                              onChanged: onRunwayChanged,
-                            ),
-                          ),
-                        ],
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isFeasible ? colors.successBg : colors.errorBg,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      isFeasible ? 'WITHIN LIMITS' : 'EXCEEDS LIMITS',
+                      style: uiText(
+                        context,
+                        size: 11,
+                        weight: FontWeight.w800,
+                        color: isFeasible ? colors.success : colors.error,
+                        letterSpacing: 0.5,
                       ),
-                      const SizedBox(height: 16),
-                      metarAsync.when(
-                        data:
-                            (metar) => _WeatherStrip(
-                              metarStr: metar,
-                              runway: runway,
-                              showRaw: showRaw,
-                              onToggleRaw: onToggleRaw,
-                              onRefresh: onRefreshMetar,
-                            ),
-                        loading:
-                            () => Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  color: colors.accent,
-                                  strokeWidth: 2,
-                                ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Strip 2: airport inputs & weather (left) with prominent wind indicator (right)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: colors.divider)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Left Column: ICAO + Runway (Row 1) and METAR Weather (Row 2)
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: _IcaoField(
+                                value: icao,
+                                onChanged: onIcaoChanged,
                               ),
                             ),
-                        error:
-                            (_, _) => _WeatherStrip(
-                              metarStr: '',
-                              runway: runway,
-                              showRaw: showRaw,
-                              onToggleRaw: onToggleRaw,
-                              onRefresh: onRefreshMetar,
+                            const SizedBox(width: 16),
+                            Expanded(
+                              flex: 3,
+                              child: _RunwaySelect(
+                                airport: airport,
+                                currentId: currentRunwayId,
+                                onChanged: onRunwayChanged,
+                              ),
                             ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 24),
-                Container(
-                  width: 1,
-                  height: 100,
-                  color: colors.divider,
-                ),
-                const SizedBox(width: 24),
-                // Right: Wind Indicator spanning both rows
-                Container(
-                  width: 110,
-                  height: 110,
-                  decoration: BoxDecoration(
-                    color: colors.inputBg,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: colors.dividerStrong,
-                      width: 1.5,
-                    ),
-                  ),
-                  child: Center(
-                    child: WindArrow(
-                      runwayHeading: runway?.heading.toDouble(),
-                      windDir: parsedWind.windDirDeg,
-                      windSpeedKt: parsedWind.windSpeedKt,
-                      color: colors.accent,
-                      size: 80,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Strip 4: results
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 22),
-            color: colors.resultsBg,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                RichText(
-                  text: TextSpan(
-                    children: [
-                      TextSpan(
-                        text: numFormat.format(weightKg.round()),
-                        style: uiText(
-                          context,
-                          size: 28,
-                          weight: FontWeight.w900,
-                          color: colors.textPrimary,
+                          ],
                         ),
-                      ),
-                      TextSpan(
-                        text: ' kg $weightLabel',
-                        style: uiText(
-                          context,
-                          size: 13,
-                          weight: FontWeight.w700,
-                          color: colors.textDim,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 28),
-                Container(width: 1, height: 36, color: colors.dividerStrong),
-                const SizedBox(width: 28),
-                Row(
-                  children:
-                      speeds.entries.map((e) {
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 24),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Text(
-                                e.key,
-                                style: uiText(
-                                  context,
-                                  size: 10,
-                                  weight: FontWeight.w700,
-                                  color: colors.textDim,
-                                ),
-                              ),
-                              const SizedBox(height: 5),
-                              Text(
-                                e.value.round().toString(),
-                                style: uiText(
-                                  context,
-                                  size: 22,
-                                  weight: FontWeight.w900,
-                                  color: speedColor,
-                                ),
-                              ),
-                            ],
+                        const SizedBox(height: 16),
+                        metarAsync.when(
+                          data: (metar) => _WeatherStrip(
+                            metarStr: metar,
+                            runway: runway,
+                            showRaw: showRaw,
+                            onToggleRaw: onToggleRaw,
+                            onRefresh: onRefreshMetar,
                           ),
-                        );
-                      }).toList(),
-                ),
-                Expanded(
-                  child: _RunwayMarginText(
-                    feasibility: feasibility,
-                    isWeightFeasible: isWeightFeasible,
-                    isFuelOver: isFuelOver,
-                    maxWeightKg: maxWeightKg,
-                    noReheatFeasible: noReheatFeasibility?.feasible ?? false,
+                          loading: () => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                color: colors.accent,
+                                strokeWidth: 2,
+                              ),
+                            ),
+                          ),
+                          error: (_, _) => _WeatherStrip(
+                            metarStr: '',
+                            runway: runway,
+                            showRaw: showRaw,
+                            onToggleRaw: onToggleRaw,
+                            onRefresh: onRefreshMetar,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 24),
+                  Container(width: 1, height: 100, color: colors.divider),
+                  const SizedBox(width: 24),
+                  // Right: Wind Indicator spanning both rows
+                  Container(
+                    width: 110,
+                    height: 110,
+                    decoration: BoxDecoration(
+                      color: colors.inputBg,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: colors.dividerStrong,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Center(
+                      child: WindArrow(
+                        runwayHeading: runway?.heading.toDouble(),
+                        windDir: parsedWind.windDirDeg,
+                        windSpeedKt: parsedWind.windSpeedKt,
+                        color: colors.accent,
+                        size: 80,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            // Strip 4: results
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 22),
+              color: colors.resultsBg,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  RichText(
+                    text: TextSpan(
+                      children: [
+                        TextSpan(
+                          text: numFormat.format(weightKg.round()),
+                          style: uiText(
+                            context,
+                            size: 28,
+                            weight: FontWeight.w900,
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                        TextSpan(
+                          text: ' kg $weightLabel',
+                          style: uiText(
+                            context,
+                            size: 13,
+                            weight: FontWeight.w700,
+                            color: colors.textDim,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 28),
+                  Container(width: 1, height: 36, color: colors.dividerStrong),
+                  const SizedBox(width: 28),
+                  Row(
+                    children: speeds.entries.map((e) {
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              e.key,
+                              style: uiText(
+                                context,
+                                size: 10,
+                                weight: FontWeight.w700,
+                                color: colors.textDim,
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              e.value.round().toString(),
+                              style: uiText(
+                                context,
+                                size: 22,
+                                weight: FontWeight.w900,
+                                color: speedColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  Expanded(
+                    child: _RunwayMarginText(
+                      feasibility: feasibility,
+                      isWeightFeasible: isWeightFeasible,
+                      isFuelOver: isFuelOver,
+                      maxWeightKg: maxWeightKg,
+                      noReheatFeasible: noReheatFeasibility?.feasible ?? false,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 }
 
 class _IcaoField extends StatelessWidget {
@@ -421,9 +408,8 @@ class _IcaoField extends StatelessWidget {
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: TextField(
-            controller:
-                TextEditingController(text: value)
-                  ..selection = TextSelection.collapsed(offset: value.length),
+            controller: TextEditingController(text: value)
+              ..selection = TextSelection.collapsed(offset: value.length),
             onChanged: onChanged,
             textCapitalization: TextCapitalization.characters,
             style: uiText(
@@ -577,95 +563,93 @@ class _WeatherStrip extends StatelessWidget {
                   horizontal: 13,
                   vertical: 5,
                 ),
-                  decoration: BoxDecoration(
-                    color: catBg,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    cat,
-                    style: uiText(
-                      context,
-                      size: 10,
-                      weight: FontWeight.w800,
-                      color: catColor,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
+                decoration: BoxDecoration(
+                  color: catBg,
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                const SizedBox(width: 16),
-                Text(
-                  '${tempC?.round() ?? '--'}°C, $summary',
+                child: Text(
+                  cat,
                   style: uiText(
                     context,
-                    size: 12,
-                    weight: FontWeight.w700,
-                    color: colors.textSecondary,
+                    size: 10,
+                    weight: FontWeight.w800,
+                    color: catColor,
+                    letterSpacing: 0.5,
                   ),
                 ),
-                const SizedBox(width: 16),
-                Container(width: 1, height: 20, color: colors.dividerStrong),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Wrap(
-                    spacing: 20,
-                    runSpacing: 8,
-                    children: [
-                      _WeatherStat(
-                        label: 'WIND',
-                        value:
-                            '${parsed.windDirDeg?.round() ?? 'VRB'}° ${parsed.windSpeedKt?.round() ?? '--'}kt',
-                      ),
-                      _WeatherStat(
-                        label: 'VIS',
-                        value:
-                            '${vis != null ? (vis >= 10 ? '10+' : vis.toStringAsFixed(1)) : '--'}km',
-                      ),
-                      _WeatherStat(
-                        label: 'QNH',
-                        value:
-                            '${qnh?.value.round() ?? '--'}${qnh?.unit ?? ''}',
-                      ),
-                      _WeatherStat(
-                        label: 'ELEV',
-                        value: '${runway?.elevationFt?.round() ?? '--'}ft',
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.refresh, size: 16, color: colors.accent),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  onPressed: onRefresh,
-                ),
-              ],
-            ),
-            if (metarStr.isNotEmpty) ...[
-              const SizedBox(height: 10),
+              ),
+              const SizedBox(width: 16),
               Text(
-                showRaw ? metarStr : 'TAP TO SHOW RAW METAR',
-                style:
-                    showRaw
-                        ? uiText(
-                          context,
-                          size: 12,
-                          weight: FontWeight.w500,
-                          color: colors.textSecondary,
-                        )
-                        : uiText(
-                          context,
-                          size: 9,
-                          weight: FontWeight.w700,
-                          color: colors.textDim,
-                          letterSpacing: 1,
-                        ),
+                '${tempC?.round() ?? '--'}°C, $summary',
+                style: uiText(
+                  context,
+                  size: 12,
+                  weight: FontWeight.w700,
+                  color: colors.textSecondary,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Container(width: 1, height: 20, color: colors.dividerStrong),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Wrap(
+                  spacing: 20,
+                  runSpacing: 8,
+                  children: [
+                    _WeatherStat(
+                      label: 'WIND',
+                      value:
+                          '${parsed.windDirDeg?.round() ?? 'VRB'}° ${parsed.windSpeedKt?.round() ?? '--'}kt',
+                    ),
+                    _WeatherStat(
+                      label: 'VIS',
+                      value:
+                          '${vis != null ? (vis >= 10 ? '10+' : vis.toStringAsFixed(1)) : '--'}km',
+                    ),
+                    _WeatherStat(
+                      label: 'QNH',
+                      value: '${qnh?.value.round() ?? '--'}${qnh?.unit ?? ''}',
+                    ),
+                    _WeatherStat(
+                      label: 'ELEV',
+                      value: '${runway?.elevationFt?.round() ?? '--'}ft',
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: Icon(Icons.refresh, size: 16, color: colors.accent),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                onPressed: onRefresh,
               ),
             ],
+          ),
+          if (metarStr.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              showRaw ? metarStr : 'TAP TO SHOW RAW METAR',
+              style: showRaw
+                  ? uiText(
+                      context,
+                      size: 12,
+                      weight: FontWeight.w500,
+                      color: colors.textSecondary,
+                    )
+                  : uiText(
+                      context,
+                      size: 9,
+                      weight: FontWeight.w700,
+                      color: colors.textDim,
+                      letterSpacing: 1,
+                    ),
+            ),
           ],
-        ),
-      );
-    }
+        ],
+      ),
+    );
   }
+}
 
 class _WeatherStat extends StatelessWidget {
   final String label;
@@ -768,6 +752,45 @@ class _RunwayMarginText extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             'EXCEEDS FUEL CAPACITY (${numFormat.format(ConcordeConstants.weights.fuelCapacityKg)} kg)',
+            textAlign: TextAlign.right,
+            style: uiText(
+              context,
+              size: 11,
+              weight: FontWeight.w800,
+              color: colors.error,
+            ),
+          ),
+        ],
+        if (!f.widthOk) ...[
+          const SizedBox(height: 4),
+          Text(
+            'RUNWAY TOO NARROW (min ${ConcordeConstants.runway.minRunwayWidthFt.round()} ft)',
+            textAlign: TextAlign.right,
+            style: uiText(
+              context,
+              size: 11,
+              weight: FontWeight.w800,
+              color: colors.error,
+            ),
+          ),
+        ],
+        if (!f.altitudeOk) ...[
+          const SizedBox(height: 4),
+          Text(
+            'AIRFIELD OUTSIDE ALTITUDE LIMITS (${ConcordeConstants.runway.minAirfieldAltFt.round()} to ${ConcordeConstants.runway.maxAirfieldAltFt.round()} ft)',
+            textAlign: TextAlign.right,
+            style: uiText(
+              context,
+              size: 11,
+              weight: FontWeight.w800,
+              color: colors.error,
+            ),
+          ),
+        ],
+        if (!f.crosswindOk) ...[
+          const SizedBox(height: 4),
+          Text(
+            'EXCEEDS MAX CROSSWIND (${ConcordeConstants.runway.maxCrosswindKt.round()} kt)',
             textAlign: TextAlign.right,
             style: uiText(
               context,

@@ -23,28 +23,41 @@ class DepartureIcaoNotifier extends Notifier<String> {
   String build() => 'EGLL';
   void set(String val) => state = val.toUpperCase();
 }
-final departureIcaoProvider = NotifierProvider<DepartureIcaoNotifier, String>(DepartureIcaoNotifier.new);
+
+final departureIcaoProvider = NotifierProvider<DepartureIcaoNotifier, String>(
+  DepartureIcaoNotifier.new,
+);
 
 class ArrivalIcaoNotifier extends Notifier<String> {
   @override
   String build() => 'KJFK';
   void set(String val) => state = val.toUpperCase();
 }
-final arrivalIcaoProvider = NotifierProvider<ArrivalIcaoNotifier, String>(ArrivalIcaoNotifier.new);
+
+final arrivalIcaoProvider = NotifierProvider<ArrivalIcaoNotifier, String>(
+  ArrivalIcaoNotifier.new,
+);
 
 class AlternateIcaoNotifier extends Notifier<String> {
   @override
   String build() => 'KBOS';
   void set(String val) => state = val.toUpperCase();
 }
-final alternateIcaoProvider = NotifierProvider<AlternateIcaoNotifier, String>(AlternateIcaoNotifier.new);
+
+final alternateIcaoProvider = NotifierProvider<AlternateIcaoNotifier, String>(
+  AlternateIcaoNotifier.new,
+);
 
 class PlannedDistanceNotifier extends Notifier<double> {
   @override
   double build() => 3000.0;
   void set(double val) => state = val;
 }
-final plannedDistanceProvider = NotifierProvider<PlannedDistanceNotifier, double>(PlannedDistanceNotifier.new);
+
+final plannedDistanceProvider =
+    NotifierProvider<PlannedDistanceNotifier, double>(
+      PlannedDistanceNotifier.new,
+    );
 
 // --- SimBrief State ---
 class SimbriefUserNotifier extends Notifier<String> {
@@ -72,42 +85,60 @@ class SimbriefUserNotifier extends Notifier<String> {
     await _prefs?.setString('simbrief_username', val);
   }
 }
-final simbriefUserProvider = NotifierProvider<SimbriefUserNotifier, String>(SimbriefUserNotifier.new);
+
+final simbriefUserProvider = NotifierProvider<SimbriefUserNotifier, String>(
+  SimbriefUserNotifier.new,
+);
 
 class CallSignNotifier extends Notifier<String> {
   @override
   String build() => '--';
   void set(String val) => state = val;
 }
-final callSignProvider = NotifierProvider<CallSignNotifier, String>(CallSignNotifier.new);
+
+final callSignProvider = NotifierProvider<CallSignNotifier, String>(
+  CallSignNotifier.new,
+);
 
 class RegistrationNotifier extends Notifier<String> {
   @override
   String build() => '--';
   void set(String val) => state = val;
 }
-final registrationProvider = NotifierProvider<RegistrationNotifier, String>(RegistrationNotifier.new);
+
+final registrationProvider = NotifierProvider<RegistrationNotifier, String>(
+  RegistrationNotifier.new,
+);
 
 class SimbriefLoadingNotifier extends Notifier<bool> {
   @override
   bool build() => false;
   void set(bool val) => state = val;
 }
-final simbriefLoadingProvider = NotifierProvider<SimbriefLoadingNotifier, bool>(SimbriefLoadingNotifier.new);
+
+final simbriefLoadingProvider = NotifierProvider<SimbriefLoadingNotifier, bool>(
+  SimbriefLoadingNotifier.new,
+);
 
 class SimbriefRouteNotifier extends Notifier<String> {
   @override
   String build() => '--';
   void set(String val) => state = val;
 }
-final simbriefRouteProvider = NotifierProvider<SimbriefRouteNotifier, String>(SimbriefRouteNotifier.new);
+
+final simbriefRouteProvider = NotifierProvider<SimbriefRouteNotifier, String>(
+  SimbriefRouteNotifier.new,
+);
 
 class SimbriefLoadedNotifier extends Notifier<bool> {
   @override
   bool build() => false;
   void set(bool val) => state = val;
 }
-final simbriefLoadedProvider = NotifierProvider<SimbriefLoadedNotifier, bool>(SimbriefLoadedNotifier.new);
+
+final simbriefLoadedProvider = NotifierProvider<SimbriefLoadedNotifier, bool>(
+  SimbriefLoadedNotifier.new,
+);
 
 // --- Runways State ---
 /// Longest runway at [airport] (matches the biggest ID for a tie), or ''
@@ -136,7 +167,11 @@ class DepartureRunwayIdNotifier extends Notifier<String> {
 
   void set(String val) => state = val;
 }
-final departureRunwayIdProvider = NotifierProvider<DepartureRunwayIdNotifier, String>(DepartureRunwayIdNotifier.new);
+
+final departureRunwayIdProvider =
+    NotifierProvider<DepartureRunwayIdNotifier, String>(
+      DepartureRunwayIdNotifier.new,
+    );
 
 class ArrivalRunwayIdNotifier extends Notifier<String> {
   @override
@@ -149,7 +184,11 @@ class ArrivalRunwayIdNotifier extends Notifier<String> {
 
   void set(String val) => state = val;
 }
-final arrivalRunwayIdProvider = NotifierProvider<ArrivalRunwayIdNotifier, String>(ArrivalRunwayIdNotifier.new);
+
+final arrivalRunwayIdProvider =
+    NotifierProvider<ArrivalRunwayIdNotifier, String>(
+      ArrivalRunwayIdNotifier.new,
+    );
 // --- Runways State ---
 // --- Derived Airport Providers ---
 final depAirportProvider = Provider<Airport?>((ref) {
@@ -204,35 +243,51 @@ class CruiseFLNotifier extends Notifier<double> {
     // airports before ever opening the Cruise & Fuel card), the direction
     // is already resolved right now and no "change" will ever fire to
     // correct the default. Snap eagerly against whatever's already known.
-    return ConcordeLogic.snapToNonRvsm(590.0, ref.read(flightDirectionProvider));
+    return ConcordeLogic.snapToNonRvsm(
+      590.0,
+      ref.read(flightDirectionProvider),
+    );
   }
 
   void set(double val, String? direction) {
     state = ConcordeLogic.snapToNonRvsm(val, direction);
   }
 }
-final cruiseFLProvider = NotifierProvider<CruiseFLNotifier, double>(CruiseFLNotifier.new);
+
+final cruiseFLProvider = NotifierProvider<CruiseFLNotifier, double>(
+  CruiseFLNotifier.new,
+);
 
 class TaxiFuelNotifier extends Notifier<double> {
   @override
   double build() => 2500.0;
   void set(double val) => state = val;
 }
-final taxiFuelProvider = NotifierProvider<TaxiFuelNotifier, double>(TaxiFuelNotifier.new);
+
+final taxiFuelProvider = NotifierProvider<TaxiFuelNotifier, double>(
+  TaxiFuelNotifier.new,
+);
 
 class ContingencyPctNotifier extends Notifier<double> {
   @override
   double build() => 5.0;
   void set(double val) => state = val;
 }
-final contingencyPctProvider = NotifierProvider<ContingencyPctNotifier, double>(ContingencyPctNotifier.new);
+
+final contingencyPctProvider = NotifierProvider<ContingencyPctNotifier, double>(
+  ContingencyPctNotifier.new,
+);
 
 class FinalReserveFuelNotifier extends Notifier<double> {
   @override
   double build() => 3600.0;
   void set(double val) => state = val;
 }
-final finalReserveFuelProvider = NotifierProvider<FinalReserveFuelNotifier, double>(FinalReserveFuelNotifier.new);
+
+final finalReserveFuelProvider =
+    NotifierProvider<FinalReserveFuelNotifier, double>(
+      FinalReserveFuelNotifier.new,
+    );
 
 /// Discretionary extra fuel a pilot chooses to load into the trim tanks (9,
 /// 10, 11) on top of the computed block fuel -- e.g. for a CG-driven
@@ -245,23 +300,33 @@ final finalReserveFuelProvider = NotifierProvider<FinalReserveFuelNotifier, doub
 class TrimTankFuelNotifier extends Notifier<double> {
   @override
   double build() => 0.0;
-  void set(double val) => state = val.clamp(0.0, ConcordeFuelSchematic.trimTankCapacityKg);
+  void set(double val) =>
+      state = val.clamp(0.0, ConcordeFuelSchematic.trimTankCapacityKg);
 }
-final trimTankFuelProvider = NotifierProvider<TrimTankFuelNotifier, double>(TrimTankFuelNotifier.new);
+
+final trimTankFuelProvider = NotifierProvider<TrimTankFuelNotifier, double>(
+  TrimTankFuelNotifier.new,
+);
 
 class ExtraFuelNotifier extends Notifier<double> {
   @override
   double build() => 0.0;
   void set(double val) => state = val;
 }
-final extraFuelProvider = NotifierProvider<ExtraFuelNotifier, double>(ExtraFuelNotifier.new);
+
+final extraFuelProvider = NotifierProvider<ExtraFuelNotifier, double>(
+  ExtraFuelNotifier.new,
+);
 
 class PaxCountNotifier extends Notifier<int> {
   @override
   int build() => 100;
   void set(int val) => state = val;
 }
-final paxCountProvider = NotifierProvider<PaxCountNotifier, int>(PaxCountNotifier.new);
+
+final paxCountProvider = NotifierProvider<PaxCountNotifier, int>(
+  PaxCountNotifier.new,
+);
 
 // --- Derived Providers ---
 
@@ -312,14 +377,16 @@ final fuelBreakdownProvider = Provider<BlockFuelBreakdown>((ref) {
   final contingency = ref.watch(contingencyPctProvider);
   final reserve = ref.watch(finalReserveFuelProvider);
   final altDist = ref.watch(alternateDistanceProvider);
-  
-  return ConcordeLogic.blockFuelKg(BlockFuelInputs(
-    tripKg: mission.tripKg,
-    taxiKg: taxi,
-    contingencyPct: contingency,
-    finalReserveKg: reserve,
-    alternateNm: altDist,
-  ));
+
+  return ConcordeLogic.blockFuelKg(
+    BlockFuelInputs(
+      tripKg: mission.tripKg,
+      taxiKg: taxi,
+      contingencyPct: contingency,
+      finalReserveKg: reserve,
+      alternateNm: altDist,
+    ),
+  );
 });
 
 final paxWeightProvider = Provider<double>((ref) {
@@ -366,49 +433,54 @@ class UseReheatTakeoffNotifier extends Notifier<bool> {
   bool build() => true;
   void set(bool val) => state = val;
 }
-final useReheatTakeoffProvider = NotifierProvider<UseReheatTakeoffNotifier, bool>(UseReheatTakeoffNotifier.new);
+
+final useReheatTakeoffProvider =
+    NotifierProvider<UseReheatTakeoffNotifier, bool>(
+      UseReheatTakeoffNotifier.new,
+    );
 
 final takeoffFeasibilityProvider = Provider<RunwayFeasibility?>((ref) {
   final runway = ref.watch(departureRunwayProvider);
   final weights = ref.watch(weightsProvider);
   final useReheat = ref.watch(useReheatTakeoffProvider);
   if (runway == null) return null;
-  
+
   final metarAsync = ref.watch(departureMetarFutureProvider);
   final metar = metarAsync.value ?? '';
-  
+
   final tempC = mp.MetarParser.parseTempC(metar);
   final parsedQnh = mp.MetarParser.parseQnh(metar);
   final parsedWind = mp.MetarParser.parseWind(metar);
-  
+
   double headwind = 0.0;
+  double crosswind = 0.0;
   final windDirection = parsedWind.windDirDeg;
   final windSpeed = parsedWind.windSpeedKt;
   if (windDirection != null && windSpeed != null) {
     final angleRad = (windDirection - runway.heading) * math.pi / 180.0;
     headwind = windSpeed * math.cos(angleRad);
+    crosswind = (windSpeed * math.sin(angleRad)).abs();
   }
-  
+
   MetarQnh? qnhInput;
   if (parsedQnh != null) {
-    qnhInput = MetarQnh(
-      unit: parsedQnh.unit,
-      value: parsedQnh.value,
-    );
+    qnhInput = MetarQnh(unit: parsedQnh.unit, value: parsedQnh.value);
   }
-  
+
   final env = RunwayEnvironmentInputs(
     runwayElevFt: runway.elevationFt?.toDouble(),
     qnh: qnhInput,
     oatC: tempC,
     headwindKt: headwind,
+    crosswindKt: crosswind,
   );
-  
+
   return ConcordeLogic.takeoffFeasibleM(
     runway.lengthM,
     weights['TOW']!,
     env: env,
     useReheat: useReheat,
+    runwayWidthFt: runway.widthFt,
   );
 });
 
@@ -428,19 +500,18 @@ final takeoffFeasibilityNoReheatProvider = Provider<RunwayFeasibility?>((ref) {
   final parsedWind = mp.MetarParser.parseWind(metar);
 
   double headwind = 0.0;
+  double crosswind = 0.0;
   final windDirection = parsedWind.windDirDeg;
   final windSpeed = parsedWind.windSpeedKt;
   if (windDirection != null && windSpeed != null) {
     final angleRad = (windDirection - runway.heading) * math.pi / 180.0;
     headwind = windSpeed * math.cos(angleRad);
+    crosswind = (windSpeed * math.sin(angleRad)).abs();
   }
 
   MetarQnh? qnhInput;
   if (parsedQnh != null) {
-    qnhInput = MetarQnh(
-      unit: parsedQnh.unit,
-      value: parsedQnh.value,
-    );
+    qnhInput = MetarQnh(unit: parsedQnh.unit, value: parsedQnh.value);
   }
 
   final env = RunwayEnvironmentInputs(
@@ -448,6 +519,7 @@ final takeoffFeasibilityNoReheatProvider = Provider<RunwayFeasibility?>((ref) {
     qnh: qnhInput,
     oatC: tempC,
     headwindKt: headwind,
+    crosswindKt: crosswind,
   );
 
   return ConcordeLogic.takeoffFeasibleM(
@@ -455,6 +527,7 @@ final takeoffFeasibilityNoReheatProvider = Provider<RunwayFeasibility?>((ref) {
     weights['TOW']!,
     env: env,
     useReheat: false,
+    runwayWidthFt: runway.widthFt,
   );
 });
 
@@ -462,41 +535,42 @@ final landingFeasibilityProvider = Provider<RunwayFeasibility?>((ref) {
   final runway = ref.watch(arrivalRunwayProvider);
   final weights = ref.watch(weightsProvider);
   if (runway == null) return null;
-  
+
   final metarAsync = ref.watch(arrivalMetarFutureProvider);
   final metar = metarAsync.value ?? '';
-  
+
   final tempC = mp.MetarParser.parseTempC(metar);
   final parsedQnh = mp.MetarParser.parseQnh(metar);
   final parsedWind = mp.MetarParser.parseWind(metar);
-  
+
   double headwind = 0.0;
+  double crosswind = 0.0;
   final windDirection = parsedWind.windDirDeg;
   final windSpeed = parsedWind.windSpeedKt;
   if (windDirection != null && windSpeed != null) {
     final angleRad = (windDirection - runway.heading) * math.pi / 180.0;
     headwind = windSpeed * math.cos(angleRad);
+    crosswind = (windSpeed * math.sin(angleRad)).abs();
   }
-  
+
   MetarQnh? qnhInput;
   if (parsedQnh != null) {
-    qnhInput = MetarQnh(
-      unit: parsedQnh.unit,
-      value: parsedQnh.value,
-    );
+    qnhInput = MetarQnh(unit: parsedQnh.unit, value: parsedQnh.value);
   }
-  
+
   final env = RunwayEnvironmentInputs(
     runwayElevFt: runway.elevationFt?.toDouble(),
     qnh: qnhInput,
     oatC: tempC,
     headwindKt: headwind,
+    crosswindKt: crosswind,
   );
-  
+
   return ConcordeLogic.landingFeasibleM(
-    runway.lengthM, 
-    weights['LW']!, 
+    runway.lengthM,
+    weights['LW']!,
     env: env,
+    runwayWidthFt: runway.widthFt,
   );
 });
 
@@ -510,10 +584,7 @@ class ChecklistNotifier extends Notifier<Map<String, bool>> {
   void resetAll() => state = {};
 
   void toggle(String itemId) {
-    state = {
-      ...state,
-      itemId: !(state[itemId] ?? false),
-    };
+    state = {...state, itemId: !(state[itemId] ?? false)};
   }
 
   void resetPhase(List<String> itemIds) {
@@ -524,8 +595,11 @@ class ChecklistNotifier extends Notifier<Map<String, bool>> {
     state = newState;
   }
 }
-final checklistProvider = NotifierProvider<ChecklistNotifier, Map<String, bool>>(ChecklistNotifier.new);
 
+final checklistProvider =
+    NotifierProvider<ChecklistNotifier, Map<String, bool>>(
+      ChecklistNotifier.new,
+    );
 
 // --- Theme Mode State ---
 class ThemeModeNotifier extends Notifier<ThemeMode> {

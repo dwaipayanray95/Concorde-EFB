@@ -106,12 +106,14 @@ class RunwayEnvironmentInputs {
   final MetarQnh? qnh;
   final double? oatC;
   final double? headwindKt;
+  final double? crosswindKt;
 
   const RunwayEnvironmentInputs({
     this.runwayElevFt,
     this.qnh,
     this.oatC,
     this.headwindKt,
+    this.crosswindKt,
   });
 }
 
@@ -131,6 +133,15 @@ class RunwayFeasibility {
   final Map<String, double> correctionBreakdownPct;
   final Map<String, dynamic> correctionInputs;
 
+  /// Independent hard limits from the BA Concorde Flying Manual Vol II
+  /// (Operating Limitations, 01.01.02) -- each defaults to true (not
+  /// violated) when the underlying data isn't available, so a runway
+  /// missing width data in the offline airport DB doesn't get flagged as
+  /// infeasible on absence of evidence.
+  final bool widthOk;
+  final bool altitudeOk;
+  final bool crosswindOk;
+
   const RunwayFeasibility({
     required this.baseRequiredLengthMEst,
     required this.requiredLengthMEst,
@@ -139,5 +150,8 @@ class RunwayFeasibility {
     required this.correctionFactor,
     required this.correctionBreakdownPct,
     required this.correctionInputs,
+    this.widthOk = true,
+    this.altitudeOk = true,
+    this.crosswindOk = true,
   });
 }
