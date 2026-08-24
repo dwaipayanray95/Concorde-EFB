@@ -4,296 +4,239 @@ This file is a high-context handoff for future coding agents working in this rep
 It captures what the app does, what has been built over time, where key logic lives,
 and what to watch before editing.
 
+**This file describes the current Flutter codebase.** The app was fully migrated off the
+original React/TypeScript/Tauri stack (see `public/changelog/entries.json` v3.1.20, 2026-06-30). There is
+no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not look for them.
+
 ## 1) Project Snapshot (current state)
 
 - Product: `Concorde EFB` (Electronic Flight Bag for DC Designs Concorde in MSFS 2020/2024).
-- Platforms:
-  - Web app (GitHub Pages).
-  - Desktop app (Tauri v2, Windows MSI target).
-- Current in-app version constants:
-  - `APP_VERSION = "2.0.2"` and `BUILD_MARKER = "281225-2"` in `src/ConcordeEFB.tsx`.
-- Tauri package version:
-  - `2.0.2` in `src-tauri/tauri.conf.json`.
-- Important version mismatch:
-  - `package.json` and `src-tauri/Cargo.toml` still show `1.1.0` (legacy value).
-  - Runtime UI + Tauri config show `2.0.2`.
-- Main implementation:
-  - `src/ConcordeEFB.tsx` (monolithic; UI + business logic + integrations + tests).
+- Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
+  present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
+- State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
+- Current version: `3.4.10+44` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+  `public/changelog/entries.json` in sync when cutting a release — README no longer carries its
+  own changelog, it just links to that page.
+- Theme system: unified light/dark `AppColors` (`lib/core/app_colors.dart`) resolved via
+  `context.colors`, flat Material cards (`lib/widgets/efb_flat_card.dart`), one font family
+  (JetBrains Mono via `lib/core/ui_text.dart`). The old glassmorphism system (`UiTokens`,
+  `EfbGlassContainer`, `AmbientGlow`) and Flight Monitor's separate dark cockpit palette
+  (`fm_theme.dart`) have been fully removed — if you see references to any of those in old docs,
+  they're stale.
 
 ## 2) What the App Does
 
-At a high level, the app plans Concorde flights with operationally useful estimates:
-
-- Flight planning:
-  - DEP/ARR/ALT ICAO input.
-  - Route input and route-distance estimation.
-  - Manual planned distance override (source of truth for calculations).
-  - Cruise FL handling with Concorde ceiling and Non-RVSM rules.
-  - SimBrief import for OFP data.
-- Fuel planning:
-  - Mission profile split into climb, accel, cruise-climb, and descent.
-  - Trip fuel, taxi, contingency, final reserve, alternate fuel.
-  - Optional trim tank fuel.
-  - Endurance vs ETE+reserves validation.
-- Performance and runway checks:
-  - Takeoff and landing required runway length estimates.
-  - Weight-sensitive speed references (`V1`, `VR`, `V2`, `VLS`, `VAPP`).
-  - METAR/elevation/weather-aware correction factors.
-- Weather/runway awareness:
-  - Fetches METAR with fallback source.
-  - Parses wind, QNH, temp, visibility, weather summary, and flight category.
-  - Computes runway-relative headwind/crosswind.
-  - Auto-picks longest runway (user can override).
-- Ops safety:
-  - Operational Alerts panel for fuel, alternate, weight-limit, runway, and tailwind risks.
-- Diagnostics:
-  - Built-in self-tests for core math and behavior sanity.
-- UX/system:
-  - Dark/light themes with persistence.
-  - Changelog and donate static pages.
-  - Tauri update availability check banner.
+- Flight planning: DEP/ARR/ALT ICAO input, route/planned-distance entry, cruise FL handling
+  (Concorde ceiling + Non-RVSM snapping), SimBrief OFP import.
+- Fuel planning: climb/accel/cruise-climb/descent mission profile, trip/taxi/contingency/final
+  reserve/alternate fuel, optional trim tank, endurance vs ETE+reserves validation.
+- Performance & runway checks: takeoff/landing required runway length, weight-scaled V1/VR/V2/
+  VLS/VAPP, METAR/elevation-aware correction factors, takeoff reheat (afterburner) toggle.
+- Weather/runway awareness: METAR fetch with fallback, wind/QNH/temp/visibility parsing,
+  runway-relative headwind/crosswind, longest-runway auto-pick (user-overridable).
+- Ops safety: Operational Alerts panel (fuel, alternate, weight-limit, runway, tailwind).
+- Checklists: interactive multi-phase checklists (Cold & Dark → Cockpit Prep → Engine Start →
+  Takeoff → Decel & Descent → Approach → Landing → After Landing/Shutdown), with live
+  takeoff/landing speeds plumbed into the relevant steps.
+- Flight Monitor: live SimConnect telemetry over a local WebSocket bridge — EICAS-style engine
+  readouts, fuel/CG envelope, PFD pitch/roll, droop nose/gear state, flight recording + history
+  playback timeline.
+- UX/system: persisted light/dark theme toggle, changelog/donate static pages, GitHub Releases
+  update-availability banner, first-close flightsim.to rating prompt.
 
 ## 3) Core Behavior and Formula Summary
 
-These are heuristic/indicative models, not certified performance data.
+These are heuristic/indicative models, not certified performance data. Core constants live in
+`lib/core/concorde_constants.dart`; the math lives in `lib/core/concorde_logic.dart`.
 
-- Core constants in `src/ConcordeEFB.tsx`:
-  - MTOW `185,066 kg`
-  - MLW `111,130 kg`
-  - Fuel capacity `95,681 kg`
-  - OEW `78,700 kg`
-  - Full pax count `100`
-  - Default pax mass `84 kg`
-  - Nominal cruise TAS `1164 kt` (Mach `2.04`)
-  - Base burn `24.45 kg/NM`
-  - Climb burn factor `1.7`
-  - Descent burn factor `0.5`
-  - Reheat cap `25 min`
-  - Runway references:
-    - Takeoff: `11800 ft` converted to meters (`~3597 m`) at MTOW baseline.
-    - Landing: `2200 m` at MLW baseline.
-
-- Mission profile (`buildCruiseMissionProfile()`):
-  - Builds climb, optional accel, segmented cruise-climb, and descent.
-  - Returns total time, trip fuel, average cruise TAS, and average cruise burn.
-
-- Cruise FL logic:
-  - FL clamped to `[0, 590]`.
-  - Above FL410, snapped to Non-RVSM sets:
-    - Eastbound: `410, 450, 490, 530, 570`
-    - Westbound: `430, 470, 510, 550, 590`
-  - Direction inferred from DEP->ARR initial bearing.
-  - Auto-FL recommendation uses planned distance and minimum cruise-time targets.
-
-- Runway feasibility:
-  - Takeoff/landing requirement scales with weight + weather correction.
-  - Correction inputs:
-    - pressure altitude (QNH + runway elevation)
-    - ISA temperature deviation
-    - headwind/tailwind component
-  - Tailwind penalties are intentionally stronger than headwind credits.
-
-- Fuel and alerts:
-  - `Total fuel required = Block fuel + Trim fuel`.
-  - Endurance compares airborne fuel endurance against `ETE + reserves`.
-  - Alerts include:
-    - endurance deficit
-    - alternate risk
-    - MTOW/MLW exceedance
-    - takeoff/landing runway shortfall
-    - significant tailwind warning
+- MTOW `185,066 kg`, MLW `111,130 kg`, fuel capacity `95,681 kg`, OEW `78,700 kg`.
+- Full pax count `100`, default pax mass `84 kg`.
+- Nominal cruise TAS `1164 kt` (Mach `2.04`), base burn `24.45 kg/NM`, climb burn factor `1.7`,
+  descent burn factor `0.5`, reheat cap `25 min`.
+- Runway references: takeoff `11800 ft` (~3597 m) at MTOW baseline; landing `2200 m` at MLW
+  baseline.
+- Cruise FL: clamped to `[0, 590]`; above FL410 snapped to Non-RVSM sets (Eastbound `410, 450,
+  490, 530, 570`; Westbound `430, 470, 510, 550, 590`), direction inferred from DEP→ARR bearing.
+- Runway feasibility scales with weight + weather correction (pressure altitude, ISA temp
+  deviation, headwind/tailwind); tailwind penalties are intentionally stronger than headwind
+  credits.
+- Total fuel required = block fuel + trim fuel. Endurance compares airborne fuel endurance
+  against ETE + reserves.
 
 ## 4) External Data and Integrations
 
-- Runtime CSV data sources:
+- Runtime CSV data sources (fetched via `lib/services/airport_database_service.dart`, cached
+  off `Documents` on Windows — see `f2b19ef`):
   - `https://raw.githubusercontent.com/davidmegginson/ourairports-data/master/airports.csv`
   - `https://raw.githubusercontent.com/davidmegginson/ourairports-data/master/runways.csv`
   - `https://raw.githubusercontent.com/davidmegginson/ourairports-data/master/navaids.csv`
-
-- METAR fetch:
-  - Primary: `https://aviationweather.gov/api/data/metar?ids=<ICAO>&format=raw`
-  - Fallback: `https://metar.vatsim.net/<ICAO>`
-
-- SimBrief import:
-  - `https://www.simbrief.com/api/xml.fetcher.php?username=<user>&json=1`
-  - Parses ICAOs, runways, route, alternate, distance, cruise FL, METAR lines,
-    callsign, registration, pax count, and pax weight.
-
-- Tauri updater:
-  - Endpoint in `src-tauri/tauri.conf.json`:
-    - `https://github.com/dwaipayanray95/Concorde-EFB/releases/latest/download/latest.json`
-  - UI checks availability and shows banner/version, but does not auto-install.
+- METAR fetch (`lib/services/metar_service.dart`): primary
+  `https://aviationweather.gov/api/data/metar?ids=<ICAO>&format=raw`, fallback
+  `https://metar.vatsim.net/<ICAO>`.
+- SimBrief import (`lib/services/simbrief_service.dart`):
+  `https://www.simbrief.com/api/xml.fetcher.php?username=<user>&json=1`.
+- Flight Monitor telemetry bridge:
+  - `lib/core/sim_bridge_launcher.dart` launches the bundled PyInstaller build of
+    `tools/simbridge/msfs_bridge.py` (`windows/simbridge/msfs_bridge/msfs_bridge.exe` relative to
+    the app executable) so users don't need Python installed.
+  - The bridge exposes telemetry over `ws://localhost:8082`; the app connects via
+    `lib/features/flight_monitor/data/services/websocket_client.dart`.
+  - `SimBridgeLauncher.startWatching()` polls `tasklist` every 5s for MSFS's own process
+    (`FlightSimulator*.exe`, covers 2020/2024) and force-restarts the bridge the moment it
+    appears — fixes stale/stuck SimConnect connections when the app is opened before the sim. A
+    reduced time-based watchdog in `telemetry_provider.dart` is a secondary safety net only, and
+    only ever touches a bridge process this launcher spawned itself (never an externally/manually
+    run dev bridge).
+- Update check: GitHub Releases API polling, surfaced via `app_header.dart`'s update banner.
 
 ## 5) File Map (where to edit what)
 
-- `src/ConcordeEFB.tsx`
-  - Main app UI and all planner logic.
-  - First file to inspect for feature edits and bug fixes.
-- `src/App.tsx`
-  - Thin wrapper that renders `ConcordeEFB`.
-- `src/main.tsx`
-  - React root mount.
-- `src/index.css`
-  - Theme and shared component styling.
-- `src/uiTokens.ts`
-  - Shared class tokens for UI sections.
-- `public/changelog/entries.json`
-  - Raw changelog source of truth (changelog page data).
-- `public/changelog/index.html`
-  - Standalone changelog viewer.
-- `public/donate/index.html`
-  - Standalone donation page.
-- `src-tauri/tauri.conf.json`
-  - Desktop metadata, updater endpoint, bundling target, window config.
-- `.github/workflows/pages.yml`
-  - GitHub Pages deployment for `main` (stable) and `beta`.
-- `.github/workflows/tauri-release.yml`
-  - Windows Tauri release workflow for `v*` tags.
+- `lib/main.dart` — app entry point: AdMob init, `SimBridgeLauncher.start()` +
+  `startWatching()`, window manager setup, theme wiring (`theme`/`darkTheme`/`themeMode`),
+  `ProviderScope` root.
+- `lib/core/app_colors.dart` — the theme system: `AppColors` `ThemeExtension` with `light`/`dark`
+  static instances, resolved via the `context.colors` extension. This is the only place color
+  values should be defined; everything else reads through it.
+- `lib/core/ui_text.dart` — shared `uiText(context, ...)` JetBrains Mono text style helper.
+- `lib/core/sim_bridge_launcher.dart` — SimConnect bridge process lifecycle (start/stop/restart/
+  watch). See section 4.
+- `lib/core/concorde_constants.dart` / `concorde_logic.dart` — performance/fuel model constants
+  and math.
+- `lib/core/metar_parser.dart` — METAR string parsing.
+- `lib/widgets/efb_flat_card.dart` — shared flat Material card (replaces the old glass container;
+  do not reintroduce blur/glassmorphism here).
+- `lib/widgets/` (rest) — `efb_card.dart` (titled card wrapper), `efb_text_field.dart`,
+  `efb_ad_banner.dart`, `wind_arrow.dart`, `efb_launches_badge.dart`, `entrance_fader.dart`,
+  `smooth_scroll_wrapper.dart`.
+- `lib/screens/home_screen.dart` — main dashboard/tab shell.
+- `lib/screens/widgets/app_header.dart` — logo/title row, theme toggle, support/Discord links,
+  update banner.
+- `lib/screens/widgets/app_footer.dart` — footer.
+- `lib/screens/tabs/flight_planner/` — `flight_plan_section.dart`, `cruise_fuel_section.dart`,
+  `performance_calculator_section.dart` (the section this app's design language originated from).
+- `lib/screens/tabs/checklists_tab.dart` — interactive checklist UI. `lib/models/checklist_item.dart`
+  is the data model; `lib/data/checklist_data.dart` is the actual checklist content (phase/step
+  text) — aligned with the Concorde manual's actual procedures as of `2041cd7`, edit steps there.
+- `lib/screens/tabs/flight_monitor_tab.dart` — Flight Monitor composition shell.
+- `lib/features/flight_monitor/presentation/controllers/telemetry_provider.dart` — the
+  `FlightMonitorNotifier`: websocket connection state, recording, playback timeline, watchdog.
+- `lib/features/flight_monitor/presentation/widgets/flight_monitor/` — cockpit UI widgets (fuel
+  schematic, PFD, EICAS-style support cards, toolbar, logbook).
+- `lib/features/flight_monitor/data/services/` — `websocket_client.dart`,
+  `flight_recorder_service.dart` (flight log persistence/playback).
+- `lib/features/flight_monitor/data/models/telemetry_model.dart` — telemetry frame shape.
+- `lib/providers/efb_providers.dart` — global Riverpod providers (theme mode, SimBrief user,
+  departure/arrival ICAO, etc.) — matches the `Notifier` + `SharedPreferences`-persisted pattern
+  used by `themeModeProvider`.
+- `tools/simbridge/msfs_bridge.py` — source for the bundled SimConnect bridge exe (PyInstaller
+  build target referenced by `sim_bridge_launcher.dart`).
+- `public/changelog/entries.json` — changelog source of truth (drives the standalone changelog
+  page and update banner text).
+- `.github/workflows/pages.yml` — GitHub Pages deployment (marketing site + changelog).
+- `.github/workflows/beta-build.yml`, `.github/workflows/release-build.yml` — Flutter build/
+  release pipelines (Windows installer via Inno Setup, macOS DMG, Android APK).
 
 ## 6) Build, Run, and Deploy Commands
 
-- Local dev (web): `npm run dev`
-- Typecheck: `npm run typecheck`
-- Build targets:
-  - `npm run build:web` for GitHub Pages base `/Concorde-EFB/`
-  - `npm run build:beta` for beta subpath `/Concorde-EFB/beta/`
-  - `npm run build:tauri` for desktop relative base `./`
-  - `npm run build` currently aliases `build:tauri`
-- Tauri CLI passthrough: `npm run tauri`
-- Changelog seed from git log: `npm run changelog:seed`
+- Get deps: `flutter pub get`
+- Run (desktop): `flutter run -d windows` (or `-d macos`)
+- Analyze: `flutter analyze` — must stay clean (no issues), especially after any theme/dead-code
+  removal pass.
+- Test: `flutter test`
+- Build Windows release: `flutter build windows`
+- Build macOS release: `flutter build macos`
+- Build Android: `flutter build apk` / `flutter build appbundle`
+- The bundled bridge exe under `windows/simbridge/` is a separate PyInstaller build of
+  `tools/simbridge/msfs_bridge.py` — it is not rebuilt automatically by `flutter build`; check the
+  release workflow (`.github/workflows/release-build.yml`) for how/when it's regenerated and
+  bundled.
 
 ## 7) Completed Features and Timeline
 
-This section summarizes what has been built. Full raw history is in:
-- `public/changelog/entries.json`
-- `README.md` changelog
+Full raw history is in `public/changelog/entries.json` (the single source of truth — README only
+links to it) — this section is a summary, not authoritative.
 
-### Early foundation (v0.10 -> v0.71)
+### Pre-Flutter (React/TypeScript/Tauri era, v0.10 → v2.1.0)
 
-- v0.10:
-  - Initial project skeleton and first calculations.
-- v0.20:
-  - Prototype UI and first-pass block-fuel math.
-- v0.40:
-  - Great-circle distance and altitude-sensitive fuel heuristic foundations.
-- v0.60:
-  - Initial route tokenization approach (later superseded by manual-distance-led flow).
-- v0.70:
-  - Manual planned distance model.
-  - Departure/landing feasibility with reasons.
-  - Metric unit normalization.
-  - Runway wind components.
-  - Diagnostics/self-test framework.
-- v0.71:
-  - METAR fetch (AviationWeather + VATSIM fallback).
-  - Longest runway auto-selection.
+Superseded entirely. See git history / README changelog for detail if archaeology is needed; no
+code from this era remains in the repo.
 
-### Performance and ops maturity (v0.75 -> v0.85)
+### v3.1.20 — 2026-06-30 — Flutter Migration
 
-- v0.75:
-  - Takeoff feasibility moved to actual computed TOW.
-  - Endurance check tied to ETE + reserves.
-  - Weight-scaled speed references (`V1/VR/V2`, `VLS/VAPP`).
-  - Trim tank integration in total fuel required.
-  - Alternate ARR->ALT fuel integration.
-- v0.76 to v0.78:
-  - Runtime fixes (regex issue, JSX issue, export/white-screen issues).
-- v0.79 to v0.82:
-  - GitHub Pages pipeline stabilization and changelog hygiene.
-- v0.83:
-  - Runway selection fixes.
-  - Fuel-capacity warning.
-  - Landing speed heuristic tuning.
-- v0.84:
-  - Eastbound/westbound inference and Non-RVSM validation.
-- v0.85:
-  - Auto cruise FL recommendation.
-  - FL590 cap and snapping behavior tightened.
+Migrated the entire application core from React/TypeScript/Tauri to a unified Flutter codebase:
+interactive multi-phase checklists with plumbed takeoff/landing speeds, takeoff reheat toggle,
+Alternate (ALT) quick-input, local SimBrief username persistence, GitHub Releases update tracker,
+first-close flightsim.to rating prompt, UPI/Patreon donation modal, GitHub Actions release
+pipeline (APK/DMG/Windows EXE via Inno Setup).
 
-### Transition to desktop + SimBrief expansion (v1.x period, Dec 2025)
+### Post-migration Flutter work (unreleased / rolling, since v3.1.20)
 
-- Tauri migration and desktop packaging stabilization.
-- Route paste + estimated distance workflow improvements.
-- SimBrief import added and expanded:
-  - DEP/ARR/ALT, route, runways, METAR fill, callsign/registration, pax extraction.
-- Planned distance protection:
-  - Manual planned distance no longer overwritten by route auto-estimates.
-- CI and deploy fixes:
-  - Build/deploy hardening across Pages and desktop release workflows.
+- SimConnect telemetry bridge (`sim_bridge_launcher.dart` + `tools/simbridge/msfs_bridge.py`)
+  bundled so Flight Monitor works without users installing Python.
+- Bridge auto-restart on MSFS process detection (`SimBridgeLauncher.startWatching()`) — fixes
+  stale connections when the app is opened well before the sim.
+- Bridge launch-failure surfacing in the Flight Monitor UI (distinguishing "exe never launched"
+  from "bridge up, waiting on SimConnect").
+- Airport DB cache moved off `Documents` on Windows.
+- Eager default-cruise-FL snapping to known flight direction.
+- App-wide retheme: unified `AppColors` light/dark theme system, flat Material cards
+  (`EfbFlatCard`) replacing glassmorphism (`EfbGlassContainer`/`AmbientGlow`, both deleted),
+  single JetBrains Mono font everywhere, Flight Monitor's separate dark cockpit palette
+  (`fm_theme.dart`) removed and folded into the same system.
+- Real app icon + polished Windows uninstaller metadata.
+- Checklist content aligned with the Concorde manual's actual procedures; added a landing phase.
+- Landing-page screenshot showcase carousel + Discord link (web/marketing site).
 
-### v2 cycle
-
-- v2.0.1 (2025-12-28):
-  - Major UI overhaul and readability improvements.
-  - Light mode contrast pass + mode toggle.
-  - Expanded SimBrief import coverage.
-  - Route planning and distance workflow refinements.
-  - Performance/fuel/METAR UX expansion.
-  - Diagnostics retained and expanded.
-
-- v2.0.2 (2025-12-28):
-  - In-app Tauri updater notification banner.
-  - Updater permissions and endpoint configuration.
-  - Input focus-loss fix.
-  - Build marker update to `281225-2`.
-
-### Unreleased (logged in changelog as of 2026-02-08)
-
-- Cruise-climb mission profile now directly drives ETE/trip/endurance calculations.
-- METAR/elevation-aware takeoff/landing requirement corrections.
-- Operational Alerts panel for fuel, alternate, weight, runway, and tailwind constraints.
-- Integrated high-contrast electric-cyan LCD Cockpit telemetry screen inside `concorde_lcd_panel.dart` displaying real-time engine EICAS, fuel, PFD pitch/roll, and Concorde droop nose/gear.
-- Implemented uniform row height snapping across the flight monitor grid using IntrinsicHeight rows.
-
-### Commit-wave notes from raw changelog
-
-- 2025-12-24:
-  - FL editing and Non-RVSM behavior refinements; FL590 clamp fixes.
-- 2025-12-25:
-  - Heavy build/deploy hardening; route distance and token parsing improvements; Tauri config cleanup.
-- 2025-12-26:
-  - SimBrief import branch merged and expanded rapidly (route tokens, METAR autofill, callsign/registration split).
-- 2025-12-27:
-  - Performance calculator and runway safety UX pass.
-- 2025-12-28:
-  - UI polish, light mode, release prep, updater integration.
-- 2026-02-08:
-  - New operational model and alerts tracked as unreleased.
+Keep this list rolling forward — append new notable changes here as they land, don't let it go
+stale like the old React-era version of this file did.
 
 ## 8) Known Constraints and Gotchas
 
-- `src/ConcordeEFB.tsx` is large and tightly coupled; local edits can ripple.
-- Planned Distance is intentionally the source of truth for performance/fuel math.
-- Route-estimated and SimBrief distances are context signals; manual distance remains authoritative.
-- Non-RVSM snapping above FL410 is intentional and covered by self-tests.
-- Runtime nav DB fetch depends on network/CORS availability; offline behavior is limited.
-- `src/App.css` and `src/vite.config.ts` appear legacy; verify real usage before cleanup.
-- Version values are duplicated across files and can drift (`src/ConcordeEFB.tsx`, `tauri.conf`, `package.json`, `Cargo.toml`).
+- The bundled `msfs_bridge.exe` is unsigned (PyInstaller) — antivirus/SmartScreen can quarantine
+  it, which looks identical to "bridge up, just waiting on SimConnect" as a bare disconnected
+  state unless `SimBridgeLauncher.status`/`lastError` is surfaced in the UI. Preserve that
+  distinction if touching this code path.
+- `SimBridgeLauncher.restart()` exists because the underlying Python SimConnect wrapper can get
+  stuck if it first attempts to connect before MSFS is running — a fresh OS process is the actual
+  fix, not a retry within the same process.
+- `SimBridgeLauncher` only ever manages a process it spawned itself (`_process`) — never touch or
+  kill an externally/manually run dev bridge (`SimBridgeStatus.alreadyRunning`).
+- Windows-only features (`tasklist` polling, the bridge exe path resolution) are gated behind
+  `defaultTargetPlatform == TargetPlatform.windows` — don't assume they run on macOS/Android/web.
+- Runtime nav DB fetch depends on network availability; offline behavior is limited.
+- Version is tracked in one place now (`pubspec.yaml`'s `version:`), unlike the old React era
+  where it was duplicated across 4 files.
+- All colors must resolve through `context.colors` (`AppColors`) — don't reintroduce hardcoded
+  `Color(0x...)` literals or a static token class; that's exactly what was just removed.
 
 ## 9) Agent Checklist Before and After Changes
 
 ### Before coding
 
-- Locate affected logic in `src/ConcordeEFB.tsx` and inspect nearby derived-state/useEffect interactions.
-- Confirm whether the change affects both web and desktop base-path behavior.
-- Check if change affects release-visible strings, versions, or changelog surfaces.
+- Locate affected logic under the relevant `lib/` subtree (section 5 file map).
+- If touching UI, confirm colors/fonts route through `context.colors` / `uiText()`, not hardcoded
+  values or a reintroduced static token class.
+- If touching `SimBridgeLauncher` or `telemetry_provider.dart`, re-read the "why" comments there
+  first — the restart/watchdog logic encodes non-obvious SimConnect behavior.
+- Check if the change affects release-visible strings, the version number, or changelog surfaces.
 
 ### After coding
 
-- Run at least `npm run typecheck`.
-- Build target(s):
-  - `npm run build:web` for web-facing edits.
-  - `npm run build:tauri` for desktop-facing edits.
-- If behavior changed for users, update `public/changelog/entries.json`.
-- If version/build marker changed, sync:
-  - `src/ConcordeEFB.tsx` (`APP_VERSION`, `BUILD_MARKER`)
-  - `src-tauri/tauri.conf.json`
-  - `README.md` version/changelog section
+- Run `flutter analyze` — must stay clean.
+- Run `flutter test`.
+- For UI changes, run the app (`flutter run -d windows`) and visually verify in both light and
+  dark mode before reporting done.
+- If behavior changed for users, update `public/changelog/entries.json` (the sole changelog —
+  README only links to it, don't add version history back into README).
+- If the version changed, sync `pubspec.yaml`.
+- Update this section (7) with a one-line summary of what landed, so it doesn't go stale again.
 
 ## 10) Source-of-Truth References
 
-- Product behavior: `src/ConcordeEFB.tsx`
+- Product behavior: `lib/core/concorde_logic.dart`, `lib/core/concorde_constants.dart`
+- Theme system: `lib/core/app_colors.dart`
 - Changelog history: `public/changelog/entries.json`
 - Human-readable overview: `README.md`
 - Web deployment pipeline: `.github/workflows/pages.yml`
-- Desktop release pipeline: `.github/workflows/tauri-release.yml`
+- Desktop/mobile release pipelines: `.github/workflows/beta-build.yml`,
+  `.github/workflows/release-build.yml`

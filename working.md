@@ -1,34 +1,63 @@
-# Working Context - Concorde EFB (Flutter Migration)
+# Working Context - Concorde EFB
 
-This file tracks the active tasks, architecture, and current state of the Concorde EFB project for development agents.
+This file tracks the active tasks, architecture, and current state of the Concorde EFB project for
+development agents. Keep it updated right before ending a turn so subsequent agents can seamlessly
+pick up.
 
 ## 1. Project Overview & Current State
-The project is a **Flutter-based rewrite/migration** of the Concorde Electronic Flight Bag (EFB), originally built in React/TypeScript with Tauri.
-* **Platform Support**: Supports Web (GitHub Pages), Desktop (Windows/macOS/Linux via Flutter window manager), and Mobile (Android/iOS with AdMob integration).
-* **Active Branch**: `flutter`
-* **Current Core files**:
-  * [lib/main.dart](file:///E:/VSCODE/Concorde-EFB/lib/main.dart) - Application entry point. Sets up the window manager, AdMob, theme, and wraps the app in a Riverpod `ProviderScope`.
-  * [lib/core/ui_tokens.dart](file:///E:/VSCODE/Concorde-EFB/lib/core/ui_tokens.dart) - Custom UI styling constants (colors, margins, shapes).
-  * [lib/screens/home_screen.dart](file:///E:/VSCODE/Concorde-EFB/lib/screens/home_screen.dart) - Main dashboard layout.
-  * [lib/services/](file:///E:/VSCODE/Concorde-EFB/lib/services/) - Contains APIs for SimBrief import, METAR data fetches, etc.
-  * [lib/features/flight_monitor/](file:///E:/VSCODE/Concorde-EFB/lib/features/flight_monitor/) - SimConnect flight monitor including a real-time CG envelope widget (`CgEnvelopeWidget`).
 
-## 2. Recent Actions & Commits
-* Ran `git reset --hard origin/flutter` and `git pull` to synchronize with upstream commits.
-* Resolved upstream dependencies (`fl_chart` / packaging configurations).
-* Fixed warning issues in [lib/providers/efb_providers.dart](file:///E:/VSCODE/Concorde-EFB/lib/providers/efb_providers.dart) related to redundant null checks on non-nullable `runway.heading`.
-* Reduced the hover border opacity and glow shadow spread/blur in [lib/widgets/efb_glass_container.dart](file:///E:/VSCODE/Concorde-EFB/lib/widgets/efb_glass_container.dart) to make hover highlight on cards subtle.
-* Fixed a large commit push failure by resetting the local commit, adding `node_modules/` and `src-tauri/target/` build files to [.gitignore](file:///E:/VSCODE/Concorde-EFB/.gitignore), and pushed a clean, light commit successfully.
-* Added 'VIEW CHANGELOG' footer link and made the bottom-right version badge clickable (attaching an external launch icon) pointing to the GitHub Pages hosted changelog.
-* Updated the changelog data file [public/changelog/entries.json](file:///E:/VSCODE/Concorde-EFB/public/changelog/entries.json) with Release v3.2.0 entries using the existing JSON schema.
-* Updated [.github/workflows/pages.yml](file:///E:/VSCODE/Concorde-EFB/.github/workflows/pages.yml) to deploy only the static changelog files (to both root and `/changelog/` paths) when pushing to the `flutter` branch instead of building the whole React app.
-* Confirmed that `flutter analyze` runs with **No issues found!**
+The Flutter migration (originally tracked here as in-progress) is complete and has been the sole
+codebase for a while — there is no React/TypeScript/Tauri code left in this repo. See
+[AGENTS.md](AGENTS.md) for the full architecture reference; this file only tracks *current, active*
+work.
+
+* **Platform support**: Windows desktop (primary), macOS packaging, Android (AdMob), Web (GitHub
+  Pages — marketing/changelog site only, not the full app).
+* **Branch**: `main` (the old `flutter` migration branch has been merged/retired).
+* **Version**: `3.4.10+44` (`pubspec.yaml`).
+* **Theme**: app-wide light/dark retheme (unified `AppColors`, flat Material cards, single
+  JetBrains Mono font) is complete — see AGENTS.md §7 for what changed and §8 for the "always
+  route colors through `context.colors`" rule going forward.
+
+## 2. Recent Actions & Commits (most recent first)
+
+* Added a screenshot showcase carousel to the marketing landing page.
+* Added a Discord link to the website nav/footer, and an in-app Discord invite.
+* `SimBridgeLauncher.startWatching()`: poll for MSFS's own process every 5s and force-restart the
+  telemetry bridge the moment it's detected running — fixes stale SimConnect connections when the
+  app is opened well before the sim (see AGENTS.md §4 and §8 for the underlying "why").
+* Aligned in-app checklist content with the Concorde manual's actual procedures; added a landing
+  phase (`lib/data/checklist_data.dart`).
+* Removed the disclaimer footer from the planner and monitor tabs.
+* Fixed broken scrolling in the checklist tab.
+* Moved the airport DB cache off `Documents` on Windows.
+* Eagerly snap the default cruise FL to the known flight direction.
+* Surfaced SimConnect bridge launch failures in the Flight Monitor UI (distinguishing "exe never
+  launched" from "bridge up, waiting on SimConnect" — see `SimBridgeStatus` in
+  `lib/core/sim_bridge_launcher.dart`).
+* Wired the real app icon and polished Windows uninstaller metadata.
+* Completed the app-wide retheme: unified `AppColors` (light/dark), flat Material cards
+  (`EfbFlatCard`) replacing the old glassmorphism system, single JetBrains Mono font throughout —
+  `UiTokens`, `EfbGlassContainer`, `AmbientGlow`, and Flight Monitor's separate `fm_theme.dart`
+  dark cockpit palette were all deleted as part of this, not left dormant.
 
 ## 3. Immediate Next Steps
-* Monitor the integration of the flight monitor features with MSFS SimConnect.
-* Continue styling and verifying page-by-page parity with original React/Tauri functionality.
-* Run tests to verify logic models and fuel/performance estimations.
+
+* No active in-progress task at the moment — check with the user before starting new work.
+* General ongoing watch items: monitor SimConnect bridge reliability across MSFS 2020/2024 and
+  Steam/MS Store variants; continue verifying checklist parity against the real Concorde manual as
+  more procedures are added; visually spot-check new UI in both light and dark mode before calling
+  a UI change done.
 
 ## 4. Key Rules
-* Always refer to the original React version constraints (`src/ConcordeEFB.tsx`) and rule constraints in [AGENTS.md](file:///E:/VSCODE/Concorde-EFB/AGENTS.md).
-* Keep this `working.md` file updated right before ending a quota/turn so subsequent agents can seamlessly pick up.
+
+* Read [AGENTS.md](AGENTS.md) first for architecture, file map, and known gotchas — this file is
+  only a rolling activity log, not the source of truth for how the app works.
+* All colors must resolve through `context.colors` (`lib/core/app_colors.dart`) — never reintroduce
+  hardcoded `Color(0x...)` literals or a static token class.
+* `SimBridgeLauncher` only ever manages a bridge process it spawned itself — never touch an
+  externally/manually run dev bridge.
+* Run `flutter analyze` (must stay clean) and `flutter test` after changes; visually verify UI
+  changes in the running app before reporting done.
+* Update `public/changelog/entries.json` when user-visible behavior changes — it's the sole
+  changelog now; README only links to it, don't reintroduce version history there.
