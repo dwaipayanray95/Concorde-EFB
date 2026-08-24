@@ -350,6 +350,12 @@
         border: 1px solid var(--accent);
       }
 
+      .download-badge.beta {
+        background: rgba(251, 191, 36, 0.12);
+        color: #fbbf24;
+        border: 1px solid #fbbf24;
+      }
+
       .download-info h4 {
         margin: 0 0 2px 0;
         font-size: 13px;
@@ -679,6 +685,7 @@
           <span>Concorde EFB</span>
         </div>
         <div class="nav-links">
+          <a href="./downloads/">Downloads</a>
           <a href="./changelog/">Changelog</a>
           <a href="./donate/">Donate</a>
           <a href="https://github.com/dwaipayanray95/Concorde-EFB" target="_blank" rel="noreferrer">GitHub</a>
@@ -699,7 +706,7 @@
             all in one desktop app.
           </p>
           <div class="hero-cta">
-            <a class="btn btn-primary" href="https://github.com/dwaipayanray95/Concorde-EFB/releases" target="_blank" rel="noreferrer">Download Latest Release</a>
+            <a class="btn btn-primary" id="hero-download-btn" href="./downloads/">Download Latest Release</a>
             <a class="btn btn-ghost" href="./changelog/">View Changelog</a>
           </div>
         </div>
@@ -866,6 +873,7 @@
 
       <footer class="footer">
         <span>Concorde EFB is an unofficial fan project for the DC Designs Concorde. Not affiliated with Airbus or British Airways.</span>
+        <a href="./downloads/">All Downloads</a>
         <a href="https://github.com/dwaipayanray95/Concorde-EFB" target="_blank" rel="noreferrer">Source on GitHub</a>
         <a href="https://discord.gg/xe49YpczpP" target="_blank" rel="noreferrer">Join Discord</a>
       </footer>
@@ -887,12 +895,29 @@
     </div>
 
     <script>
+      // Finds the .exe installer asset on a release, for a direct download
+      // link instead of sending people to GitHub's release page.
+      const findInstallerAsset = (release) =>
+        (Array.isArray(release.assets) &&
+          release.assets.find((a) => a.name && a.name.toLowerCase().endsWith(".exe"))) ||
+        null;
+
       const fetchReleases = () => {
         const downloadsContainer = document.getElementById("downloads-list");
-        fetch("https://api.github.com/repos/dwaipayanray95/Concorde-EFB/releases")
+        const heroBtn = document.getElementById("hero-download-btn");
+        fetch("https://api.github.com/repos/dwaipayanray95/Concorde-EFB/releases?per_page=20")
           .then((res) => (res.ok ? res.json() : []))
           .then((releases) => {
-            if (!Array.isArray(releases) || releases.length === 0) {
+            if (!Array.isArray(releases)) releases = [];
+            const visible = releases.filter((r) => !r.draft);
+            // Releases come back newest-first regardless of channel, so the
+            // very first entry isn't necessarily a stable release -- find
+            // the newest of each channel explicitly instead of assuming
+            // releases[0] is the one to feature.
+            const latestStable = visible.find((r) => !r.prerelease) || null;
+            const latestBeta = visible.find((r) => r.prerelease) || null;
+
+            if (!latestStable && !latestBeta) {
               downloadsContainer.innerHTML = `
                 <div class="download-item stable-release">
                   <div class="download-badge stable">Stable</div>
@@ -900,34 +925,59 @@
                     <h4>Concorde EFB Releases</h4>
                     <p>Track updates and download installers</p>
                   </div>
-                  <a href="https://github.com/dwaipayanray95/Concorde-EFB/releases" target="_blank" class="btn btn-primary">View on GitHub</a>
+                  <a href="./downloads/" class="btn btn-primary">View Downloads</a>
                 </div>
               `;
               return;
             }
 
-            const latest = releases[0];
-            const isBeta = latest.prerelease;
-            const badgeClass = isBeta ? "beta" : "stable";
-            const badgeText = isBeta ? "Beta / Pre-Release" : "Latest Release";
+            const stableAsset = latestStable ? findInstallerAsset(latestStable) : null;
+            if (heroBtn && stableAsset) {
+              heroBtn.href = stableAsset.browser_download_url;
+            }
+
+            const stableBlock = latestStable
+              ? `
+                <div class="download-badge stable">Latest Release</div>
+                <div class="download-info" style="margin-top: 8px; margin-bottom: 8px;">
+                  <h4 style="font-size: 15px; font-weight: 700; color: white;">${latestStable.name || latestStable.tag_name}</h4>
+                  <p>Released on ${new Date(latestStable.published_at).toLocaleDateString()}</p>
+                </div>
+                <div style="display: flex; gap: 8px; width: 100%; margin-top: 4px;">
+                  <a href="${stableAsset ? stableAsset.browser_download_url : latestStable.html_url}" class="btn btn-primary" style="flex: 1; text-align: center;">Get Latest Version</a>
+                  <a href="./downloads/" class="btn btn-ghost" style="flex: 1; text-align: center;">All Releases &rarr;</a>
+                </div>
+              `
+              : `
+                <div class="download-badge stable">Stable</div>
+                <div class="download-info" style="margin-top: 8px; margin-bottom: 8px;">
+                  <p>No stable release published yet -- try the beta below.</p>
+                </div>
+              `;
+
+            const betaBlock = latestBeta
+              ? `
+                <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--stroke);">
+                  <div class="download-badge beta">Beta available</div>
+                  <div class="download-info" style="margin-top: 8px; margin-bottom: 8px;">
+                    <h4 style="font-size: 13px; font-weight: 700; color: white;">${latestBeta.name || latestBeta.tag_name}</h4>
+                    <p>Test build, released ${new Date(latestBeta.published_at).toLocaleDateString()}</p>
+                  </div>
+                  <a href="./downloads/" class="btn btn-ghost" style="width: 100%; text-align: center;">Get Beta &rarr;</a>
+                </div>
+              `
+              : "";
 
             downloadsContainer.innerHTML = `
               <div class="download-item stable-release" style="flex-direction: column; align-items: flex-start; width: 100%;">
-                <div class="download-badge ${badgeClass}">${badgeText}</div>
-                <div class="download-info" style="margin-top: 8px; margin-bottom: 8px;">
-                  <h4 style="font-size: 15px; font-weight: 700; color: white;">${latest.name || latest.tag_name}</h4>
-                  <p>Released on ${new Date(latest.published_at).toLocaleDateString()}</p>
-                </div>
-                <div style="display: flex; gap: 8px; width: 100%; margin-top: 4px;">
-                  <a href="${latest.html_url}" target="_blank" class="btn btn-primary" style="flex: 1; text-align: center;">Get Latest Version</a>
-                  <a href="https://github.com/dwaipayanray95/Concorde-EFB/releases" target="_blank" class="btn btn-ghost" style="flex: 1; text-align: center;">All Releases &rarr;</a>
-                </div>
+                ${stableBlock}
+                ${betaBlock}
               </div>
             `;
           })
           .catch(() => {
             downloadsContainer.innerHTML =
-              '<div class="empty">Unable to fetch releases. <a href="https://github.com/dwaipayanray95/Concorde-EFB/releases" target="_blank" style="color: var(--accent);">View on GitHub</a></div>';
+              '<div class="empty">Unable to fetch releases. <a href="./downloads/" style="color: var(--accent);">View Downloads</a></div>';
           });
       };
 
