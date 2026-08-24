@@ -44,8 +44,8 @@ class _ChecklistsTabState extends ConsumerState<ChecklistsTab> {
     final v2 = takeoffSpeeds['V2'];
     final vSpeedsStr =
         (simbriefLoaded && v1 != null && vr != null && v2 != null)
-            ? 'V1:${v1.round()} VR:${vr.round()} V2:${v2.round()}'
-            : 'V-Speeds';
+        ? 'V1:${v1.round()} VR:${vr.round()} V2:${v2.round()}'
+        : 'V-Speeds';
 
     final checklistData = buildChecklistData(
       vSpeedsStr: vSpeedsStr,
@@ -54,7 +54,7 @@ class _ChecklistsTabState extends ConsumerState<ChecklistsTab> {
     final currentItems = checklistData[selectedChecklistPhase] ?? [];
 
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Left Navigation Panel
         Expanded(
@@ -75,7 +75,8 @@ class _ChecklistsTabState extends ConsumerState<ChecklistsTab> {
                       checkedCount == totalCount && totalCount > 0;
 
                   return InkWell(
-                    onTap: () => setState(() => selectedChecklistPhase = phase.id),
+                    onTap: () =>
+                        setState(() => selectedChecklistPhase = phase.id),
                     borderRadius: BorderRadius.circular(12),
                     mouseCursor: SystemMouseCursors.click,
                     child: Container(
@@ -93,7 +94,9 @@ class _ChecklistsTabState extends ConsumerState<ChecklistsTab> {
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: isSelected ? colors.accent : Colors.transparent,
+                          color: isSelected
+                              ? colors.accent
+                              : Colors.transparent,
                           width: 1.5,
                         ),
                       ),
@@ -180,8 +183,9 @@ class _ChecklistsTabState extends ConsumerState<ChecklistsTab> {
                     ),
                     TextButton.icon(
                       onPressed: () {
-                        final ids =
-                            currentItems.map((item) => item.id).toList();
+                        final ids = currentItems
+                            .map((item) => item.id)
+                            .toList();
                         notifier.resetPhase(ids);
                       },
                       icon: Icon(Icons.refresh, size: 16, color: colors.error),
@@ -207,112 +211,112 @@ class _ChecklistsTabState extends ConsumerState<ChecklistsTab> {
                 const SizedBox(height: 24),
                 Divider(color: colors.divider),
                 const SizedBox(height: 16),
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: currentItems.length,
-                  itemBuilder: (context, index) {
-                    final item = currentItems[index];
-                    final isChecked = checklistState[item.id] ?? false;
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: currentItems.length,
+                    itemBuilder: (context, index) {
+                      final item = currentItems[index];
+                      final isChecked = checklistState[item.id] ?? false;
 
-                    return InkWell(
-                      onTap: () => notifier.toggle(item.id),
-                      borderRadius: BorderRadius.circular(12),
-                      mouseCursor: SystemMouseCursors.click,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 12,
-                          horizontal: 16,
-                        ),
-                        margin: const EdgeInsets.symmetric(vertical: 4),
-                        decoration: BoxDecoration(
-                          color: isChecked
-                              ? colors.inputBg.withValues(alpha: 0.5)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(top: 2),
-                              child: Transform.scale(
-                                scale: 0.9,
-                                child: Checkbox(
-                                  value: isChecked,
-                                  onChanged: (_) => notifier.toggle(item.id),
-                                  activeColor: colors.accent,
-                                  checkColor: Colors.white,
-                                  side: BorderSide(
-                                    color: colors.dividerStrong,
-                                    width: 1.5,
+                      return InkWell(
+                        onTap: () => notifier.toggle(item.id),
+                        borderRadius: BorderRadius.circular(12),
+                        mouseCursor: SystemMouseCursors.click,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 16,
+                          ),
+                          margin: const EdgeInsets.symmetric(vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isChecked
+                                ? colors.inputBg.withValues(alpha: 0.5)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Transform.scale(
+                                  scale: 0.9,
+                                  child: Checkbox(
+                                    value: isChecked,
+                                    onChanged: (_) => notifier.toggle(item.id),
+                                    activeColor: colors.accent,
+                                    checkColor: Colors.white,
+                                    side: BorderSide(
+                                      color: colors.dividerStrong,
+                                      width: 1.5,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.baseline,
-                                    textBaseline: TextBaseline.alphabetic,
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          item.item,
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.baseline,
+                                      textBaseline: TextBaseline.alphabetic,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            item.item,
+                                            style: uiText(
+                                              context,
+                                              size: 14,
+                                              weight: FontWeight.w600,
+                                              color: isChecked
+                                                  ? colors.textDim
+                                                  : colors.textPrimary,
+                                              decoration: isChecked
+                                                  ? TextDecoration.lineThrough
+                                                  : TextDecoration.none,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Text(
+                                          item.status,
                                           style: uiText(
                                             context,
-                                            size: 14,
-                                            weight: FontWeight.w600,
+                                            size: 13,
+                                            weight: FontWeight.bold,
                                             color: isChecked
                                                 ? colors.textDim
-                                                : colors.textPrimary,
+                                                : colors.accent,
                                             decoration: isChecked
                                                 ? TextDecoration.lineThrough
                                                 : TextDecoration.none,
                                           ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 16),
+                                      ],
+                                    ),
+                                    if (item.note != null) ...[
+                                      const SizedBox(height: 4),
                                       Text(
-                                        item.status,
+                                        item.note!,
                                         style: uiText(
                                           context,
-                                          size: 13,
-                                          weight: FontWeight.bold,
-                                          color: isChecked
-                                              ? colors.textDim
-                                              : colors.accent,
-                                          decoration: isChecked
-                                              ? TextDecoration.lineThrough
-                                              : TextDecoration.none,
+                                          size: 11,
+                                          weight: FontWeight.w500,
+                                          color: colors.textDim,
                                         ),
                                       ),
                                     ],
-                                  ),
-                                  if (item.note != null) ...[
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      item.note!,
-                                      style: uiText(
-                                        context,
-                                        size: 11,
-                                        weight: FontWeight.w500,
-                                        color: colors.textDim,
-                                      ),
-                                    ),
                                   ],
-                                ],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
