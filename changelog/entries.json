@@ -3,6 +3,7 @@
         "date": "2026-08-24",
         "title": "Commits",
         "items": [
+            "26969d8 feat: add screenshot showcase carousel to landing page",
             "98a7179 docs: add Discord link to website nav and footer",
             "c8c69eb feat: watch for MSFS process to auto-restart telemetry bridge & add discord invite",
             "2041cd7 fix: align checklist with manual's actual procedures, add landing phase",
