@@ -19,17 +19,9 @@ class AppFooter extends StatelessWidget {
         const SizedBox(height: 20),
         const Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            EfbLaunchesBadge(),
-          ],
+          children: [EfbLaunchesBadge()],
         ),
         const SizedBox(height: 24),
-        Text(
-          'Speeds scale with √(weight/reference) and are indicative IAS; verify against the DC Designs manual & in-sim.',
-          style: uiText(context, color: colors.textDim, size: 12),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 16),
         InkWell(
           onTap: () async {
             final url = Uri.parse(AppLinks.changelog);
