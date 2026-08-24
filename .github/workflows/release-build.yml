@@ -114,12 +114,20 @@ jobs:
         with:
           commit-changes: 'true'
 
+      - name: Rename installer for this release
+        id: asset
+        run: |
+          $dest = "build/windows/ConcordeEFB_${{ github.ref_name }}.exe"
+          Copy-Item "build/windows/Concorde-EFB-Installer.exe" $dest
+          "path=$dest" >> $env:GITHUB_OUTPUT
+        shell: pwsh
+
       - name: Create Draft GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${{ github.ref_name }}" `
-            "build/windows/Concorde-EFB-Installer.exe" `
+            "${{ steps.asset.outputs.path }}" `
             --title "${{ github.ref_name }}" `
             --notes-file release_notes.md `
             --draft

@@ -31,13 +31,16 @@ jobs:
         id: ver
         run: |
           $pubspec = Get-Content pubspec.yaml -Raw
-          if ($pubspec -notmatch 'version:\s*([0-9]+\.[0-9]+\.[0-9]+)') {
-            throw "Could not parse a version out of pubspec.yaml"
+          if ($pubspec -notmatch 'version:\s*([0-9]+\.[0-9]+\.[0-9]+)\+([0-9]+)') {
+            throw "Could not parse a version+build out of pubspec.yaml"
           }
           $version = $Matches[1]
-          $tag = "beta-$version-build${{ github.run_number }}"
+          $build = $Matches[2]
+          $tag = "beta-$version-build$build"
           Write-Host "Beta tag: $tag"
           "tag=$tag" >> $env:GITHUB_OUTPUT
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "build=$build" >> $env:GITHUB_OUTPUT
         shell: pwsh
 
       - name: Set up Python
@@ -79,8 +82,9 @@ jobs:
       - name: Rename installer for this beta
         id: asset
         run: |
-          $tag = "${{ steps.ver.outputs.tag }}"
-          $dest = "build/windows/Concorde-EFB-Installer-$tag.exe"
+          $version = "${{ steps.ver.outputs.version }}"
+          $build = "${{ steps.ver.outputs.build }}"
+          $dest = "build/windows/ConcordeEFB_v$version-beta_build$build.exe"
           Copy-Item "build/windows/Concorde-EFB-Installer.exe" $dest
           "path=$dest" >> $env:GITHUB_OUTPUT
         shell: pwsh
