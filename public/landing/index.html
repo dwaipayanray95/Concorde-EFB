@@ -510,6 +510,160 @@
       .close-modal:hover {
         color: var(--accent);
       }
+
+      /* ── Screenshot showcase ─────────────────────────── */
+      .showcase {
+        width: 100vw;
+        position: relative;
+        left: 50%;
+        right: 50%;
+        margin-left: -50vw;
+        margin-right: -50vw;
+        padding: 4px 0 0;
+      }
+
+      .showcase-viewport {
+        position: relative;
+      }
+
+      .showcase-track {
+        display: flex;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        scroll-behavior: smooth;
+        gap: 0;
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+        padding: 6px 0 4px;
+      }
+
+      .showcase-track::-webkit-scrollbar {
+        display: none;
+      }
+
+      .showcase-slide {
+        flex: 0 0 100%;
+        scroll-snap-align: center;
+        margin: 0;
+        display: grid;
+        justify-items: center;
+        gap: 14px;
+        padding: 0 18px;
+      }
+
+      .window-frame {
+        width: min(760px, 100%);
+        border-radius: 14px;
+        overflow: hidden;
+        background: var(--bg-2);
+        border: 1px solid var(--stroke);
+        box-shadow: 0 30px 70px -30px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.03);
+      }
+
+      .window-titlebar {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 12px;
+        background: rgba(255, 255, 255, 0.03);
+        border-bottom: 1px solid var(--stroke);
+      }
+
+      .window-titlebar .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+
+      .dot-r {
+        background: #ff5f57;
+      }
+      .dot-y {
+        background: #febc2e;
+      }
+      .dot-g {
+        background: #28c840;
+      }
+
+      .window-frame img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .showcase-slide figcaption {
+        font-size: 13px;
+        color: var(--muted);
+        text-align: center;
+        max-width: 52ch;
+      }
+
+      .showcase-slide figcaption strong {
+        color: var(--ink);
+        font-weight: 700;
+      }
+
+      .showcase-nav {
+        position: absolute;
+        top: 45%;
+        transform: translateY(-50%);
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 1px solid var(--stroke);
+        background: rgba(13, 15, 23, 0.7);
+        color: var(--ink);
+        font-size: 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(6px);
+        transition: background 0.15s ease, border-color 0.15s ease;
+      }
+
+      .showcase-nav:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: var(--accent);
+      }
+
+      .showcase-nav.prev {
+        left: 14px;
+      }
+
+      .showcase-nav.next {
+        right: 14px;
+      }
+
+      @media (max-width: 640px) {
+        .showcase-nav {
+          display: none;
+        }
+      }
+
+      .showcase-dots {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 4px;
+      }
+
+      .showcase-dots button {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        border: none;
+        padding: 0;
+        background: rgba(255, 255, 255, 0.2);
+        cursor: pointer;
+        transition: background 0.15s ease, transform 0.15s ease;
+      }
+
+      .showcase-dots button.active {
+        background: var(--accent);
+        transform: scale(1.3);
+      }
     </style>
 
     <!-- PROPELLER ADS / MONETAG - Main Script Injection Tag -->
@@ -552,6 +706,59 @@
         <div class="hero-icon">
           <img src="./app-icon-256.png" alt="Concorde EFB app icon" />
         </div>
+      </section>
+
+      <!-- Screenshot showcase -->
+      <section class="block showcase">
+        <div class="showcase-viewport">
+          <div class="showcase-track" id="showcaseTrack">
+            <figure class="showcase-slide">
+              <div class="window-frame">
+                <div class="window-titlebar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+                <img src="./screenshots/planner-dark.png" alt="Concorde EFB flight planner screen showing SimBrief import and route summary" loading="lazy" />
+              </div>
+              <figcaption><strong>Flight Planner</strong> — SimBrief import, live fuel & time-enroute breakdown.</figcaption>
+            </figure>
+            <figure class="showcase-slide">
+              <div class="window-frame">
+                <div class="window-titlebar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+                <img src="./screenshots/cruise-fuel.png" alt="Concorde EFB cruise and fuel management screen with trip fuel breakdown" loading="lazy" />
+              </div>
+              <figcaption><strong>Cruise & Fuel Management</strong> — segmented climb, cruise, and descent fuel modeling.</figcaption>
+            </figure>
+            <figure class="showcase-slide">
+              <div class="window-frame">
+                <div class="window-titlebar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+                <img src="./screenshots/performance-calc.png" alt="Concorde EFB performance calculator showing takeoff and landing V-speeds" loading="lazy" />
+              </div>
+              <figcaption><strong>Performance Calculator</strong> — V-speeds and runway limits corrected for live METAR.</figcaption>
+            </figure>
+            <figure class="showcase-slide">
+              <div class="window-frame">
+                <div class="window-titlebar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+                <img src="./screenshots/checklists.png" alt="Concorde EFB interactive checklist screen for cold and dark setup" loading="lazy" />
+              </div>
+              <figcaption><strong>Interactive Checklists</strong> — full cold-and-dark-to-shutdown flow, synced with live V-speeds.</figcaption>
+            </figure>
+            <figure class="showcase-slide">
+              <div class="window-frame">
+                <div class="window-titlebar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+                <img src="./screenshots/flight-monitor.png" alt="Concorde EFB live flight monitor with fuel tank schematic and center of gravity" loading="lazy" />
+              </div>
+              <figcaption><strong>Live Flight Monitor</strong> — glass-cockpit telemetry streamed from MSFS over SimConnect.</figcaption>
+            </figure>
+            <figure class="showcase-slide">
+              <div class="window-frame">
+                <div class="window-titlebar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+                <img src="./screenshots/planner-light.png" alt="Concorde EFB flight planner screen in light theme" loading="lazy" />
+              </div>
+              <figcaption><strong>Light or Dark</strong> — built to match your cockpit, day or night.</figcaption>
+            </figure>
+          </div>
+          <button class="showcase-nav prev" id="showcasePrev" aria-label="Previous screenshot">&larr;</button>
+          <button class="showcase-nav next" id="showcaseNext" aria-label="Next screenshot">&rarr;</button>
+        </div>
+        <div class="showcase-dots" id="showcaseDots"></div>
       </section>
 
       <!-- Features -->
@@ -771,6 +978,68 @@
           abModal.style.display = "none";
         }
       };
+
+      // ── Screenshot showcase carousel ──────────────────────────
+      (function () {
+        const track = document.getElementById("showcaseTrack");
+        const dotsWrap = document.getElementById("showcaseDots");
+        const prevBtn = document.getElementById("showcasePrev");
+        const nextBtn = document.getElementById("showcaseNext");
+        if (!track) return;
+
+        const slides = Array.from(track.children);
+        slides.forEach((_, i) => {
+          const dot = document.createElement("button");
+          dot.setAttribute("aria-label", "Go to screenshot " + (i + 1));
+          dot.addEventListener("click", () => goTo(i));
+          dotsWrap.appendChild(dot);
+        });
+        const dots = Array.from(dotsWrap.children);
+
+        let index = 0;
+        let autoplayTimer = null;
+
+        function currentIndex() {
+          return Math.round(track.scrollLeft / track.clientWidth);
+        }
+
+        function goTo(i) {
+          index = (i + slides.length) % slides.length;
+          track.scrollTo({ left: index * track.clientWidth, behavior: "smooth" });
+        }
+
+        function updateDots() {
+          const i = currentIndex();
+          dots.forEach((d, di) => d.classList.toggle("active", di === i));
+        }
+
+        function startAutoplay() {
+          stopAutoplay();
+          autoplayTimer = setInterval(() => goTo(currentIndex() + 1), 5000);
+        }
+
+        function stopAutoplay() {
+          if (autoplayTimer) clearInterval(autoplayTimer);
+        }
+
+        prevBtn.addEventListener("click", () => {
+          goTo(currentIndex() - 1);
+          startAutoplay();
+        });
+        nextBtn.addEventListener("click", () => {
+          goTo(currentIndex() + 1);
+          startAutoplay();
+        });
+        track.addEventListener("scroll", () => {
+          window.requestAnimationFrame(updateDots);
+        });
+        track.addEventListener("pointerenter", stopAutoplay);
+        track.addEventListener("pointerleave", startAutoplay);
+        track.addEventListener("touchstart", stopAutoplay, { passive: true });
+
+        updateDots();
+        startAutoplay();
+      })();
     </script>
   </body>
 </html>
