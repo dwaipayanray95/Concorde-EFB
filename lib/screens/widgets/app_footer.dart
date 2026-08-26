@@ -5,46 +5,64 @@ import '../../core/ui_text.dart';
 import '../../core/app_links.dart';
 import '../../widgets/efb_launches_badge.dart';
 import '../../widgets/efb_ad_banner.dart';
+import '../../widgets/efb_flat_card.dart';
 
 /// Shared footer shown at the bottom of the Flight Planner and Flight
-/// Monitor tabs: the support-development banner alongside a stack of
-/// small link buttons (launches count, changelog, Discord).
+/// Monitor tabs: the support-development banner alongside a matching card
+/// of pill-shaped link buttons (launches count, changelog, Discord, GitHub
+/// Sponsors), laid out side by side.
 class AppFooter extends StatelessWidget {
   const AppFooter({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     return Column(
       children: [
-        const SizedBox(height: 20),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const SizedBox(width: 600, child: EfbAdBanner()),
-            const SizedBox(width: 20),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const EfbLaunchesBadge(),
-                const SizedBox(height: 10),
-                _FooterLinkButton(
-                  label: 'VIEW CHANGELOG',
-                  url: AppLinks.changelog,
+        const SizedBox(height: 8),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(width: 24),
+              const Expanded(child: EfbAdBanner()),
+              const SizedBox(width: 20),
+              EfbFlatCard(
+                background: colors.resultsBg,
+                padding: const EdgeInsets.all(16),
+                borderRadius: BorderRadius.circular(16),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const EfbLaunchesBadge(),
+                    const SizedBox(width: 12),
+                    _FooterLinkButton(
+                      label: 'VIEW CHANGELOG',
+                      url: AppLinks.changelog,
+                    ),
+                    const SizedBox(width: 12),
+                    _FooterLinkButton(
+                      label: 'JOIN DISCORD',
+                      url: AppLinks.discord,
+                    ),
+                    const SizedBox(width: 12),
+                    _FooterLinkButton(
+                      label: 'GITHUB SPONSOR',
+                      url: AppLinks.githubSponsors,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 10),
-                _FooterLinkButton(label: 'JOIN DISCORD', url: AppLinks.discord),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
 }
 
-/// A small button-styled footer link, stacked alongside the launches badge.
+/// A pill-shaped footer link button, matching the support banner's
+/// "DONATE NOW" style so the whole group reads as one button family.
 class _FooterLinkButton extends StatelessWidget {
   final String label;
   final String url;
@@ -61,14 +79,14 @@ class _FooterLinkButton extends StatelessWidget {
           await launchUrl(uri);
         } catch (_) {}
       },
-      borderRadius: BorderRadius.circular(6),
+      borderRadius: BorderRadius.circular(20),
       mouseCursor: SystemMouseCursors.click,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: colors.dividerStrong, width: 1),
+          color: colors.accent.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: colors.accent, width: 1.5),
         ),
         child: Text(
           label,
@@ -76,9 +94,9 @@ class _FooterLinkButton extends StatelessWidget {
           style: uiText(
             context,
             color: colors.accent,
-            size: 10,
+            size: 11,
             weight: FontWeight.bold,
-            letterSpacing: 0.5,
+            letterSpacing: 0.8,
           ),
         ),
       ),

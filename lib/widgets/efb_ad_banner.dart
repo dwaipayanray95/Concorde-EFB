@@ -126,6 +126,37 @@ class _EfbAdBannerState extends State<EfbAdBanner> {
                 elevation: 0,
               ),
             ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () async {
+                final url = Uri.parse(AppLinks.githubSponsors);
+                try {
+                  await launchUrl(url, mode: LaunchMode.externalApplication);
+                } catch (_) {
+                  try {
+                    await launchUrl(url);
+                  } catch (_) {}
+                }
+                if (context.mounted) Navigator.of(context).pop();
+              },
+              icon: Icon(Icons.favorite_border, color: colors.accent, size: 18),
+              label: Text(
+                'Sponsor on GitHub',
+                style: uiText(
+                  context,
+                  weight: FontWeight.bold,
+                  color: colors.accent,
+                  size: 13,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: colors.accent, width: 1.5),
+                minimumSize: const Size(double.infinity, 44),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
             const SizedBox(height: 24),
             Divider(color: colors.dividerStrong),
             const SizedBox(height: 16),
@@ -238,8 +269,9 @@ class _EfbAdBannerState extends State<EfbAdBanner> {
         child: GestureDetector(
           onTap: () => _showDonateDialog(context),
           child: SizedBox(
-            height: 90,
+            height: double.infinity,
             child: EfbFlatCard(
+              background: colors.resultsBg,
               padding: const EdgeInsets.symmetric(horizontal: 24),
               borderRadius: BorderRadius.circular(16),
               child: Row(

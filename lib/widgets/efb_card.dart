@@ -26,7 +26,7 @@ class EfbCard extends StatelessWidget {
 
     return TopArcBorder(
       color: accent,
-      background: colors.surface,
+      background: colors.resultsBg,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

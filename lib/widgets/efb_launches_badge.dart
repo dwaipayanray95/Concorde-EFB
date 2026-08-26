@@ -30,7 +30,7 @@ class EfbLaunchesBadge extends ConsumerWidget {
 
         return Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
                 color: colors.textPrimary.withValues(alpha: 0.08),
@@ -40,14 +40,14 @@ class EfbLaunchesBadge extends ConsumerWidget {
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(20),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
+                    horizontal: 12,
+                    vertical: 10,
                   ),
                   color: colors.surface,
                   child: Text(
@@ -63,8 +63,8 @@ class EfbLaunchesBadge extends ConsumerWidget {
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
+                    horizontal: 12,
+                    vertical: 10,
                   ),
                   color: colors.accent,
                   child: Text(
