@@ -45,6 +45,47 @@
         gap: 18px;
       }
 
+      /* ── Nav ─────────────────────────────────────────── */
+      .nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .brand img {
+        width: 34px;
+        height: 34px;
+        border-radius: 9px;
+      }
+
+      .brand span {
+        font-weight: 700;
+        font-size: 15px;
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 18px;
+        font-size: 12px;
+      }
+
+      .nav-links a {
+        color: var(--muted);
+        text-decoration: none;
+      }
+
+      .nav-links a:hover {
+        color: var(--accent);
+      }
+
       .hero {
         display: grid;
         gap: 10px;
@@ -379,6 +420,21 @@
   </head>
   <body>
     <main class="shell">
+      <!-- Nav -->
+      <nav class="nav">
+        <div class="brand">
+          <img src="../app-icon-256.png" alt="Concorde EFB icon" />
+          <span>Concorde EFB</span>
+        </div>
+        <div class="nav-links">
+          <a href="../">Home</a>
+          <a href="../downloads/">Downloads</a>
+          <a href="../donate/">Donate</a>
+          <a href="https://github.com/dwaipayanray95/Concorde-EFB" target="_blank" rel="noreferrer">GitHub</a>
+          <a href="https://discord.gg/xe49YpczpP" target="_blank" rel="noreferrer">Discord</a>
+        </div>
+      </nav>
+
       <section class="hero">
         <span class="eyebrow">Concorde EFB Portal</span>
         <h1>Download, Support & Changelog</h1>
@@ -421,7 +477,6 @@
 
       <section class="toolbar">
         <span>Source: <code>public/changelog/entries.json</code></span>
-        <a href="/Concorde-EFB/">Back to the app</a>
       </section>
 
       <section id="timeline" class="timeline" aria-live="polite"></section>
