@@ -14,6 +14,12 @@ analyzer:
     # Generated build artifacts (e.g. iOS Swift Package Manager vendors full
     # plugin sources, including their own test suites, under build/ios).
     - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
 
 linter:
   # The lint rules applied to this project can be customized in the
