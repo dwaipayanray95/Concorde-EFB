@@ -3,6 +3,8 @@
         "date": "2026-08-26",
         "title": "Commits",
         "items": [
+            "8a8ac6a feat: build MSFS-pasteable route string with dep/arr runways",
+            "55ce654 style: tighten ICAO/runway field widths and color the METAR strip by flight category",
             "d6332d2 fix: treat narrow runway width as a caution, not a hard reject",
             "84071f6 fix: remove extra trim fuel entry and add final reserve to fuel calculator",
             "84c216b chore: upgrade Flutter SDK and bump pub dependencies",
