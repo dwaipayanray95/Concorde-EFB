@@ -218,16 +218,16 @@ class _LegCard extends ConsumerWidget {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              flex: 2,
+                            SizedBox(
+                              width: 120,
                               child: _IcaoField(
                                 value: icao,
                                 onChanged: onIcaoChanged,
                               ),
                             ),
                             const SizedBox(width: 16),
-                            Expanded(
-                              flex: 3,
+                            SizedBox(
+                              width: 260,
                               child: _RunwaySelect(
                                 airport: airport,
                                 currentId: currentRunwayId,
@@ -537,93 +537,100 @@ class _WeatherStrip extends StatelessWidget {
     final cat = MetarParser.parseFlightCategory(metarStr);
     final summary = MetarParser.parseWeatherSummary(metarStr);
 
-    Color catBg = colors.successBg;
-    Color catColor = colors.success;
+    // Solid category color as the whole strip's background (not just the
+    // badge), so text needs to switch to white-on-color rather than the
+    // usual dim/primary tones meant for a neutral background.
+    Color catBg = colors.success;
     if (cat == 'MVFR') {
-      catBg = colors.mvfrBg;
-      catColor = colors.mvfr;
+      catBg = colors.mvfr;
     } else if (cat == 'IFR') {
-      catBg = colors.ifrBg;
-      catColor = colors.ifr;
+      catBg = colors.ifr;
     } else if (cat == 'LIFR') {
-      catBg = colors.lifrBg;
-      catColor = colors.lifr;
+      catBg = colors.lifr;
     }
+    const catColor = Colors.white;
+    final dimOnCat = Colors.white.withValues(alpha: 0.75);
 
     return InkWell(
       onTap: metarStr.isNotEmpty ? onToggleRaw : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 13,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: catBg,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: catBg,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
                   cat,
                   style: uiText(
                     context,
-                    size: 10,
+                    size: 12,
                     weight: FontWeight.w800,
                     color: catColor,
                     letterSpacing: 0.5,
                   ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Text(
-                '${tempC?.round() ?? '--'}°C, $summary',
-                style: uiText(
-                  context,
-                  size: 12,
-                  weight: FontWeight.w700,
-                  color: colors.textSecondary,
+                const SizedBox(width: 16),
+                Text(
+                  '${tempC?.round() ?? '--'}°C, $summary',
+                  style: uiText(
+                    context,
+                    size: 12,
+                    weight: FontWeight.w700,
+                    color: catColor,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Container(width: 1, height: 20, color: colors.dividerStrong),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Wrap(
-                  spacing: 20,
-                  runSpacing: 8,
-                  children: [
-                    _WeatherStat(
-                      label: 'WIND',
-                      value:
-                          '${parsed.windDirDeg?.round() ?? 'VRB'}° ${parsed.windSpeedKt?.round() ?? '--'}kt',
-                    ),
-                    _WeatherStat(
-                      label: 'VIS',
-                      value:
-                          '${vis != null ? (vis >= 10 ? '10+' : vis.toStringAsFixed(1)) : '--'}km',
-                    ),
-                    _WeatherStat(
-                      label: 'QNH',
-                      value: '${qnh?.value.round() ?? '--'}${qnh?.unit ?? ''}',
-                    ),
-                    _WeatherStat(
-                      label: 'ELEV',
-                      value: '${runway?.elevationFt?.round() ?? '--'}ft',
-                    ),
-                  ],
+                const SizedBox(width: 16),
+                Container(width: 1, height: 20, color: dimOnCat),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Wrap(
+                    spacing: 20,
+                    runSpacing: 8,
+                    children: [
+                      _WeatherStat(
+                        label: 'WIND',
+                        value:
+                            '${parsed.windDirDeg?.round() ?? 'VRB'}° ${parsed.windSpeedKt?.round() ?? '--'}kt',
+                        labelColor: dimOnCat,
+                        valueColor: catColor,
+                      ),
+                      _WeatherStat(
+                        label: 'VIS',
+                        value:
+                            '${vis != null ? (vis >= 10 ? '10+' : vis.toStringAsFixed(1)) : '--'}km',
+                        labelColor: dimOnCat,
+                        valueColor: catColor,
+                      ),
+                      _WeatherStat(
+                        label: 'QNH',
+                        value:
+                            '${qnh?.value.round() ?? '--'}${qnh?.unit ?? ''}',
+                        labelColor: dimOnCat,
+                        valueColor: catColor,
+                      ),
+                      _WeatherStat(
+                        label: 'ELEV',
+                        value: '${runway?.elevationFt?.round() ?? '--'}ft',
+                        labelColor: dimOnCat,
+                        valueColor: catColor,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              IconButton(
-                icon: Icon(Icons.refresh, size: 16, color: colors.accent),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                onPressed: onRefresh,
-              ),
-            ],
+                IconButton(
+                  icon: Icon(Icons.refresh, size: 16, color: catColor),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: onRefresh,
+                ),
+              ],
+            ),
           ),
           if (metarStr.isNotEmpty) ...[
             const SizedBox(height: 10),
@@ -654,7 +661,14 @@ class _WeatherStrip extends StatelessWidget {
 class _WeatherStat extends StatelessWidget {
   final String label;
   final String value;
-  const _WeatherStat({required this.label, required this.value});
+  final Color? labelColor;
+  final Color? valueColor;
+  const _WeatherStat({
+    required this.label,
+    required this.value,
+    this.labelColor,
+    this.valueColor,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -668,7 +682,7 @@ class _WeatherStat extends StatelessWidget {
             context,
             size: 10,
             weight: FontWeight.w700,
-            color: colors.textDim,
+            color: labelColor ?? colors.textDim,
           ),
         ),
         Text(
@@ -677,7 +691,7 @@ class _WeatherStat extends StatelessWidget {
             context,
             size: 12,
             weight: FontWeight.w700,
-            color: colors.textPrimary,
+            color: valueColor ?? colors.textPrimary,
           ),
         ),
       ],
