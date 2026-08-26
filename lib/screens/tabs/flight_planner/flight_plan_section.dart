@@ -19,6 +19,26 @@ class FlightPlanSection extends ConsumerWidget {
     final isLoading = ref.watch(simbriefLoadingProvider);
     final isLoaded = ref.watch(simbriefLoadedProvider);
 
+    // VATSIM-chart-style route: DEP/RWY ...enroute... ARR/RWY, so it can be
+    // pasted straight into the MSFS world map flight planner.
+    final rawRoute = ref.watch(simbriefRouteProvider);
+    final depIcao = ref.watch(departureIcaoProvider);
+    final arrIcao = ref.watch(arrivalIcaoProvider);
+    final depRwy = ref.watch(departureRunwayIdProvider);
+    final arrRwy = ref.watch(arrivalRunwayIdProvider);
+    final hasRoute = rawRoute.isNotEmpty && rawRoute != '--';
+    final dep = depIcao.isEmpty
+        ? ''
+        : (depRwy.isEmpty ? depIcao : '$depIcao/$depRwy');
+    final arr = arrIcao.isEmpty
+        ? ''
+        : (arrRwy.isEmpty ? arrIcao : '$arrIcao/$arrRwy');
+    final msfsRoute = [
+      if (dep.isNotEmpty) dep,
+      if (hasRoute) rawRoute,
+      if (arr.isNotEmpty) arr,
+    ].join(' ');
+
     return EfbCard(
       title: 'FLIGHT PLAN',
       child: Column(
@@ -181,9 +201,8 @@ class FlightPlanSection extends ConsumerWidget {
                 flex: 3,
                 child: InkWell(
                   onTap: () {
-                    final route = ref.read(simbriefRouteProvider);
-                    if (route.isNotEmpty && route != '--') {
-                      Clipboard.setData(ClipboardData(text: route));
+                    if (msfsRoute.isNotEmpty) {
+                      Clipboard.setData(ClipboardData(text: msfsRoute));
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
@@ -215,7 +234,7 @@ class FlightPlanSection extends ConsumerWidget {
                           ),
                           content: SingleChildScrollView(
                             child: SelectableText(
-                              route,
+                              msfsRoute,
                               style: uiText(
                                 context,
                                 color: colors.textSecondary,
@@ -225,6 +244,39 @@ class FlightPlanSection extends ConsumerWidget {
                             ),
                           ),
                           actions: [
+                            TextButton.icon(
+                              onPressed: () {
+                                Clipboard.setData(
+                                  ClipboardData(text: msfsRoute),
+                                );
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Route copied to clipboard!',
+                                      style: uiText(
+                                        context,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    behavior: SnackBarBehavior.floating,
+                                    backgroundColor: colors.surface,
+                                  ),
+                                );
+                              },
+                              icon: Icon(
+                                Icons.copy_all,
+                                size: 16,
+                                color: colors.accent,
+                              ),
+                              label: Text(
+                                'COPY',
+                                style: uiText(
+                                  context,
+                                  color: colors.accent,
+                                  weight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
                             TextButton(
                               onPressed: () => Navigator.of(context).pop(),
                               child: Text(
@@ -259,11 +311,11 @@ class FlightPlanSection extends ConsumerWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            ref.watch(simbriefRouteProvider),
+                            msfsRoute.isEmpty ? '--' : msfsRoute,
                             overflow: TextOverflow.ellipsis,
                             style: uiText(
                               context,
-                              color: ref.watch(simbriefRouteProvider) == '--'
+                              color: msfsRoute.isEmpty
                                   ? colors.textDim
                                   : colors.textPrimary,
                               size: 13,
@@ -274,7 +326,7 @@ class FlightPlanSection extends ConsumerWidget {
                         const SizedBox(width: 8),
                         Icon(
                           Icons.copy_all,
-                          color: ref.watch(simbriefRouteProvider) == '--'
+                          color: msfsRoute.isEmpty
                               ? colors.textDim.withValues(alpha: 0.5)
                               : colors.accent,
                           size: 16,
