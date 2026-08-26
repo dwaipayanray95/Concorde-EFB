@@ -25,19 +25,37 @@ runs:
       run: |
         git config --local user.name "github-actions[bot]"
         git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-        
+
+        # Stash the freshly generated CHANGELOG.md aside so a forced branch
+        # switch below can't lose it, then restore it once we're on the
+        # right branch.
+        cp CHANGELOG.md "$RUNNER_TEMP/CHANGELOG.generated.md" 2>/dev/null || true
+
         # Check if we are in detached HEAD state (e.g. triggered by tag push)
         if git symbolic-ref -q HEAD >/dev/null; then
           echo "On branch. Normal commit."
         else
           echo "Detached HEAD state. Checking out branch: ${{ inputs.branch }}"
-          git checkout ${{ inputs.branch }} || git checkout -b ${{ inputs.branch }}
+          # -f discards any dirty build-artifact changes in the working
+          # tree (e.g. a build step regenerated a tracked file) so they
+          # can't block the switch, and -B <branch> origin/<branch>
+          # resets to the real remote branch tip explicitly -- plain
+          # `checkout <branch> || checkout -b <branch>` would silently
+          # fall back to branching off the current (detached tag) commit
+          # on failure, diverging from origin/<branch> and later failing
+          # to push with an ambiguous refspec error.
+          git fetch origin "${{ inputs.branch }}"
+          git checkout -f -B "${{ inputs.branch }}" "origin/${{ inputs.branch }}"
         fi
+
+        cp "$RUNNER_TEMP/CHANGELOG.generated.md" CHANGELOG.md 2>/dev/null || true
 
         if [ -n "$(git status --porcelain CHANGELOG.md)" ]; then
           git add CHANGELOG.md
           git commit -m "chore: update CHANGELOG.md [skip ci]"
-          git push origin ${{ inputs.branch }}
+          # Fully-qualified refspec so the push can't hit an ambiguous
+          # "src refspec matches more than one" ref resolution.
+          git push origin "HEAD:refs/heads/${{ inputs.branch }}"
         else
           echo "No changes to CHANGELOG.md detected."
         fi
