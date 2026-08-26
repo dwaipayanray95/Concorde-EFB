@@ -3,6 +3,7 @@
         "date": "2026-08-26",
         "title": "Commits",
         "items": [
+            "d6332d2 fix: treat narrow runway width as a caution, not a hard reject",
             "84071f6 fix: remove extra trim fuel entry and add final reserve to fuel calculator",
             "84c216b chore: upgrade Flutter SDK and bump pub dependencies",
             "9d849f5 style: add community banner to downloads page"
