@@ -11,6 +11,12 @@ class EfbTextField extends StatefulWidget {
   final String? placeholder;
   final bool readOnly;
 
+  /// When false, skips the label row above the field and uses [label] as
+  /// the field's hint text instead -- for fields where the label reads
+  /// fine as a placeholder and the extra row isn't worth the vertical
+  /// space (e.g. an optional, rarely-filled field).
+  final bool showLabel;
+
   const EfbTextField({
     super.key,
     required this.label,
@@ -20,6 +26,7 @@ class EfbTextField extends StatefulWidget {
     this.textCapitalization = TextCapitalization.none,
     this.placeholder,
     this.readOnly = false,
+    this.showLabel = true,
   });
 
   @override
@@ -72,19 +79,21 @@ class _EfbTextFieldState extends State<EfbTextField> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          widget.label,
-          style: uiText(
-            context,
-            color: colors.textSecondary,
-            size: 11,
-            weight: FontWeight.bold,
-            letterSpacing: 0.5,
+        if (widget.showLabel) ...[
+          Text(
+            widget.label,
+            style: uiText(
+              context,
+              color: colors.textSecondary,
+              size: 11,
+              weight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        const SizedBox(height: 6),
+          const SizedBox(height: 6),
+        ],
         Container(
           decoration: BoxDecoration(
             color: colors.inputBg,
@@ -104,7 +113,9 @@ class _EfbTextFieldState extends State<EfbTextField> {
               size: 15,
             ),
             decoration: InputDecoration(
-              hintText: widget.placeholder,
+              hintText:
+                  widget.placeholder ??
+                  (widget.showLabel ? null : widget.label),
               hintStyle: uiText(context, color: colors.textDim, size: 15),
               filled: false,
               border: InputBorder.none,

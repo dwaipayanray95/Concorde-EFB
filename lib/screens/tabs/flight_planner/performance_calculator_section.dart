@@ -68,7 +68,9 @@ class _PerformanceCalculatorSectionState
                 ),
               ),
             ),
-            const SizedBox(width: 24),
+            const SizedBox(width: 12),
+            VerticalDivider(color: colors.divider, width: 1, thickness: 1),
+            const SizedBox(width: 12),
             Expanded(
               child: _LegCard(
                 legLabel: 'ARRIVAL / LANDING',
@@ -166,7 +168,7 @@ class _LegCard extends ConsumerWidget {
         children: [
           // Identity row
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
             decoration: BoxDecoration(
               color: colors.resultsBg,
               border: Border(bottom: BorderSide(color: colors.divider)),
