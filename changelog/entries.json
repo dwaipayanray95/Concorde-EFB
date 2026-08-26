@@ -3,6 +3,7 @@
         "date": "2026-08-26",
         "title": "Commits",
         "items": [
+            "3b40d6e style: add consistent site nav to changelog and donate pages",
             "8a8ac6a feat: build MSFS-pasteable route string with dep/arr runways",
             "55ce654 style: tighten ICAO/runway field widths and color the METAR strip by flight category",
             "d6332d2 fix: treat narrow runway width as a caution, not a hard reject",
