@@ -22,9 +22,8 @@ class CruiseAndFuelSection extends ConsumerWidget {
     final fuel = ref.watch(fuelBreakdownProvider);
     final mission = ref.watch(missionProfileProvider);
     final weights = ref.watch(weightsProvider);
-    final trim = ref.watch(trimTankFuelProvider);
     final extra = ref.watch(extraFuelProvider);
-    final totalFuel = fuel.blockKg + trim + extra;
+    final totalFuel = fuel.blockKg + extra;
     final isOverCapacity = totalFuel > ConcordeConstants.weights.fuelCapacityKg;
     final direction = ref.watch(flightDirectionProvider);
 
@@ -181,20 +180,6 @@ class CruiseAndFuelSection extends ConsumerWidget {
                           const SizedBox(width: 16),
                           Expanded(
                             child: EfbTextField(
-                              label: 'EXTRA TRIM (KG)',
-                              initialValue: ref
-                                  .watch(trimTankFuelProvider)
-                                  .round()
-                                  .toString(),
-                              onChanged: (v) => ref
-                                  .read(trimTankFuelProvider.notifier)
-                                  .set(double.tryParse(v) ?? 0.0),
-                              keyboardType: TextInputType.number,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: EfbTextField(
                               label: 'EXTRA FUEL (KG)',
                               initialValue: ref
                                   .watch(extraFuelProvider)
@@ -248,7 +233,6 @@ class CruiseAndFuelSection extends ConsumerWidget {
                   flex: 2,
                   child: _FuelBreakdownPanel(
                     fuel: fuel,
-                    trim: trim,
                     extra: extra,
                     totalFuel: totalFuel,
                     isOverCapacity: isOverCapacity,
@@ -513,7 +497,6 @@ class _StatColumn extends StatelessWidget {
 /// The fuel breakdown/"Total Required" panel matching _LegCard's strip pattern with shadow card styling
 class _FuelBreakdownPanel extends StatelessWidget {
   final BlockFuelBreakdown fuel;
-  final double trim;
   final double extra;
   final double totalFuel;
   final bool isOverCapacity;
@@ -521,7 +504,6 @@ class _FuelBreakdownPanel extends StatelessWidget {
 
   const _FuelBreakdownPanel({
     required this.fuel,
-    required this.trim,
     required this.extra,
     required this.totalFuel,
     required this.isOverCapacity,
@@ -545,14 +527,14 @@ class _FuelBreakdownPanel extends StatelessWidget {
           const _FuelDivider(),
           _FuelRow(label: 'Contingency', value: fuel.contingencyKg),
           const _FuelDivider(),
-          _FuelRow(label: 'Extra Trim Fuel', value: trim),
-          const _FuelDivider(),
           _FuelRow(label: 'Extra Fuel', value: extra),
           const _FuelDivider(),
           _FuelRow(
             label: 'Alt Fuel ($alternateDistanceNm NM)',
             value: fuel.alternateKg,
           ),
+          const _FuelDivider(),
+          _FuelRow(label: 'Final Reserve', value: fuel.finalReserveKg),
           const _FuelDivider(),
           _FuelRow(label: 'Block Fuel', value: fuel.blockKg, isBold: true),
           const SizedBox(height: 24),
@@ -576,7 +558,7 @@ class _FuelBreakdownPanel extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Block + Trim + Extra (${numFormat.format(trim + extra)} kg)',
+                    'Block + Extra (${numFormat.format(extra)} kg)',
                     style: uiText(
                       context,
                       size: 10,

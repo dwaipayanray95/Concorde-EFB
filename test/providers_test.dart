@@ -33,8 +33,7 @@ void main() {
       addTearDown(container.dispose);
 
       // Force total fuel far past the 95,681 kg tank capacity.
-      container.read(trimTankFuelProvider.notifier).set(1000000);
-      container.read(extraFuelProvider.notifier).set(1000000);
+      container.read(extraFuelProvider.notifier).set(2000000);
 
       final weights = container.read(weightsProvider);
       expect(
