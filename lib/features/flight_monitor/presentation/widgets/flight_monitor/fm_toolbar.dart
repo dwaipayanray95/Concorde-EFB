@@ -4,18 +4,14 @@ import '../../../../../core/sim_bridge_launcher.dart';
 import '../../../../../core/ui_text.dart';
 import '../../../data/models/telemetry_model.dart';
 
-/// Top status/controls bar: connection dot + Zulu clock, and an
-/// auto-logging indicator (a flight is logged automatically on
-/// takeoff/landing detection -- there's no manual record control).
+/// Top status/controls bar: connection dot + Zulu clock.
 class FmToolbar extends StatelessWidget {
   final bool isConnected;
-  final bool isLoggingFlight;
   final TelemetryModel telemetry;
 
   const FmToolbar({
     super.key,
     required this.isConnected,
-    required this.isLoggingFlight,
     required this.telemetry,
   });
 
@@ -105,51 +101,7 @@ class FmToolbar extends StatelessWidget {
             ],
           ),
         ),
-        if (isConnected && isLoggingFlight) const _LoggingIndicator(),
       ],
-    );
-  }
-}
-
-/// Shown while a flight is being auto-tracked (from takeoff detection to
-/// landing detection) -- purely informational, nothing to press.
-class _LoggingIndicator extends StatelessWidget {
-  const _LoggingIndicator();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-      decoration: BoxDecoration(
-        border: Border.all(color: colors.error),
-        color: colors.errorBg,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: colors.error,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            'LOGGING FLIGHT',
-            style: uiText(
-              context,
-              size: 12,
-              color: colors.error,
-              weight: FontWeight.w800,
-              letterSpacing: 0.4,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

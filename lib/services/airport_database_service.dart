@@ -79,9 +79,8 @@ class AirportDatabaseService {
 
   /// On Windows this is the install folder (next to the .exe) rather than
   /// Documents -- Windows Defender's Controlled Folder Access protects
-  /// Documents by default and blocks writes there from unrecognized apps
-  /// (same reasoning as FlightLogService's flight-log storage). Other
-  /// platforms keep using the app documents directory.
+  /// Documents by default and blocks writes there from unrecognized apps.
+  /// Other platforms keep using the app documents directory.
   Future<Directory> _appDataRoot() async {
     if (!kIsWeb && Platform.isWindows) {
       return Directory(File(Platform.resolvedExecutable).parent.path);
