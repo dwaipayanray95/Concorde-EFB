@@ -59,13 +59,6 @@ class ConcordeFuelSchematic {
   static double get totalCapacityKg =>
       tankCapacitiesKg.values.fold(0.0, (s, v) => s + v);
 
-  /// Combined capacity of tanks 9, 10, 11 -- caps how much discretionary
-  /// extra fuel a pilot can load into the trim tanks (see
-  /// TrimTankFuelNotifier in efb_providers.dart).
-  static double get trimTankCapacityKg => tankGroups.entries
-      .where((e) => e.value == FuelTankGroup.trim)
-      .fold(0.0, (s, e) => s + tankCapacitiesKg[e.key]!);
-
   /// Real per-tank weight, read directly from MSFS's
   /// FUELSYSTEM TANK WEIGHT:N SimVar for each of the 13 Concorde
   /// tanks (see [TelemetryModel.fuelTanksKg] / `tools/simbridge/msfs_bridge.py`),

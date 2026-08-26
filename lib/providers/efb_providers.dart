@@ -8,7 +8,6 @@ import '../core/metar_parser.dart' as mp;
 import '../models/concorde_models.dart';
 import '../models/airport.dart';
 import '../core/concorde_constants.dart';
-import '../core/concorde_fuel_schematic.dart';
 import '../services/metar_service.dart';
 
 final airportDbProvider = FutureProvider<AirportDatabaseService>((ref) async {
@@ -289,25 +288,6 @@ final finalReserveFuelProvider =
       FinalReserveFuelNotifier.new,
     );
 
-/// Discretionary extra fuel a pilot chooses to load into the trim tanks (9,
-/// 10, 11) on top of the computed block fuel -- e.g. for a CG-driven
-/// margin. This is additive with [extraFuelProvider] in the total-fuel
-/// formula (Total = Block + Trim + Extra), so it must stay a plain manual
-/// value rather than an auto-computed "overflow beyond block fuel" --
-/// block fuel already represents everything the flight needs; treating
-/// trim as an auto-filled overflow on top of it double-counts the same
-/// fuel twice. Still capped at what tanks 9-11 can physically hold.
-class TrimTankFuelNotifier extends Notifier<double> {
-  @override
-  double build() => 0.0;
-  void set(double val) =>
-      state = val.clamp(0.0, ConcordeFuelSchematic.trimTankCapacityKg);
-}
-
-final trimTankFuelProvider = NotifierProvider<TrimTankFuelNotifier, double>(
-  TrimTankFuelNotifier.new,
-);
-
 class ExtraFuelNotifier extends Notifier<double> {
   @override
   double build() => 0.0;
@@ -396,9 +376,8 @@ final paxWeightProvider = Provider<double>((ref) {
 
 final weightsProvider = Provider<Map<String, double>>((ref) {
   final fuel = ref.watch(fuelBreakdownProvider);
-  final trim = ref.watch(trimTankFuelProvider);
   final extra = ref.watch(extraFuelProvider);
-  final totalFuel = fuel.blockKg + trim + extra;
+  final totalFuel = fuel.blockKg + extra;
   final effectiveFuel = math.min(
     totalFuel,
     ConcordeConstants.weights.fuelCapacityKg,

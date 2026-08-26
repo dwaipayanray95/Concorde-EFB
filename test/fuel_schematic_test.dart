@@ -67,14 +67,6 @@ void main() {
         );
       }
     });
-
-    test('trim tank capacity is tanks 9 + 10 + 11 only', () {
-      final expected =
-          ConcordeFuelSchematic.tankCapacitiesKg['9']! +
-          ConcordeFuelSchematic.tankCapacitiesKg['10']! +
-          ConcordeFuelSchematic.tankCapacitiesKg['11']!;
-      expect(ConcordeFuelSchematic.trimTankCapacityKg, closeTo(expected, 0.01));
-    });
   });
 
   group('ConcordeFuelSchematic.computeTankFills', () {
