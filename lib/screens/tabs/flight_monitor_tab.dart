@@ -7,7 +7,6 @@ import '../../features/flight_monitor/presentation/widgets/flight_monitor/fm_too
 import '../../features/flight_monitor/presentation/widgets/flight_monitor/hero_pfd_row.dart';
 import '../../features/flight_monitor/presentation/widgets/flight_monitor/fuel_schematic_card.dart';
 import '../../features/flight_monitor/presentation/widgets/flight_monitor/support_cards.dart';
-import '../../features/flight_monitor/presentation/widgets/flight_monitor/fm_logbook.dart';
 import '../../widgets/entrance_fader.dart';
 import '../widgets/app_footer.dart';
 
@@ -53,11 +52,7 @@ class _FlightMonitorSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        FmToolbar(
-          isConnected: monitorState.isConnected,
-          isLoggingFlight: monitorState.isLoggingFlight,
-          telemetry: telemetry,
-        ),
+        FmToolbar(isConnected: monitorState.isConnected, telemetry: telemetry),
         const SizedBox(height: 28),
 
         AbsorbPointer(
@@ -78,9 +73,6 @@ class _FlightMonitorSection extends StatelessWidget {
             ),
           ),
         ),
-
-        const SizedBox(height: 48),
-        const FmLogbook(),
       ],
     );
   }
