@@ -51,10 +51,11 @@ class FlightPlanSection extends ConsumerWidget {
                 flex: 2,
                 child: EfbTextField(
                   label: 'SIMBRIEF USERNAME / ID (OPTIONAL)',
+                  showLabel: false,
                   initialValue: ref.watch(simbriefUserProvider),
                   onChanged: (v) =>
                       ref.read(simbriefUserProvider.notifier).set(v),
-                  placeholder: 'SimBrief username',
+                  placeholder: 'SimBrief username / ID (optional)',
                 ),
               ),
               const SizedBox(width: 16),
@@ -222,7 +223,6 @@ class FlightPlanSection extends ConsumerWidget {
                   decoration: BoxDecoration(
                     color: colors.inputBg,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: colors.dividerStrong, width: 1.5),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -361,10 +361,6 @@ class FlightPlanSection extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: colors.inputBg,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: colors.dividerStrong,
-                        width: 1.5,
-                      ),
                     ),
                     child: Row(
                       children: [
@@ -435,7 +431,6 @@ class _InfoChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final isColored = backgroundColor != null;
     return Container(
       height: 48,
       width: double.infinity,
@@ -443,9 +438,6 @@ class _InfoChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: backgroundColor ?? colors.inputBg,
         borderRadius: BorderRadius.circular(12),
-        border: isColored
-            ? null
-            : Border.all(color: colors.dividerStrong, width: 1.5),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

@@ -260,7 +260,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                                 padding: const EdgeInsets.only(
                                   left: 40,
                                   right: 40,
-                                  top: 48,
+                                  top: 20,
                                 ),
                                 child: EntranceFader(
                                   key: const ValueKey('global-header'),

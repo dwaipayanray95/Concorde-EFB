@@ -31,7 +31,7 @@ class EfbCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
             decoration: BoxDecoration(
               color: colors.resultsBg,
               border: Border(bottom: BorderSide(color: colors.divider)),
