@@ -764,13 +764,13 @@ class _RunwayMarginText extends StatelessWidget {
         if (!f.widthOk) ...[
           const SizedBox(height: 4),
           Text(
-            'RUNWAY TOO NARROW (min ${ConcordeConstants.runway.minRunwayWidthFt.round()} ft)',
+            'CAUTION: NARROW RUNWAY (min ${ConcordeConstants.runway.minRunwayWidthFt.round()} ft)',
             textAlign: TextAlign.right,
             style: uiText(
               context,
               size: 11,
               weight: FontWeight.w800,
-              color: colors.error,
+              color: colors.mvfr,
             ),
           ),
         ],
