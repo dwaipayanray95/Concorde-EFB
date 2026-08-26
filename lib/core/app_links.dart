@@ -19,4 +19,6 @@ class AppLinks {
       'https://flightsim.to/addon/101890/concorde-efb';
   static const String patreon = 'https://www.patreon.com/c/theawesomeray';
   static const String discord = 'https://discord.gg/xe49YpczpP';
+  static const String githubSponsors =
+      'https://github.com/sponsors/dwaipayanray95';
 }

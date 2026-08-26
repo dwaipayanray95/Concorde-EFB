@@ -411,7 +411,7 @@ class _StatGroup extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     return EfbFlatCard(
-      background: colors.resultsBg,
+      background: colors.inputBg,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       borderRadius: BorderRadius.circular(16),
       child: Row(
@@ -507,7 +507,7 @@ class _FuelBreakdownPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     return EfbFlatCard(
-      background: colors.resultsBg,
+      background: colors.inputBg,
       borderRadius: BorderRadius.circular(16),
       padding: const EdgeInsets.all(24),
       child: Column(

@@ -35,7 +35,7 @@ class FlightPlannerTab extends StatelessWidget {
           delay: const Duration(milliseconds: 220),
           child: const PerformanceCalculatorSection(),
         ),
-        const SizedBox(height: 64),
+        const SizedBox(height: 24),
         EntranceFader(
           key: const ValueKey('footer'),
           delay: const Duration(milliseconds: 340),
