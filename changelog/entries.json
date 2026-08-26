@@ -3,6 +3,8 @@
         "date": "2026-08-26",
         "title": "Commits",
         "items": [
+            "7b84ee2 style: polish flight planner layout and spacing",
+            "6c20fda feat: add GitHub Sponsors links and unify card contrast styling",
             "17dd5de Update FUNDING.yml with sponsorship options",
             "f5c0cce refactor: extract shared TopArcBorder card style and refresh app shell theming",
             "b76eaf9 refactor: rework performance calculator cards and runway/wind indicator",
