@@ -472,10 +472,11 @@ class ConcordeLogic {
 
     // If reheat is off and weight is too high (above 155,000 kg),
     // Concorde cannot climb out safely without afterburners, making it unfeasible.
+    // Narrow runway width is a caution, not a hard reject: it's surfaced to the
+    // crew via widthOk but doesn't gate feasibility the way altitude/crosswind do.
     final feasible =
         (runwayLengthM >= required) &&
         (useReheat || takeoffWeightKg < 155000) &&
-        limits.widthOk &&
         limits.altitudeOk &&
         limits.crosswindOk;
 
@@ -512,9 +513,9 @@ class ConcordeLogic {
       baseRequiredLengthMEst: baseRequired,
       requiredLengthMEst: required,
       runwayLengthM: runwayLengthM,
+      // Narrow runway width is a caution, not a hard reject: see takeoffFeasibleM.
       feasible:
           runwayLengthM >= required &&
-          limits.widthOk &&
           limits.altitudeOk &&
           limits.crosswindOk,
       correctionFactor: correction["factor"] as double,

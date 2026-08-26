@@ -149,14 +149,14 @@ void main() {
   });
 
   group('ConcordeLogic hard limits (width / altitude / crosswind)', () {
-    test('a runway narrower than 150 ft is infeasible for takeoff', () {
+    test('a runway narrower than 150 ft is a caution, not infeasible', () {
       final result = ConcordeLogic.takeoffFeasibleM(
         4200,
         170000,
         runwayWidthFt: 100,
       );
       expect(result.widthOk, isFalse);
-      expect(result.feasible, isFalse);
+      expect(result.feasible, isTrue);
     });
 
     test('a runway at or above 150 ft wide is fine', () {
