@@ -3,6 +3,7 @@
         "date": "2026-08-26",
         "title": "Commits",
         "items": [
+            "97a9e24 refactor: remove flight log/recording feature from Flight Monitor",
             "7b84ee2 style: polish flight planner layout and spacing",
             "6c20fda feat: add GitHub Sponsors links and unify card contrast styling",
             "17dd5de Update FUNDING.yml with sponsorship options",
