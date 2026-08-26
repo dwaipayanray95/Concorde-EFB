@@ -3,6 +3,8 @@
         "date": "2026-08-26",
         "title": "Commits",
         "items": [
+            "17dd5de Update FUNDING.yml with sponsorship options",
+            "f5c0cce refactor: extract shared TopArcBorder card style and refresh app shell theming",
             "b76eaf9 refactor: rework performance calculator cards and runway/wind indicator",
             "3b40d6e style: add consistent site nav to changelog and donate pages",
             "8a8ac6a feat: build MSFS-pasteable route string with dep/arr runways",
