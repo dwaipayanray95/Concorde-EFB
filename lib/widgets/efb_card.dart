@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import '../core/app_colors.dart';
 import '../core/ui_text.dart';
-import 'efb_flat_card.dart';
+import 'top_arc_border.dart';
 
 class EfbCard extends StatelessWidget {
   final String title;
   final Widget child;
   final Widget? right;
   final Color? accentTop;
+  final IconData? icon;
 
   const EfbCard({
     super.key,
@@ -15,63 +16,52 @@ class EfbCard extends StatelessWidget {
     required this.child,
     this.right,
     this.accentTop,
+    this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final tabBg = accentTop ?? colors.accent;
+    final accent = accentTop ?? colors.cardAccent;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Popping folder tab perfectly merged with the card's left edge
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 22,
-                vertical: 8,
-              ),
-              decoration: BoxDecoration(
-                color: tabBg,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(14),
-                ),
-              ),
-              child: Text(
-                title.toUpperCase(),
-                style: uiText(
-                  context,
-                  size: 11,
-                  weight: FontWeight.w900,
-                  letterSpacing: 2,
-                  color: Colors.white,
-                ),
-              ),
+    return TopArcBorder(
+      color: accent,
+      background: colors.surface,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            decoration: BoxDecoration(
+              color: colors.resultsBg,
+              border: Border(bottom: BorderSide(color: colors.divider)),
             ),
-            if (right != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 6, right: 8),
-                child: right!,
-              ),
-          ],
-        ),
-        // Main card body with flush top-left corner merging directly into the tab
-        EfbFlatCard(
-          borderRadius: const BorderRadius.only(
-            topRight: Radius.circular(20),
-            bottomLeft: Radius.circular(20),
-            bottomRight: Radius.circular(20),
+            child: Row(
+              children: [
+                if (icon != null) ...[
+                  Icon(icon, size: 16, color: accent),
+                  const SizedBox(width: 10),
+                ],
+                Expanded(
+                  child: Text(
+                    title.toUpperCase(),
+                    style: uiText(
+                      context,
+                      size: 12,
+                      weight: FontWeight.w900,
+                      letterSpacing: 2,
+                      height: 1,
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                ),
+                ?right,
+              ],
+            ),
           ),
-          padding: const EdgeInsets.all(24),
-          child: child,
-        ),
-      ],
+          Padding(padding: const EdgeInsets.all(24), child: child),
+        ],
+      ),
     );
   }
 }

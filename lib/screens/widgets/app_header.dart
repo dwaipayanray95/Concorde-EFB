@@ -137,23 +137,23 @@ class AppHeader extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Concorde EFB',
+                    'CONCORDE EFB',
                     style: uiText(
                       context,
                       size: 28,
                       weight: FontWeight.w900,
-                      color: Colors.white,
-                    ),
+                      color: colors.textPrimary,
+                    ).copyWith(fontStyle: FontStyle.italic),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Flight planning & performance for MSFS.',
+                    'Your supersonic co-pilot for Microsoft Flight Simulator.',
                     style: uiText(
                       context,
                       size: 13,
                       weight: FontWeight.w500,
-                      color: const Color(0xFFA8ACC4),
-                    ),
+                      color: colors.textSecondary,
+                    ).copyWith(fontStyle: FontStyle.italic),
                   ),
                 ],
               ),

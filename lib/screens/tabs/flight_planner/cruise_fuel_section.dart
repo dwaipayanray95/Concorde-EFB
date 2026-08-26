@@ -46,6 +46,7 @@ class CruiseAndFuelSection extends ConsumerWidget {
 
     return EfbCard(
       title: 'CRUISE & FUEL MANAGEMENT',
+      icon: Icons.local_gas_station_outlined,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -223,11 +224,7 @@ class CruiseAndFuelSection extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 24),
-                VerticalDivider(
-                  color: colors.divider,
-                  thickness: 1,
-                  width: 1,
-                ),
+                VerticalDivider(color: colors.divider, thickness: 1, width: 1),
                 const SizedBox(width: 24),
                 Expanded(
                   flex: 2,
@@ -254,9 +251,9 @@ class CruiseAndFuelSection extends ConsumerWidget {
                   context,
                   color:
                       mission.climb.timeH * 60 <=
-                              ConcordeConstants.fuel.reheatMinutesCap
-                          ? colors.textDim
-                          : colors.error,
+                          ConcordeConstants.fuel.reheatMinutesCap
+                      ? colors.textDim
+                      : colors.error,
                   size: 12,
                 ),
               ),
@@ -265,11 +262,7 @@ class CruiseAndFuelSection extends ConsumerWidget {
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
                     'Fuel endurance is less than required ETE + reserves.',
-                    style: uiText(
-                      context,
-                      color: colors.error,
-                      size: 12,
-                    ),
+                    style: uiText(context, color: colors.error, size: 12),
                   ),
                 ),
               if (isOverCapacity)
@@ -559,11 +552,7 @@ class _FuelBreakdownPanel extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     'Block + Extra (${numFormat.format(extra)} kg)',
-                    style: uiText(
-                      context,
-                      size: 10,
-                      color: colors.textDim,
-                    ),
+                    style: uiText(context, size: 10, color: colors.textDim),
                   ),
                 ],
               ),
@@ -577,19 +566,13 @@ class _FuelBreakdownPanel extends StatelessWidget {
                       context,
                       size: 28,
                       weight: FontWeight.w900,
-                      color: isOverCapacity
-                          ? colors.error
-                          : colors.success,
+                      color: isOverCapacity ? colors.error : colors.success,
                     ),
                   ),
                   const SizedBox(width: 4),
                   Text(
                     'kg',
-                    style: uiText(
-                      context,
-                      size: 14,
-                      color: colors.textDim,
-                    ),
+                    style: uiText(context, size: 14, color: colors.textDim),
                   ),
                 ],
               ),
