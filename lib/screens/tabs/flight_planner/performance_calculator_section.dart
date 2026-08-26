@@ -1,9 +1,9 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/efb_providers.dart';
 import '../../../widgets/wind_arrow.dart';
 import '../../../widgets/efb_card.dart';
+import '../../../widgets/top_arc_border.dart';
 import '../../../core/app_colors.dart';
 import '../../../core/ui_text.dart';
 import '../../../core/concorde_constants.dart';
@@ -34,6 +34,7 @@ class _PerformanceCalculatorSectionState
 
     return EfbCard(
       title: 'PERFORMANCE CALCULATOR',
+      icon: Icons.calculate_outlined,
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -157,346 +158,196 @@ class _LegCard extends ConsumerWidget {
     final parsedWind = MetarParser.parseWind(metarStr);
     final statusColor = isFeasible ? colors.arrival : colors.departure;
 
-    const cardRadius = 20.0;
-    const topBorderWidth = 8.0;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.resultsBg,
-        borderRadius: BorderRadius.circular(cardRadius),
-        // No border at all -- the shadow separates the card from the page
-        // background, and the reactive top arc is painted as a stroke on
-        // top (see _TopArcBorderPainter) rather than a filled band, so it
-        // keeps a constant thickness all the way around the curve instead
-        // of tapering to a point at the corner.
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Stack(
+    return TopArcBorder(
+      color: statusColor,
+      background: colors.resultsBg,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(cardRadius),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          // Identity row
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            decoration: BoxDecoration(
+              color: colors.resultsBg,
+              border: Border(bottom: BorderSide(color: colors.divider)),
+            ),
+            child: Row(
               children: [
-                // Identity row
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 16,
-                  ),
-                  decoration: BoxDecoration(
-                    color: colors.resultsBg,
-                    border: Border(bottom: BorderSide(color: colors.divider)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(legIcon, size: 18, color: statusColor),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          legLabel,
-                          style: uiText(
-                            context,
-                            size: 12,
-                            weight: FontWeight.w900,
-                            color: colors.textSecondary,
-                            letterSpacing: 2,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isFeasible ? colors.successBg : colors.errorBg,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          isFeasible ? 'WITHIN LIMITS' : 'EXCEEDS LIMITS',
-                          style: uiText(
-                            context,
-                            size: 11,
-                            weight: FontWeight.w800,
-                            color: isFeasible ? colors.success : colors.error,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                    ],
+                Icon(legIcon, size: 18, color: statusColor),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    legLabel,
+                    style: uiText(
+                      context,
+                      size: 12,
+                      weight: FontWeight.w900,
+                      color: colors.textSecondary,
+                      letterSpacing: 2,
+                    ),
                   ),
                 ),
-                // Everything below flows in one vertical stack: ICAO/runway +
-                // wind, METAR, then the big weight/speeds/margin block.
-                Padding(
+                Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 20,
+                    horizontal: 16,
+                    vertical: 6,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      IntrinsicHeight(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              flex: 3,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  _IcaoField(
-                                    value: icao,
-                                    onChanged: onIcaoChanged,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  _RunwaySelect(
-                                    airport: airport,
-                                    currentId: currentRunwayId,
-                                    onChanged: onRunwayChanged,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 20),
-                            Container(width: 1, color: colors.divider),
-                            const SizedBox(width: 20),
-                            // Matches the combined height of the stacked ICAO +
-                            // RUNWAY fields above (label + field, twice, plus
-                            // the gap between them) -- IntrinsicHeight can't
-                            // be queried via LayoutBuilder, so this is
-                            // measured by hand rather than derived at layout
-                            // time.
-                            Expanded(
-                              flex: 2,
-                              child: SizedBox(
-                                height: 148,
-                                child: Center(
-                                  child: WindArrow(
-                                    runwayHeading: runway?.heading.toDouble(),
-                                    windDir: parsedWind.windDirDeg,
-                                    windSpeedKt: parsedWind.windSpeedKt,
-                                    color: colors.accent,
-                                    size: 148,
-                                    runwayLabel: runway?.id,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      metarAsync.when(
-                        data: (metar) => _WeatherStrip(
-                          metarStr: metar,
-                          runway: runway,
-                          showRaw: showRaw,
-                          onToggleRaw: onToggleRaw,
-                          onRefresh: onRefreshMetar,
-                        ),
-                        loading: () => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              color: colors.accent,
-                              strokeWidth: 2,
-                            ),
-                          ),
-                        ),
-                        error: (_, _) => _WeatherStrip(
-                          metarStr: '',
-                          runway: runway,
-                          showRaw: showRaw,
-                          onToggleRaw: onToggleRaw,
-                          onRefresh: onRefreshMetar,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Divider(color: colors.divider, height: 1),
-                      const SizedBox(height: 20),
-                      RichText(
-                        text: TextSpan(
-                          children: [
-                            TextSpan(
-                              text: numFormat.format(weightKg.round()),
-                              style: uiText(
-                                context,
-                                size: 28,
-                                weight: FontWeight.w900,
-                                color: colors.textPrimary,
-                              ),
-                            ),
-                            TextSpan(
-                              text: ' kg $weightLabel',
-                              style: uiText(
-                                context,
-                                size: 13,
-                                weight: FontWeight.w700,
-                                color: colors.textDim,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: speeds.entries.map((e) {
-                          return Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 12),
-                              child: _SpeedChip(
-                                label: e.key,
-                                value: e.value.round().toString(),
-                                color: speedColor,
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 16),
-                      _RunwayMarginText(
-                        feasibility: feasibility,
-                        isWeightFeasible: isWeightFeasible,
-                        isFuelOver: isFuelOver,
-                        maxWeightKg: maxWeightKg,
-                        noReheatFeasible:
-                            noReheatFeasibility?.feasible ?? false,
-                      ),
-                    ],
+                  decoration: BoxDecoration(
+                    color: isFeasible ? colors.successBg : colors.errorBg,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    isFeasible ? 'WITHIN LIMITS' : 'EXCEEDS LIMITS',
+                    style: uiText(
+                      context,
+                      size: 11,
+                      weight: FontWeight.w800,
+                      color: isFeasible ? colors.success : colors.error,
+                      letterSpacing: 0.5,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          Positioned.fill(
-            child: IgnorePointer(
-              child: CustomPaint(
-                painter: _TopArcBorderPainter(
-                  color: statusColor,
-                  radius: cardRadius,
-                  strokeWidth: topBorderWidth,
+          // Everything below flows in one vertical stack: ICAO/runway +
+          // wind, METAR, then the big weight/speeds/margin block.
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _IcaoField(value: icao, onChanged: onIcaoChanged),
+                            const SizedBox(height: 16),
+                            _RunwaySelect(
+                              airport: airport,
+                              currentId: currentRunwayId,
+                              onChanged: onRunwayChanged,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+                      Container(width: 1, color: colors.divider),
+                      const SizedBox(width: 20),
+                      // Matches the combined height of the stacked ICAO +
+                      // RUNWAY fields above (label + field, twice, plus
+                      // the gap between them) -- IntrinsicHeight can't
+                      // be queried via LayoutBuilder, so this is
+                      // measured by hand rather than derived at layout
+                      // time.
+                      Expanded(
+                        flex: 2,
+                        child: SizedBox(
+                          height: 148,
+                          child: Center(
+                            child: WindArrow(
+                              runwayHeading: runway?.heading.toDouble(),
+                              windDir: parsedWind.windDirDeg,
+                              windSpeedKt: parsedWind.windSpeedKt,
+                              color: colors.accent,
+                              size: 148,
+                              runwayLabel: runway?.id,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+                const SizedBox(height: 20),
+                metarAsync.when(
+                  data: (metar) => _WeatherStrip(
+                    metarStr: metar,
+                    runway: runway,
+                    showRaw: showRaw,
+                    onToggleRaw: onToggleRaw,
+                    onRefresh: onRefreshMetar,
+                  ),
+                  loading: () => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: colors.accent,
+                        strokeWidth: 2,
+                      ),
+                    ),
+                  ),
+                  error: (_, _) => _WeatherStrip(
+                    metarStr: '',
+                    runway: runway,
+                    showRaw: showRaw,
+                    onToggleRaw: onToggleRaw,
+                    onRefresh: onRefreshMetar,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Divider(color: colors.divider, height: 1),
+                const SizedBox(height: 20),
+                RichText(
+                  text: TextSpan(
+                    children: [
+                      TextSpan(
+                        text: numFormat.format(weightKg.round()),
+                        style: uiText(
+                          context,
+                          size: 28,
+                          weight: FontWeight.w900,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                      TextSpan(
+                        text: ' kg $weightLabel',
+                        style: uiText(
+                          context,
+                          size: 13,
+                          weight: FontWeight.w700,
+                          color: colors.textDim,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: speeds.entries.map((e) {
+                    return Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: _SpeedChip(
+                          label: e.key,
+                          value: e.value.round().toString(),
+                          color: speedColor,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+                _RunwayMarginText(
+                  feasibility: feasibility,
+                  isWeightFeasible: isWeightFeasible,
+                  isFuelOver: isFuelOver,
+                  maxWeightKg: maxWeightKg,
+                  noReheatFeasible: noReheatFeasibility?.feasible ?? false,
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
   }
-}
-
-/// Paints a thick colored stroke along just the top rounded edge of a card
-/// (following the actual corner curve at a constant thickness, then
-/// stopping before the straight sides) -- a stroked arc, not a filled band,
-/// since a flat band clipped by the card's rounded mask tapers to a point
-/// at the corner instead of curving smoothly.
-class _TopArcBorderPainter extends CustomPainter {
-  final Color color;
-  final double radius;
-  final double strokeWidth;
-
-  const _TopArcBorderPainter({
-    required this.color,
-    required this.radius,
-    required this.strokeWidth,
-  });
-
-  static const _cornerSteps = 24;
-
-  /// Inner-edge radius at corner param [t] (0 = flat-top tangent, 1 = side
-  /// tangent, where it merges with the outer edge). Eased (not linear) so
-  /// its derivative is zero at t=0 -- matching the flat band's horizontal
-  /// inner edge -- instead of kinking right where the flat band meets the
-  /// curve.
-  double _innerRadius(double t) {
-    final u = 1 - t;
-    return radius - strokeWidth * (2 * u - u * u);
-  }
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
-    final rightCenter = Offset(size.width - radius, radius);
-    final leftCenter = Offset(radius, radius);
-    // Both corners start at their flat-top tangent (angle -90°, straight
-    // up) and sweep 90° down to their straight-side tangent -- the right
-    // corner sweeping clockwise (+), the left corner counterclockwise (-).
-    const startAngle = -math.pi / 2;
-
-    final path = Path()
-      // Flat full-width band across the top, flush with the card's edges.
-      ..moveTo(radius, 0)
-      ..lineTo(size.width - radius, 0);
-
-    // Right corner outer edge: constant radius, flush with the card
-    // boundary, from the top tangent to the side tangent.
-    for (var i = 1; i <= _cornerSteps; i++) {
-      final angle = startAngle + (math.pi / 2) * (i / _cornerSteps);
-      path.lineTo(
-        rightCenter.dx + radius * math.cos(angle),
-        rightCenter.dy + radius * math.sin(angle),
-      );
-    }
-    // Right corner inner edge, walked backwards (side tangent -> top
-    // tangent): its radius tapers from [radius] (touching the outer edge,
-    // i.e. zero width) at the side tangent up to (radius - strokeWidth) at
-    // the top tangent, so the band's two edges merge into one point at the
-    // side instead of being sliced off with a flat cut.
-    for (var i = _cornerSteps; i >= 0; i--) {
-      final t = i / _cornerSteps;
-      final angle = startAngle + (math.pi / 2) * t;
-      final r = _innerRadius(t);
-      path.lineTo(
-        rightCenter.dx + r * math.cos(angle),
-        rightCenter.dy + r * math.sin(angle),
-      );
-    }
-
-    path.lineTo(radius, strokeWidth);
-
-    // Left corner inner edge (top tangent -> side tangent): tapers from
-    // (radius - strokeWidth) at the top down to [radius] (merging with the
-    // outer edge) at the side.
-    for (var i = 1; i <= _cornerSteps; i++) {
-      final t = i / _cornerSteps;
-      final angle = startAngle - (math.pi / 2) * t;
-      final r = _innerRadius(t);
-      path.lineTo(
-        leftCenter.dx + r * math.cos(angle),
-        leftCenter.dy + r * math.sin(angle),
-      );
-    }
-    // Left corner outer edge, walked backwards (side tangent -> top
-    // tangent), closing back to the path's start point.
-    for (var i = _cornerSteps; i >= 0; i--) {
-      final angle = startAngle - (math.pi / 2) * (i / _cornerSteps);
-      path.lineTo(
-        leftCenter.dx + radius * math.cos(angle),
-        leftCenter.dy + radius * math.sin(angle),
-      );
-    }
-    path.close();
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _TopArcBorderPainter oldDelegate) =>
-      oldDelegate.color != color ||
-      oldDelegate.radius != radius ||
-      oldDelegate.strokeWidth != strokeWidth;
 }
 
 /// One boxed V-speed/reference-speed value under the big TOW/LW figure.

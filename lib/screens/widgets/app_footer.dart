@@ -7,80 +7,81 @@ import '../../widgets/efb_launches_badge.dart';
 import '../../widgets/efb_ad_banner.dart';
 
 /// Shared footer shown at the bottom of the Flight Planner and Flight
-/// Monitor tabs: launches badge, disclaimer, changelog link, and ad banner.
+/// Monitor tabs: the support-development banner alongside a stack of
+/// small link buttons (launches count, changelog, Discord).
 class AppFooter extends StatelessWidget {
   const AppFooter({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
     return Column(
       children: [
         const SizedBox(height: 20),
-        const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [EfbLaunchesBadge()],
-        ),
-        const SizedBox(height: 24),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            InkWell(
-              onTap: () async {
-                final url = Uri.parse(AppLinks.changelog);
-                try {
-                  await launchUrl(url);
-                } catch (_) {}
-              },
-              borderRadius: BorderRadius.circular(4),
-              mouseCursor: SystemMouseCursors.click,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: Text(
-                  'VIEW CHANGELOG',
-                  style: uiText(
-                    context,
-                    color: colors.accent,
-                    size: 12,
-                    weight: FontWeight.bold,
-                    letterSpacing: 1.2,
-                    decoration: TextDecoration.underline,
-                  ),
+            const SizedBox(width: 600, child: EfbAdBanner()),
+            const SizedBox(width: 20),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const EfbLaunchesBadge(),
+                const SizedBox(height: 10),
+                _FooterLinkButton(
+                  label: 'VIEW CHANGELOG',
+                  url: AppLinks.changelog,
                 ),
-              ),
-            ),
-            Text(
-              '  •  ',
-              style: uiText(context, color: colors.textDim, size: 12),
-            ),
-            InkWell(
-              onTap: () async {
-                final url = Uri.parse(AppLinks.discord);
-                try {
-                  await launchUrl(url);
-                } catch (_) {}
-              },
-              borderRadius: BorderRadius.circular(4),
-              mouseCursor: SystemMouseCursors.click,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: Text(
-                  'JOIN DISCORD',
-                  style: uiText(
-                    context,
-                    color: colors.accent,
-                    size: 12,
-                    weight: FontWeight.bold,
-                    letterSpacing: 1.2,
-                    decoration: TextDecoration.underline,
-                  ),
-                ),
-              ),
+                const SizedBox(height: 10),
+                _FooterLinkButton(label: 'JOIN DISCORD', url: AppLinks.discord),
+              ],
             ),
           ],
         ),
-        const EfbAdBanner(),
       ],
+    );
+  }
+}
+
+/// A small button-styled footer link, stacked alongside the launches badge.
+class _FooterLinkButton extends StatelessWidget {
+  final String label;
+  final String url;
+
+  const _FooterLinkButton({required this.label, required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return InkWell(
+      onTap: () async {
+        final uri = Uri.parse(url);
+        try {
+          await launchUrl(uri);
+        } catch (_) {}
+      },
+      borderRadius: BorderRadius.circular(6),
+      mouseCursor: SystemMouseCursors.click,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: colors.dividerStrong, width: 1),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: uiText(
+            context,
+            color: colors.accent,
+            size: 10,
+            weight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
     );
   }
 }

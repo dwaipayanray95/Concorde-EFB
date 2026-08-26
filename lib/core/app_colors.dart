@@ -12,6 +12,7 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color divider;
   final Color dividerStrong;
   final Color accent;
+  final Color cardAccent;
   final Color departure;
   final Color arrival;
   final Color errorBg;
@@ -36,6 +37,7 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.divider,
     required this.dividerStrong,
     required this.accent,
+    required this.cardAccent,
     required this.departure,
     required this.arrival,
     required this.errorBg,
@@ -51,7 +53,7 @@ class AppColors extends ThemeExtension<AppColors> {
   });
 
   static const light = AppColors(
-    bg: Color(0xFF1E212B),
+    bg: Color(0xFFEDF1F8),
     surface: Color(0xFFD0D7E6),
     resultsBg: Color(0xFFFFFFFF),
     inputBg: Color(0xFFF2F5FC),
@@ -61,6 +63,7 @@ class AppColors extends ThemeExtension<AppColors> {
     divider: Color(0xFFB8C2D6),
     dividerStrong: Color(0xFFA2AFC8),
     accent: Color(0xFF651FFF),
+    cardAccent: Color(0xFF0EA5E9),
     departure: Color(0xFFFF2D4E),
     arrival: Color(0xFF00B848),
     errorBg: Color(0xFFFFEBEE),
@@ -86,6 +89,7 @@ class AppColors extends ThemeExtension<AppColors> {
     divider: Color(0xFF262B3A),
     dividerStrong: Color(0xFF323851),
     accent: Color(0xFF5B7CFF),
+    cardAccent: Color(0xFF38BDF8),
     departure: Color(0xFFFF5C74),
     arrival: Color(0xFF2FE07A),
     errorBg: Color(0xFF3A1620),
@@ -112,6 +116,7 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? divider,
     Color? dividerStrong,
     Color? accent,
+    Color? cardAccent,
     Color? departure,
     Color? arrival,
     Color? errorBg,
@@ -136,6 +141,7 @@ class AppColors extends ThemeExtension<AppColors> {
       divider: divider ?? this.divider,
       dividerStrong: dividerStrong ?? this.dividerStrong,
       accent: accent ?? this.accent,
+      cardAccent: cardAccent ?? this.cardAccent,
       departure: departure ?? this.departure,
       arrival: arrival ?? this.arrival,
       errorBg: errorBg ?? this.errorBg,
@@ -165,6 +171,7 @@ class AppColors extends ThemeExtension<AppColors> {
       divider: Color.lerp(divider, other.divider, t)!,
       dividerStrong: Color.lerp(dividerStrong, other.dividerStrong, t)!,
       accent: Color.lerp(accent, other.accent, t)!,
+      cardAccent: Color.lerp(cardAccent, other.cardAccent, t)!,
       departure: Color.lerp(departure, other.departure, t)!,
       arrival: Color.lerp(arrival, other.arrival, t)!,
       errorBg: Color.lerp(errorBg, other.errorBg, t)!,

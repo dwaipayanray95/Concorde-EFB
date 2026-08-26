@@ -120,7 +120,9 @@ class _EfbAdBannerState extends State<EfbAdBanner> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: colors.accent,
                 minimumSize: const Size(double.infinity, 48),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 elevation: 0,
               ),
             ),
@@ -153,7 +155,11 @@ class _EfbAdBannerState extends State<EfbAdBanner> {
                     width: 150,
                     height: 150,
                     child: Center(
-                      child: Icon(Icons.qr_code, color: Colors.black54, size: 48),
+                      child: Icon(
+                        Icons.qr_code,
+                        color: Colors.black54,
+                        size: 48,
+                      ),
                     ),
                   );
                 },
@@ -162,7 +168,9 @@ class _EfbAdBannerState extends State<EfbAdBanner> {
             const SizedBox(height: 16),
             OutlinedButton.icon(
               onPressed: () {
-                Clipboard.setData(const ClipboardData(text: 'dwaipayanray95@ptaxis'));
+                Clipboard.setData(
+                  const ClipboardData(text: 'dwaipayanray95@ptaxis'),
+                );
                 if (context.mounted) {
                   Navigator.of(context).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -190,7 +198,9 @@ class _EfbAdBannerState extends State<EfbAdBanner> {
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: colors.accent, width: 1.5),
                 minimumSize: const Size(double.infinity, 44),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ],
@@ -216,78 +226,86 @@ class _EfbAdBannerState extends State<EfbAdBanner> {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final isDesktopOrWeb = kIsWeb ||
+    final isDesktopOrWeb =
+        kIsWeb ||
         defaultTargetPlatform == TargetPlatform.windows ||
         defaultTargetPlatform == TargetPlatform.macOS ||
         defaultTargetPlatform == TargetPlatform.linux;
 
     if (isDesktopOrWeb) {
-      return Center(
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
-            onTap: () => _showDonateDialog(context),
-            child: Container(
-              margin: const EdgeInsets.only(top: 24),
-              width: 728,
-              height: 90,
-              child: EfbFlatCard(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                borderRadius: BorderRadius.circular(16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
+      return MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: () => _showDonateDialog(context),
+          child: SizedBox(
+            height: 90,
+            child: EfbFlatCard(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              borderRadius: BorderRadius.circular(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Row(
                       children: [
                         Icon(Icons.favorite, color: colors.departure, size: 28),
                         const SizedBox(width: 16),
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'SUPPORT CONCORDE EFB DEVELOPMENT',
-                              style: uiText(
-                                context,
-                                size: 12,
-                                weight: FontWeight.w900,
-                                color: colors.textPrimary,
-                                letterSpacing: 1.5,
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'SUPPORT CONCORDE EFB DEVELOPMENT',
+                                overflow: TextOverflow.ellipsis,
+                                style: uiText(
+                                  context,
+                                  size: 12,
+                                  weight: FontWeight.w900,
+                                  color: colors.textPrimary,
+                                  letterSpacing: 1.5,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Help keep this flight planner free and updated by sponsoring or donating.',
-                              style: uiText(
-                                context,
-                                size: 11,
-                                color: colors.textSecondary,
+                              const SizedBox(height: 4),
+                              Text(
+                                'Help keep this flight planner free and updated by sponsoring or donating.',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: uiText(
+                                  context,
+                                  size: 11,
+                                  color: colors.textSecondary,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ],
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: colors.accent.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: colors.accent, width: 1.5),
-                      ),
-                      child: Text(
-                        'DONATE NOW',
-                        style: uiText(
-                          context,
-                          size: 11,
-                          weight: FontWeight.bold,
-                          color: colors.accent,
-                          letterSpacing: 1,
-                        ),
+                  ),
+                  const SizedBox(width: 16),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colors.accent.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: colors.accent, width: 1.5),
+                    ),
+                    child: Text(
+                      'DONATE NOW',
+                      style: uiText(
+                        context,
+                        size: 11,
+                        weight: FontWeight.bold,
+                        color: colors.accent,
+                        letterSpacing: 1,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),

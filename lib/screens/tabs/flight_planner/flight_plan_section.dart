@@ -41,6 +41,7 @@ class FlightPlanSection extends ConsumerWidget {
 
     return EfbCard(
       title: 'FLIGHT PLAN',
+      icon: Icons.map_outlined,
       child: Column(
         children: [
           Row(
@@ -51,7 +52,8 @@ class FlightPlanSection extends ConsumerWidget {
                 child: EfbTextField(
                   label: 'SIMBRIEF USERNAME / ID (OPTIONAL)',
                   initialValue: ref.watch(simbriefUserProvider),
-                  onChanged: (v) => ref.read(simbriefUserProvider.notifier).set(v),
+                  onChanged: (v) =>
+                      ref.read(simbriefUserProvider.notifier).set(v),
                   placeholder: 'SimBrief username',
                 ),
               ),
@@ -69,59 +71,112 @@ class FlightPlanSection extends ConsumerWidget {
                   ],
                 ),
                 child: ElevatedButton.icon(
-                  onPressed: isLoading ? null : () async {
-                    final user = ref.read(simbriefUserProvider);
-                    if (user.isEmpty) return;
-                    ref.read(simbriefLoadingProvider.notifier).set(true);
-                    try {
-                      final ofp = await SimBriefService().fetchLatestOFP(user);
-                      if (ofp != null) {
-                        ref.read(callSignProvider.notifier).set(ofp['general']?['atc_callsign'] ?? ofp['atc']?['callsign'] ?? '--');
-                        ref.read(registrationProvider.notifier).set(ofp['aircraft']?['reg'] ?? '--');
-                        ref.read(departureIcaoProvider.notifier).set(ofp['origin']?['icao_code'] ?? '');
-                        ref.read(arrivalIcaoProvider.notifier).set(ofp['destination']?['icao_code'] ?? '');
-                        ref.read(alternateIcaoProvider.notifier).set(ofp['alternate']?['icao_code'] ?? '');
-                        ref.read(plannedDistanceProvider.notifier).set(double.tryParse(ofp['general']?['route_distance'] ?? '0') ?? 0.0);
-                        ref.read(paxCountProvider.notifier).set(int.tryParse(ofp['weights']?['pax_count'] ?? '100') ?? 100);
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          final user = ref.read(simbriefUserProvider);
+                          if (user.isEmpty) return;
+                          ref.read(simbriefLoadingProvider.notifier).set(true);
+                          try {
+                            final ofp = await SimBriefService().fetchLatestOFP(
+                              user,
+                            );
+                            if (ofp != null) {
+                              ref
+                                  .read(callSignProvider.notifier)
+                                  .set(
+                                    ofp['general']?['atc_callsign'] ??
+                                        ofp['atc']?['callsign'] ??
+                                        '--',
+                                  );
+                              ref
+                                  .read(registrationProvider.notifier)
+                                  .set(ofp['aircraft']?['reg'] ?? '--');
+                              ref
+                                  .read(departureIcaoProvider.notifier)
+                                  .set(ofp['origin']?['icao_code'] ?? '');
+                              ref
+                                  .read(arrivalIcaoProvider.notifier)
+                                  .set(ofp['destination']?['icao_code'] ?? '');
+                              ref
+                                  .read(alternateIcaoProvider.notifier)
+                                  .set(ofp['alternate']?['icao_code'] ?? '');
+                              ref
+                                  .read(plannedDistanceProvider.notifier)
+                                  .set(
+                                    double.tryParse(
+                                          ofp['general']?['route_distance'] ??
+                                              '0',
+                                        ) ??
+                                        0.0,
+                                  );
+                              ref
+                                  .read(paxCountProvider.notifier)
+                                  .set(
+                                    int.tryParse(
+                                          ofp['weights']?['pax_count'] ?? '100',
+                                        ) ??
+                                        100,
+                                  );
 
-                        ref.read(departureRunwayIdProvider.notifier).set(ofp['origin']?['plan_rwy'] ?? '');
-                        ref.read(arrivalRunwayIdProvider.notifier).set(ofp['destination']?['plan_rwy'] ?? '');
+                              ref
+                                  .read(departureRunwayIdProvider.notifier)
+                                  .set(ofp['origin']?['plan_rwy'] ?? '');
+                              ref
+                                  .read(arrivalRunwayIdProvider.notifier)
+                                  .set(ofp['destination']?['plan_rwy'] ?? '');
 
-                        ref.read(simbriefRouteProvider.notifier).set(ofp['general']?['route'] ?? '--');
-                        ref.read(simbriefLoadedProvider.notifier).set(true);
-                        ref.read(checklistProvider.notifier).resetAll();
-                      } else if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'SimBrief import failed. Check your username/ID and internet connection.',
-                              style: uiText(context, color: Colors.white),
-                            ),
-                            behavior: SnackBarBehavior.floating,
-                            backgroundColor: colors.error,
-                          ),
-                        );
-                      }
-                    } finally {
-                      ref.read(simbriefLoadingProvider.notifier).set(false);
-                    }
-                  },
+                              ref
+                                  .read(simbriefRouteProvider.notifier)
+                                  .set(ofp['general']?['route'] ?? '--');
+                              ref
+                                  .read(simbriefLoadedProvider.notifier)
+                                  .set(true);
+                              ref.read(checklistProvider.notifier).resetAll();
+                            } else if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'SimBrief import failed. Check your username/ID and internet connection.',
+                                    style: uiText(context, color: Colors.white),
+                                  ),
+                                  behavior: SnackBarBehavior.floating,
+                                  backgroundColor: colors.error,
+                                ),
+                              );
+                            }
+                          } finally {
+                            ref
+                                .read(simbriefLoadingProvider.notifier)
+                                .set(false);
+                          }
+                        },
                   icon: isLoading
                       ? const SizedBox(
                           width: 16,
                           height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Icon(Icons.download, size: 16),
                   label: Text(
                     'Import',
-                    style: uiText(context, size: 14, weight: FontWeight.bold, color: Colors.white),
+                    style: uiText(
+                      context,
+                      size: 14,
+                      weight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colors.accent,
                     foregroundColor: Colors.white,
                     elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     padding: const EdgeInsets.symmetric(horizontal: 32),
                   ),
                 ),
@@ -220,7 +275,10 @@ class FlightPlanSection extends ConsumerWidget {
                           backgroundColor: colors.surface,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
-                            side: BorderSide(color: colors.dividerStrong, width: 1.5),
+                            side: BorderSide(
+                              color: colors.dividerStrong,
+                              width: 1.5,
+                            ),
                           ),
                           title: Text(
                             'FULL ROUTE',
@@ -303,7 +361,10 @@ class FlightPlanSection extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: colors.inputBg,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: colors.dividerStrong, width: 1.5),
+                      border: Border.all(
+                        color: colors.dividerStrong,
+                        width: 1.5,
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -388,7 +449,9 @@ class _InfoChip extends StatelessWidget {
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: alignLeft ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+        crossAxisAlignment: alignLeft
+            ? CrossAxisAlignment.start
+            : CrossAxisAlignment.center,
         children: [
           Text(
             label,
@@ -396,7 +459,9 @@ class _InfoChip extends StatelessWidget {
               context,
               size: 9,
               weight: FontWeight.bold,
-              color: textColor != null ? textColor!.withValues(alpha: 0.85) : colors.textDim,
+              color: textColor != null
+                  ? textColor!.withValues(alpha: 0.85)
+                  : colors.textDim,
               letterSpacing: 1,
             ),
           ),
