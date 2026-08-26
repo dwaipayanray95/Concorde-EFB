@@ -391,6 +391,34 @@
       .footer a:hover {
         color: var(--accent);
       }
+
+      /* ── Community banner ───────────────────────────── */
+      .community-banner {
+        background: var(--card);
+        border: 1px solid var(--stroke);
+        border-radius: 16px;
+        padding: 18px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+
+      .community-banner .text h2 {
+        font-size: 15px;
+        margin: 0 0 4px;
+      }
+
+      .community-banner .text p {
+        margin: 0;
+      }
+
+      .community-banner .links {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
     </style>
   </head>
   <body>
@@ -418,6 +446,17 @@
           releases are the recommended track; beta builds get new features first but are test
           builds, not fully vetted.
         </p>
+      </div>
+
+      <div class="community-banner">
+        <div class="text">
+          <h2>🐞 Found a bug? Got an idea?</h2>
+          <p>Report bugs, request features, and track the roadmap — join us on Discord.</p>
+        </div>
+        <div class="links">
+          <a class="btn btn-primary" href="https://discord.gg/xe49YpczpP" target="_blank" rel="noreferrer">Join Discord</a>
+          <a class="btn btn-ghost" href="https://github.com/users/dwaipayanray95/projects/3" target="_blank" rel="noreferrer">View Roadmap</a>
+        </div>
       </div>
 
       <div class="channels">
