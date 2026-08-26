@@ -10,6 +10,11 @@ class WindArrow extends StatelessWidget {
   final double size;
   final Color? color;
 
+  /// Runway identifier (e.g. "09L") shown under the strip so the runway
+  /// this indicator refers to is obvious at a glance, without having to
+  /// cross-reference the ICAO/runway fields above it.
+  final String? runwayLabel;
+
   const WindArrow({
     super.key,
     required this.runwayHeading,
@@ -17,6 +22,7 @@ class WindArrow extends StatelessWidget {
     this.windSpeedKt,
     this.size = 24.0,
     this.color,
+    this.runwayLabel,
   });
 
   @override
@@ -27,16 +33,32 @@ class WindArrow extends StatelessWidget {
       return SizedBox(
         width: size,
         height: size,
-        child: Center(
-          child: Text(
-            'VRB',
-            style: uiText(
-              context,
-              size: 10,
-              weight: FontWeight.bold,
-              color: colors.textSecondary,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'VRB',
+              style: uiText(
+                context,
+                size: 10,
+                weight: FontWeight.bold,
+                color: colors.textSecondary,
+              ),
             ),
-          ),
+            if (runwayLabel != null && runwayLabel!.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                runwayLabel!,
+                style: uiText(
+                  context,
+                  size: 10,
+                  weight: FontWeight.w800,
+                  color: colors.textDim,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ],
         ),
       );
     }
@@ -59,55 +81,118 @@ class WindArrow extends StatelessWidget {
       }
     }
 
+    final hasLabel = runwayLabel != null && runwayLabel!.isNotEmpty;
+    final labelHeight = hasLabel ? size * 0.14 : 0.0;
+    final stripSize = size - labelHeight;
+
     return SizedBox(
       width: size,
       height: size,
-      child: Stack(
-        alignment: Alignment.center,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Transform.rotate(
-            angle: runwayRadians,
-            child: Container(
-              width: size * 0.16,
-              height: size * 1.08,
-              decoration: BoxDecoration(
-                color: colors.dividerStrong.withValues(alpha: 0.85),
-                borderRadius: BorderRadius.circular(3),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: List.generate(
-                  5,
-                  (index) => Container(
-                    width: 2,
-                    height: size * 0.10,
-                    color: colors.textDim.withValues(alpha: 0.85),
+          SizedBox(
+            width: size,
+            height: stripSize,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Transform.rotate(
+                  angle: runwayRadians,
+                  child: CustomPaint(
+                    size: Size(stripSize * 0.22, stripSize * 1.08),
+                    painter: _RunwayPainter(
+                      pavementColor: colors.dividerStrong.withValues(
+                        alpha: 0.55,
+                      ),
+                      markingColor: colors.textDim.withValues(alpha: 0.9),
+                    ),
                   ),
                 ),
-              ),
+                Transform.rotate(
+                  angle: arrowRadians,
+                  child: CustomPaint(
+                    size: Size(stripSize * 0.8, stripSize * 0.8),
+                    painter: _ArrowPainter(color: arrowColor),
+                  ),
+                ),
+              ],
             ),
           ),
-          Transform.rotate(
-            angle: arrowRadians,
-            child: CustomPaint(
-              size: Size(size * 0.8, size * 0.8),
-              painter: _ArrowPainter(
-                color: arrowColor,
-                maskColor: colors.surface,
+          if (hasLabel) ...[
+            const SizedBox(height: 4),
+            Text(
+              runwayLabel!,
+              style: uiText(
+                context,
+                size: 10,
+                weight: FontWeight.w800,
+                color: colors.textDim,
+                letterSpacing: 0.5,
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
   }
 }
 
+/// Draws a runway strip in one self-contained paint pass: pavement fill plus
+/// a dashed centerline. Kept as a CustomPainter (rather than a Container +
+/// Column of tick widgets) so this look can't be quietly stripped down to a
+/// plain line/border by an unrelated future edit -- everything that makes it
+/// read as "runway" lives in this one paint() call.
+class _RunwayPainter extends CustomPainter {
+  final Color pavementColor;
+  final Color markingColor;
+
+  const _RunwayPainter({
+    required this.pavementColor,
+    required this.markingColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final pavementRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Radius.circular(size.width * 0.3),
+    );
+    canvas.drawRRect(pavementRect, Paint()..color = pavementColor);
+
+    final dashPaint = Paint()..color = markingColor;
+    final dashWidth = size.width * 0.16;
+    final dashHeight = size.height * 0.06;
+    final dashGap = dashHeight * 1.4;
+    final centerX = size.width / 2;
+
+    var y = dashHeight / 2;
+    while (y < size.height) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(
+            center: Offset(centerX, y),
+            width: dashWidth,
+            height: dashHeight,
+          ),
+          Radius.circular(dashWidth * 0.3),
+        ),
+        dashPaint,
+      );
+      y += dashHeight + dashGap;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _RunwayPainter oldDelegate) =>
+      oldDelegate.pavementColor != pavementColor ||
+      oldDelegate.markingColor != markingColor;
+}
+
 class _ArrowPainter extends CustomPainter {
   final Color color;
-  final Color maskColor;
 
-  const _ArrowPainter({required this.color, required this.maskColor});
+  const _ArrowPainter({required this.color});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -116,31 +201,11 @@ class _ArrowPainter extends CustomPainter {
     final double centerX = size.width / 2;
     final double headSize = size.width * 0.28;
 
-    final maskPaint =
-        Paint()
-          ..color = maskColor
-          ..strokeWidth = size.width * 0.22
-          ..strokeCap = StrokeCap.round
-          ..style = PaintingStyle.stroke;
-
-    canvas.drawLine(Offset(centerX, startY), Offset(centerX, endY), maskPaint);
-    canvas.drawLine(
-      Offset(centerX, endY),
-      Offset(centerX - headSize, endY + headSize),
-      maskPaint,
-    );
-    canvas.drawLine(
-      Offset(centerX, endY),
-      Offset(centerX + headSize, endY + headSize),
-      maskPaint,
-    );
-
-    final paint =
-        Paint()
-          ..color = color
-          ..strokeWidth = size.width * 0.10
-          ..strokeCap = StrokeCap.round
-          ..style = PaintingStyle.stroke;
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = size.width * 0.10
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
 
     canvas.drawLine(Offset(centerX, startY), Offset(centerX, endY), paint);
     canvas.drawLine(
@@ -157,5 +222,5 @@ class _ArrowPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ArrowPainter oldDelegate) =>
-      oldDelegate.color != color || oldDelegate.maskColor != maskColor;
+      oldDelegate.color != color;
 }
