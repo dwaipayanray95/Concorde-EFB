@@ -1,147 +1,17 @@
 [
     {
-        "date": "2026-08-26",
-        "title": "Commits",
-        "items": [
-            "1c5ee47 fix: stop tracking generated build artifacts breaking CI changelog push and v3.4.26",
-            "0262a46 fix: stop tracking generated build artifacts breaking CI changelog push",
-            "ab49e45 v3.4.25",
-            "97a9e24 refactor: remove flight log/recording feature from Flight Monitor",
-            "7b84ee2 style: polish flight planner layout and spacing",
-            "6c20fda feat: add GitHub Sponsors links and unify card contrast styling",
-            "17dd5de Update FUNDING.yml with sponsorship options",
-            "f5c0cce refactor: extract shared TopArcBorder card style and refresh app shell theming",
-            "b76eaf9 refactor: rework performance calculator cards and runway/wind indicator",
-            "3b40d6e style: add consistent site nav to changelog and donate pages",
-            "8a8ac6a feat: build MSFS-pasteable route string with dep/arr runways",
-            "55ce654 style: tighten ICAO/runway field widths and color the METAR strip by flight category",
-            "d6332d2 fix: treat narrow runway width as a caution, not a hard reject",
-            "84071f6 fix: remove extra trim fuel entry and add final reserve to fuel calculator",
-            "84c216b chore: upgrade Flutter SDK and bump pub dependencies",
-            "9d849f5 style: add community banner to downloads page"
-        ]
-    },
-    {
-        "date": "2026-08-24",
-        "title": "Commits",
-        "items": [
-            "2fc7c5c ci: add Discord webhook notification for beta pre-releases",
-            "4e4fa72 style: redesign downloads page with side-by-side stable/beta and collapsed history",
-            "1e31baa chore: remove dead public assets and unused ez-github-scripts config",
-            "069c85c fix: guarantee landing capture even when tracking starts mid-flight",
-            "bad1d22 ci: rename release/beta installers to ConcordeEFB_vX.Y.Z(- beta_buildNN).exe",
-            "b997498 feat: add runway width, crosswind, and airfield altitude limits sourced from BA Concorde Flying Manual",
-            "193b3db feat(flight-monitor): rework hero row layout, drop redundant gear/flaps card",
-            "84da04d test: add coverage for fuel schematic, providers, runway feasibility, airport DB",
-            "9284410 docs: refresh AGENTS.md/working.md for Flutter codebase, dedupe README changelog",
-            "26969d8 feat: add screenshot showcase carousel to landing page",
-            "98a7179 docs: add Discord link to website nav and footer",
-            "c8c69eb feat: watch for MSFS process to auto-restart telemetry bridge & add discord invite",
-            "2041cd7 fix: align checklist with manual's actual procedures, add landing phase",
-            "35fd5fd chore: remove disclaimer from the bottom of planner and monitor pages",
-            "a318b34 fix: Scrolling in checklist was broken"
-        ]
-    },
-    {
-        "date": "2026-08-21",
-        "title": "Commits",
-        "items": [
-            "f2b19ef fix: move airport DB cache off Documents on Windows",
-            "130e86c fix: eagerly snap default cruise FL to known flight direction",
-            "c26c2b2 fix: surface SimConnect bridge launch failures in Flight Monitor UI"
-        ]
-    },
-    {
-        "date": "2026-08-20",
-        "title": "Commits",
-        "items": [
-            "1317b7d feat: wire real app icon, polish Windows uninstaller metadata",
-            "6a8393b style: fix borders in performance calculator",
-            "d5770e3 style: bigger runway and wind indicator now",
-            "f3b9d0e style(ui): new light / dark ui. dropped glass ui and stuff",
-            "1d24dba style(theme): update accent to deep violet #651FFF",
-            "12303aa fix(ui): seamlessly merge folder tab with card body without gap or misaligned curvature",
-            "265eea3 style(ui): pop amber folder tab above card without top card background bleed",
-            "ff02491 style(ui): render card title as a popping folder tab",
-            "2740a22 style(ui): render card flightstrip as compact bold flat accent with white text",
-            "60e007b style(ui): unify entire card background to solid colors.surface",
-            "43f02d6 style(ui): render card title on attached colored flightstrip header",
-            "7e151a7 style(ui): rename navigation tabs to PLANNER, CHECKLISTS, and MONITOR",
-            "4fdc54b style(theme): adjust light mode canvas background to refined dark charcoal gray #1E212B",
-            "b36d808 style(theme): deepen card surface to #D0D7E6 for enhanced contrast",
-            "c1ae019 style(theme): set slate card surface with white inner controls for high contrast",
-            "b13aad0 style(theme): set dark absolute app background in light mode with crisp header contrast",
-            "64d5d57 fix(ui): unify _LegCard background with EFB calculator and ensure smooth non-chopped rounded corners",
-            "9be1a64 fix(ui): wrap Performance Calculator in EfbCard with cleanly styled inner leg modules",
-            "11fe293 fix(theme): eliminate nested card-in-card wrapper and restore clean light mode palette hierarchy",
-            "b25f9f5 style(theme): separate dark card surface from crisp white inner input and panel containers",
-            "e57ca2b style(theme): deepen light mode card surface to medium slate tone",
-            "a4fa0c6 style(theme): darken light mode card surface and nested containers for stronger depth",
-            "295dce3 style(theme): deepen light mode background layers for better card contrast",
-            "ce3038b style(ui): match Performance Calculator card header to other flight planner cards",
-            "b0824e9 feat(theme): refine cruise components to EfbFlatCard shadow style, wire window title bar background, and refine LIFR palette",
-            "7fe6f0a chore(theme): Phase 6 delete ui_tokens.dart, efb_glass_container.dart, and finalize dead code removal",
-            "7f59ce8 feat(theme): Phase 5 retheme flight monitor tab and delete fm_theme.dart",
-            "962cb29 feat(theme): Phase 4 retheme checklists tab",
-            "8cc7c12 feat(theme): Phase 3 retheme flight planner tab with bold Material cards",
-            "1667a3f feat(theme): Phase 2 app shell retheme and remove AmbientGlow",
-            "7619d94 feat(theme): Phase 1 retheme shared widgets and add theme toggle",
-            "70c9eca feat(theme): Phase 0 theme system foundation",
-            "2ca6b1b style(ui): rework perf calc card, now shows when takeoff possible without reheat",
-            "ba53fbe style(ui): rework Cruise and fuel management card",
-            "56c93c0 fix: match title bar tint to app theme on macOS",
-            "62bf7c0 refactor: move nav tabs into header row, drop header stats",
-            "d28b75f fix: auto-select longest runway on ICAO change, fix dropdown crash",
-            "de9cbc0 fix: recalibrate fuel burn model to real Concorde performance data",
-            "0e554a1 ci: add on-demand Beta-Build workflow for test releases",
-            "b89d11d ci: consolidate release pipeline into a single Release-Build workflow",
-            "1cfcda8 fix: save flight logs next to the install folder, not Documents, on Windows",
-            "73f77c5 feat: replace raster fuel diagram with real vector schematic, live per- tank fill",
-            "dfbcadf refactor: simplify fuel schematic card to single-line legend, no overlays",
-            "f8be436 feat: wire fuel schematic to real per-tank MSFS telemetry",
-            "59717ba feat: rebuild flight monitor tab with real fuel schematic"
-        ]
-    },
-    {
-        "date": "2026-08-19",
-        "title": "Commits",
-        "items": [
-            "14623c3 feat: rebuild Flight Monitor tab from new design, real 13-tank fuel schematic"
-        ]
-    },
-    {
-        "date": "2026-08-17",
-        "title": "Commits",
-        "items": [
-            "2878e3e fix: correct checklist data and unify triplicated fuel/FL logic; refactor: split flight_planner_tab.dart into flight_planner/ sections"
-        ]
-    },
-    {
-        "date": "2026-07-26",
-        "title": "Commits",
-        "items": [
-            "5c3719e feat: add a proper landing page for the official Concorde EFB website"
-        ]
-    },
-    {
-        "date": "2026-07-18",
-        "title": "Commits",
-        "items": [
-            "0e9a6d7 ci: rebuild GitHub Pages deploy as isolated changelog+donate pipeline"
-        ]
-    },
-    {
         "date": "2026-07-16",
         "title": "Commits",
         "items": [
-            "64f074d chore: update scripts again",
-            "7ad9c07 chore: fix workflow"
+            "c3eaeb8 fix: reconcile fuel tank totals, redesign fuel panel layout"
         ]
     },
     {
         "date": "2026-07-15",
         "title": "Commits",
         "items": [
+            "d0b473a fix: guard native-assets install rule against missing directory",
+            "da4b343 fix: correct fuel telemetry (100x bug), add real N1/wind/ISA data",
             "d6e01d1 ci: fix broken Windows build pipeline in GitHub Actions",
             "6e17380 feat: bundle SimConnect bridge into app and fix telemetry bugs",
             "6bbb338 feat: add ez-github-scripts",

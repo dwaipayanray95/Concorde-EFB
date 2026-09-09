@@ -3,9 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Concorde EFB — a free, realistic flight planning and performance companion for the DC Designs Concorde in Microsoft Flight Simulator." />
-    <title>Concorde EFB — Supersonic Flight Planning for MSFS</title>
-    <link rel="icon" type="image/png" href="./app-icon-256.png" />
+    <title>Concorde EFB Changelog</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -41,10 +39,15 @@
       }
 
       .shell {
-        width: min(1000px, 100%);
+        width: min(900px, 100%);
         margin: 0 auto;
         display: grid;
-        gap: 22px;
+        gap: 18px;
+      }
+
+      .hero {
+        display: grid;
+        gap: 10px;
       }
 
       .eyebrow {
@@ -54,240 +57,109 @@
         color: var(--accent-2);
       }
 
+      h1 {
+        margin: 0;
+        font-size: clamp(24px, 3.2vw, 36px);
+        line-height: 1.1;
+      }
+
       p {
         margin: 0;
         color: var(--muted);
         font-size: 14px;
-        line-height: 1.6;
+        line-height: 1.55;
       }
 
-      /* ── Nav ─────────────────────────────────────────── */
-      .nav {
+      .toolbar {
         display: flex;
-        align-items: center;
         justify-content: space-between;
-        gap: 12px;
         flex-wrap: wrap;
-      }
-
-      .brand {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-
-      .brand img {
-        width: 34px;
-        height: 34px;
-        border-radius: 9px;
-      }
-
-      .brand span {
-        font-weight: 700;
-        font-size: 15px;
-      }
-
-      .nav-links {
-        display: flex;
-        gap: 18px;
-        font-size: 12px;
-      }
-
-      .nav-links a {
+        gap: 12px;
+        font-size: 11px;
         color: var(--muted);
+      }
+
+      .toolbar a {
+        color: inherit;
         text-decoration: none;
       }
 
-      .nav-links a:hover {
+      .toolbar a:hover {
         color: var(--accent);
       }
 
-      /* ── Hero ────────────────────────────────────────── */
-      .hero {
+      .timeline {
         display: grid;
-        grid-template-columns: 1.3fr 1fr;
-        gap: 32px;
-        align-items: center;
-        padding: 12px 0 8px;
+        gap: 10px;
       }
 
-      @media (max-width: 760px) {
-        .hero {
-          grid-template-columns: 1fr;
-          text-align: center;
-        }
-        .hero-icon {
-          justify-self: center;
-        }
-      }
-
-      .hero h1 {
-        margin: 10px 0 14px;
-        font-size: clamp(30px, 4.6vw, 48px);
-        line-height: 1.08;
-      }
-
-      .hero h1 .accent {
-        background: linear-gradient(120deg, var(--accent), var(--accent-2));
-        -webkit-background-clip: text;
-        background-clip: text;
-        color: transparent;
-      }
-
-      .hero p {
-        font-size: 15px;
-        max-width: 46ch;
-      }
-
-      @media (max-width: 760px) {
-        .hero p {
-          max-width: none;
-          margin: 0 auto;
-        }
-      }
-
-      .hero-cta {
-        display: flex;
-        gap: 12px;
-        margin-top: 22px;
-        flex-wrap: wrap;
-      }
-
-      @media (max-width: 760px) {
-        .hero-cta {
-          justify-content: center;
-        }
-      }
-
-      .hero-icon {
-        display: flex;
-        justify-content: center;
-      }
-
-      .hero-icon img {
-        width: min(240px, 60vw);
-        height: min(240px, 60vw);
-        border-radius: 40px;
-        box-shadow: 0 30px 80px -30px rgba(110, 231, 183, 0.45), 0 0 0 1px var(--stroke);
-      }
-
-      .btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        padding: 12px 20px;
-        border-radius: 12px;
-        font-size: 13px;
-        font-weight: 600;
-        text-decoration: none;
-        cursor: pointer;
-        border: none;
-        transition: transform 0.15s ease, background 0.15s ease;
-      }
-
-      .btn:hover {
-        transform: translateY(-1px);
-      }
-
-      .btn-primary {
-        background: var(--accent);
-        color: black !important;
-      }
-
-      .btn-primary:hover {
-        background: #52d2a4;
-      }
-
-      .btn-ghost {
-        background: rgba(255, 255, 255, 0.06);
-        color: var(--ink) !important;
-        border: 1px solid var(--stroke);
-      }
-
-      .btn-ghost:hover {
-        background: rgba(255, 255, 255, 0.12);
-      }
-
-      /* ── Sections ────────────────────────────────────── */
-      section.block {
-        display: grid;
-        gap: 14px;
-      }
-
-      h2 {
-        margin: 0;
-        font-size: 20px;
-      }
-
-      /* ── Feature grid ────────────────────────────────── */
-      .feature-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 12px;
-      }
-
-      @media (max-width: 760px) {
-        .feature-grid {
-          grid-template-columns: 1fr;
-        }
-      }
-
-      .feature-card {
+      .entry {
         display: grid;
         gap: 8px;
-        padding: 16px;
-        border-radius: 16px;
-        background: var(--card);
-        border: 1px solid var(--stroke);
-      }
-
-      .feature-card .icon {
-        font-size: 20px;
-      }
-
-      .feature-card h3 {
-        margin: 0;
-        font-size: 14px;
-        color: white;
-      }
-
-      .feature-card p {
-        font-size: 12.5px;
-      }
-
-      /* ── About / stack ───────────────────────────────── */
-      .about-card {
-        padding: 20px 24px;
+        padding: 14px 16px;
         border-radius: 18px;
         background: var(--card);
         border: 1px solid var(--stroke);
-        display: grid;
-        gap: 12px;
+        box-shadow: 0 18px 40px -32px rgba(0, 0, 0, 0.8);
       }
 
-      .stack-row {
+      .entry.release-entry {
+        border-color: var(--accent);
+        background: rgba(110, 231, 183, 0.05);
+        box-shadow: 0 0 20px -5px rgba(110, 231, 183, 0.3), 0 18px 40px -32px rgba(0, 0, 0, 0.8);
+      }
+
+      .release-badge {
+        display: inline-block;
+        font-size: 9px;
+        text-transform: uppercase;
+        font-weight: 700;
+        background: rgba(110, 231, 183, 0.15);
+        color: var(--accent);
+        border: 1px solid var(--accent);
+        padding: 2px 6px;
+        border-radius: 99px;
+        letter-spacing: 0.1em;
+      }
+
+      .entry header {
         display: flex;
+        justify-content: space-between;
         flex-wrap: wrap;
         gap: 8px;
-        margin-top: 4px;
       }
 
-      .pill {
-        font-family: "JetBrains Mono", ui-monospace, monospace;
+      .entry h2 {
+        margin: 0;
+        font-size: 16px;
+      }
+
+      .date {
+        font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
         font-size: 11px;
-        padding: 4px 10px;
-        border-radius: 99px;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid var(--stroke);
+        color: var(--accent);
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .empty {
+        padding: 20px;
+        border-radius: 16px;
+        border: 1px dashed var(--stroke);
         color: var(--muted);
       }
 
-      /* ── Dashboard grid (downloads + support) reused from /changelog ── */
       .dashboard-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 18px;
+        margin-bottom: 8px;
       }
       @media (max-width: 768px) {
         .dashboard-grid {
@@ -351,9 +223,9 @@
       }
 
       .download-badge.beta {
-        background: rgba(251, 191, 36, 0.12);
-        color: #fbbf24;
-        border: 1px solid #fbbf24;
+        background: rgba(56, 189, 248, 0.12);
+        color: var(--accent-2);
+        border: 1px solid var(--accent-2);
       }
 
       .download-info h4 {
@@ -368,104 +240,64 @@
         color: var(--muted);
       }
 
-      .empty {
-        padding: 20px;
-        border-radius: 16px;
-        border: 1px dashed var(--stroke);
-        color: var(--muted);
+      .support-actions {
+        display: flex;
+        gap: 12px;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 16px;
+        border-radius: 10px;
         font-size: 12px;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        border: none;
+        transition: all 0.2s;
       }
 
-      /* ── Changelog preview ───────────────────────────── */
-      .timeline-preview {
-        display: grid;
-        gap: 10px;
+      .btn-download {
+        background: var(--accent);
+        color: black !important;
+        font-weight: 700;
       }
 
-      .entry {
-        display: grid;
-        gap: 6px;
-        padding: 14px 16px;
-        border-radius: 16px;
-        background: var(--card);
+      .btn-download:hover {
+        background: #52d2a4;
+      }
+
+      .btn-download-beta {
+        background: rgba(255, 255, 255, 0.06);
+        color: white !important;
         border: 1px solid var(--stroke);
       }
 
-      .entry header {
-        display: flex;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 8px;
+      .btn-download-beta:hover {
+        background: rgba(255, 255, 255, 0.12);
       }
 
-      .entry h4 {
-        margin: 0;
-        font-size: 14px;
+      .btn-patreon {
+        background: #FF424D;
+        color: white;
       }
 
-      .date {
-        font-family: "JetBrains Mono", ui-monospace, monospace;
-        font-size: 11px;
-        color: var(--accent);
+      .btn-patreon:hover {
+        background: #e0323c;
+        transform: translateY(-1px);
       }
 
-      .entry ul {
-        margin: 0;
-        padding-left: 18px;
-        color: var(--muted);
-        font-size: 12.5px;
-        line-height: 1.5;
+      .btn-upi {
+        background: rgba(255, 255, 255, 0.08);
+        color: white;
+        border: 1px solid var(--stroke);
       }
 
-      .toolbar {
-        display: flex;
-        justify-content: flex-end;
-        font-size: 11px;
-      }
-
-      .toolbar a {
-        color: var(--accent);
-        text-decoration: none;
-      }
-
-      /* ── Support strip ───────────────────────────────── */
-      .support-card {
-        padding: 20px 24px;
-        border-radius: 18px;
-        border: 1px solid var(--accent);
-        background: linear-gradient(135deg, rgba(56, 189, 248, 0.05), rgba(110, 231, 183, 0.05));
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-        flex-wrap: wrap;
-      }
-
-      .support-card h3 {
-        margin: 0 0 4px;
-        font-size: 15px;
-        color: var(--accent);
-      }
-
-      /* ── Footer ──────────────────────────────────────── */
-      .footer {
-        display: flex;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 10px;
-        font-size: 11px;
-        color: var(--muted);
-        padding-top: 8px;
-        border-top: 1px solid var(--stroke);
-      }
-
-      .footer a {
-        color: inherit;
-        text-decoration: none;
-      }
-
-      .footer a:hover {
-        color: var(--accent);
+      .btn-upi:hover {
+        background: rgba(255, 255, 255, 0.15);
+        transform: translateY(-1px);
       }
 
       .ad-container {
@@ -495,7 +327,7 @@
         background: var(--bg-2);
         margin: auto;
         padding: 28px 24px;
-        border: 1px solid var(--accent-2);
+        border: 1px solid var(--accent);
         width: min(340px, 90%);
         border-radius: 20px;
         text-align: center;
@@ -517,341 +349,66 @@
         color: var(--accent);
       }
 
-      /* ── Screenshot showcase ─────────────────────────── */
-      .showcase {
-        width: 100vw;
-        position: relative;
-        left: 50%;
-        right: 50%;
-        margin-left: -50vw;
-        margin-right: -50vw;
-        padding: 4px 0 0;
+      .qr-image {
+        margin: 16px 0;
+        border-radius: 12px;
+        background: white;
+        padding: 12px;
+        width: 180px;
+        height: 180px;
       }
 
-      .showcase-viewport {
-        position: relative;
-      }
-
-      .showcase-track {
-        display: flex;
-        overflow-x: auto;
-        scroll-snap-type: x mandatory;
-        scroll-behavior: smooth;
-        gap: 0;
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-        padding: 6px 0 4px;
-      }
-
-      .showcase-track::-webkit-scrollbar {
-        display: none;
-      }
-
-      .showcase-slide {
-        flex: 0 0 100%;
-        scroll-snap-align: center;
+      .upi-text {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 12px;
+        color: var(--accent);
+        background: rgba(255, 255, 255, 0.05);
+        padding: 8px;
+        border-radius: 8px;
+        border: 1px solid var(--stroke);
         margin: 0;
-        display: grid;
-        justify-items: center;
-        gap: 14px;
-        padding: 0 18px;
-      }
-
-      .window-frame {
-        width: min(760px, 100%);
-        border-radius: 14px;
-        overflow: hidden;
-        background: var(--bg-2);
-        border: 1px solid var(--stroke);
-        box-shadow: 0 30px 70px -30px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.03);
-      }
-
-      .window-titlebar {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 10px 12px;
-        background: rgba(255, 255, 255, 0.03);
-        border-bottom: 1px solid var(--stroke);
-      }
-
-      .window-titlebar .dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        display: inline-block;
-      }
-
-      .dot-r {
-        background: #ff5f57;
-      }
-      .dot-y {
-        background: #febc2e;
-      }
-      .dot-g {
-        background: #28c840;
-      }
-
-      .window-frame img {
-        display: block;
-        width: 100%;
-        height: auto;
-      }
-
-      .showcase-slide figcaption {
-        font-size: 13px;
-        color: var(--muted);
-        text-align: center;
-        max-width: 52ch;
-      }
-
-      .showcase-slide figcaption strong {
-        color: var(--ink);
-        font-weight: 700;
-      }
-
-      .showcase-nav {
-        position: absolute;
-        top: 45%;
-        transform: translateY(-50%);
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        border: 1px solid var(--stroke);
-        background: rgba(13, 15, 23, 0.7);
-        color: var(--ink);
-        font-size: 16px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        backdrop-filter: blur(6px);
-        transition: background 0.15s ease, border-color 0.15s ease;
-      }
-
-      .showcase-nav:hover {
-        background: rgba(255, 255, 255, 0.1);
-        border-color: var(--accent);
-      }
-
-      .showcase-nav.prev {
-        left: 14px;
-      }
-
-      .showcase-nav.next {
-        right: 14px;
-      }
-
-      @media (max-width: 640px) {
-        .showcase-nav {
-          display: none;
-        }
-      }
-
-      .showcase-dots {
-        display: flex;
-        justify-content: center;
-        gap: 8px;
-        margin-top: 4px;
-      }
-
-      .showcase-dots button {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        border: none;
-        padding: 0;
-        background: rgba(255, 255, 255, 0.2);
-        cursor: pointer;
-        transition: background 0.15s ease, transform 0.15s ease;
-      }
-
-      .showcase-dots button.active {
-        background: var(--accent);
-        transform: scale(1.3);
       }
     </style>
-
+    <!-- PROPELLER ADS - Verification Meta Tag (Paste verification code here) -->
+    <!-- e.g. <meta name="propeller" content="your_verification_id"> -->
+    
     <!-- PROPELLER ADS / MONETAG - Main Script Injection Tag -->
     <script src="https://quge5.com/88/tag.min.js" data-zone="255560" async data-cfasync="false"></script>
-    <script src="./changelog/ads.js"></script>
+
+    <script src="./ads.js"></script>
   </head>
   <body>
     <main class="shell">
-      <!-- Nav -->
-      <nav class="nav">
-        <div class="brand">
-          <img src="./app-icon-256.png" alt="Concorde EFB icon" />
-          <span>Concorde EFB</span>
-        </div>
-        <div class="nav-links">
-          <a href="./downloads/">Downloads</a>
-          <a href="./changelog/">Changelog</a>
-          <a href="./donate/">Donate</a>
-          <a href="https://github.com/dwaipayanray95/Concorde-EFB" target="_blank" rel="noreferrer">GitHub</a>
-          <a href="https://github.com/sponsors/dwaipayanray95" target="_blank" rel="noreferrer">Sponsor</a>
-          <a href="https://flightsim.to/addon/101890/concorde-efb" target="_blank" rel="noreferrer">flightsim.to</a>
-          <a href="https://discord.gg/xe49YpczpP" target="_blank" rel="noreferrer">Discord</a>
-        </div>
-      </nav>
-
-      <!-- Hero -->
       <section class="hero">
-        <div>
-          <span class="eyebrow">Official Website</span>
-          <h1>Supersonic flight planning, <span class="accent">done right.</span></h1>
-          <p>
-            Concorde EFB is a free, realistic electronic flight bag built for the DC Designs Concorde
-            in Microsoft Flight Simulator — cruise-climb mission profiles, METAR-corrected takeoff
-            and landing performance, interactive checklists, and a live SimConnect flight monitor,
-            all in one desktop app.
+        <span class="eyebrow">Concorde EFB Portal</span>
+        <h1>Download, Support & Changelog</h1>
+        <p>
+          Get the latest pre-releases, stable builds, check the live history logs, and support the development of the ultimate Concorde flight companion.
+        </p>
+      </section>
+
+      <!-- Dashboard Grid -->
+      <div class="dashboard-grid">
+        <!-- Downloads Card -->
+        <div class="download-card">
+          <h3>Latest Releases</h3>
+          <div id="downloads-list" class="downloads-list">
+            <div class="empty">Loading GitHub releases...</div>
+          </div>
+        </div>
+
+        <!-- Support Card -->
+        <div class="download-card" style="border-color: var(--accent); background: linear-gradient(135deg, rgba(56, 189, 248, 0.05), rgba(110, 231, 183, 0.05));">
+          <h3 style="color: var(--accent);">Support & Donation</h3>
+          <p style="margin: 0; font-size: 13px; color: var(--muted); line-height: 1.55;">
+            Concorde EFB is maintained for free in the developer's spare time. Contributions keep the servers active and fuel new feature expansions!
           </p>
-          <div class="hero-cta">
-            <a class="btn btn-primary" id="hero-download-btn" href="./downloads/">Download Latest Release</a>
-            <a class="btn btn-ghost" href="./changelog/">View Changelog</a>
+          <div class="support-actions" style="margin-top: auto;">
+            <a href="https://www.patreon.com/c/theawesomeray" target="_blank" class="btn btn-patreon" style="flex: 1;">Patreon Tip</a>
+            <button onclick="showQrModal()" class="btn btn-upi" style="flex: 1;">Show UPI QR</button>
           </div>
         </div>
-        <div class="hero-icon">
-          <img src="./app-icon-256.png" alt="Concorde EFB app icon" />
-        </div>
-      </section>
-
-      <!-- Screenshot showcase -->
-      <section class="block showcase">
-        <div class="showcase-viewport">
-          <div class="showcase-track" id="showcaseTrack">
-            <figure class="showcase-slide">
-              <div class="window-frame">
-                <div class="window-titlebar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
-                <img src="./screenshots/planner-dark.png" alt="Concorde EFB flight planner screen showing SimBrief import and route summary" loading="lazy" />
-              </div>
-              <figcaption><strong>Flight Planner</strong> — SimBrief import, live fuel & time-enroute breakdown.</figcaption>
-            </figure>
-            <figure class="showcase-slide">
-              <div class="window-frame">
-                <div class="window-titlebar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
-                <img src="./screenshots/cruise-fuel.png" alt="Concorde EFB cruise and fuel management screen with trip fuel breakdown" loading="lazy" />
-              </div>
-              <figcaption><strong>Cruise & Fuel Management</strong> — segmented climb, cruise, and descent fuel modeling.</figcaption>
-            </figure>
-            <figure class="showcase-slide">
-              <div class="window-frame">
-                <div class="window-titlebar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
-                <img src="./screenshots/performance-calc.png" alt="Concorde EFB performance calculator showing takeoff and landing V-speeds" loading="lazy" />
-              </div>
-              <figcaption><strong>Performance Calculator</strong> — V-speeds and runway limits corrected for live METAR.</figcaption>
-            </figure>
-            <figure class="showcase-slide">
-              <div class="window-frame">
-                <div class="window-titlebar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
-                <img src="./screenshots/checklists.png" alt="Concorde EFB interactive checklist screen for cold and dark setup" loading="lazy" />
-              </div>
-              <figcaption><strong>Interactive Checklists</strong> — full cold-and-dark-to-shutdown flow, synced with live V-speeds.</figcaption>
-            </figure>
-            <figure class="showcase-slide">
-              <div class="window-frame">
-                <div class="window-titlebar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
-                <img src="./screenshots/flight-monitor.png" alt="Concorde EFB live flight monitor with fuel tank schematic and center of gravity" loading="lazy" />
-              </div>
-              <figcaption><strong>Live Flight Monitor</strong> — glass-cockpit telemetry streamed from MSFS over SimConnect.</figcaption>
-            </figure>
-            <figure class="showcase-slide">
-              <div class="window-frame">
-                <div class="window-titlebar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
-                <img src="./screenshots/planner-light.png" alt="Concorde EFB flight planner screen in light theme" loading="lazy" />
-              </div>
-              <figcaption><strong>Light or Dark</strong> — built to match your cockpit, day or night.</figcaption>
-            </figure>
-          </div>
-          <button class="showcase-nav prev" id="showcasePrev" aria-label="Previous screenshot">&larr;</button>
-          <button class="showcase-nav next" id="showcaseNext" aria-label="Next screenshot">&rarr;</button>
-        </div>
-        <div class="showcase-dots" id="showcaseDots"></div>
-      </section>
-
-      <!-- Features -->
-      <section class="block">
-        <h2>What it does</h2>
-        <div class="feature-grid">
-          <div class="feature-card">
-            <div class="icon">🛫</div>
-            <h3>Cruise-Climb Mission Profile</h3>
-            <p>Segmented climb, supersonic acceleration, cruise-climb, and descent modeling for realistic trip fuel and ETE.</p>
-          </div>
-          <div class="feature-card">
-            <div class="icon">📊</div>
-            <h3>Live Performance Calculator</h3>
-            <p>Takeoff and landing V-speeds and runway feasibility, corrected for live METAR wind, QNH, and temperature.</p>
-          </div>
-          <div class="feature-card">
-            <div class="icon">✅</div>
-            <h3>Interactive Checklists</h3>
-            <p>Full cold-and-dark-to-shutdown Concorde checklist flow, synced with live V-speeds once a plan is loaded.</p>
-          </div>
-          <div class="feature-card">
-            <div class="icon">📡</div>
-            <h3>Live Flight Monitor</h3>
-            <p>A glass-cockpit style avionics panel streaming real-time telemetry from MSFS over SimConnect.</p>
-          </div>
-          <div class="feature-card">
-            <div class="icon">🗺️</div>
-            <h3>Offline Airport Database</h3>
-            <p>39,000+ airports and runways bundled in-app — flight planning works fully offline.</p>
-          </div>
-          <div class="feature-card">
-            <div class="icon">✈️</div>
-            <h3>SimBrief Import</h3>
-            <p>Pull route, fuel, callsign, registration, and runway data straight from your SimBrief OFP.</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- About -->
-      <section class="block">
-        <h2>About the project</h2>
-        <div class="about-card">
-          <p>
-            Concorde EFB started as a small performance calculator and has grown into a full Flutter
-            desktop application — built and maintained in the developer's spare time as a free
-            companion for the flight sim community. It targets Windows, macOS, and Linux, with an
-            optional bundled SimConnect bridge so Flight Monitor works without installing anything
-            extra.
-          </p>
-          <div class="stack-row">
-            <span class="pill">Flutter</span>
-            <span class="pill">Riverpod</span>
-            <span class="pill">SimConnect</span>
-            <span class="pill">Python</span>
-            <span class="pill">Open Source</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- Downloads + Support -->
-      <section class="block">
-        <div class="dashboard-grid">
-          <div class="download-card">
-            <h3>Latest Releases</h3>
-            <div id="downloads-list" class="downloads-list">
-              <div class="empty">Loading GitHub releases...</div>
-            </div>
-          </div>
-
-          <div class="support-card" style="align-items: flex-start; flex-direction: column;">
-            <div>
-              <h3>Support &amp; Donation</h3>
-              <p style="margin: 0; font-size: 13px;">
-                Concorde EFB is maintained for free. Contributions keep the servers active and fuel new feature expansions!
-              </p>
-            </div>
-            <div style="display: flex; gap: 12px; width: 100%; margin-top: auto;">
-              <a href="https://www.patreon.com/c/theawesomeray" target="_blank" class="btn" style="flex: 1; background: #FF424D; color: white;">Patreon Tip</a>
-              <a href="https://github.com/sponsors/dwaipayanray95" target="_blank" class="btn" style="flex: 1; background: #24292f; color: white;">GitHub Sponsor</a>
-              <a href="./donate/" class="btn btn-ghost" style="flex: 1;">Donate Page</a>
-            </div>
-          </div>
-        </div>
-      </section>
+      </div>
 
       <!-- BEGIN AADS AD UNIT 2446475 -->
       <section class="ad-container">
@@ -862,143 +419,74 @@
       </section>
       <!-- END AADS AD UNIT 2446475 -->
 
-      <!-- Changelog preview -->
-      <section class="block">
-        <h2>Recent updates</h2>
-        <div id="timeline-preview" class="timeline-preview" aria-live="polite">
-          <div class="empty">Loading recent changes...</div>
-        </div>
-        <div class="toolbar">
-          <a href="./changelog/">Full changelog &rarr;</a>
-        </div>
+      <section class="toolbar">
+        <span>Source: <code>public/changelog/entries.json</code></span>
+        <a href="/Concorde-EFB/">Back to the app</a>
       </section>
 
-      <footer class="footer">
-        <span>Concorde EFB is an unofficial fan project for the DC Designs Concorde. Not affiliated with Airbus or British Airways.</span>
-        <a href="./downloads/">All Downloads</a>
-        <a href="https://github.com/dwaipayanray95/Concorde-EFB" target="_blank" rel="noreferrer">Source on GitHub</a>
-        <a href="https://discord.gg/xe49YpczpP" target="_blank" rel="noreferrer">Join Discord</a>
-      </footer>
+      <section id="timeline" class="timeline" aria-live="polite"></section>
     </main>
+
+    <!-- UPI QR Modal -->
+    <div id="qr-modal" class="overlay-layer">
+      <div class="overlay-card">
+        <span class="close-modal" onclick="closeQrModal()">&times;</span>
+        <h3 style="margin: 0; font-size: 16px; color: var(--accent);">Scan to Pay via UPI</h3>
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi%3A%2F%2Fpay%3Fpa%3Ddwaipayanray95%40ptaxis%26pn%3DRay%26tn%3DConcorde%2520EFB%2520Support%26cu%3DINR" alt="UPI QR Code" class="qr-image" />
+        <p class="upi-text">dwaipayanray95@ptaxis</p>
+      </div>
+    </div>
 
     <!-- Adblock Warning Modal -->
     <div id="sys-notice-overlay" class="overlay-layer">
-      <div class="overlay-card">
-        <span class="close-modal" onclick="document.getElementById('sys-notice-overlay').style.display='none'">&times;</span>
+      <div class="overlay-card" style="border-color: var(--accent-2);">
+        <span class="close-modal" onclick="closeAdblockModal()">&times;</span>
         <h3 style="margin: 0; font-size: 16px; color: var(--accent-2);">Ad Blocker Detected</h3>
         <p style="margin: 16px 0; font-size: 13px; color: var(--muted); line-height: 1.5; text-align: center;">
-          It looks like you're using an ad blocker. This project is maintained for free. Please consider whitelisting our site, or support directly to keep this EFB updated!
+          It looks like you're using an ad blocker. This project is maintained for free. Please consider whitelisting our site in your ad blocker, or support directly to keep this EFB updated!
         </p>
         <div style="display: flex; gap: 12px; justify-content: center;">
-          <button onclick="document.getElementById('sys-notice-overlay').style.display='none'" class="btn btn-ghost">I'll Whitelist</button>
-          <a href="https://www.patreon.com/c/theawesomeray" target="_blank" class="btn" style="background: #FF424D; color: white;">Patreon Support</a>
+          <button onclick="closeAdblockModal()" class="btn btn-upi" style="background: var(--accent-2); color: black; border: none;">I'll Whitelist</button>
+          <a href="https://www.patreon.com/c/theawesomeray" target="_blank" class="btn btn-patreon">Patreon Support</a>
         </div>
       </div>
     </div>
 
     <script>
-      // Finds the .exe installer asset on a release, for a direct download
-      // link instead of sending people to GitHub's release page.
-      const findInstallerAsset = (release) =>
-        (Array.isArray(release.assets) &&
-          release.assets.find((a) => a.name && a.name.toLowerCase().endsWith(".exe"))) ||
-        null;
+      const timeline = document.getElementById("timeline");
 
-      const fetchReleases = () => {
-        const downloadsContainer = document.getElementById("downloads-list");
-        const heroBtn = document.getElementById("hero-download-btn");
-        fetch("https://api.github.com/repos/dwaipayanray95/Concorde-EFB/releases?per_page=20")
-          .then((res) => (res.ok ? res.json() : []))
-          .then((releases) => {
-            if (!Array.isArray(releases)) releases = [];
-            const visible = releases.filter((r) => !r.draft);
-            // Releases come back newest-first regardless of channel, so the
-            // very first entry isn't necessarily a stable release -- find
-            // the newest of each channel explicitly instead of assuming
-            // releases[0] is the one to feature.
-            const latestStable = visible.find((r) => !r.prerelease) || null;
-            const latestBeta = visible.find((r) => r.prerelease) || null;
-
-            if (!latestStable && !latestBeta) {
-              downloadsContainer.innerHTML = `
-                <div class="download-item stable-release">
-                  <div class="download-badge stable">Stable</div>
-                  <div class="download-info">
-                    <h4>Concorde EFB Releases</h4>
-                    <p>Track updates and download installers</p>
-                  </div>
-                  <a href="./downloads/" class="btn btn-primary">View Downloads</a>
-                </div>
-              `;
-              return;
-            }
-
-            const stableAsset = latestStable ? findInstallerAsset(latestStable) : null;
-            if (heroBtn && stableAsset) {
-              heroBtn.href = stableAsset.browser_download_url;
-            }
-
-            const stableBlock = latestStable
-              ? `
-                <div class="download-badge stable">Latest Release</div>
-                <div class="download-info" style="margin-top: 8px; margin-bottom: 8px;">
-                  <h4 style="font-size: 15px; font-weight: 700; color: white;">${latestStable.name || latestStable.tag_name}</h4>
-                  <p>Released on ${new Date(latestStable.published_at).toLocaleDateString()}</p>
-                </div>
-                <div style="display: flex; gap: 8px; width: 100%; margin-top: 4px;">
-                  <a href="${stableAsset ? stableAsset.browser_download_url : latestStable.html_url}" class="btn btn-primary" style="flex: 1; text-align: center;">Get Latest Version</a>
-                  <a href="./downloads/" class="btn btn-ghost" style="flex: 1; text-align: center;">All Releases &rarr;</a>
-                </div>
-              `
-              : `
-                <div class="download-badge stable">Stable</div>
-                <div class="download-info" style="margin-top: 8px; margin-bottom: 8px;">
-                  <p>No stable release published yet -- try the beta below.</p>
-                </div>
-              `;
-
-            const betaBlock = latestBeta
-              ? `
-                <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--stroke);">
-                  <div class="download-badge beta">Beta available</div>
-                  <div class="download-info" style="margin-top: 8px; margin-bottom: 8px;">
-                    <h4 style="font-size: 13px; font-weight: 700; color: white;">${latestBeta.name || latestBeta.tag_name}</h4>
-                    <p>Test build, released ${new Date(latestBeta.published_at).toLocaleDateString()}</p>
-                  </div>
-                  <a href="./downloads/" class="btn btn-ghost" style="width: 100%; text-align: center;">Get Beta &rarr;</a>
-                </div>
-              `
-              : "";
-
-            downloadsContainer.innerHTML = `
-              <div class="download-item stable-release" style="flex-direction: column; align-items: flex-start; width: 100%;">
-                ${stableBlock}
-                ${betaBlock}
-              </div>
-            `;
-          })
-          .catch(() => {
-            downloadsContainer.innerHTML =
-              '<div class="empty">Unable to fetch releases. <a href="./downloads/" style="color: var(--accent);">View Downloads</a></div>';
-          });
+      const renderEmpty = () => {
+        timeline.innerHTML = '<div class="empty">No entries yet. Add items in entries.json.</div>';
       };
 
-      const renderPreview = (entries) => {
-        const el = document.getElementById("timeline-preview");
+      const renderEntries = (entries) => {
         if (!Array.isArray(entries) || entries.length === 0) {
-          el.innerHTML = '<div class="empty">No changelog entries yet.</div>';
+          renderEmpty();
           return;
         }
-        el.innerHTML = entries
-          .slice(0, 3)
+
+        timeline.innerHTML = entries
           .map((entry) => {
-            const items = Array.isArray(entry.items) ? entry.items.slice(0, 4) : [];
-            const list = items.length ? `<ul>${items.map((i) => `<li>${i}</li>`).join("")}</ul>` : "";
+            const title = entry.title ? entry.title : "Update";
+            const items = Array.isArray(entry.items) ? entry.items : [];
+            const list = items.length
+              ? `<ul>${items.map((item) => `<li>${item}</li>`).join("")}</ul>`
+              : "<div class='empty'>No notes added.</div>";
+
+            const isRelease = !!entry.isGithubRelease;
+            const entryClass = isRelease ? "entry release-entry" : "entry";
+            const badge = isRelease 
+              ? `<span class="release-badge">Official Release</span>` 
+              : "";
+
             return `
-              <article class="entry">
-                <header>
-                  <h4>${entry.title || "Update"}</h4>
-                  <span class="date">${entry.date || ""}</span>
+              <article class="${entryClass}">
+                <header style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <h2 style="margin: 0; font-size: 16px;">${title}</h2>
+                    ${badge}
+                  </div>
+                  <span class="date">${entry.date || "Unknown date"}</span>
                 </header>
                 ${list}
               </article>
@@ -1007,16 +495,106 @@
           .join("");
       };
 
-      const loadPreview = () => {
-        fetch("./changelog/entries.json", { cache: "no-store" })
-          .then((res) => (res.ok ? res.json() : []))
-          .then(renderPreview)
-          .catch(() => renderPreview([]));
+      const loadTimeline = () => {
+        Promise.all([
+          fetch("./entries.json", { cache: "no-store" }).then(res => res.ok ? res.json() : []),
+          fetch("https://api.github.com/repos/dwaipayanray95/Concorde-EFB/releases").then(res => res.ok ? res.json() : [])
+        ])
+        .then(([localEntries, githubReleases]) => {
+          const githubTagNames = new Set(githubReleases.map(r => r.tag_name.toLowerCase()));
+          
+          let merged = localEntries.filter(entry => {
+            const title = entry.title || "";
+            const isManualRelease = title.toLowerCase().startsWith("release v");
+            if (isManualRelease) {
+              const tagMatch = title.match(/v\d+\.\d+\.\d+/);
+              if (tagMatch && githubTagNames.has(tagMatch[0].toLowerCase())) {
+                return false;
+              }
+            }
+            return true;
+          });
+          
+          githubReleases.forEach(release => {
+            const dateStr = release.published_at.split("T")[0];
+            const rawItems = release.body ? release.body.split("\n") : [];
+            const items = rawItems
+              .map(line => line.trim().replace(/^[-*+]\s*/, ""))
+              .filter(line => line.length > 0 && !line.startsWith("###") && !line.startsWith("##"));
+            
+            merged.push({
+              date: dateStr,
+              title: release.name || release.tag_name,
+              items: items.length > 0 ? items : ["No release notes provided."],
+              isGithubRelease: true
+            });
+          });
+          
+          merged.sort((a, b) => new Date(b.date) - new Date(a.date));
+          renderEntries(merged);
+        })
+        .catch(renderEmpty);
       };
 
-      window.addEventListener("load", () => {
+      function showQrModal() {
+        document.getElementById("qr-modal").style.display = "flex";
+      }
+
+      function closeQrModal() {
+        document.getElementById("qr-modal").style.display = "none";
+      }
+
+      function closeAdblockModal() {
+        document.getElementById("sys-notice-overlay").style.display = "none";
+      }
+
+      const fetchReleases = () => {
+        const downloadsContainer = document.getElementById("downloads-list");
+        fetch("https://api.github.com/repos/dwaipayanray95/Concorde-EFB/releases")
+          .then(res => res.ok ? res.json() : [])
+          .then(releases => {
+            if (!Array.isArray(releases) || releases.length === 0) {
+              downloadsContainer.innerHTML = `
+                <div class="download-item stable-release">
+                  <div class="download-badge stable">Stable</div>
+                  <div class="download-info">
+                    <h4>Concorde EFB Releases</h4>
+                    <p>Track updates and download installers</p>
+                  </div>
+                  <a href="https://github.com/dwaipayanray95/Concorde-EFB/releases" target="_blank" class="btn btn-download">View on GitHub</a>
+                </div>
+              `;
+              return;
+            }
+            
+            const latest = releases[0];
+            const isBeta = latest.prerelease;
+            const badgeClass = isBeta ? "beta" : "stable";
+            const badgeText = isBeta ? "Beta / Pre-Release" : "Latest Release";
+            
+            downloadsContainer.innerHTML = `
+              <div class="download-item stable-release" style="flex-direction: column; align-items: flex-start; width: 100%;">
+                <div class="download-badge ${badgeClass}">${badgeText}</div>
+                <div class="download-info" style="margin-top: 8px; margin-bottom: 8px;">
+                  <h4 style="font-size: 15px; font-weight: 700; color: white;">${latest.name || latest.tag_name}</h4>
+                  <p>Released on ${new Date(latest.published_at).toLocaleDateString()}</p>
+                </div>
+                <div style="display: flex; gap: 8px; width: 100%; margin-top: 4px;">
+                  <a href="${latest.html_url}" target="_blank" class="btn btn-download" style="flex: 1; text-align: center;">Get Latest Version</a>
+                  <a href="https://github.com/dwaipayanray95/Concorde-EFB/releases" target="_blank" class="btn btn-download-beta" style="flex: 1; text-align: center;">All Releases &rarr;</a>
+                </div>
+              </div>
+            `;
+          })
+          .catch(() => {
+            downloadsContainer.innerHTML = '<div class="empty">Unable to fetch releases. <a href="https://github.com/dwaipayanray95/Concorde-EFB/releases" target="_blank" style="color: var(--accent);">View on GitHub</a></div>';
+          });
+      };
+
+      window.addEventListener('load', () => {
         fetchReleases();
-        loadPreview();
+        loadTimeline();
+        // Check after 1 second to allow adblocker extensions to block ads.js
         setTimeout(() => {
           if (window.canShowAds === undefined) {
             document.getElementById("sys-notice-overlay").style.display = "flex";
@@ -1024,74 +602,16 @@
         }, 1000);
       });
 
-      window.onclick = function (event) {
+      window.onclick = function(event) {
+        const qrModal = document.getElementById("qr-modal");
         const abModal = document.getElementById("sys-notice-overlay");
-        if (event.target === abModal) {
+        if (event.target == qrModal) {
+          qrModal.style.display = "none";
+        }
+        if (event.target == abModal) {
           abModal.style.display = "none";
         }
-      };
-
-      // ── Screenshot showcase carousel ──────────────────────────
-      (function () {
-        const track = document.getElementById("showcaseTrack");
-        const dotsWrap = document.getElementById("showcaseDots");
-        const prevBtn = document.getElementById("showcasePrev");
-        const nextBtn = document.getElementById("showcaseNext");
-        if (!track) return;
-
-        const slides = Array.from(track.children);
-        slides.forEach((_, i) => {
-          const dot = document.createElement("button");
-          dot.setAttribute("aria-label", "Go to screenshot " + (i + 1));
-          dot.addEventListener("click", () => goTo(i));
-          dotsWrap.appendChild(dot);
-        });
-        const dots = Array.from(dotsWrap.children);
-
-        let index = 0;
-        let autoplayTimer = null;
-
-        function currentIndex() {
-          return Math.round(track.scrollLeft / track.clientWidth);
-        }
-
-        function goTo(i) {
-          index = (i + slides.length) % slides.length;
-          track.scrollTo({ left: index * track.clientWidth, behavior: "smooth" });
-        }
-
-        function updateDots() {
-          const i = currentIndex();
-          dots.forEach((d, di) => d.classList.toggle("active", di === i));
-        }
-
-        function startAutoplay() {
-          stopAutoplay();
-          autoplayTimer = setInterval(() => goTo(currentIndex() + 1), 5000);
-        }
-
-        function stopAutoplay() {
-          if (autoplayTimer) clearInterval(autoplayTimer);
-        }
-
-        prevBtn.addEventListener("click", () => {
-          goTo(currentIndex() - 1);
-          startAutoplay();
-        });
-        nextBtn.addEventListener("click", () => {
-          goTo(currentIndex() + 1);
-          startAutoplay();
-        });
-        track.addEventListener("scroll", () => {
-          window.requestAnimationFrame(updateDots);
-        });
-        track.addEventListener("pointerenter", stopAutoplay);
-        track.addEventListener("pointerleave", startAutoplay);
-        track.addEventListener("touchstart", stopAutoplay, { passive: true });
-
-        updateDots();
-        startAutoplay();
-      })();
+      }
     </script>
   </body>
 </html>

@@ -3,13 +3,15 @@
         "date": "2026-07-16",
         "title": "Commits",
         "items": [
-            "7ad9c07 chore: fix workflow"
+            "c3eaeb8 fix: reconcile fuel tank totals, redesign fuel panel layout"
         ]
     },
     {
         "date": "2026-07-15",
         "title": "Commits",
         "items": [
+            "d0b473a fix: guard native-assets install rule against missing directory",
+            "da4b343 fix: correct fuel telemetry (100x bug), add real N1/wind/ISA data",
             "d6e01d1 ci: fix broken Windows build pipeline in GitHub Actions",
             "6e17380 feat: bundle SimConnect bridge into app and fix telemetry bugs",
             "6bbb338 feat: add ez-github-scripts",
