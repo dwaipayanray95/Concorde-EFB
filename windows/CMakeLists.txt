@@ -110,6 +110,8 @@ install(FILES "${AOT_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}"
 # Bundle the SimConnect telemetry bridge (standalone PyInstaller exe, built
 # from tools/simbridge/msfs_bridge.py) next to the app so Flight Monitor
 # works without users installing Python or MSFS SDK tooling separately.
-install(DIRECTORY "${CMAKE_SOURCE_DIR}/simbridge/msfs_bridge"
-  DESTINATION "${INSTALL_BUNDLE_LIB_DIR}/simbridge"
-  COMPONENT Runtime)
+if(EXISTS "${CMAKE_SOURCE_DIR}/simbridge/msfs_bridge")
+  install(DIRECTORY "${CMAKE_SOURCE_DIR}/simbridge/msfs_bridge"
+    DESTINATION "${INSTALL_BUNDLE_LIB_DIR}/simbridge"
+    COMPONENT Runtime)
+endif()
