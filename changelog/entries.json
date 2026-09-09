@@ -3,6 +3,7 @@
         "date": "2026-09-09",
         "title": "Commits",
         "items": [
+            "fea7f86 fix(windows): guard simbridge install rule against missing directory",
             "1fae9ef chore: optimize macOS icons and landing screenshots PNG compression"
         ]
     },
