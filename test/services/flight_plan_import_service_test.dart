@@ -85,5 +85,27 @@ void main() {
       expect(plan.arrivalIcao, 'KJFK');
       expect(plan.route, 'CPT KENET');
     });
+
+    test('parses manually pasted route with ICAO and runway tokens', () {
+      const manualRoute = 'OMDB/12L OMDB/30R RIDAP M557 OTIKI TOTKU GODKI RALMI EGCC/23R EGCC/05L';
+      final plan = FlightPlanImportService.parseManualRoute(manualRoute);
+
+      expect(plan.departureIcao, 'OMDB');
+      expect(plan.departureRunway, '30R');
+      expect(plan.arrivalIcao, 'EGCC');
+      expect(plan.arrivalRunway, '23R');
+      expect(plan.route, 'RIDAP M557 OTIKI TOTKU GODKI RALMI');
+    });
+
+    test('parses standard space-separated manual route tokens', () {
+      const manualRoute = 'OMDB 30R RIDAP M557 OTIKI EGCC 23R';
+      final plan = FlightPlanImportService.parseManualRoute(manualRoute);
+
+      expect(plan.departureIcao, 'OMDB');
+      expect(plan.departureRunway, '30R');
+      expect(plan.arrivalIcao, 'EGCC');
+      expect(plan.arrivalRunway, '23R');
+      expect(plan.route, 'RIDAP M557 OTIKI');
+    });
   });
 }

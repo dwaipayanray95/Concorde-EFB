@@ -171,6 +171,119 @@ class FlightPlanImportService {
     );
   }
 
+  /// Parses a manually pasted route string (e.g. MSFS/VATSIM format:
+  /// "OMDB/30R RIDAP M557 ... EGCC/23R" or multiple runway candidates like
+  /// "OMDB/12L OMDB/30R ... EGCC/23R EGCC/05L").
+  /// Extracts the departure ICAO, departure runway, arrival ICAO, arrival
+  /// runway, and enroute route string.
+  static ParsedFlightPlan parseManualRoute(
+    String rawInput, {
+    String? defaultDep,
+    String? defaultArr,
+    String? defaultAlt,
+  }) {
+    final tokens = rawInput.trim().split(RegExp(r'\s+'));
+    if (tokens.isEmpty || rawInput.trim().isEmpty) {
+      return ParsedFlightPlan(
+        departureIcao: (defaultDep ?? '').toUpperCase(),
+        arrivalIcao: (defaultArr ?? '').toUpperCase(),
+        alternateIcao: defaultAlt?.toUpperCase(),
+        route: '',
+      );
+    }
+
+    var dep = defaultDep?.trim().toUpperCase();
+    String? depRwy;
+    var arr = defaultArr?.trim().toUpperCase();
+    String? arrRwy;
+
+    final tokenList = List<String>.from(tokens);
+
+    // Forward scan from the start for departure ICAO and runway tokens
+    while (tokenList.isNotEmpty) {
+      final first = tokenList.first.toUpperCase();
+      // Pattern 1: ICAO/RWY e.g. "OMDB/30R" or "OMDB/12L"
+      final icaoRwyMatch = RegExp(r'^([A-Z]{4})/([0-9]{1,2}[LRC]?)$').firstMatch(first);
+      if (icaoRwyMatch != null) {
+        dep = icaoRwyMatch.group(1);
+        depRwy = icaoRwyMatch.group(2);
+        tokenList.removeAt(0);
+        continue;
+      }
+
+      // Pattern 2: 4-letter ICAO matching departure or starting the route
+      final icaoMatch = RegExp(r'^([A-Z]{4})$').firstMatch(first);
+      if (icaoMatch != null) {
+        final cand = icaoMatch.group(1)!;
+        if (dep == null || dep.isEmpty || cand == dep) {
+          dep = cand;
+          tokenList.removeAt(0);
+          // Check if next token is a runway like "30R" or "RW30R"
+          if (tokenList.isNotEmpty) {
+            final nextRwy = RegExp(r'^(?:RW)?([0-9]{1,2}[LRC]?)$').firstMatch(tokenList.first.toUpperCase());
+            if (nextRwy != null) {
+              depRwy = nextRwy.group(1);
+              tokenList.removeAt(0);
+            }
+          }
+          continue;
+        }
+      }
+      break;
+    }
+
+    // Backward scan from the end for arrival ICAO and runway tokens
+    while (tokenList.isNotEmpty) {
+      final last = tokenList.last.toUpperCase();
+      // Pattern 1: ICAO/RWY e.g. "EGCC/23R" or "EGCC/05L"
+      final icaoRwyMatch = RegExp(r'^([A-Z]{4})/([0-9]{1,2}[LRC]?)$').firstMatch(last);
+      if (icaoRwyMatch != null) {
+        arr = icaoRwyMatch.group(1);
+        arrRwy = icaoRwyMatch.group(2);
+        tokenList.removeLast();
+        continue;
+      }
+
+      // Pattern 2: 4-letter ICAO
+      final icaoMatch = RegExp(r'^([A-Z]{4})$').firstMatch(last);
+      if (icaoMatch != null) {
+        final cand = icaoMatch.group(1)!;
+        if (arr == null || arr.isEmpty || cand == arr) {
+          arr = cand;
+          tokenList.removeLast();
+          continue;
+        }
+      }
+
+      // Pattern 3: Standalone runway at end (e.g. "... EGCC 23R")
+      final rwyMatch = RegExp(r'^(?:RW)?([0-9]{1,2}[LRC]?)$').firstMatch(last);
+      if (rwyMatch != null) {
+        final candidateRwy = rwyMatch.group(1);
+        if (tokenList.length >= 2 && RegExp(r'^([A-Z]{4})$').hasMatch(tokenList[tokenList.length - 2].toUpperCase())) {
+          arrRwy = candidateRwy;
+          arr = tokenList[tokenList.length - 2].toUpperCase();
+          tokenList.removeLast();
+          tokenList.removeLast();
+          continue;
+        } else if (arr != null && arr.isNotEmpty) {
+          arrRwy = candidateRwy;
+          tokenList.removeLast();
+          continue;
+        }
+      }
+      break;
+    }
+
+    return ParsedFlightPlan(
+      departureIcao: dep ?? '',
+      arrivalIcao: arr ?? '',
+      alternateIcao: defaultAlt?.toUpperCase(),
+      departureRunway: depRwy,
+      arrivalRunway: arrRwy,
+      route: tokenList.join(' ').trim(),
+    );
+  }
+
   /// Tries every known XML shape against file content — used by the file
   /// import flow, which doesn't know in advance whether the user picked a
   /// `.pln` or some other planner's route XML.

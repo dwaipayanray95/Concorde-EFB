@@ -209,12 +209,22 @@ class FlightPlanSection extends ConsumerWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              final dep = depCtl.text.trim().toUpperCase();
-              final arr = arrCtl.text.trim().toUpperCase();
+              // Pre-parse the route in case the user pasted the entire route
+              // (including DEP/ARR ICAOs) directly into the route field.
+              final preParsed = FlightPlanImportService.parseManualRoute(
+                routeCtl.text,
+                defaultDep: depCtl.text,
+                defaultArr: arrCtl.text,
+                defaultAlt: altCtl.text,
+              );
+              final dep = preParsed.departureIcao.trim().toUpperCase();
+              final arr = preParsed.arrivalIcao.trim().toUpperCase();
               if (dep.length != 4 || arr.length != 4) {
                 _showSnack(dialogContext, 'Departure and arrival need valid 4-letter ICAO codes.', colors.error);
                 return;
               }
+              depCtl.text = dep;
+              arrCtl.text = arr;
               Navigator.of(dialogContext).pop(true);
             },
             style: ElevatedButton.styleFrom(
@@ -229,16 +239,13 @@ class FlightPlanSection extends ConsumerWidget {
     );
 
     if (applied == true) {
-      _applyParsedPlan(
-        ref,
-        ParsedFlightPlan(
-          departureIcao: depCtl.text.trim().toUpperCase(),
-          arrivalIcao: arrCtl.text.trim().toUpperCase(),
-          alternateIcao: altCtl.text.trim().isEmpty ? null : altCtl.text.trim().toUpperCase(),
-          route: routeCtl.text.trim(),
-        ),
-        FlightPlanSource.manual,
+      final parsed = FlightPlanImportService.parseManualRoute(
+        routeCtl.text,
+        defaultDep: depCtl.text,
+        defaultArr: arrCtl.text,
+        defaultAlt: altCtl.text,
       );
+      _applyParsedPlan(ref, parsed, FlightPlanSource.manual);
       if (context.mounted) {
         _showSnack(context, 'Route applied manually.', colors.success);
       }
