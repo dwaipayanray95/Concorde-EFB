@@ -37,11 +37,42 @@ class FlightPlanSection extends ConsumerWidget {
     final db = ref.read(airportDbProvider).value;
     final dep = db?.airports[plan.departureIcao];
     final arr = db?.airports[plan.arrivalIcao];
+
+    if (plan.departureRunway != null && plan.departureRunway!.isNotEmpty) {
+      final match = _findMatchingRunwayId(dep?.runways, plan.departureRunway!);
+      ref.read(departureRunwayIdProvider.notifier).set(match ?? plan.departureRunway!);
+    }
+    if (plan.arrivalRunway != null && plan.arrivalRunway!.isNotEmpty) {
+      final match = _findMatchingRunwayId(arr?.runways, plan.arrivalRunway!);
+      ref.read(arrivalRunwayIdProvider.notifier).set(match ?? plan.arrivalRunway!);
+    }
+
     if (dep != null && arr != null) {
       ref.read(plannedDistanceProvider.notifier).set(
             ConcordeLogic.greatCircleNM(dep.lat, dep.lon, arr.lat, arr.lon),
           );
     }
+  }
+
+  static String? _findMatchingRunwayId(List<dynamic>? runways, String rwyId) {
+    if (runways == null || runways.isEmpty) return null;
+    final target = rwyId.toUpperCase().replaceAll('RW', '').trim();
+    for (final r in runways) {
+      final id = (r.id as String).toUpperCase();
+      if (id == target || id.padLeft(3, '0') == target.padLeft(3, '0')) {
+        return r.id as String;
+      }
+    }
+    // Also try matching without leading zeros (e.g. "05L" vs "5L")
+    final strippedTarget = target.replaceFirst(RegExp(r'^0+'), '');
+    for (final r in runways) {
+      final id = (r.id as String).toUpperCase();
+      final strippedId = id.replaceFirst(RegExp(r'^0+'), '');
+      if (strippedId == strippedTarget) {
+        return r.id as String;
+      }
+    }
+    return null;
   }
 
   Future<void> _importFile(BuildContext context, WidgetRef ref) async {

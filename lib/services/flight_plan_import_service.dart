@@ -8,6 +8,8 @@ class ParsedFlightPlan {
   final String departureIcao;
   final String arrivalIcao;
   final String? alternateIcao;
+  final String? departureRunway;
+  final String? arrivalRunway;
   final String route;
   final double? cruiseAltFt;
 
@@ -15,6 +17,8 @@ class ParsedFlightPlan {
     required this.departureIcao,
     required this.arrivalIcao,
     this.alternateIcao,
+    this.departureRunway,
+    this.arrivalRunway,
     this.route = '',
     this.cruiseAltFt,
   });
@@ -25,10 +29,10 @@ class ParsedFlightPlan {
 /// simple/well-known structure) rather than pulling in a full XML DOM
 /// parser for a handful of fixed tag names.
 class FlightPlanImportService {
-  /// Parses an MSFS/FSX/P3D `.pln` file (XML). These always carry
-  /// `<DepartureID>` / `<DestinationID>` ICAO codes and a `<CruisingAlt>`,
-  /// plus one `<ATCWaypoint id="...">` per point on the route including
-  /// the departure and arrival airports themselves.
+  /// Parses an MSFS/FSX/P3D `.pln` file (XML). These carry
+  /// `<DepartureID>` / `<DestinationID>` ICAO codes, runway details in
+  /// `<DepartureDetails>` / `<ArrivalDetails>`, and `<ATCWaypoint>` nodes
+  /// containing `<ICAOIdent>`, `<ATCWaypointIdent>`, or `id="..."`.
   static ParsedFlightPlan? parsePln(String xml) {
     final dep = _tag(xml, 'DepartureID');
     final dest = _tag(xml, 'DestinationID');
@@ -38,29 +42,109 @@ class FlightPlanImportService {
 
     final cruiseAlt = double.tryParse(_tag(xml, 'CruisingAlt') ?? '');
 
-    final waypointIds = RegExp(r'<ATCWaypoint id="([^"]*)"')
-        .allMatches(xml)
-        .map((m) => m.group(1)!.trim())
-        .where((id) => id.isNotEmpty)
-        .toList();
+    // Parse departure runway (e.g. <RunwayNumberFP>30</RunwayNumberFP> + <RunwayDesignatorFP>RIGHT</RunwayDesignatorFP> -> "30R")
+    final depDetails = _tagBlock(xml, 'DepartureDetails');
+    final depRwy = depDetails != null
+        ? _formatRunway(
+            _tag(depDetails, 'RunwayNumberFP'),
+            _tag(depDetails, 'RunwayDesignatorFP'),
+          )
+        : null;
 
-    // Drop the leading/trailing entries when they just repeat the
-    // departure/destination airport identifiers, so the route string is
-    // the enroute fixes only.
-    var enroute = List<String>.from(waypointIds);
-    if (enroute.isNotEmpty && enroute.first.toUpperCase() == dep.toUpperCase()) {
+    // Parse arrival runway
+    final arrDetails = _tagBlock(xml, 'ArrivalDetails') ?? _tagBlock(xml, 'ApproachDetails');
+    final arrRwy = arrDetails != null
+        ? _formatRunway(
+            _tag(arrDetails, 'RunwayNumberFP'),
+            _tag(arrDetails, 'RunwayDesignatorFP'),
+          )
+        : null;
+
+    // Extract waypoints from <ATCWaypoint> blocks.
+    // Handles both attribute style (`<ATCWaypoint id="..."/>` or `<ATCWaypoint id="...">...</ATCWaypoint>`)
+    // and child tag style (`<ATCWaypoint><ICAO><ICAOIdent>...</ICAOIdent></ICAO></ATCWaypoint>`).
+    final waypointMatches = RegExp(r'<ATCWaypoint\b([^>]*?)(?:>(.*?)</ATCWaypoint>|/>)', dotAll: true).allMatches(xml);
+    final waypoints = <_PlnWaypoint>[];
+
+    for (final match in waypointMatches) {
+      final attrs = match.group(1) ?? '';
+      final block = match.group(2) ?? '';
+
+      // Ident can be in <ICAOIdent>, <ATCWaypointIdent>, <Ident>, or the `id="..."` attribute
+      final ident = _tag(block, 'ICAOIdent') ??
+          _tag(block, 'ATCWaypointIdent') ??
+          _tag(block, 'Ident') ??
+          RegExp(r'\bid\s*=\s*"([^"]*)"', dotAll: true).firstMatch(attrs)?.group(1);
+
+      if (ident == null || ident.trim().isEmpty) continue;
+
+      final airway = _tag(block, 'ATCAirway');
+      waypoints.add(_PlnWaypoint(ident: ident.trim().toUpperCase(), airway: airway?.trim().toUpperCase()));
+    }
+
+    // Build the enroute string. Drop leading/trailing points if they repeat
+    // the departure or destination ICAO.
+    var enroute = List<_PlnWaypoint>.from(waypoints);
+    if (enroute.isNotEmpty && enroute.first.ident == dep.toUpperCase()) {
       enroute.removeAt(0);
     }
-    if (enroute.isNotEmpty && enroute.last.toUpperCase() == dest.toUpperCase()) {
+    if (enroute.isNotEmpty && enroute.last.ident == dest.toUpperCase()) {
       enroute.removeLast();
     }
+
+    // Format route as standard aviation route:
+    // When consecutive fixes share an airway, represent as: FIX1 AIRWAY FIX2 ...
+    final routeTokens = <String>[];
+    String? currentAirway;
+
+    for (var i = 0; i < enroute.length; i++) {
+      final wp = enroute[i];
+      if (wp.airway != null && wp.airway!.isNotEmpty && wp.airway != 'DIRECT') {
+        if (wp.airway != currentAirway) {
+          currentAirway = wp.airway;
+          routeTokens.add(currentAirway!);
+        }
+      } else {
+        currentAirway = null;
+      }
+      routeTokens.add(wp.ident);
+    }
+
+    final routeString = routeTokens.isEmpty
+        ? enroute.map((w) => w.ident).join(' ')
+        : routeTokens.join(' ');
 
     return ParsedFlightPlan(
       departureIcao: dep.toUpperCase(),
       arrivalIcao: dest.toUpperCase(),
-      route: enroute.join(' '),
+      departureRunway: depRwy,
+      arrivalRunway: arrRwy,
+      route: routeString,
       cruiseAltFt: cruiseAlt,
     );
+  }
+
+  /// Helper to convert runway number + designator to standard ID format:
+  /// e.g. ("30", "RIGHT") -> "30R", ("5", "LEFT") -> "05L", ("23", "NONE") -> "23"
+  static String? _formatRunway(String? number, String? designator) {
+    if (number == null || number.trim().isEmpty) return null;
+    var numStr = number.trim();
+    if (numStr.length == 1) {
+      numStr = '0$numStr';
+    }
+
+    var suffix = '';
+    if (designator != null && designator.trim().isNotEmpty) {
+      final d = designator.trim().toUpperCase();
+      if (d == 'RIGHT' || d == 'R') {
+        suffix = 'R';
+      } else if (d == 'LEFT' || d == 'L') {
+        suffix = 'L';
+      } else if (d == 'CENTER' || d == 'C') {
+        suffix = 'C';
+      }
+    }
+    return '$numStr$suffix';
   }
 
   /// Simfly/PFPX/generic route-XML exports commonly use
@@ -74,11 +158,15 @@ class FlightPlanImportService {
 
     final route = _tag(xml, 'Route') ?? '';
     final alt = _tag(xml, 'Alternate') ?? _attr(xml, 'Alternate', 'icao_code');
+    final depRwy = _tag(xml, 'DepartureRunway') ?? _attr(xml, 'Origin', 'runway');
+    final arrRwy = _tag(xml, 'ArrivalRunway') ?? _attr(xml, 'Destination', 'runway');
 
     return ParsedFlightPlan(
       departureIcao: dep.toUpperCase(),
       arrivalIcao: dest.toUpperCase(),
       alternateIcao: alt?.toUpperCase(),
+      departureRunway: depRwy?.toUpperCase(),
+      arrivalRunway: arrRwy?.toUpperCase(),
       route: route.trim(),
     );
   }
@@ -95,8 +183,20 @@ class FlightPlanImportService {
     return m?.group(1)?.trim();
   }
 
+  static String? _tagBlock(String xml, String name) {
+    final m = RegExp('<$name\\b[^>]*>(.*?)</$name>', dotAll: true).firstMatch(xml);
+    return m?.group(1);
+  }
+
   static String? _attr(String xml, String tag, String attr) {
-    final m = RegExp('<$tag\\b[^>]*\\b$attr="([^"]*)"').firstMatch(xml);
+    final m = RegExp('<$tag\\b[^>]*\\b$attr\\s*=\\s*"([^"]*)"', dotAll: true).firstMatch(xml);
     return m?.group(1)?.trim();
   }
+}
+
+class _PlnWaypoint {
+  final String ident;
+  final String? airway;
+
+  const _PlnWaypoint({required this.ident, this.airway});
 }
