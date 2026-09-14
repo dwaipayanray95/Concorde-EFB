@@ -27,6 +27,8 @@ class FlightPlanSection extends ConsumerWidget {
   ) {
     ref.read(departureIcaoProvider.notifier).set(plan.departureIcao);
     ref.read(arrivalIcaoProvider.notifier).set(plan.arrivalIcao);
+    ref.invalidate(departureMetarFutureProvider);
+    ref.invalidate(arrivalMetarFutureProvider);
     if (plan.alternateIcao != null && plan.alternateIcao!.isNotEmpty) {
       ref.read(alternateIcaoProvider.notifier).set(plan.alternateIcao!);
     }
@@ -370,6 +372,8 @@ class FlightPlanSection extends ConsumerWidget {
                             ref
                                 .read(flightPlanSourceProvider.notifier)
                                 .set(FlightPlanSource.simbrief);
+                            ref.invalidate(departureMetarFutureProvider);
+                            ref.invalidate(arrivalMetarFutureProvider);
                             ref.read(checklistProvider.notifier).resetAll();
                           } else if (context.mounted) {
                             _showSnack(

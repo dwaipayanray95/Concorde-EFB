@@ -268,30 +268,15 @@ class _LegCard extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
-                metarAsync.when(
-                  data: (metar) => _WeatherStrip(
-                    metarStr: metar,
-                    runway: runway,
-                    showRaw: showRaw,
-                    onToggleRaw: onToggleRaw,
-                    onRefresh: onRefreshMetar,
-                  ),
-                  loading: () => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        color: colors.accent,
-                        strokeWidth: 2,
-                      ),
-                    ),
-                  ),
-                  error: (_, _) => _WeatherStrip(
-                    metarStr: '',
-                    runway: runway,
-                    showRaw: showRaw,
-                    onToggleRaw: onToggleRaw,
-                    onRefresh: onRefreshMetar,
-                  ),
+                _WeatherStrip(
+                  metarStr: metarAsync.value ?? '',
+                  runway: runway,
+                  showRaw: showRaw,
+                  isLoading: metarAsync.isLoading,
+                  isError: metarAsync.hasError,
+                  errorMessage: metarAsync.error?.toString(),
+                  onToggleRaw: onToggleRaw,
+                  onRefresh: onRefreshMetar,
                 ),
                 const SizedBox(height: 20),
                 Divider(color: colors.divider, height: 1),
@@ -539,6 +524,9 @@ class _WeatherStrip extends StatelessWidget {
   final String metarStr;
   final Runway? runway;
   final bool showRaw;
+  final bool isLoading;
+  final bool isError;
+  final String? errorMessage;
   final VoidCallback onToggleRaw;
   final VoidCallback onRefresh;
 
@@ -546,6 +534,9 @@ class _WeatherStrip extends StatelessWidget {
     required this.metarStr,
     required this.runway,
     required this.showRaw,
+    this.isLoading = false,
+    this.isError = false,
+    this.errorMessage,
     required this.onToggleRaw,
     required this.onRefresh,
   });
@@ -564,12 +555,16 @@ class _WeatherStrip extends StatelessWidget {
     // badge), so text needs to switch to white-on-color rather than the
     // usual dim/primary tones meant for a neutral background.
     Color catBg = colors.success;
-    if (cat == 'MVFR') {
+    if (isError && metarStr.isEmpty) {
+      catBg = colors.error.withValues(alpha: 0.85);
+    } else if (cat == 'MVFR') {
       catBg = colors.mvfr;
     } else if (cat == 'IFR') {
       catBg = colors.ifr;
     } else if (cat == 'LIFR') {
       catBg = colors.lifr;
+    } else if (metarStr.isEmpty) {
+      catBg = colors.dividerStrong;
     }
     const catColor = Colors.white;
     final dimOnCat = Colors.white.withValues(alpha: 0.75);
@@ -589,7 +584,7 @@ class _WeatherStrip extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
-                  cat,
+                  isError && metarStr.isEmpty ? 'OFFLINE' : (metarStr.isEmpty && isLoading ? 'FETCHING' : cat),
                   style: uiText(
                     context,
                     size: 12,
@@ -600,7 +595,9 @@ class _WeatherStrip extends StatelessWidget {
                 ),
                 const SizedBox(width: 16),
                 Text(
-                  '${tempC?.round() ?? '--'}°C, $summary',
+                  isError && metarStr.isEmpty
+                      ? 'Unable to fetch METAR'
+                      : (tempC != null ? '${tempC.round()}°C, $summary' : (isLoading ? 'Updating weather...' : '--')),
                   style: uiText(
                     context,
                     size: 12,
@@ -646,10 +643,9 @@ class _WeatherStrip extends StatelessWidget {
                     ],
                   ),
                 ),
-                IconButton(
-                  icon: Icon(Icons.refresh, size: 16, color: catColor),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+                _AnimatedRefreshButton(
+                  isLoading: isLoading,
+                  color: catColor,
                   onPressed: onRefresh,
                 ),
               ],
@@ -674,9 +670,85 @@ class _WeatherStrip extends StatelessWidget {
                       letterSpacing: 1,
                     ),
             ),
+          ] else if (isError) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Failed to retrieve weather. Tap refresh to retry.',
+              style: uiText(
+                context,
+                size: 10,
+                weight: FontWeight.w600,
+                color: colors.error,
+              ),
+            ),
           ],
         ],
       ),
+    );
+  }
+}
+
+class _AnimatedRefreshButton extends StatefulWidget {
+  final bool isLoading;
+  final Color color;
+  final VoidCallback onPressed;
+
+  const _AnimatedRefreshButton({
+    required this.isLoading,
+    required this.color,
+    required this.onPressed,
+  });
+
+  @override
+  State<_AnimatedRefreshButton> createState() => _AnimatedRefreshButtonState();
+}
+
+class _AnimatedRefreshButtonState extends State<_AnimatedRefreshButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    if (widget.isLoading) {
+      _controller.repeat();
+    }
+  }
+
+  @override
+  void didUpdateWidget(_AnimatedRefreshButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isLoading != oldWidget.isLoading) {
+      if (widget.isLoading) {
+        _controller.repeat();
+      } else {
+        _controller.stop();
+        _controller.reset();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: widget.isLoading ? 'Fetching ATIS/METAR...' : 'Refresh ATIS/METAR',
+      icon: RotationTransition(
+        turns: _controller,
+        child: Icon(Icons.refresh, size: 18, color: widget.color),
+      ),
+      padding: const EdgeInsets.all(4),
+      constraints: const BoxConstraints(),
+      onPressed: widget.isLoading ? null : widget.onPressed,
     );
   }
 }

@@ -21,7 +21,13 @@ final airportDbProvider = FutureProvider<AirportDatabaseService>((ref) async {
 class DepartureIcaoNotifier extends Notifier<String> {
   @override
   String build() => 'EGLL';
-  void set(String val) => state = val.toUpperCase();
+  void set(String val) {
+    val = val.toUpperCase();
+    if (state != val) {
+      state = val;
+      ref.invalidate(departureMetarFutureProvider);
+    }
+  }
 }
 
 final departureIcaoProvider = NotifierProvider<DepartureIcaoNotifier, String>(
@@ -31,7 +37,13 @@ final departureIcaoProvider = NotifierProvider<DepartureIcaoNotifier, String>(
 class ArrivalIcaoNotifier extends Notifier<String> {
   @override
   String build() => 'KJFK';
-  void set(String val) => state = val.toUpperCase();
+  void set(String val) {
+    val = val.toUpperCase();
+    if (state != val) {
+      state = val;
+      ref.invalidate(arrivalMetarFutureProvider);
+    }
+  }
 }
 
 final arrivalIcaoProvider = NotifierProvider<ArrivalIcaoNotifier, String>(
@@ -174,12 +186,20 @@ class DepartureRunwayIdNotifier extends Notifier<String> {
     // and the airport DB finishing its async load after this provider's
     // first build.
     ref.listen(depAirportProvider, (previous, next) {
-      if (next?.icao != previous?.icao) state = _longestRunwayId(next);
+      if (next?.icao != previous?.icao) {
+        state = _longestRunwayId(next);
+        ref.invalidate(departureMetarFutureProvider);
+      }
     });
     return _longestRunwayId(ref.read(depAirportProvider));
   }
 
-  void set(String val) => state = val;
+  void set(String val) {
+    if (state != val) {
+      state = val;
+      ref.invalidate(departureMetarFutureProvider);
+    }
+  }
 }
 
 final departureRunwayIdProvider =
@@ -191,12 +211,20 @@ class ArrivalRunwayIdNotifier extends Notifier<String> {
   @override
   String build() {
     ref.listen(arrAirportProvider, (previous, next) {
-      if (next?.icao != previous?.icao) state = _longestRunwayId(next);
+      if (next?.icao != previous?.icao) {
+        state = _longestRunwayId(next);
+        ref.invalidate(arrivalMetarFutureProvider);
+      }
     });
     return _longestRunwayId(ref.read(arrAirportProvider));
   }
 
-  void set(String val) => state = val;
+  void set(String val) {
+    if (state != val) {
+      state = val;
+      ref.invalidate(arrivalMetarFutureProvider);
+    }
+  }
 }
 
 final arrivalRunwayIdProvider =
