@@ -9,6 +9,7 @@ import '../models/concorde_models.dart';
 import '../models/airport.dart';
 import '../core/concorde_constants.dart';
 import '../services/metar_service.dart';
+import '../services/flight_plan_import_service.dart';
 
 final airportDbProvider = FutureProvider<AirportDatabaseService>((ref) async {
   final service = AirportDatabaseService();
@@ -56,6 +57,20 @@ class PlannedDistanceNotifier extends Notifier<double> {
 final plannedDistanceProvider =
     NotifierProvider<PlannedDistanceNotifier, double>(
       PlannedDistanceNotifier.new,
+    );
+
+/// Where the currently loaded flight plan came from (SimBrief / a .pln or
+/// route-XML file / hand-typed) -- purely informational, shown as a badge
+/// on the Flight Plan card.
+class FlightPlanSourceNotifier extends Notifier<FlightPlanSource> {
+  @override
+  FlightPlanSource build() => FlightPlanSource.none;
+  void set(FlightPlanSource val) => state = val;
+}
+
+final flightPlanSourceProvider =
+    NotifierProvider<FlightPlanSourceNotifier, FlightPlanSource>(
+      FlightPlanSourceNotifier.new,
     );
 
 // --- SimBrief State ---

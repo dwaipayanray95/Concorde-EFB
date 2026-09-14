@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,18 +7,219 @@ import '../../../widgets/efb_card.dart';
 import '../../../widgets/efb_text_field.dart';
 import '../../../core/app_colors.dart';
 import '../../../core/ui_text.dart';
+import '../../../core/concorde_logic.dart';
 import '../../../services/simbrief_service.dart';
+import '../../../services/flight_plan_import_service.dart';
 
-/// FLIGHT PLAN card: SimBrief import, callsign/registration/passenger
-/// chips, and the route/distance summary row.
+/// FLIGHT PLAN card: three ways to load a plan -- SimBrief import, a
+/// dropped .pln/route-XML file, or hand-typed route -- plus the
+/// callsign/registration/passenger chips and route/distance summary row.
 class FlightPlanSection extends ConsumerWidget {
   const FlightPlanSection({super.key});
+
+  /// Applies a parsed plan to the shared providers and, when both airports
+  /// resolve in the offline database, fills in a great-circle distance so
+  /// the card is never left showing a stale/default figure after import.
+  void _applyParsedPlan(
+    WidgetRef ref,
+    ParsedFlightPlan plan,
+    FlightPlanSource source,
+  ) {
+    ref.read(departureIcaoProvider.notifier).set(plan.departureIcao);
+    ref.read(arrivalIcaoProvider.notifier).set(plan.arrivalIcao);
+    if (plan.alternateIcao != null && plan.alternateIcao!.isNotEmpty) {
+      ref.read(alternateIcaoProvider.notifier).set(plan.alternateIcao!);
+    }
+    ref.read(simbriefRouteProvider.notifier).set(plan.route.isEmpty ? '--' : plan.route);
+    ref.read(flightPlanSourceProvider.notifier).set(source);
+    ref.read(checklistProvider.notifier).resetAll();
+
+    final db = ref.read(airportDbProvider).value;
+    final dep = db?.airports[plan.departureIcao];
+    final arr = db?.airports[plan.arrivalIcao];
+    if (dep != null && arr != null) {
+      ref.read(plannedDistanceProvider.notifier).set(
+            ConcordeLogic.greatCircleNM(dep.lat, dep.lon, arr.lat, arr.lon),
+          );
+    }
+  }
+
+  Future<void> _importFile(BuildContext context, WidgetRef ref) async {
+    final colors = context.colors;
+    try {
+      final picked = await FilePicker.pickFile(
+        type: FileType.custom,
+        allowedExtensions: ['pln', 'xml', 'fpl'],
+      );
+      if (picked == null) return;
+
+      final bytes = await picked.readAsBytes();
+      final content = String.fromCharCodes(bytes);
+      final plan = FlightPlanImportService.parseAnyXml(content);
+
+      if (plan == null) {
+        if (context.mounted) {
+          _showSnack(context, 'Could not find a route in "${picked.name}" -- unrecognized format.', colors.error);
+        }
+        return;
+      }
+
+      _applyParsedPlan(ref, plan, FlightPlanSource.file);
+      if (context.mounted) {
+        _showSnack(context, 'Flight plan imported from ${picked.name}.', colors.success);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        _showSnack(context, 'File import failed: $e', colors.error);
+      }
+    }
+  }
+
+  void _showSnack(BuildContext context, String text, Color background) {
+    final colors = context.colors;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(text, style: uiText(context, color: Colors.white)),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: background == colors.success || background == colors.error ? background : colors.surface,
+      ),
+    );
+  }
+
+  Future<void> _openManualEntry(BuildContext context, WidgetRef ref) async {
+    final colors = context.colors;
+    final depCtl = TextEditingController(text: ref.read(departureIcaoProvider));
+    final arrCtl = TextEditingController(text: ref.read(arrivalIcaoProvider));
+    final altCtl = TextEditingController(text: ref.read(alternateIcaoProvider));
+    final routeCtl = TextEditingController(
+      text: ref.read(simbriefRouteProvider) == '--' ? '' : ref.read(simbriefRouteProvider),
+    );
+
+    final applied = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: colors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: colors.dividerStrong, width: 1.5),
+        ),
+        title: Text(
+          'MANUAL ROUTE ENTRY',
+          style: uiText(dialogContext, color: colors.textPrimary, weight: FontWeight.w900, size: 16, letterSpacing: 1.5),
+        ),
+        content: SizedBox(
+          width: 420,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: EfbTextField(
+                        label: 'DEPARTURE ICAO',
+                        initialValue: depCtl.text,
+                        textCapitalization: TextCapitalization.characters,
+                        onChanged: (v) => depCtl.text = v,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: EfbTextField(
+                        label: 'ARRIVAL ICAO',
+                        initialValue: arrCtl.text,
+                        textCapitalization: TextCapitalization.characters,
+                        onChanged: (v) => arrCtl.text = v,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                EfbTextField(
+                  label: 'ALTERNATE ICAO (OPTIONAL)',
+                  initialValue: altCtl.text,
+                  textCapitalization: TextCapitalization.characters,
+                  onChanged: (v) => altCtl.text = v,
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'ROUTE (PASTE OR TYPE)',
+                  style: uiText(dialogContext, color: colors.textSecondary, size: 11, weight: FontWeight.bold, letterSpacing: 0.5),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  decoration: BoxDecoration(
+                    color: colors.inputBg,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: colors.dividerStrong, width: 1.5),
+                  ),
+                  child: TextField(
+                    controller: routeCtl,
+                    maxLines: 3,
+                    textCapitalization: TextCapitalization.characters,
+                    style: uiText(dialogContext, color: colors.textPrimary, weight: FontWeight.bold, size: 14),
+                    decoration: InputDecoration(
+                      hintText: 'e.g. DVR KONAN UL9 KOK UN57 REMBA ...',
+                      hintStyle: uiText(dialogContext, color: colors.textDim, size: 13),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text('CANCEL', style: uiText(dialogContext, color: colors.textDim, weight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final dep = depCtl.text.trim().toUpperCase();
+              final arr = arrCtl.text.trim().toUpperCase();
+              if (dep.length != 4 || arr.length != 4) {
+                _showSnack(dialogContext, 'Departure and arrival need valid 4-letter ICAO codes.', colors.error);
+                return;
+              }
+              Navigator.of(dialogContext).pop(true);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: colors.accent,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: Text('APPLY', style: uiText(dialogContext, color: Colors.white, weight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (applied == true) {
+      _applyParsedPlan(
+        ref,
+        ParsedFlightPlan(
+          departureIcao: depCtl.text.trim().toUpperCase(),
+          arrivalIcao: arrCtl.text.trim().toUpperCase(),
+          alternateIcao: altCtl.text.trim().isEmpty ? null : altCtl.text.trim().toUpperCase(),
+          route: routeCtl.text.trim(),
+        ),
+        FlightPlanSource.manual,
+      );
+      if (context.mounted) {
+        _showSnack(context, 'Route applied manually.', colors.success);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final isLoading = ref.watch(simbriefLoadingProvider);
     final isLoaded = ref.watch(simbriefLoadedProvider);
+    final source = ref.watch(flightPlanSourceProvider);
 
     // VATSIM-chart-style route: DEP/RWY ...enroute... ARR/RWY, so it can be
     // pasted straight into the MSFS world map flight planner.
@@ -42,8 +244,11 @@ class FlightPlanSection extends ConsumerWidget {
     return EfbCard(
       title: 'FLIGHT PLAN',
       icon: Icons.map_outlined,
+      right: source == FlightPlanSource.none ? null : _sourceBadge(context, source),
       child: Column(
         children: [
+          // Import methods row: SimBrief (inline field + button), then two
+          // compact buttons for the file and manual-entry paths.
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -58,129 +263,101 @@ class FlightPlanSection extends ConsumerWidget {
                   placeholder: 'SimBrief username / ID (optional)',
                 ),
               ),
-              const SizedBox(width: 16),
-              Container(
-                height: 48,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: colors.accent.withValues(alpha: 0.25),
-                      blurRadius: 16,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: ElevatedButton.icon(
-                  onPressed: isLoading
-                      ? null
-                      : () async {
-                          final user = ref.read(simbriefUserProvider);
-                          if (user.isEmpty) return;
-                          ref.read(simbriefLoadingProvider.notifier).set(true);
-                          try {
-                            final ofp = await SimBriefService().fetchLatestOFP(
-                              user,
-                            );
-                            if (ofp != null) {
-                              ref
-                                  .read(callSignProvider.notifier)
-                                  .set(
-                                    ofp['general']?['atc_callsign'] ??
-                                        ofp['atc']?['callsign'] ??
-                                        '--',
-                                  );
-                              ref
-                                  .read(registrationProvider.notifier)
-                                  .set(ofp['aircraft']?['reg'] ?? '--');
-                              ref
-                                  .read(departureIcaoProvider.notifier)
-                                  .set(ofp['origin']?['icao_code'] ?? '');
-                              ref
-                                  .read(arrivalIcaoProvider.notifier)
-                                  .set(ofp['destination']?['icao_code'] ?? '');
-                              ref
-                                  .read(alternateIcaoProvider.notifier)
-                                  .set(ofp['alternate']?['icao_code'] ?? '');
-                              ref
-                                  .read(plannedDistanceProvider.notifier)
-                                  .set(
-                                    double.tryParse(
-                                          ofp['general']?['route_distance'] ??
-                                              '0',
-                                        ) ??
-                                        0.0,
-                                  );
-                              ref
-                                  .read(paxCountProvider.notifier)
-                                  .set(
-                                    int.tryParse(
-                                          ofp['weights']?['pax_count'] ?? '100',
-                                        ) ??
-                                        100,
-                                  );
-
-                              ref
-                                  .read(departureRunwayIdProvider.notifier)
-                                  .set(ofp['origin']?['plan_rwy'] ?? '');
-                              ref
-                                  .read(arrivalRunwayIdProvider.notifier)
-                                  .set(ofp['destination']?['plan_rwy'] ?? '');
-
-                              ref
-                                  .read(simbriefRouteProvider.notifier)
-                                  .set(ofp['general']?['route'] ?? '--');
-                              ref
-                                  .read(simbriefLoadedProvider.notifier)
-                                  .set(true);
-                              ref.read(checklistProvider.notifier).resetAll();
-                            } else if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'SimBrief import failed. Check your username/ID and internet connection.',
-                                    style: uiText(context, color: Colors.white),
-                                  ),
-                                  behavior: SnackBarBehavior.floating,
-                                  backgroundColor: colors.error,
-                                ),
-                              );
-                            }
-                          } finally {
+              const SizedBox(width: 10),
+              _ImportButton(
+                icon: isLoading ? null : Icons.cloud_download_outlined,
+                loading: isLoading,
+                label: 'SIMBRIEF',
+                onPressed: isLoading
+                    ? null
+                    : () async {
+                        final user = ref.read(simbriefUserProvider);
+                        if (user.isEmpty) return;
+                        ref.read(simbriefLoadingProvider.notifier).set(true);
+                        try {
+                          final ofp = await SimBriefService().fetchLatestOFP(
+                            user,
+                          );
+                          if (ofp != null) {
                             ref
-                                .read(simbriefLoadingProvider.notifier)
-                                .set(false);
+                                .read(callSignProvider.notifier)
+                                .set(
+                                  ofp['general']?['atc_callsign'] ??
+                                      ofp['atc']?['callsign'] ??
+                                      '--',
+                                );
+                            ref
+                                .read(registrationProvider.notifier)
+                                .set(ofp['aircraft']?['reg'] ?? '--');
+                            ref
+                                .read(departureIcaoProvider.notifier)
+                                .set(ofp['origin']?['icao_code'] ?? '');
+                            ref
+                                .read(arrivalIcaoProvider.notifier)
+                                .set(ofp['destination']?['icao_code'] ?? '');
+                            ref
+                                .read(alternateIcaoProvider.notifier)
+                                .set(ofp['alternate']?['icao_code'] ?? '');
+                            ref
+                                .read(plannedDistanceProvider.notifier)
+                                .set(
+                                  double.tryParse(
+                                        ofp['general']?['route_distance'] ??
+                                            '0',
+                                      ) ??
+                                      0.0,
+                                );
+                            ref
+                                .read(paxCountProvider.notifier)
+                                .set(
+                                  int.tryParse(
+                                        ofp['weights']?['pax_count'] ?? '100',
+                                      ) ??
+                                      100,
+                                );
+
+                            ref
+                                .read(departureRunwayIdProvider.notifier)
+                                .set(ofp['origin']?['plan_rwy'] ?? '');
+                            ref
+                                .read(arrivalRunwayIdProvider.notifier)
+                                .set(ofp['destination']?['plan_rwy'] ?? '');
+
+                            ref
+                                .read(simbriefRouteProvider.notifier)
+                                .set(ofp['general']?['route'] ?? '--');
+                            ref
+                                .read(simbriefLoadedProvider.notifier)
+                                .set(true);
+                            ref
+                                .read(flightPlanSourceProvider.notifier)
+                                .set(FlightPlanSource.simbrief);
+                            ref.read(checklistProvider.notifier).resetAll();
+                          } else if (context.mounted) {
+                            _showSnack(
+                              context,
+                              'SimBrief import failed. Check your username/ID and internet connection.',
+                              colors.error,
+                            );
                           }
-                        },
-                  icon: isLoading
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Icon(Icons.download, size: 16),
-                  label: Text(
-                    'Import',
-                    style: uiText(
-                      context,
-                      size: 14,
-                      weight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: colors.accent,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
-                  ),
-                ),
+                        } finally {
+                          ref
+                              .read(simbriefLoadingProvider.notifier)
+                              .set(false);
+                        }
+                      },
+              ),
+              const SizedBox(width: 8),
+              _ImportButton(
+                icon: Icons.upload_file_outlined,
+                label: 'FILE',
+                onPressed: () => _importFile(context, ref),
+              ),
+              const SizedBox(width: 8),
+              _ImportButton(
+                icon: Icons.edit_note_outlined,
+                label: 'MANUAL',
+                onPressed: () => _openManualEntry(context, ref),
               ),
               const SizedBox(width: 24),
               Expanded(
@@ -406,6 +583,84 @@ class FlightPlanSection extends ConsumerWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _sourceBadge(BuildContext context, FlightPlanSource source) {
+    final colors = context.colors;
+    final label = switch (source) {
+      FlightPlanSource.simbrief => 'SIMBRIEF',
+      FlightPlanSource.file => 'FILE IMPORT',
+      FlightPlanSource.manual => 'MANUAL',
+      FlightPlanSource.none => '',
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: colors.accent.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: colors.accent.withValues(alpha: 0.4)),
+      ),
+      child: Text(
+        'SOURCE: $label',
+        style: uiText(context, color: colors.accent, size: 9, weight: FontWeight.bold, letterSpacing: 0.5),
+      ),
+    );
+  }
+}
+
+class _ImportButton extends StatelessWidget {
+  final IconData? icon;
+  final bool loading;
+  final String label;
+  final VoidCallback? onPressed;
+
+  const _ImportButton({
+    this.icon,
+    this.loading = false,
+    required this.label,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Container(
+      height: 48,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: onPressed == null
+            ? null
+            : [
+                BoxShadow(
+                  color: colors.accent.withValues(alpha: 0.2),
+                  blurRadius: 12,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+      ),
+      child: ElevatedButton.icon(
+        onPressed: onPressed,
+        icon: loading
+            ? const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              )
+            : Icon(icon, size: 15),
+        label: Text(
+          label,
+          style: uiText(context, size: 12, weight: FontWeight.bold, color: Colors.white),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: colors.accent,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: colors.accent.withValues(alpha: 0.5),
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+        ),
       ),
     );
   }
