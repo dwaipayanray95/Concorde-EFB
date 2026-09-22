@@ -9,6 +9,7 @@ import '../core/app_version.dart';
 import '../core/sim_bridge_launcher.dart';
 import '../providers/efb_providers.dart';
 import '../features/flight_monitor/presentation/controllers/telemetry_provider.dart';
+import '../design_system/design_lab.dart';
 
 /// Authentic cockpit-style vertical navigation rail for landscape tablet EFB.
 class EfbNavRail extends ConsumerWidget {
@@ -243,6 +244,37 @@ class EfbNavRail extends ConsumerWidget {
               icon: Icons.favorite_border,
               label: 'Support Development',
               url: AppLinks.donate,
+            ),
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const DesignLabScreen()),
+                );
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: colors.inputBg,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: colors.dividerStrong.withValues(alpha: 0.5)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.palette_outlined, size: 16, color: colors.accent),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Design Lab / Component Catalog',
+                        style: uiText(context, size: 13, color: colors.textPrimary, weight: FontWeight.w600),
+                      ),
+                    ),
+                    Icon(Icons.arrow_forward_ios, size: 12, color: colors.textDim),
+                  ],
+                ),
+              ),
             ),
           ],
         ),

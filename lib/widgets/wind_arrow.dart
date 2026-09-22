@@ -82,14 +82,16 @@ class WindArrow extends StatelessWidget {
     }
 
     final hasLabel = runwayLabel != null && runwayLabel!.isNotEmpty;
-    final labelHeight = hasLabel ? size * 0.14 : 0.0;
-    final stripSize = size - labelHeight;
+    // 10px text + 4px spacing = 14px for the label row
+    final labelHeight = hasLabel ? 18.0 : 0.0;
+    final stripSize = math.max(0.0, size - labelHeight);
 
     return SizedBox(
       width: size,
       height: size,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
             width: size,
@@ -119,7 +121,7 @@ class WindArrow extends StatelessWidget {
               ],
             ),
           ),
-          if (hasLabel) ...[
+          if (hasLabel && size >= 40) ...[
             const SizedBox(height: 4),
             Text(
               runwayLabel!,

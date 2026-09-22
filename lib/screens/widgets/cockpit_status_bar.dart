@@ -130,146 +130,154 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
               width: 1.2,
             ),
           ),
-          child: Row(
-            children: [
-              // Flight Deck Identity: Call Sign, Reg, Pax
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildHeaderPill(
-                    context,
-                    label: 'CALL SIGN',
-                    value: ref.watch(callSignProvider),
-                    color: colors.accent,
-                  ),
-                  const SizedBox(width: 8),
-                  _buildHeaderPill(
-                    context,
-                    label: 'REG',
-                    value: ref.watch(registrationProvider),
-                    color: colors.accent,
-                  ),
-                  const SizedBox(width: 8),
-                  _buildHeaderPill(
-                    context,
-                    label: 'PAX',
-                    value: '${ref.watch(paxCountProvider)}',
-                    color: colors.arrival,
-                  ),
-                ],
-              ),
-              const SizedBox(width: 14),
-              Container(
-                width: 1,
-                height: 18,
-                color: colors.dividerStrong.withValues(alpha: 0.5),
-              ),
-              const SizedBox(width: 14),
-
-              // Route pill
-              Expanded(
-                child: Row(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Flight Deck Identity: Call Sign, Reg, Pax
+                Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: colors.resultsBg,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: colors.dividerStrong.withValues(alpha: 0.5),
-                          width: 1,
-                        ),
+                    _buildHeaderPill(
+                      context,
+                      label: 'CALL SIGN',
+                      value: ref.watch(callSignProvider),
+                      color: colors.accent,
+                    ),
+                    const SizedBox(width: 8),
+                    _buildHeaderPill(
+                      context,
+                      label: 'REG',
+                      value: ref.watch(registrationProvider),
+                      color: colors.accent,
+                    ),
+                    const SizedBox(width: 8),
+                    _buildHeaderPill(
+                      context,
+                      label: 'PAX',
+                      value: '${ref.watch(paxCountProvider)}',
+                      color: colors.arrival,
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 14),
+                Container(
+                  width: 1,
+                  height: 18,
+                  color: colors.dividerStrong.withValues(alpha: 0.5),
+                ),
+                const SizedBox(width: 14),
+
+                // Route pill
+                Semantics(
+                  label: hasRoute
+                      ? 'Active route: $depIcao to $arrIcao, ${plannedDistance.round()} nautical miles'
+                      : 'No active route set',
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: colors.resultsBg,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: colors.dividerStrong.withValues(alpha: 0.5),
+                        width: 1,
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (hasRoute) ...[
-                            Text(
-                              depIcao,
-                              style: uiText(
-                                context,
-                                size: 12,
-                                weight: FontWeight.w900,
-                                color: colors.departure,
-                              ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (hasRoute) ...[
+                          Text(
+                            depIcao,
+                            style: uiText(
+                              context,
+                              size: 12,
+                              weight: FontWeight.w900,
+                              color: colors.departure,
                             ),
-                            const SizedBox(width: 6),
-                            Icon(Icons.arrow_forward, size: 12, color: colors.textDim),
-                            const SizedBox(width: 6),
-                            Text(
-                              arrIcao,
-                              style: uiText(
-                                context,
-                                size: 12,
-                                weight: FontWeight.w900,
-                                color: colors.arrival,
-                              ),
+                          ),
+                          const SizedBox(width: 6),
+                          Icon(Icons.arrow_forward, size: 12, color: colors.textDim),
+                          const SizedBox(width: 6),
+                          Text(
+                            arrIcao,
+                            style: uiText(
+                              context,
+                              size: 12,
+                              weight: FontWeight.w900,
+                              color: colors.arrival,
                             ),
-                            if (plannedDistance > 0) ...[
-                              const SizedBox(width: 8),
-                              Text(
-                                '• ${plannedDistance.round()} NM',
-                                style: uiText(
-                                  context,
-                                  size: 11,
-                                  weight: FontWeight.w600,
-                                  color: colors.textDim,
-                                ),
-                              ),
-                            ],
-                          ] else ...[
+                          ),
+                          if (plannedDistance > 0) ...[
+                            const SizedBox(width: 8),
                             Text(
-                              'NO ACTIVE ROUTE',
+                              '• ${plannedDistance.round()} NM',
                               style: uiText(
                                 context,
                                 size: 11,
-                                weight: FontWeight.w700,
+                                weight: FontWeight.w600,
                                 color: colors.textDim,
-                                letterSpacing: 0.5,
                               ),
                             ),
                           ],
+                        ] else ...[
+                          Text(
+                            'NO ACTIVE ROUTE',
+                            style: uiText(
+                              context,
+                              size: 11,
+                              weight: FontWeight.w700,
+                              color: colors.textDim,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
                         ],
-                      ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-
-              // SimConnect Status Pill
-              _buildSimPill(context, monitorState.isConnected, bridgeStatus),
-              const SizedBox(width: 12),
-
-              // Live Zulu / UTC Clock
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: colors.resultsBg,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: colors.dividerStrong.withValues(alpha: 0.6),
-                    width: 1,
                   ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.schedule, size: 14, color: colors.accent),
-                    const SizedBox(width: 6),
-                    Text(
-                      _formatZulu(_nowUtc),
-                      style: uiText(
-                        context,
-                        size: 12,
-                        weight: FontWeight.w900,
-                        color: colors.textPrimary,
-                        letterSpacing: 1.0,
+                const SizedBox(width: 12),
+
+                // SimConnect Status Pill
+                _buildSimPill(context, monitorState.isConnected, bridgeStatus),
+                const SizedBox(width: 12),
+
+                // Live Zulu / UTC Clock
+                Semantics(
+                  label: 'Universal Coordinated Time Zulu: ${_formatZulu(_nowUtc)}',
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: colors.resultsBg,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: colors.dividerStrong.withValues(alpha: 0.6),
+                        width: 1,
                       ),
                     ),
-                  ],
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.schedule, size: 14, color: colors.accent),
+                        const SizedBox(width: 6),
+                        Text(
+                          _formatZulu(_nowUtc),
+                          style: uiText(
+                            context,
+                            size: 12,
+                            weight: FontWeight.w900,
+                            color: colors.textPrimary,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ],
@@ -292,39 +300,42 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
       statusText = 'SIM OFFLINE';
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        color: statusColor.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: statusColor.withValues(alpha: 0.4),
-          width: 1,
+    return Semantics(
+      label: 'Flight Simulator Connection Status: $statusText',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          color: statusColor.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: statusColor.withValues(alpha: 0.4),
+            width: 1,
+          ),
         ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: statusColor,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: statusColor,
+              ),
             ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            statusText,
-            style: uiText(
-              context,
-              size: 10,
-              weight: FontWeight.w900,
-              color: statusColor,
-              letterSpacing: 0.5,
+            const SizedBox(width: 6),
+            Text(
+              statusText,
+              style: uiText(
+                context,
+                size: 10,
+                weight: FontWeight.w900,
+                color: statusColor,
+                letterSpacing: 0.5,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -338,39 +349,42 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
     final colors = context.colors;
     final isPopulated = value.isNotEmpty && value != '--';
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: colors.resultsBg,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: colors.dividerStrong.withValues(alpha: 0.5),
-          width: 1,
+    return Semantics(
+      label: '$label: ${value.isEmpty ? "none" : value}',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: colors.resultsBg,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: colors.dividerStrong.withValues(alpha: 0.5),
+            width: 1,
+          ),
         ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '$label: ',
-            style: uiText(
-              context,
-              size: 9.5,
-              weight: FontWeight.w700,
-              color: colors.textDim,
-              letterSpacing: 0.5,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '$label: ',
+              style: uiText(
+                context,
+                size: 9.5,
+                weight: FontWeight.w700,
+                color: colors.textDim,
+                letterSpacing: 0.5,
+              ),
             ),
-          ),
-          Text(
-            value.isEmpty ? '--' : value,
-            style: uiText(
-              context,
-              size: 11,
-              weight: FontWeight.w900,
-              color: isPopulated ? color : colors.textDim,
+            Text(
+              value.isEmpty ? '--' : value,
+              style: uiText(
+                context,
+                size: 11,
+                weight: FontWeight.w900,
+                color: isPopulated ? color : colors.textDim,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

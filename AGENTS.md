@@ -187,6 +187,7 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 - Checklist content aligned with the Concorde manual's actual procedures; added a landing phase.
 - Landing-page screenshot showcase carousel + Discord link (web/marketing site).
 - Tablet-style EFB cockpit overhaul: Left-hand vertical navigation rail (`EfbNavRail`), avionics operational status bar (`CockpitStatusBar`) with real-time live UTC Zulu clock, SimConnect telemetry badge, consolidated cockpit settings popover, flight deck identity pills (call sign, registration, pax) with theme accents, relocated mission phase time strip in Flight Plan card, and sub-tabbed Flight Planner (`Route & Fuel` vs `Performance & Speeds`) optimized for 1200x700 tablet landscape resolution.
+- Design System & Mobile Responsiveness: Established `DESIGN_SYSTEM.md` contract, standardized 4px/8px layout tokens (`AppSpacing`/`AppRadii` in `lib/core/app_spacing.dart`), added semantic type scale (`AppTypography` in `lib/core/ui_text.dart`), implemented OS-level `textScaler` clamping (0.85 - 1.25) in `main.dart` to prevent mobile overflow stripes, adaptive mobile bottom-bar shell in `home_screen.dart`, horizontal-scrolling a11y `CockpitStatusBar` with `Semantics` tags, and an interactive in-app component gallery (`DesignLabScreen` in `lib/design_system/design_lab.dart`).
 
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.

@@ -100,6 +100,20 @@ class ConcordeEfbApp extends ConsumerWidget {
             ),
       ),
       home: const HomeScreen(),
+      builder: (context, child) {
+        final mediaQuery = MediaQuery.of(context);
+        // Clamp dynamic OS text scaling between 0.85 and 1.25 to prevent
+        // dense cockpit gauge blowouts and RenderFlex overflow stripes on mobile
+        return MediaQuery(
+          data: mediaQuery.copyWith(
+            textScaler: mediaQuery.textScaler.clamp(
+              minScaleFactor: 0.85,
+              maxScaleFactor: 1.25,
+            ),
+          ),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
     );
   }
 }

@@ -246,69 +246,142 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
       data: (db) {
         return Scaffold(
           backgroundColor: colors.bg,
-          body: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 1. Authentic left navigation rail
-              EfbNavRail(
-                selectedIndex: selectedTab,
-                onDestinationSelected: (idx) {
-                  setState(() => selectedTab = idx);
-                },
-              ),
+          body: LayoutBuilder(
+            builder: (context, constraints) {
+              final isCompact = constraints.maxWidth < 720;
 
-              // 2. Main EFB tablet content area
-              Expanded(
-                child: SafeArea(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Cockpit Top Status Bar
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
-                        child: CockpitStatusBar(
-                          hasUpdate: _hasUpdate,
-                          latestVersion: _latestVersion,
+              final mainContent = SafeArea(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Cockpit Top Status Bar
+                    Padding(
+                      padding: isCompact
+                          ? const EdgeInsets.fromLTRB(12, 10, 12, 8)
+                          : const EdgeInsets.fromLTRB(20, 14, 20, 12),
+                      child: CockpitStatusBar(
+                        hasUpdate: _hasUpdate,
+                        latestVersion: _latestVersion,
+                      ),
+                    ),
+
+                    // Tab View Content
+                    Expanded(
+                      child: selectedTab == 0
+                          ? SmoothScrollWrapper(
+                              controller: _tab0Controller,
+                              child: SingleChildScrollView(
+                                controller: _tab0Controller,
+                                key: const ValueKey('scroll-tab-0'),
+                                scrollDirection: Axis.vertical,
+                                physics: const BouncingScrollPhysics(),
+                                padding: EdgeInsets.fromLTRB(
+                                  isCompact ? 12 : 20,
+                                  4,
+                                  isCompact ? 12 : 20,
+                                  24,
+                                ),
+                                child: const FlightPlannerTab(),
+                              ),
+                            )
+                          : selectedTab == 1
+                          ? Padding(
+                              key: const ValueKey('padding-tab-1'),
+                              padding: EdgeInsets.fromLTRB(
+                                isCompact ? 12 : 20,
+                                4,
+                                isCompact ? 12 : 20,
+                                24,
+                              ),
+                              child: const ChecklistsTab(),
+                            )
+                          : SmoothScrollWrapper(
+                              controller: _tab2Controller,
+                              child: SingleChildScrollView(
+                                controller: _tab2Controller,
+                                key: const ValueKey('scroll-tab-2'),
+                                scrollDirection: Axis.vertical,
+                                physics: const BouncingScrollPhysics(),
+                                padding: EdgeInsets.fromLTRB(
+                                  isCompact ? 12 : 20,
+                                  4,
+                                  isCompact ? 12 : 20,
+                                  24,
+                                ),
+                                child: const FlightMonitorTab(),
+                              ),
+                            ),
+                    ),
+                  ],
+                ),
+              );
+
+              if (isCompact) {
+                return Column(
+                  children: [
+                    Expanded(child: mainContent),
+                    // Compact Bottom Navigation for mobile screens
+                    Container(
+                      decoration: BoxDecoration(
+                        color: colors.surface,
+                        border: Border(
+                          top: BorderSide(
+                            color: colors.dividerStrong.withValues(alpha: 0.6),
+                            width: 1.2,
+                          ),
                         ),
                       ),
-
-                      // Tab View Content
-                      Expanded(
-                        child: selectedTab == 0
-                            ? SmoothScrollWrapper(
-                                controller: _tab0Controller,
-                                child: SingleChildScrollView(
-                                  controller: _tab0Controller,
-                                  key: const ValueKey('scroll-tab-0'),
-                                  scrollDirection: Axis.vertical,
-                                  physics: const BouncingScrollPhysics(),
-                                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-                                  child: const FlightPlannerTab(),
-                                ),
-                              )
-                            : selectedTab == 1
-                            ? const Padding(
-                                key: ValueKey('padding-tab-1'),
-                                padding: EdgeInsets.fromLTRB(20, 4, 20, 24),
-                                child: ChecklistsTab(),
-                              )
-                            : SmoothScrollWrapper(
-                                controller: _tab2Controller,
-                                child: SingleChildScrollView(
-                                  controller: _tab2Controller,
-                                  key: const ValueKey('scroll-tab-2'),
-                                  scrollDirection: Axis.vertical,
-                                  physics: const BouncingScrollPhysics(),
-                                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-                                  child: const FlightMonitorTab(),
-                                ),
-                              ),
+                      child: SafeArea(
+                        top: false,
+                        child: NavigationBar(
+                          selectedIndex: selectedTab,
+                          height: 56,
+                          backgroundColor: Colors.transparent,
+                          indicatorColor: colors.accent.withValues(alpha: 0.18),
+                          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                          onDestinationSelected: (idx) {
+                            setState(() => selectedTab = idx);
+                          },
+                          destinations: [
+                            NavigationDestination(
+                              icon: Icon(Icons.flight_takeoff, color: colors.textSecondary, size: 20),
+                              selectedIcon: Icon(Icons.flight_takeoff, color: colors.accent, size: 20),
+                              label: 'PLAN',
+                            ),
+                            NavigationDestination(
+                              icon: Icon(Icons.playlist_add_check, color: colors.textSecondary, size: 20),
+                              selectedIcon: Icon(Icons.playlist_add_check, color: colors.accent, size: 20),
+                              label: 'CHECK',
+                            ),
+                            NavigationDestination(
+                              icon: Icon(Icons.monitor_heart, color: colors.textSecondary, size: 20),
+                              selectedIcon: Icon(Icons.monitor_heart, color: colors.accent, size: 20),
+                              label: 'MONITOR',
+                            ),
+                          ],
+                        ),
                       ),
-                    ],
+                    ),
+                  ],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 1. Authentic left navigation rail for tablet/desktop
+                  EfbNavRail(
+                    selectedIndex: selectedTab,
+                    onDestinationSelected: (idx) {
+                      setState(() => selectedTab = idx);
+                    },
                   ),
-                ),
-              ),
-            ],
+
+                  // 2. Main EFB tablet content area
+                  Expanded(child: mainContent),
+                ],
+              );
+            },
           ),
         );
       },
