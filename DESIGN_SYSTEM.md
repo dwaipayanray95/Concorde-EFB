@@ -19,21 +19,22 @@ Defined in [`lib/core/app_colors.dart`](file:///e:/VSCODE/Concorde-EFB/lib/core/
 
 | Token | Semantic Purpose | Dark Value | Light Value |
 | :--- | :--- | :--- | :--- |
-| `bg` | Application canvas / root background | `#090C15` | `#EDF1F8` |
-| `surface` | Card background & navigation rail | `#131926` | `#D0D7E6` |
-| `resultsBg` | Inset data readout cards & inner panels | `#1B2232` | `#FFFFFF` |
-| `inputBg` | Text fields & selectable controls | `#101420` | `#F2F5FC` |
-| `textPrimary` | Primary headings, values, and gauges | `#F0F4FF` | `#0A0D18` |
-| `textSecondary` | Subheadings, standard body text | `#CBD5E1` | `#2D3748` |
+| `bg` | Application canvas / root background | `#090B10` | `#F1F3F7` |
+| `surface` | Card background & navigation rail | `#131722` | `#E2E6EF` |
+| `resultsBg` | Inset data readout cards & inner panels | `#191F2D` | `#FFFFFF` |
+| `inputBg` | Text fields & selectable controls | `#111520` | `#F8FAFD` |
+| `textPrimary` | Primary headings, values, and gauges | `#F8FAFC` | `#0F172A` |
+| `textSecondary` | Subheadings, standard body text | `#94A3B8` | `#334155` |
 | `textDim` | Captions, unselected states, units | `#64748B` | `#64748B` |
-| `divider` | Subtle card dividers and borders | `#2A354A` | `#CBD5E1` |
-| `dividerStrong` | Outer card frames & active borders | `#384660` | `#94A3B8` |
-| `accent` | Interactive links, focus rings, buttons | `#4F86F7` | `#2563EB` |
-| `departure` | Departure airport highlights & VFR green | `#10B981` | `#059669` |
-| `arrival` | Destination highlights & SimConnect green | `#38BDF8` | `#0284C7` |
-| `error` / `errorBg` | IFR status, warnings, invalid runways | `#EF4444` | `#DC2626` |
-| `mvfr` / `mvfrBg` | Marginal VFR & waiting status | `#3B82F6` | `#2563EB` |
-| `lifr` / `lifrBg` | Low IFR status | `#D946EF` | `#C026D3` |
+| `divider` | Subtle card dividers and borders | `#1E2638` | `#CBD5E1` |
+| `dividerStrong` | Outer card frames & active borders | `#2E3B54` | `#94A3B8` |
+| `accent` | Signature Aviation Amber lead | `#F59E0B` | `#D97706` |
+| `cardAccent` | High-viz enroute & flight plan blue | `#38BDF8` | `#0284C7` |
+| `departure` | Departure highlights & VFR green | `#10B981` | `#059669` |
+| `arrival` | Destination & SimConnect telemetry | `#38BDF8` | `#0284C7` |
+| `error` / `errorBg` | Master Warning Red, invalid runways | `#EF4444` | `#DC2626` |
+| `mvfr` / `mvfrBg` | Master Caution Amber, marginal weather | `#F59E0B` | `#D97706` |
+| `lifr` / `lifrBg` | Low IFR status | `#E879F9` | `#C026D3` |
 
 ---
 

@@ -24,20 +24,23 @@ class EfbFlatCard extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: background ?? colors.surface,
-        borderRadius: borderRadius ?? BorderRadius.circular(20),
+        borderRadius: borderRadius ?? BorderRadius.circular(16),
         border: accentTop != null
-            ? Border(top: BorderSide(color: accentTop!, width: 5))
-            : null,
+            ? Border(
+                top: BorderSide(color: accentTop!, width: 4),
+                left: BorderSide(color: colors.dividerStrong.withValues(alpha: 0.5), width: 1),
+                right: BorderSide(color: colors.dividerStrong.withValues(alpha: 0.5), width: 1),
+                bottom: BorderSide(color: colors.dividerStrong.withValues(alpha: 0.5), width: 1),
+              )
+            : Border.all(
+                color: colors.dividerStrong.withValues(alpha: 0.6),
+                width: 1,
+              ),
         boxShadow: [
           BoxShadow(
-            color: colors.textPrimary.withValues(alpha: 0.08),
-            blurRadius: 24,
-            offset: const Offset(0, 4),
-          ),
-          BoxShadow(
-            color: colors.textPrimary.withValues(alpha: 0.06),
-            blurRadius: 3,
-            offset: const Offset(0, 1),
+            color: Colors.black.withValues(alpha: 0.14),
+            blurRadius: 16,
+            offset: const Offset(0, 3),
           ),
         ],
       ),

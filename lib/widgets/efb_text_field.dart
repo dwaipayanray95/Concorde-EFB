@@ -97,8 +97,11 @@ class _EfbTextFieldState extends State<EfbTextField> {
         Container(
           decoration: BoxDecoration(
             color: colors.inputBg,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: colors.dividerStrong, width: 1.5),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: colors.dividerStrong.withValues(alpha: 0.8),
+              width: 1.2,
+            ),
           ),
           child: TextField(
             controller: _controller,
@@ -106,6 +109,7 @@ class _EfbTextFieldState extends State<EfbTextField> {
             keyboardType: widget.keyboardType,
             textCapitalization: widget.textCapitalization,
             readOnly: widget.readOnly,
+            cursorColor: colors.accent,
             style: uiText(
               context,
               color: colors.textPrimary,
@@ -116,14 +120,17 @@ class _EfbTextFieldState extends State<EfbTextField> {
               hintText:
                   widget.placeholder ??
                   (widget.showLabel ? null : widget.label),
-              hintStyle: uiText(context, color: colors.textDim, size: 15),
-              filled: false,
+              hintStyle: uiText(context, color: colors.textDim, size: 14),
               border: InputBorder.none,
-              focusedBorder: InputBorder.none,
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(9),
+                borderSide: BorderSide(color: colors.accent, width: 1.5),
+              ),
               contentPadding: const EdgeInsets.symmetric(
-                horizontal: 14,
+                horizontal: 16,
                 vertical: 12,
               ),
+              isDense: true,
             ),
           ),
         ),

@@ -92,23 +92,16 @@ class _FlightPlannerTabState extends State<FlightPlannerTab> {
       borderRadius: BorderRadius.circular(8),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
         decoration: BoxDecoration(
-          color: isSelected ? colors.accent : colors.surface,
+          color: isSelected
+              ? colors.accent.withValues(alpha: 0.16)
+              : colors.surface,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isSelected ? colors.accent : colors.dividerStrong.withValues(alpha: 0.6),
             width: 1.2,
           ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: colors.accent.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -116,7 +109,7 @@ class _FlightPlannerTabState extends State<FlightPlannerTab> {
             Icon(
               icon,
               size: 15,
-              color: isSelected ? Colors.white : colors.textSecondary,
+              color: isSelected ? colors.accent : colors.textSecondary,
             ),
             const SizedBox(width: 8),
             Text(
@@ -125,7 +118,7 @@ class _FlightPlannerTabState extends State<FlightPlannerTab> {
                 context,
                 size: 11,
                 weight: FontWeight.w900,
-                color: isSelected ? Colors.white : colors.textSecondary,
+                color: isSelected ? colors.accent : colors.textSecondary,
                 letterSpacing: 0.8,
               ),
             ),

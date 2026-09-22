@@ -319,18 +319,17 @@ class _NavRailItem extends StatelessWidget {
           hoverColor: colors.resultsBg.withValues(alpha: 0.5),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
             decoration: BoxDecoration(
-              color: isSelected ? colors.accent : Colors.transparent,
+              color: isSelected
+                  ? colors.accent.withValues(alpha: 0.16)
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(10),
-              boxShadow: isSelected
-                  ? [
-                      BoxShadow(
-                        color: colors.accent.withValues(alpha: 0.35),
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
-                      ),
-                    ]
+              border: isSelected
+                  ? Border.all(
+                      color: colors.accent.withValues(alpha: 0.4),
+                      width: 1.2,
+                    )
                   : null,
             ),
             child: Column(
@@ -339,7 +338,7 @@ class _NavRailItem extends StatelessWidget {
                 Icon(
                   icon,
                   size: 22,
-                  color: isSelected ? Colors.white : colors.textSecondary,
+                  color: isSelected ? colors.accent : colors.textSecondary,
                 ),
                 const SizedBox(height: 5),
                 Text(
@@ -348,7 +347,7 @@ class _NavRailItem extends StatelessWidget {
                     context,
                     size: 9.5,
                     weight: isSelected ? FontWeight.w900 : FontWeight.w600,
-                    color: isSelected ? Colors.white : colors.textSecondary,
+                    color: isSelected ? colors.accent : colors.textSecondary,
                     letterSpacing: 0.8,
                   ),
                 ),

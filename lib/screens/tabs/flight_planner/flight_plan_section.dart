@@ -664,36 +664,24 @@ class _ImportButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: colors.dividerStrong, width: 1),
       ),
-      child: Container(
+      child: SizedBox(
         height: 48,
         width: 48,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: onPressed == null
-              ? null
-              : [
-                  BoxShadow(
-                    color: colors.accent.withValues(alpha: 0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-        ),
         child: ElevatedButton(
           onPressed: onPressed,
           style: ElevatedButton.styleFrom(
             backgroundColor: colors.accent,
-            foregroundColor: Colors.white,
-            disabledBackgroundColor: colors.accent.withValues(alpha: 0.5),
+            foregroundColor: const Color(0xFF090B10),
+            disabledBackgroundColor: colors.accent.withValues(alpha: 0.35),
             elevation: 0,
             padding: EdgeInsets.zero,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
           child: loading
               ? const SizedBox(
                   width: 16,
                   height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF090B10)),
                 )
               : Icon(icon, size: 20),
         ),

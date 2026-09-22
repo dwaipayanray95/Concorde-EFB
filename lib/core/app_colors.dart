@@ -53,55 +53,55 @@ class AppColors extends ThemeExtension<AppColors> {
   });
 
   static const light = AppColors(
-    bg: Color(0xFFEDF1F8),
-    surface: Color(0xFFD0D7E6),
+    bg: Color(0xFFF1F3F7),
+    surface: Color(0xFFE2E6EF),
     resultsBg: Color(0xFFFFFFFF),
-    inputBg: Color(0xFFF2F5FC),
-    textPrimary: Color(0xFF0A0D18),
-    textSecondary: Color(0xFF323A4E),
-    textDim: Color(0xFF4F576E),
-    divider: Color(0xFFB8C2D6),
-    dividerStrong: Color(0xFFA2AFC8),
-    accent: Color(0xFF651FFF),
-    cardAccent: Color(0xFF0EA5E9),
-    departure: Color(0xFFFF2D4E),
-    arrival: Color(0xFF00B848),
-    errorBg: Color(0xFFFFEBEE),
-    error: Color(0xFFD50032),
-    successBg: Color(0xFFE4F9EE),
-    success: Color(0xFF00A651),
-    mvfrBg: Color(0xFFFFEDCE),
-    mvfr: Color(0xFFFF9800),
-    ifrBg: Color(0xFFFFE8E0),
-    ifr: Color(0xFFFF5722),
-    lifrBg: Color(0xFFF3E5F5),
-    lifr: Color(0xFFAA00FF),
+    inputBg: Color(0xFFF8FAFD),
+    textPrimary: Color(0xFF0F172A),
+    textSecondary: Color(0xFF334155),
+    textDim: Color(0xFF64748B),
+    divider: Color(0xFFCBD5E1),
+    dividerStrong: Color(0xFF94A3B8),
+    accent: Color(0xFFD97706), // Aviation Amber Lead (Light Mode)
+    cardAccent: Color(0xFF0284C7), // High-Viz Sky Blue
+    departure: Color(0xFF059669), // Emerald VFR
+    arrival: Color(0xFF0284C7), // Cyan Info/Arrival
+    errorBg: Color(0xFFFEE2E2),
+    error: Color(0xFFDC2626), // Ruby Alert
+    successBg: Color(0xFFD1FAE5),
+    success: Color(0xFF059669), // Emerald
+    mvfrBg: Color(0xFFFEF3C7),
+    mvfr: Color(0xFFD97706), // Amber Caution
+    ifrBg: Color(0xFFFFEDD5),
+    ifr: Color(0xFFEA580C),
+    lifrBg: Color(0xFFF5D0FE),
+    lifr: Color(0xFFC026D3),
   );
 
   static const dark = AppColors(
-    bg: Color(0xFF0B0D14),
-    surface: Color(0xFF161923),
-    resultsBg: Color(0xFF1B1F2C),
-    inputBg: Color(0xFF1E222E),
-    textPrimary: Color(0xFFF2F4FC),
-    textSecondary: Color(0xFFA8ACC4),
-    textDim: Color(0xFF6B6F8A),
-    divider: Color(0xFF262B3A),
-    dividerStrong: Color(0xFF323851),
-    accent: Color(0xFF5B7CFF),
-    cardAccent: Color(0xFF38BDF8),
-    departure: Color(0xFFFF5C74),
-    arrival: Color(0xFF2FE07A),
-    errorBg: Color(0xFF3A1620),
-    error: Color(0xFFFF5C7A),
-    successBg: Color(0xFF15301F),
-    success: Color(0xFF2FE07A),
-    mvfrBg: Color(0xFF3A2C10),
-    mvfr: Color(0xFFFFB74D),
-    ifrBg: Color(0xFF3A2016),
-    ifr: Color(0xFFFF7A50),
-    lifrBg: Color(0xFF38153D),
-    lifr: Color(0xFFE040FB),
+    bg: Color(0xFF090B10), // Deep obsidian cockpit canvas
+    surface: Color(0xFF131722), // Low-reflection gunmetal surface
+    resultsBg: Color(0xFF191F2D), // Inset instrument/readout panel
+    inputBg: Color(0xFF111520), // Recessed input well
+    textPrimary: Color(0xFFF8FAFC), // Crisp anti-glare primary readout
+    textSecondary: Color(0xFF94A3B8), // Cool slate secondary
+    textDim: Color(0xFF64748B), // Muted captions & units
+    divider: Color(0xFF1E2638), // Subtle 1px instrument border
+    dividerStrong: Color(0xFF2E3B54), // Outer bezel framing
+    accent: Color(0xFFF59E0B), // Signature Aviation Amber (Dark Mode)
+    cardAccent: Color(0xFF38BDF8), // Cyan/Sky Blue alert & enroute
+    departure: Color(0xFF10B981), // Emerald VFR / DEP
+    arrival: Color(0xFF38BDF8), // Cyan ARR / Sim telemetry
+    errorBg: Color(0xFF3B1219),
+    error: Color(0xFFEF4444), // Master Warning Red
+    successBg: Color(0xFF0B2E1E),
+    success: Color(0xFF10B981), // Within limits / Safe Green
+    mvfrBg: Color(0xFF382307),
+    mvfr: Color(0xFFF59E0B), // Master Caution Amber
+    ifrBg: Color(0xFF361608),
+    ifr: Color(0xFFF97316),
+    lifrBg: Color(0xFF311038),
+    lifr: Color(0xFFE879F9),
   );
 
   @override

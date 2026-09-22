@@ -31,16 +31,27 @@ class EfbCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             decoration: BoxDecoration(
               color: colors.resultsBg,
-              border: Border(bottom: BorderSide(color: colors.divider)),
+              border: Border(
+                bottom: BorderSide(color: colors.dividerStrong.withValues(alpha: 0.5), width: 1),
+              ),
             ),
             child: Row(
               children: [
+                Container(
+                  width: 3,
+                  height: 14,
+                  margin: const EdgeInsets.only(right: 10),
+                  decoration: BoxDecoration(
+                    color: accent,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
                 if (icon != null) ...[
                   Icon(icon, size: 16, color: accent),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                 ],
                 Expanded(
                   child: Text(
@@ -49,9 +60,9 @@ class EfbCard extends StatelessWidget {
                       context,
                       size: 12,
                       weight: FontWeight.w900,
-                      letterSpacing: 2,
+                      letterSpacing: 1.8,
                       height: 1,
-                      color: colors.textSecondary,
+                      color: colors.textPrimary,
                     ),
                   ),
                 ),
@@ -59,7 +70,7 @@ class EfbCard extends StatelessWidget {
               ],
             ),
           ),
-          Padding(padding: const EdgeInsets.all(24), child: child),
+          Padding(padding: const EdgeInsets.all(20), child: child),
         ],
       ),
     );
