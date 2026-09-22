@@ -258,7 +258,6 @@ class FlightPlanSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final isLoading = ref.watch(simbriefLoadingProvider);
-    final isLoaded = ref.watch(simbriefLoadedProvider);
     final source = ref.watch(flightPlanSourceProvider);
 
     // VATSIM-chart-style route: DEP/RWY ...enroute... ARR/RWY, so it can be
@@ -401,35 +400,9 @@ class FlightPlanSection extends ConsumerWidget {
                 label: 'MANUAL',
                 onPressed: () => _openManualEntry(context, ref),
               ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: _InfoChip(
-                  label: 'CALL SIGN',
-                  value: ref.watch(callSignProvider),
-                  backgroundColor: isLoaded ? colors.success : null,
-                  textColor: isLoaded ? Colors.white : null,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _InfoChip(
-                  label: 'REGISTRATION',
-                  value: ref.watch(registrationProvider),
-                  backgroundColor: isLoaded ? const Color(0xFFFF9800) : null,
-                  textColor: isLoaded ? Colors.white : null,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _InfoChip(
-                  label: 'PASSENGERS',
-                  value: '${ref.watch(paxCountProvider)}',
-                  isNumeric: true,
-                ),
-              ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 18),
           Row(
             children: [
               Expanded(
@@ -713,16 +686,12 @@ class _InfoChip extends StatelessWidget {
   final String value;
   final bool alignLeft;
   final bool isNumeric;
-  final Color? backgroundColor;
-  final Color? textColor;
 
   const _InfoChip({
     required this.label,
     required this.value,
     this.alignLeft = false,
     this.isNumeric = false,
-    this.backgroundColor,
-    this.textColor,
   });
 
   @override
@@ -733,7 +702,7 @@ class _InfoChip extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: backgroundColor ?? colors.inputBg,
+        color: colors.inputBg,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -748,9 +717,7 @@ class _InfoChip extends StatelessWidget {
               context,
               size: 9,
               weight: FontWeight.bold,
-              color: textColor != null
-                  ? textColor!.withValues(alpha: 0.85)
-                  : colors.textDim,
+              color: colors.textDim,
               letterSpacing: 1,
             ),
           ),
@@ -761,7 +728,7 @@ class _InfoChip extends StatelessWidget {
               context,
               size: 14,
               weight: FontWeight.bold,
-              color: textColor ?? colors.textPrimary,
+              color: colors.textPrimary,
             ),
           ),
         ],

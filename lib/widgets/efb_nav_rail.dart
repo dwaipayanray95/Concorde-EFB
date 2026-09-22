@@ -276,9 +276,6 @@ class _NavRailItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final activeBg = colors.accent.withValues(alpha: 0.16);
-    final activeBorder = colors.accent;
-    final inactiveBorder = Colors.transparent;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -290,14 +287,19 @@ class _NavRailItem extends StatelessWidget {
           hoverColor: colors.resultsBg.withValues(alpha: 0.5),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.symmetric(vertical: 10),
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
             decoration: BoxDecoration(
-              color: isSelected ? activeBg : Colors.transparent,
+              color: isSelected ? colors.accent : Colors.transparent,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: isSelected ? activeBorder : inactiveBorder,
-                width: 1.2,
-              ),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: colors.accent.withValues(alpha: 0.35),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ]
+                  : null,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -305,16 +307,16 @@ class _NavRailItem extends StatelessWidget {
                 Icon(
                   icon,
                   size: 22,
-                  color: isSelected ? colors.accent : colors.textSecondary,
+                  color: isSelected ? Colors.white : colors.textSecondary,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 5),
                 Text(
                   label,
                   style: uiText(
                     context,
                     size: 9.5,
                     weight: isSelected ? FontWeight.w900 : FontWeight.w600,
-                    color: isSelected ? colors.accent : colors.textSecondary,
+                    color: isSelected ? Colors.white : colors.textSecondary,
                     letterSpacing: 0.8,
                   ),
                 ),

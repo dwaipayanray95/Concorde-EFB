@@ -132,31 +132,39 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
           ),
           child: Row(
             children: [
-              // Aircraft callout / Title
+              // Flight Deck Identity: Call Sign, Reg, Pax
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.flight, size: 16, color: colors.accent),
+                  _buildHeaderPill(
+                    context,
+                    label: 'CALL SIGN',
+                    value: ref.watch(callSignProvider),
+                    color: colors.cardAccent,
+                  ),
                   const SizedBox(width: 8),
-                  Text(
-                    'CONCORDE SST',
-                    style: uiText(
-                      context,
-                      size: 12.5,
-                      weight: FontWeight.w900,
-                      color: colors.textPrimary,
-                      letterSpacing: 1.2,
-                    ),
+                  _buildHeaderPill(
+                    context,
+                    label: 'REG',
+                    value: ref.watch(registrationProvider),
+                    color: colors.cardAccent,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildHeaderPill(
+                    context,
+                    label: 'PAX',
+                    value: '${ref.watch(paxCountProvider)}',
+                    color: colors.arrival,
                   ),
                 ],
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 14),
               Container(
                 width: 1,
-                height: 16,
+                height: 18,
                 color: colors.dividerStrong.withValues(alpha: 0.5),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 14),
 
               // Route pill
               Expanded(
@@ -314,6 +322,52 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
               weight: FontWeight.w900,
               color: statusColor,
               letterSpacing: 0.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderPill(
+    BuildContext context, {
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    final colors = context.colors;
+    final isPopulated = value.isNotEmpty && value != '--';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: colors.resultsBg,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: colors.dividerStrong.withValues(alpha: 0.5),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$label: ',
+            style: uiText(
+              context,
+              size: 9.5,
+              weight: FontWeight.w700,
+              color: colors.textDim,
+              letterSpacing: 0.5,
+            ),
+          ),
+          Text(
+            value.isEmpty ? '--' : value,
+            style: uiText(
+              context,
+              size: 11,
+              weight: FontWeight.w900,
+              color: isPopulated ? color : colors.textDim,
             ),
           ),
         ],
