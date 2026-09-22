@@ -39,7 +39,7 @@ void main() async {
   await windowManager.ensureInitialized();
 
   WindowOptions windowOptions = WindowOptions(
-    size: const Size(1300, 900), // Defined size to fit all widgets comfortably
+    size: const Size(1200, 700), // Defined size to fit all widgets comfortably
     center: true,
     backgroundColor: windowBg,
     skipTaskbar: false,
