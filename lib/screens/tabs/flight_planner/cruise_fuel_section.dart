@@ -59,17 +59,6 @@ class CruiseAndFuelSection extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _PhaseTimeGroup(
-                        phases: [
-                          MapEntry('TOTAL FLIGHT TIME', mission.totalTimeH),
-                          MapEntry('CLIMB', mission.climb.timeH),
-                          MapEntry('CRUISE', mission.cruise.timeH),
-                          MapEntry('DESCENT', mission.descent.timeH),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Divider(color: colors.divider, thickness: 1),
-                      const SizedBox(height: 16),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -294,106 +283,6 @@ String _formatHoursMinutes(double hoursDecimal) {
   return '${h}h ${m.toString().padLeft(2, '0')}m';
 }
 
-/// TOTAL FLIGHT TIME / CLIMB / CRUISE / DESCENT sharing one strip with shadow card styling
-class _PhaseTimeGroup extends StatelessWidget {
-  final List<MapEntry<String, double>> phases;
-  const _PhaseTimeGroup({required this.phases});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return EfbFlatCard(
-      background: colors.inputBg,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      borderRadius: BorderRadius.circular(16),
-      child: Row(
-        children: [
-          for (var i = 0; i < phases.length; i++) ...[
-            if (i > 0)
-              Container(
-                width: 1,
-                height: 34,
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                color: colors.dividerStrong,
-              ),
-            Expanded(
-              child: _PhaseTimeColumn(
-                label: phases[i].key,
-                hoursDecimal: phases[i].value,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _PhaseTimeColumn extends StatelessWidget {
-  final String label;
-  final double hoursDecimal;
-  const _PhaseTimeColumn({required this.label, required this.hoursDecimal});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final h = hoursDecimal.floor();
-    final m = ((hoursDecimal - h) * 60).round();
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        RichText(
-          text: TextSpan(
-            style: uiText(
-              context,
-              color: colors.textPrimary,
-              weight: FontWeight.w900,
-            ),
-            children: [
-              TextSpan(text: '$h', style: const TextStyle(fontSize: 20)),
-              TextSpan(
-                text: ' h  ',
-                style: uiText(
-                  context,
-                  size: 11,
-                  color: colors.textDim,
-                  weight: FontWeight.w600,
-                ),
-              ),
-              TextSpan(
-                text: m.toString().padLeft(2, '0'),
-                style: const TextStyle(fontSize: 20),
-              ),
-              TextSpan(
-                text: ' m',
-                style: uiText(
-                  context,
-                  size: 11,
-                  color: colors.textDim,
-                  weight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: uiText(
-            context,
-            size: 10,
-            weight: FontWeight.bold,
-            color: colors.textDim,
-            letterSpacing: 1,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
-    );
-  }
-}
 
 class _StatEntry {
   final String label;

@@ -259,6 +259,7 @@ class FlightPlanSection extends ConsumerWidget {
     final colors = context.colors;
     final isLoading = ref.watch(simbriefLoadingProvider);
     final source = ref.watch(flightPlanSourceProvider);
+    final mission = ref.watch(missionProfileProvider);
 
     // VATSIM-chart-style route: DEP/RWY ...enroute... ARR/RWY, so it can be
     // pasted straight into the MSFS world map flight planner.
@@ -399,6 +400,19 @@ class FlightPlanSection extends ConsumerWidget {
                 icon: Icons.edit_note_outlined,
                 label: 'MANUAL',
                 onPressed: () => _openManualEntry(context, ref),
+              ),
+              const SizedBox(width: 20),
+              // Flight Phase Time Strip
+              Expanded(
+                flex: 3,
+                child: _FlightPhaseStrip(
+                  phases: [
+                    MapEntry('TOTAL FLIGHT TIME', mission.totalTimeH),
+                    MapEntry('CLIMB', mission.climb.timeH),
+                    MapEntry('CRUISE', mission.cruise.timeH),
+                    MapEntry('DESCENT', mission.descent.timeH),
+                  ],
+                ),
               ),
             ],
           ),
@@ -736,3 +750,110 @@ class _InfoChip extends StatelessWidget {
     );
   }
 }
+
+class _FlightPhaseStrip extends StatelessWidget {
+  final List<MapEntry<String, double>> phases;
+  const _FlightPhaseStrip({required this.phases});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Container(
+      height: 48,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: colors.inputBg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          for (var i = 0; i < phases.length; i++) ...[
+            if (i > 0)
+              Container(
+                width: 1,
+                height: 26,
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+                color: colors.dividerStrong.withValues(alpha: 0.5),
+              ),
+            Expanded(
+              child: _PhaseTimeColumn(
+                label: phases[i].key,
+                hoursDecimal: phases[i].value,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PhaseTimeColumn extends StatelessWidget {
+  final String label;
+  final double hoursDecimal;
+  const _PhaseTimeColumn({required this.label, required this.hoursDecimal});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final h = hoursDecimal.floor();
+    final m = ((hoursDecimal - h) * 60).round();
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        RichText(
+          text: TextSpan(
+            style: uiText(
+              context,
+              color: colors.textPrimary,
+              weight: FontWeight.w900,
+            ),
+            children: [
+              TextSpan(
+                text: '$h',
+                style: const TextStyle(fontSize: 14),
+              ),
+              TextSpan(
+                text: 'h ',
+                style: uiText(
+                  context,
+                  size: 9.5,
+                  color: colors.textDim,
+                  weight: FontWeight.w600,
+                ),
+              ),
+              TextSpan(
+                text: m.toString().padLeft(2, '0'),
+                style: const TextStyle(fontSize: 14),
+              ),
+              TextSpan(
+                text: 'm',
+                style: uiText(
+                  context,
+                  size: 9.5,
+                  color: colors.textDim,
+                  weight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 1),
+        Text(
+          label,
+          style: uiText(
+            context,
+            size: 8.5,
+            weight: FontWeight.bold,
+            color: colors.textDim,
+            letterSpacing: 0.5,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+}
+

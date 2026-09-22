@@ -140,14 +140,14 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
                     context,
                     label: 'CALL SIGN',
                     value: ref.watch(callSignProvider),
-                    color: colors.cardAccent,
+                    color: colors.accent,
                   ),
                   const SizedBox(width: 8),
                   _buildHeaderPill(
                     context,
                     label: 'REG',
                     value: ref.watch(registrationProvider),
-                    color: colors.cardAccent,
+                    color: colors.accent,
                   ),
                   const SizedBox(width: 8),
                   _buildHeaderPill(
