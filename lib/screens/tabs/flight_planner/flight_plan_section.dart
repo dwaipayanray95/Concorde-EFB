@@ -305,9 +305,9 @@ class FlightPlanSection extends ConsumerWidget {
               ),
               const SizedBox(width: 10),
               _ImportButton(
-                icon: isLoading ? null : Icons.cloud_download_outlined,
+                icon: Icons.cloud_download_outlined,
                 loading: isLoading,
-                label: 'SIMBRIEF',
+                tooltip: 'SimBrief: Fetch latest OFP',
                 onPressed: isLoading
                     ? null
                     : () async {
@@ -392,13 +392,13 @@ class FlightPlanSection extends ConsumerWidget {
               const SizedBox(width: 8),
               _ImportButton(
                 icon: Icons.upload_file_outlined,
-                label: 'FILE',
+                tooltip: 'File: Import PLN / XML / FPL route',
                 onPressed: () => _importFile(context, ref),
               ),
               const SizedBox(width: 8),
               _ImportButton(
                 icon: Icons.edit_note_outlined,
-                label: 'MANUAL',
+                tooltip: 'Manual: Enter ICAO & route string',
                 onPressed: () => _openManualEntry(context, ref),
               ),
               const SizedBox(width: 20),
@@ -642,53 +642,60 @@ class FlightPlanSection extends ConsumerWidget {
 class _ImportButton extends StatelessWidget {
   final IconData? icon;
   final bool loading;
-  final String label;
+  final String tooltip;
   final VoidCallback? onPressed;
 
   const _ImportButton({
     this.icon,
     this.loading = false,
-    required this.label,
+    required this.tooltip,
     required this.onPressed,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return Container(
-      height: 48,
+    return Tooltip(
+      message: tooltip,
+      waitDuration: const Duration(milliseconds: 250),
+      textStyle: uiText(context, size: 11, weight: FontWeight.bold, color: Colors.white),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: onPressed == null
-            ? null
-            : [
-                BoxShadow(
-                  color: colors.accent.withValues(alpha: 0.2),
-                  blurRadius: 12,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: colors.dividerStrong, width: 1),
       ),
-      child: ElevatedButton.icon(
-        onPressed: onPressed,
-        icon: loading
-            ? const SizedBox(
-                width: 14,
-                height: 14,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-              )
-            : Icon(icon, size: 15),
-        label: Text(
-          label,
-          style: uiText(context, size: 12, weight: FontWeight.bold, color: Colors.white),
+      child: Container(
+        height: 48,
+        width: 48,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: onPressed == null
+              ? null
+              : [
+                  BoxShadow(
+                    color: colors.accent.withValues(alpha: 0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
         ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: colors.accent,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: colors.accent.withValues(alpha: 0.5),
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+        child: ElevatedButton(
+          onPressed: onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: colors.accent,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: colors.accent.withValues(alpha: 0.5),
+            elevation: 0,
+            padding: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          child: loading
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
+              : Icon(icon, size: 20),
         ),
       ),
     );
