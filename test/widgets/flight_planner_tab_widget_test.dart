@@ -4,16 +4,21 @@ import 'test_harness.dart';
 
 void main() {
   group('FlightPlannerTab', () {
-    testWidgets('renders all three cards without throwing', (tester) async {
+    testWidgets('renders cards across sub-tabs without throwing', (tester) async {
       await pumpScrollableScreen(tester, const FlightPlannerTab());
 
       expect(tester.takeException(), isNull);
+      // Route & Fuel sub-tab is active by default
       expect(find.text('FLIGHT PLAN'), findsOneWidget);
       expect(find.text('CRUISE & FUEL MANAGEMENT'), findsOneWidget);
-      expect(find.text('PERFORMANCE CALCULATOR'), findsOneWidget);
-      // Shared footer, confirms the tab renders end-to-end.
       expect(find.text('VIEW CHANGELOG'), findsOneWidget);
       expect(find.text('JOIN DISCORD'), findsOneWidget);
+
+      // Switch to Performance & Speeds sub-tab
+      await tester.tap(find.text('PERFORMANCE & SPEEDS'));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('PERFORMANCE CALCULATOR'), findsOneWidget);
     });
 
     testWidgets('shows the default departure/arrival ICAOs', (tester) async {

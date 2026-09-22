@@ -186,6 +186,7 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 - Real app icon + polished Windows uninstaller metadata.
 - Checklist content aligned with the Concorde manual's actual procedures; added a landing phase.
 - Landing-page screenshot showcase carousel + Discord link (web/marketing site).
+- Tablet-style EFB cockpit overhaul: Left-hand vertical navigation rail (`EfbNavRail`), avionics operational status bar (`CockpitStatusBar`) with real-time live UTC Zulu clock, SimConnect telemetry badge, consolidated cockpit settings popover, and sub-tabbed Flight Planner (`Route & Fuel` vs `Performance & Speeds`) optimized for 1200x700 tablet landscape resolution.
 
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.

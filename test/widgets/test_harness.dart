@@ -44,6 +44,12 @@ Future<void> pumpBoundedScreen(WidgetTester tester, Widget child) async {
 /// SingleChildScrollView (FlightPlannerTab, FlightMonitorTab).
 Future<void> pumpScrollableScreen(WidgetTester tester, Widget child) async {
   _mockPrefs();
+  tester.view.physicalSize = const Size(1200, 700);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(() {
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
+  });
   await tester.pumpWidget(
     ProviderScope(
       child: MaterialApp(
