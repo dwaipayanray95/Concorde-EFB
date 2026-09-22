@@ -211,11 +211,11 @@ class _DesignLabScreenState extends State<DesignLabScreen> {
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: colors.accent,
-                        foregroundColor: Colors.white,
+                        foregroundColor: const Color(0xFF090B10),
                         shape: RoundedRectangleBorder(borderRadius: AppRadii.md),
                       ),
                       onPressed: () {},
-                      child: Text('PRIMARY BUTTON', style: AppTypography.caption(context, color: Colors.white)),
+                      child: Text('PRIMARY BUTTON', style: AppTypography.caption(context, color: const Color(0xFF090B10))),
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     OutlinedButton(

@@ -352,25 +352,44 @@ class _SpeedChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: colors.inputBg,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: colors.dividerStrong.withValues(alpha: 0.6),
+          width: 1.2,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            label,
-            style: uiText(
-              context,
-              size: 10,
-              weight: FontWeight.w700,
-              color: colors.textDim,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                label,
+                style: uiText(
+                  context,
+                  size: 10,
+                  weight: FontWeight.w700,
+                  color: colors.textDim,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              Text(
+                'KT',
+                style: uiText(
+                  context,
+                  size: 9,
+                  weight: FontWeight.w700,
+                  color: colors.textDim,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(
             value,
             style: uiText(

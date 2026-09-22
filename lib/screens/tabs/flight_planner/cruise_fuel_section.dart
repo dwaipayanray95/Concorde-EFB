@@ -302,7 +302,7 @@ class _StatGroup extends StatelessWidget {
     return EfbFlatCard(
       background: colors.inputBg,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -397,8 +397,8 @@ class _FuelBreakdownPanel extends StatelessWidget {
     final colors = context.colors;
     return EfbFlatCard(
       background: colors.inputBg,
-      borderRadius: BorderRadius.circular(16),
-      padding: const EdgeInsets.all(24),
+      borderRadius: BorderRadius.circular(12),
+      padding: const EdgeInsets.all(22),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
