@@ -376,7 +376,9 @@ class _StatColumn extends StatelessWidget {
   }
 }
 
-/// The fuel breakdown/"Total Required" panel matching _LegCard's strip pattern with shadow card styling
+/// Authentic printed flight dispatch / ACARS thermal printer fuel strip.
+/// Emulates the physical cockpit load sheet / fuel release strip with
+/// serrated perforated edges, monospace dot-matrix alignment, and dispatch stamps.
 class _FuelBreakdownPanel extends StatelessWidget {
   final BlockFuelBreakdown fuel;
   final double extra;
@@ -395,77 +397,301 @@ class _FuelBreakdownPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return EfbFlatCard(
-      background: colors.inputBg,
-      borderRadius: BorderRadius.circular(12),
-      padding: const EdgeInsets.all(22),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Authentic thermal paper substrate
+    final paperBg = isDark ? const Color(0xFF161619) : const Color(0xFFFAF9F5);
+    final paperBorder = isDark ? const Color(0xFF2E2E34) : const Color(0xFFE2E0D8);
+    final inkPrimary = isDark ? const Color(0xFFF4F4F5) : const Color(0xFF18181B);
+    final inkSecondary = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF52525B);
+    final inkDim = isDark ? const Color(0xFF71717A) : const Color(0xFF8C8C94);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: paperBg,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: paperBorder, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _FuelRow(label: 'Trip Fuel', value: fuel.tripKg),
-          const _FuelDivider(),
-          _FuelRow(label: 'Taxi Fuel', value: fuel.taxiKg),
-          const _FuelDivider(),
-          _FuelRow(label: 'Contingency', value: fuel.contingencyKg),
-          const _FuelDivider(),
-          _FuelRow(label: 'Extra Fuel', value: extra),
-          const _FuelDivider(),
-          _FuelRow(
-            label: 'Alt Fuel ($alternateDistanceNm NM)',
-            value: fuel.alternateKg,
+          // Top Serrated / Perforated Torn Paper Edge
+          CustomPaint(
+            size: const Size(double.infinity, 6),
+            painter: _PerforatedEdgePainter(
+              color: paperBorder,
+              fillColor: paperBg,
+              isTop: true,
+            ),
           ),
-          const _FuelDivider(),
-          _FuelRow(label: 'Final Reserve', value: fuel.finalReserveKg),
-          const _FuelDivider(),
-          _FuelRow(label: 'Block Fuel', value: fuel.blockKg, isBold: true),
-          const SizedBox(height: 24),
-          Divider(color: colors.dividerStrong, thickness: 1),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Total Required',
-                    style: uiText(
-                      context,
-                      size: 14,
-                      weight: FontWeight.bold,
-                      color: colors.textPrimary,
+
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Header: ACARS / Dispatch Teletype Block
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'CONCORDE 102 // FUEL REL',
+                          style: uiText(
+                            context,
+                            size: 11,
+                            weight: FontWeight.w900,
+                            color: colors.accent,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'OFP MANIFEST • MSFS SIMCONNECT',
+                          style: uiText(
+                            context,
+                            size: 8.5,
+                            weight: FontWeight.w600,
+                            color: inkDim,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: colors.accent.withValues(alpha: 0.5), width: 1),
+                        borderRadius: BorderRadius.circular(3),
+                        color: colors.accent.withValues(alpha: 0.08),
+                      ),
+                      child: Text(
+                        'DISPATCH',
+                        style: uiText(
+                          context,
+                          size: 8,
+                          weight: FontWeight.w900,
+                          color: colors.accent,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 10),
+                _ThermalDivider(color: paperBorder, style: _ThermalDividerStyle.dashed),
+                const SizedBox(height: 8),
+
+                // Monospace Dot-Matrix Fuel Line Items
+                _ThermalPrintRow(
+                  label: 'TRIP FUEL',
+                  value: fuel.tripKg,
+                  inkPrimary: inkPrimary,
+                  inkSecondary: inkSecondary,
+                  inkDim: inkDim,
+                ),
+                _ThermalPrintRow(
+                  label: 'TAXI FUEL',
+                  value: fuel.taxiKg,
+                  inkPrimary: inkPrimary,
+                  inkSecondary: inkSecondary,
+                  inkDim: inkDim,
+                ),
+                _ThermalPrintRow(
+                  label: 'CONTINGENCY',
+                  value: fuel.contingencyKg,
+                  inkPrimary: inkPrimary,
+                  inkSecondary: inkSecondary,
+                  inkDim: inkDim,
+                ),
+                _ThermalPrintRow(
+                  label: 'EXTRA FUEL',
+                  value: extra,
+                  inkPrimary: inkPrimary,
+                  inkSecondary: inkSecondary,
+                  inkDim: inkDim,
+                ),
+                _ThermalPrintRow(
+                  label: 'ALT FUEL (${alternateDistanceNm}NM)',
+                  value: fuel.alternateKg,
+                  inkPrimary: inkPrimary,
+                  inkSecondary: inkSecondary,
+                  inkDim: inkDim,
+                ),
+                _ThermalPrintRow(
+                  label: 'FINAL RESERVE',
+                  value: fuel.finalReserveKg,
+                  inkPrimary: inkPrimary,
+                  inkSecondary: inkSecondary,
+                  inkDim: inkDim,
+                ),
+
+                const SizedBox(height: 4),
+                _ThermalDivider(color: paperBorder, style: _ThermalDividerStyle.dotted),
+                const SizedBox(height: 6),
+
+                _ThermalPrintRow(
+                  label: 'BLOCK FUEL',
+                  value: fuel.blockKg,
+                  isBold: true,
+                  inkPrimary: inkPrimary,
+                  inkSecondary: inkSecondary,
+                  inkDim: inkDim,
+                ),
+
+                const SizedBox(height: 8),
+                // Double thermal print rule
+                _ThermalDivider(color: paperBorder, style: _ThermalDividerStyle.doubleLine),
+                const SizedBox(height: 12),
+
+                // Total Required readout stamped block
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E1E22) : const Color(0xFFF1EFE8),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: isOverCapacity
+                          ? colors.error
+                          : (isDark ? const Color(0xFF38383F) : const Color(0xFFD6D3C8)),
+                      width: 1,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Block + Extra (${numFormat.format(extra)} kg)',
-                    style: uiText(context, size: 10, color: colors.textDim),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'TOTAL REQUIRED',
+                                style: uiText(
+                                  context,
+                                  size: 11,
+                                  weight: FontWeight.w900,
+                                  color: inkPrimary,
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                              if (isOverCapacity) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: colors.error,
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                  child: Text(
+                                    'EXCEEDS TANK CAP',
+                                    style: uiText(
+                                      context,
+                                      size: 7.5,
+                                      weight: FontWeight.w900,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'BLOCK + EXTRA (${numFormat.format(extra.round())} KG)',
+                            style: uiText(
+                              context,
+                              size: 8.5,
+                              weight: FontWeight.w600,
+                              color: inkDim,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(
+                            numFormat.format(totalFuel.round()),
+                            style: uiText(
+                              context,
+                              size: 24,
+                              weight: FontWeight.w900,
+                              color: isOverCapacity
+                                  ? colors.error
+                                  : (isDark ? colors.accent : const Color(0xFFB45309)),
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'KG',
+                            style: uiText(
+                              context,
+                              size: 11,
+                              weight: FontWeight.bold,
+                              color: inkDim,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  Text(
-                    numFormat.format(totalFuel),
-                    style: uiText(
-                      context,
-                      size: 28,
-                      weight: FontWeight.w900,
-                      color: isOverCapacity ? colors.error : colors.success,
+                ),
+
+                const SizedBox(height: 10),
+                // Footer dispatch verification stamp
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '*** END OF LOAD SHEET ***',
+                      style: uiText(
+                        context,
+                        size: 8,
+                        weight: FontWeight.w700,
+                        color: inkDim,
+                        letterSpacing: 1.0,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'kg',
-                    style: uiText(context, size: 14, color: colors.textDim),
-                  ),
-                ],
-              ),
-            ],
+                    Text(
+                      'CAP: 95,681 KG',
+                      style: uiText(
+                        context,
+                        size: 8,
+                        weight: FontWeight.w800,
+                        color: inkDim,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Bottom Serrated / Perforated Torn Paper Edge
+          CustomPaint(
+            size: const Size(double.infinity, 6),
+            painter: _PerforatedEdgePainter(
+              color: paperBorder,
+              fillColor: paperBg,
+              isTop: false,
+            ),
           ),
         ],
       ),
@@ -473,40 +699,55 @@ class _FuelBreakdownPanel extends StatelessWidget {
   }
 }
 
-class _FuelRow extends StatelessWidget {
+class _ThermalPrintRow extends StatelessWidget {
   final String label;
   final double value;
   final bool isBold;
-  const _FuelRow({
+  final Color inkPrimary;
+  final Color inkSecondary;
+  final Color inkDim;
+
+  const _ThermalPrintRow({
     required this.label,
     required this.value,
     this.isBold = false,
+    required this.inkPrimary,
+    required this.inkSecondary,
+    required this.inkDim,
   });
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 3.5),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             label,
             style: uiText(
               context,
-              size: 14,
-              weight: isBold ? FontWeight.bold : FontWeight.normal,
-              color: isBold ? colors.textPrimary : colors.textSecondary,
+              size: isBold ? 11.5 : 11,
+              weight: isBold ? FontWeight.w900 : FontWeight.w600,
+              color: isBold ? inkPrimary : inkSecondary,
+              letterSpacing: 0.4,
             ),
           ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: CustomPaint(
+              size: const Size(double.infinity, 8),
+              painter: _DotLeaderPainter(color: inkDim.withValues(alpha: 0.45)),
+            ),
+          ),
+          const SizedBox(width: 6),
           Text(
             numFormat.format(value.round()),
             style: uiText(
               context,
-              size: isBold ? 18 : 16,
-              weight: FontWeight.bold,
-              color: colors.textPrimary,
+              size: isBold ? 14 : 12.5,
+              weight: isBold ? FontWeight.w900 : FontWeight.w700,
+              color: inkPrimary,
+              letterSpacing: 0.6,
             ),
           ),
         ],
@@ -515,11 +756,169 @@ class _FuelRow extends StatelessWidget {
   }
 }
 
-class _FuelDivider extends StatelessWidget {
-  const _FuelDivider();
+enum _ThermalDividerStyle { dashed, dotted, doubleLine }
+
+class _ThermalDivider extends StatelessWidget {
+  final Color color;
+  final _ThermalDividerStyle style;
+
+  const _ThermalDivider({
+    required this.color,
+    required this.style,
+  });
+
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Divider(color: colors.divider, height: 16);
+    if (style == _ThermalDividerStyle.doubleLine) {
+      return Column(
+        children: [
+          Divider(color: color, thickness: 1, height: 1),
+          const SizedBox(height: 2),
+          Divider(color: color, thickness: 1, height: 1),
+        ],
+      );
+    }
+
+    return CustomPaint(
+      size: const Size(double.infinity, 1),
+      painter: _LinePatternPainter(
+        color: color,
+        isDotted: style == _ThermalDividerStyle.dotted,
+      ),
+    );
   }
 }
+
+class _LinePatternPainter extends CustomPainter {
+  final Color color;
+  final bool isDotted;
+
+  _LinePatternPainter({required this.color, required this.isDotted});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+
+    final dashWidth = isDotted ? 2.0 : 5.0;
+    final dashSpace = isDotted ? 3.0 : 4.0;
+    double startX = 0;
+
+    while (startX < size.width) {
+      canvas.drawLine(Offset(startX, 0), Offset(startX + dashWidth, 0), paint);
+      startX += dashWidth + dashSpace;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _LinePatternPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.isDotted != isDotted;
+}
+
+class _DotLeaderPainter extends CustomPainter {
+  final Color color;
+
+  _DotLeaderPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.2
+      ..strokeCap = StrokeCap.round;
+
+    const spacing = 5.0;
+    final centerY = size.height / 2;
+    double currentX = 2;
+
+    while (currentX < size.width - 2) {
+      canvas.drawCircle(Offset(currentX, centerY), 0.75, paint);
+      currentX += spacing;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DotLeaderPainter oldDelegate) => oldDelegate.color != color;
+}
+
+/// Paints realistic jagged serrated teeth on top and bottom torn thermal paper edges.
+class _PerforatedEdgePainter extends CustomPainter {
+  final Color color;
+  final Color fillColor;
+  final bool isTop;
+
+  _PerforatedEdgePainter({
+    required this.color,
+    required this.fillColor,
+    required this.isTop,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const toothWidth = 6.0;
+    final toothHeight = size.height;
+    final teethCount = (size.width / toothWidth).ceil();
+
+    final path = Path();
+    final borderPath = Path();
+
+    if (isTop) {
+      path.moveTo(0, toothHeight);
+      borderPath.moveTo(0, toothHeight);
+
+      for (int i = 0; i < teethCount; i++) {
+        final startX = i * toothWidth;
+        final midX = startX + toothWidth / 2;
+        final endX = startX + toothWidth;
+
+        path.lineTo(midX, 0);
+        path.lineTo(endX, toothHeight);
+
+        borderPath.lineTo(midX, 0);
+        borderPath.lineTo(endX, toothHeight);
+      }
+
+      path.lineTo(size.width, toothHeight);
+      path.close();
+    } else {
+      path.moveTo(0, 0);
+      borderPath.moveTo(0, 0);
+
+      for (int i = 0; i < teethCount; i++) {
+        final startX = i * toothWidth;
+        final midX = startX + toothWidth / 2;
+        final endX = startX + toothWidth;
+
+        path.lineTo(midX, toothHeight);
+        path.lineTo(endX, 0);
+
+        borderPath.lineTo(midX, toothHeight);
+        borderPath.lineTo(endX, 0);
+      }
+
+      path.lineTo(size.width, 0);
+      path.close();
+    }
+
+    final fillPaint = Paint()
+      ..color = fillColor
+      ..style = PaintingStyle.fill;
+
+    final borderPaint = Paint()
+      ..color = color
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+
+    canvas.drawPath(path, fillPaint);
+    canvas.drawPath(borderPath, borderPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _PerforatedEdgePainter oldDelegate) =>
+      oldDelegate.color != color ||
+      oldDelegate.fillColor != fillColor ||
+      oldDelegate.isTop != isTop;
+}
+
