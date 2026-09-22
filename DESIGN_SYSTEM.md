@@ -19,19 +19,19 @@ Defined in [`lib/core/app_colors.dart`](file:///e:/VSCODE/Concorde-EFB/lib/core/
 
 | Token | Semantic Purpose | Dark Value | Light Value |
 | :--- | :--- | :--- | :--- |
-| `bg` | Application canvas / root background | `#090B10` | `#F1F3F7` |
-| `surface` | Card background & navigation rail | `#131722` | `#E2E6EF` |
-| `resultsBg` | Inset data readout cards & inner panels | `#191F2D` | `#FFFFFF` |
-| `inputBg` | Text fields & selectable controls | `#111520` | `#F8FAFD` |
-| `textPrimary` | Primary headings, values, and gauges | `#F8FAFC` | `#0F172A` |
-| `textSecondary` | Subheadings, standard body text | `#94A3B8` | `#334155` |
-| `textDim` | Captions, unselected states, units | `#64748B` | `#64748B` |
-| `divider` | Subtle card dividers and borders | `#1E2638` | `#CBD5E1` |
-| `dividerStrong` | Outer card frames & active borders | `#2E3B54` | `#94A3B8` |
+| `bg` | Application canvas / root background | `#101012` | `#F4F4F5` |
+| `surface` | Card background & navigation rail | `#18181B` | `#E4E4E7` |
+| `resultsBg` | Inset data readout cards & inner panels | `#202024` | `#FFFFFF` |
+| `inputBg` | Text fields & selectable controls | `#141416` | `#FAFAFA` |
+| `textPrimary` | Primary headings, values, and gauges | `#FAFAFA` | `#18181B` |
+| `textSecondary` | Subheadings, standard body text | `#A1A1AA` | `#52525B` |
+| `textDim` | Captions, unselected states, units | `#71717A` | `#71717A` |
+| `divider` | Subtle card dividers and borders | `#27272A` | `#E4E4E7` |
+| `dividerStrong` | Outer card frames & active borders | `#3F3F46` | `#D4D4D8` |
 | `accent` | Signature Aviation Amber lead | `#F59E0B` | `#D97706` |
-| `cardAccent` | High-viz enroute & flight plan blue | `#38BDF8` | `#0284C7` |
+| `cardAccent` | Signature Aviation Amber lead header | `#F59E0B` | `#D97706` |
 | `departure` | Departure highlights & VFR green | `#10B981` | `#059669` |
-| `arrival` | Destination & SimConnect telemetry | `#38BDF8` | `#0284C7` |
+| `arrival` | Destination & Enroute Amber target | `#F59E0B` | `#D97706` |
 | `error` / `errorBg` | Master Warning Red, invalid runways | `#EF4444` | `#DC2626` |
 | `mvfr` / `mvfrBg` | Master Caution Amber, marginal weather | `#F59E0B` | `#D97706` |
 | `lifr` / `lifrBg` | Low IFR status | `#E879F9` | `#C026D3` |

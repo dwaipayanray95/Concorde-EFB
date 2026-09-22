@@ -53,19 +53,19 @@ class AppColors extends ThemeExtension<AppColors> {
   });
 
   static const light = AppColors(
-    bg: Color(0xFFF1F3F7),
-    surface: Color(0xFFE2E6EF),
-    resultsBg: Color(0xFFFFFFFF),
-    inputBg: Color(0xFFF8FAFD),
-    textPrimary: Color(0xFF0F172A),
-    textSecondary: Color(0xFF334155),
-    textDim: Color(0xFF64748B),
-    divider: Color(0xFFCBD5E1),
-    dividerStrong: Color(0xFF94A3B8),
-    accent: Color(0xFFD97706), // Aviation Amber Lead (Light Mode)
-    cardAccent: Color(0xFF0284C7), // High-Viz Sky Blue
-    departure: Color(0xFF059669), // Emerald VFR
-    arrival: Color(0xFF0284C7), // Cyan Info/Arrival
+    bg: Color(0xFFF4F4F5), // True neutral light zinc canvas (zero blue tint)
+    surface: Color(0xFFE4E4E7), // Neutral instrument surface / nav rail
+    resultsBg: Color(0xFFFFFFFF), // Pure white readout panels
+    inputBg: Color(0xFFFAFAFA), // Crisp neutral input well
+    textPrimary: Color(0xFF18181B), // Deep neutral charcoal text
+    textSecondary: Color(0xFF52525B), // Mid-tone neutral zinc secondary
+    textDim: Color(0xFF71717A), // Muted neutral captions & units
+    divider: Color(0xFFE4E4E7), // Clean neutral divider
+    dividerStrong: Color(0xFFD4D4D8), // Outer panel bevel
+    accent: Color(0xFFD97706), // Signature Aviation Amber Lead (Light Mode)
+    cardAccent: Color(0xFFD97706), // Lead Aviation Amber header accent
+    departure: Color(0xFF059669), // Emerald VFR / DEP
+    arrival: Color(0xFFD97706), // Aviation Amber ARR / Enroute target
     errorBg: Color(0xFFFEE2E2),
     error: Color(0xFFDC2626), // Ruby Alert
     successBg: Color(0xFFD1FAE5),
@@ -79,19 +79,19 @@ class AppColors extends ThemeExtension<AppColors> {
   );
 
   static const dark = AppColors(
-    bg: Color(0xFF090B10), // Deep obsidian cockpit canvas
-    surface: Color(0xFF131722), // Low-reflection gunmetal surface
-    resultsBg: Color(0xFF191F2D), // Inset instrument/readout panel
-    inputBg: Color(0xFF111520), // Recessed input well
-    textPrimary: Color(0xFFF8FAFC), // Crisp anti-glare primary readout
-    textSecondary: Color(0xFF94A3B8), // Cool slate secondary
-    textDim: Color(0xFF64748B), // Muted captions & units
-    divider: Color(0xFF1E2638), // Subtle 1px instrument border
-    dividerStrong: Color(0xFF2E3B54), // Outer bezel framing
-    accent: Color(0xFFF59E0B), // Signature Aviation Amber (Dark Mode)
-    cardAccent: Color(0xFF38BDF8), // Cyan/Sky Blue alert & enroute
+    bg: Color(0xFF101012), // Deep neutral charcoal/carbon cockpit canvas (zero blue)
+    surface: Color(0xFF18181B), // Low-reflection dark zinc instrument panel
+    resultsBg: Color(0xFF202024), // Recessed neutral instrument readout well
+    inputBg: Color(0xFF141416), // Dark neutral input field
+    textPrimary: Color(0xFFFAFAFA), // Anti-glare high-contrast white readout
+    textSecondary: Color(0xFFA1A1AA), // Clean neutral zinc secondary
+    textDim: Color(0xFF71717A), // Muted neutral captions & units
+    divider: Color(0xFF27272A), // 1px neutral instrument separator
+    dividerStrong: Color(0xFF3F3F46), // Precision outer bezel framing
+    accent: Color(0xFFF59E0B), // Signature Aviation Amber Lead (Dark Mode)
+    cardAccent: Color(0xFFF59E0B), // Lead Aviation Amber header accent
     departure: Color(0xFF10B981), // Emerald VFR / DEP
-    arrival: Color(0xFF38BDF8), // Cyan ARR / Sim telemetry
+    arrival: Color(0xFFF59E0B), // Aviation Amber ARR / Enroute target
     errorBg: Color(0xFF3B1219),
     error: Color(0xFFEF4444), // Master Warning Red
     successBg: Color(0xFF0B2E1E),
