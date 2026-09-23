@@ -168,15 +168,14 @@ class _LegCard extends ConsumerWidget {
     final metarStr = metarAsync.asData?.value ?? '';
     final parsedWind = MetarParser.parseWind(metarStr);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final statusBorderColor = isFeasible ? colors.dividerStrong.withValues(alpha: isDark ? 0.6 : 0.8) : colors.error;
 
     return Container(
       decoration: BoxDecoration(
         color: colors.resultsBg,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: statusBorderColor,
-          width: isFeasible ? 1.0 : 1.5,
+          color: colors.dividerStrong.withValues(alpha: isDark ? 0.6 : 0.8),
+          width: 1.0,
         ),
         boxShadow: [
           BoxShadow(
@@ -192,21 +191,23 @@ class _LegCard extends ConsumerWidget {
         children: [
           // Identity row
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF141417) : const Color(0xFFEBEBEF),
               border: Border(
                 bottom: BorderSide(
-                  color: colors.dividerStrong.withValues(alpha: isDark ? 0.5 : 0.7),
-                  width: 1.0,
+                  color: isFeasible
+                      ? colors.dividerStrong.withValues(alpha: isDark ? 0.5 : 0.7)
+                      : colors.error.withValues(alpha: 0.5),
+                  width: isFeasible ? 1.0 : 1.5,
                 ),
               ),
             ),
             child: Row(
               children: [
                 Container(
-                  width: 3,
-                  height: 12,
+                  width: 3.5,
+                  height: 14,
                   margin: const EdgeInsets.only(right: 8),
                   decoration: BoxDecoration(
                     color: isFeasible ? colors.accent : colors.error,
@@ -227,24 +228,46 @@ class _LegCard extends ConsumerWidget {
                     ),
                   ),
                 ),
+                // Authentic Cockpit Annunciator Box
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 6,
+                    horizontal: 10,
+                    vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: isFeasible ? colors.successBg : colors.errorBg,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    isFeasible ? 'WITHIN LIMITS' : 'EXCEEDS LIMITS',
-                    style: uiText(
-                      context,
-                      size: 11,
-                      weight: FontWeight.w800,
-                      color: isFeasible ? colors.success : colors.error,
-                      letterSpacing: 0.5,
+                    color: isFeasible
+                        ? colors.success.withValues(alpha: 0.15)
+                        : colors.error,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: isFeasible
+                          ? colors.success.withValues(alpha: 0.6)
+                          : colors.error,
+                      width: 1.2,
                     ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (!isFeasible) ...[
+                        const Icon(
+                          Icons.warning_amber_rounded,
+                          size: 13,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 5),
+                      ],
+                      Text(
+                        isFeasible ? 'WITHIN LIMITS' : 'PERF LIMIT EXCEEDED',
+                        style: uiText(
+                          context,
+                          size: 10,
+                          weight: FontWeight.w900,
+                          color: isFeasible ? colors.success : Colors.white,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -273,6 +296,7 @@ class _LegCard extends ConsumerWidget {
                               airport: airport,
                               currentId: currentRunwayId,
                               onChanged: onRunwayChanged,
+                              hasDeficit: (feasibility != null && feasibility!.runwayLengthM < feasibility!.requiredLengthMEst),
                             ),
                           ],
                         ),
@@ -499,34 +523,57 @@ class _RunwaySelect extends StatelessWidget {
   final Airport? airport;
   final String currentId;
   final ValueChanged<String?> onChanged;
+  final bool hasDeficit;
+
   const _RunwaySelect({
     required this.airport,
     required this.currentId,
     required this.onChanged,
+    this.hasDeficit = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'RUNWAY',
-          style: uiText(
-            context,
-            size: 10,
-            weight: FontWeight.w700,
-            color: colors.textDim,
-            letterSpacing: 0.5,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'RUNWAY',
+              style: uiText(
+                context,
+                size: 10,
+                weight: FontWeight.w700,
+                color: colors.textDim,
+                letterSpacing: 0.5,
+              ),
+            ),
+            if (hasDeficit)
+              Text(
+                'LENGTH DEFICIT',
+                style: uiText(
+                  context,
+                  size: 9,
+                  weight: FontWeight.w900,
+                  color: colors.error,
+                  letterSpacing: 0.6,
+                ),
+              ),
+          ],
         ),
         const SizedBox(height: 6),
         Container(
           decoration: BoxDecoration(
             color: colors.inputBg,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: colors.dividerStrong, width: 1.5),
+            border: Border.all(
+              color: hasDeficit ? colors.error : colors.dividerStrong,
+              width: hasDeficit ? 1.8 : 1.5,
+            ),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16),
           height: 44,
@@ -869,26 +916,151 @@ class _RunwayMarginText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final f = feasibility;
+
+    // Collect all exceedances / decision barriers
+    final violations = <String>[];
     if (!isWeightFeasible) {
-      return Text(
-        'EXCEEDS MAX WEIGHT (${numFormat.format(maxWeightKg)} kg)',
-        style: uiText(
-          context,
-          size: 12,
-          weight: FontWeight.w800,
-          color: colors.error,
-        ),
-      );
+      violations.add('AIRCRAFT EXCEEDS MAX WEIGHT (${numFormat.format(maxWeightKg)} kg)');
     }
-    if (f == null) {
+    if (isFuelOver) {
+      violations.add('EXCEEDS FUEL CAPACITY (${numFormat.format(ConcordeConstants.weights.fuelCapacityKg)} kg)');
+    }
+    if (f != null) {
+      if (f.runwayLengthM < f.requiredLengthMEst) {
+        final deficit = (f.requiredLengthMEst - f.runwayLengthM).round();
+        violations.add('RUNWAY LENGTH DEFICIT (-$deficit m shortfall for dispatch)');
+      }
+      if (!f.altitudeOk) {
+        violations.add('AIRFIELD OUTSIDE ALTITUDE LIMITS (${ConcordeConstants.runway.minAirfieldAltFt.round()} - ${ConcordeConstants.runway.maxAirfieldAltFt.round()} ft)');
+      }
+      if (!f.crosswindOk) {
+        violations.add('EXCEEDS MAX CROSSWIND LIMIT (${ConcordeConstants.runway.maxCrosswindKt.round()} kt)');
+      }
+    }
+
+    final hasViolations = violations.isNotEmpty;
+
+    if (f == null && !hasViolations) {
       return Text(
         '--',
         style: uiText(context, size: 12, color: colors.textSecondary),
       );
     }
-    final reqRunway = numFormat.format(f.requiredLengthMEst.round());
-    final availRunway = numFormat.format(f.runwayLengthM.round());
+
+    final reqRunway = f != null ? numFormat.format(f.requiredLengthMEst.round()) : '--';
+    final availRunway = f != null ? numFormat.format(f.runwayLengthM.round()) : '--';
+    final marginM = f != null ? (f.runwayLengthM - f.requiredLengthMEst).round() : 0;
+    final marginText = marginM >= 0 ? '+$marginM m margin' : '$marginM m deficit';
+
+    if (hasViolations) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: colors.error.withValues(alpha: isDark ? 0.12 : 0.08),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: colors.error.withValues(alpha: isDark ? 0.7 : 0.9),
+            width: 1.2,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.block,
+                  size: 15,
+                  color: colors.error,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'DISPATCH DECISION: PERFORMANCE NO-GO',
+                  style: uiText(
+                    context,
+                    size: 11,
+                    weight: FontWeight.w900,
+                    color: colors.error,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // Specific exceedance lines
+            ...violations.map((v) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '• ',
+                    style: uiText(
+                      context,
+                      size: 11,
+                      weight: FontWeight.w900,
+                      color: colors.error,
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      v,
+                      style: uiText(
+                        context,
+                        size: 11,
+                        weight: FontWeight.w700,
+                        color: isDark ? const Color(0xFFFCA5A5) : colors.error,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )),
+            const SizedBox(height: 6),
+            Container(
+              height: 1,
+              color: colors.error.withValues(alpha: 0.25),
+            ),
+            const SizedBox(height: 6),
+            RichText(
+              text: TextSpan(
+                style: uiText(context, size: 11, color: colors.textSecondary),
+                children: [
+                  const TextSpan(text: 'Calculated: '),
+                  TextSpan(
+                    text: '$reqRunway m required',
+                    style: uiText(
+                      context,
+                      size: 11,
+                      weight: FontWeight.w800,
+                      color: colors.error,
+                    ),
+                  ),
+                  TextSpan(text: ' vs $availRunway m available ($marginText)'),
+                ],
+              ),
+            ),
+            if (f != null && !f.widthOk) ...[
+              const SizedBox(height: 4),
+              Text(
+                'CAUTION: NARROW RUNWAY (min ${ConcordeConstants.runway.minRunwayWidthFt.round()} ft)',
+                style: uiText(
+                  context,
+                  size: 11,
+                  weight: FontWeight.w800,
+                  color: colors.mvfr,
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
+    // FEASIBLE (WITHIN LIMITS) presentation
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -904,26 +1076,14 @@ class _RunwayMarginText extends StatelessWidget {
                   context,
                   size: 12,
                   weight: FontWeight.w800,
-                  color: f.feasible ? colors.success : colors.error,
+                  color: colors.success,
                 ),
               ),
-              TextSpan(text: ' vs $availRunway m avail'),
+              TextSpan(text: ' vs $availRunway m avail ($marginText)'),
             ],
           ),
         ),
-        if (isFuelOver) ...[
-          const SizedBox(height: 4),
-          Text(
-            'EXCEEDS FUEL CAPACITY (${numFormat.format(ConcordeConstants.weights.fuelCapacityKg)} kg)',
-            style: uiText(
-              context,
-              size: 11,
-              weight: FontWeight.w800,
-              color: colors.error,
-            ),
-          ),
-        ],
-        if (!f.widthOk) ...[
+        if (f != null && !f.widthOk) ...[
           const SizedBox(height: 4),
           Text(
             'CAUTION: NARROW RUNWAY (min ${ConcordeConstants.runway.minRunwayWidthFt.round()} ft)',
@@ -932,30 +1092,6 @@ class _RunwayMarginText extends StatelessWidget {
               size: 11,
               weight: FontWeight.w800,
               color: colors.mvfr,
-            ),
-          ),
-        ],
-        if (!f.altitudeOk) ...[
-          const SizedBox(height: 4),
-          Text(
-            'AIRFIELD OUTSIDE ALTITUDE LIMITS (${ConcordeConstants.runway.minAirfieldAltFt.round()} to ${ConcordeConstants.runway.maxAirfieldAltFt.round()} ft)',
-            style: uiText(
-              context,
-              size: 11,
-              weight: FontWeight.w800,
-              color: colors.error,
-            ),
-          ),
-        ],
-        if (!f.crosswindOk) ...[
-          const SizedBox(height: 4),
-          Text(
-            'EXCEEDS MAX CROSSWIND (${ConcordeConstants.runway.maxCrosswindKt.round()} kt)',
-            style: uiText(
-              context,
-              size: 11,
-              weight: FontWeight.w800,
-              color: colors.error,
             ),
           ),
         ],
