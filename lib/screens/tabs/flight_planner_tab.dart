@@ -27,11 +27,9 @@ class _FlightPlannerTabState extends State<FlightPlannerTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Authentic Cockpit MFD Bezel Segmented Softkey Strip
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Container(
-            height: 38,
+        // Authentic Cockpit MFD Bezel Segmented Softkey Strip (Full-width tabbed selector)
+        Container(
+          height: 40,
           decoration: BoxDecoration(
             color: colors.surface,
             borderRadius: BorderRadius.circular(6),
@@ -42,30 +40,32 @@ class _FlightPlannerTabState extends State<FlightPlannerTab> {
           ),
           clipBehavior: Clip.antiAlias,
           child: Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
-              _buildSubTabButton(
-                context,
-                index: 0,
-                label: 'ROUTE & FUEL PLANNING',
-                icon: Icons.alt_route,
+              Expanded(
+                child: _buildSubTabButton(
+                  context,
+                  index: 0,
+                  label: 'ROUTE & FUEL PLANNING',
+                  icon: Icons.alt_route,
+                ),
               ),
               Container(
                 width: 1,
                 height: 24,
                 color: colors.dividerStrong.withValues(alpha: isDark ? 0.4 : 0.6),
               ),
-              _buildSubTabButton(
-                context,
-                index: 1,
-                label: 'PERFORMANCE & SPEEDS',
-                icon: Icons.speed,
+              Expanded(
+                child: _buildSubTabButton(
+                  context,
+                  index: 1,
+                  label: 'PERFORMANCE & SPEEDS',
+                  icon: Icons.speed,
+                ),
               ),
             ],
           ),
         ),
-      ),
-      const SizedBox(height: 16),
+        const SizedBox(height: 16),
 
         // Sub-tab content
         if (_activeSubTab == 0) ...[
@@ -109,52 +109,37 @@ class _FlightPlannerTabState extends State<FlightPlannerTab> {
   }) {
     final colors = context.colors;
     final isSelected = _activeSubTab == index;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final activeBg = colors.accent;
+    final activeText = const Color(0xFF090B10);
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: () => setState(() => _activeSubTab = index),
-        hoverColor: colors.resultsBg.withValues(alpha: 0.4),
-        child: Container(
+        hoverColor: isSelected ? null : colors.resultsBg.withValues(alpha: 0.4),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
           padding: const EdgeInsets.symmetric(horizontal: 18),
           alignment: Alignment.center,
-          color: isSelected
-              ? (isDark ? const Color(0xFF222227) : const Color(0xFFFFFFFF))
-              : Colors.transparent,
-          child: Column(
+          color: isSelected ? activeBg : Colors.transparent,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const SizedBox(height: 3),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    icon,
-                    size: 13,
-                    color: isSelected ? colors.accent : colors.textDim,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    label,
-                    style: uiText(
-                      context,
-                      size: 10.5,
-                      weight: isSelected ? FontWeight.w900 : FontWeight.w700,
-                      color: isSelected ? colors.textPrimary : colors.textSecondary,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ],
+              Icon(
+                icon,
+                size: 14,
+                color: isSelected ? activeText : colors.textDim,
               ),
-              const SizedBox(height: 3),
-              // Precision Amber Active Indicator Line
-              Container(
-                height: 2.0,
-                width: isSelected ? 24.0 : 0.0,
-                decoration: BoxDecoration(
-                  color: isSelected ? colors.accent : Colors.transparent,
-                  borderRadius: BorderRadius.circular(1),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: uiText(
+                  context,
+                  size: 11,
+                  weight: isSelected ? FontWeight.w900 : FontWeight.w700,
+                  color: isSelected ? activeText : colors.textSecondary,
+                  letterSpacing: 0.8,
                 ),
               ),
             ],
