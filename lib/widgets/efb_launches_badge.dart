@@ -30,50 +30,48 @@ class EfbLaunchesBadge extends ConsumerWidget {
 
         return Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: colors.textPrimary.withValues(alpha: 0.08),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: colors.dividerStrong.withValues(alpha: 0.8),
+              width: 1.0,
+            ),
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(5),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
+                    horizontal: 9,
+                    vertical: 7,
                   ),
-                  color: colors.surface,
+                  color: colors.resultsBg,
                   child: Text(
                     'EFB LAUNCHES',
                     style: uiText(
                       context,
                       color: colors.textSecondary,
-                      size: 10,
-                      weight: FontWeight.bold,
-                      letterSpacing: 0.5,
+                      size: 9.5,
+                      weight: FontWeight.w800,
+                      letterSpacing: 0.6,
                     ),
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
+                    horizontal: 9,
+                    vertical: 7,
                   ),
                   color: colors.accent,
                   child: Text(
                     numFormat.format(count),
                     style: uiText(
                       context,
-                      color: Colors.white,
+                      color: const Color(0xFF101012),
                       size: 10,
-                      weight: FontWeight.bold,
+                      weight: FontWeight.w900,
+                      letterSpacing: 0.4,
                     ),
                   ),
                 ),

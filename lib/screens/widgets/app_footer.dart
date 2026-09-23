@@ -5,98 +5,170 @@ import '../../core/ui_text.dart';
 import '../../core/app_links.dart';
 import '../../widgets/efb_launches_badge.dart';
 import '../../widgets/efb_ad_banner.dart';
-import '../../widgets/efb_flat_card.dart';
 
 /// Shared footer shown at the bottom of the Flight Planner and Flight
 /// Monitor tabs: the support-development banner alongside a matching card
-/// of pill-shaped link buttons (launches count, changelog, Discord, GitHub
-/// Sponsors), laid out side by side.
+/// of cockpit-style softkey links (launches count, changelog, Discord, GitHub
+/// Sponsors), laid out side by side with responsive stacking fallback.
 class AppFooter extends StatelessWidget {
   const AppFooter({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Column(
-      children: [
-        const SizedBox(height: 8),
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 1000;
+        if (isNarrow) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 12),
+                const EfbAdBanner(),
+                const SizedBox(height: 12),
+                _buildLinksCard(context),
+                const SizedBox(height: 16),
+              ],
+            ),
+          );
+        }
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
             children: [
-              const SizedBox(width: 24),
-              const Expanded(child: EfbAdBanner()),
-              const SizedBox(width: 20),
-              EfbFlatCard(
-                background: colors.resultsBg,
-                padding: const EdgeInsets.all(16),
-                borderRadius: BorderRadius.circular(16),
+              const SizedBox(height: 12),
+              IntrinsicHeight(
                 child: Row(
-                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const EfbLaunchesBadge(),
-                    const SizedBox(width: 12),
-                    _FooterLinkButton(
-                      label: 'VIEW CHANGELOG',
-                      url: AppLinks.changelog,
-                    ),
-                    const SizedBox(width: 12),
-                    _FooterLinkButton(
-                      label: 'JOIN DISCORD',
-                      url: AppLinks.discord,
-                    ),
-                    const SizedBox(width: 12),
-                    _FooterLinkButton(
-                      label: 'GITHUB SPONSOR',
-                      url: AppLinks.githubSponsors,
-                    ),
+                    const Expanded(child: EfbAdBanner()),
+                    const SizedBox(width: 14),
+                    _buildLinksCard(context),
                   ],
                 ),
               ),
+              const SizedBox(height: 16),
             ],
           ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLinksCard(BuildContext context) {
+    final colors = context.colors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: colors.dividerStrong.withValues(alpha: 0.7),
+          width: 1.2,
         ),
-      ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const EfbLaunchesBadge(),
+          const SizedBox(width: 10),
+          _FooterLinkButton(
+            icon: Icons.history,
+            label: 'VIEW CHANGELOG',
+            url: AppLinks.changelog,
+          ),
+          const SizedBox(width: 8),
+          _FooterLinkButton(
+            icon: Icons.forum_outlined,
+            label: 'JOIN DISCORD',
+            url: AppLinks.discord,
+          ),
+          const SizedBox(width: 8),
+          _FooterLinkButton(
+            icon: Icons.favorite_border,
+            label: 'GITHUB SPONSOR',
+            url: AppLinks.githubSponsors,
+          ),
+        ],
+      ),
     );
   }
 }
 
-/// A pill-shaped footer link button, matching the support banner's
-/// "DONATE NOW" style so the whole group reads as one button family.
-class _FooterLinkButton extends StatelessWidget {
+/// A cockpit MFD segmented softkey button for footer links.
+/// Matches the 6px radius, anodized bezel, and amber interactive illumination.
+class _FooterLinkButton extends StatefulWidget {
+  final IconData? icon;
   final String label;
   final String url;
 
-  const _FooterLinkButton({required this.label, required this.url});
+  const _FooterLinkButton({
+    this.icon,
+    required this.label,
+    required this.url,
+  });
+
+  @override
+  State<_FooterLinkButton> createState() => _FooterLinkButtonState();
+}
+
+class _FooterLinkButtonState extends State<_FooterLinkButton> {
+  bool _isHovered = false;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return InkWell(
-      onTap: () async {
-        final uri = Uri.parse(url);
-        try {
-          await launchUrl(uri);
-        } catch (_) {}
-      },
-      borderRadius: BorderRadius.circular(20),
-      mouseCursor: SystemMouseCursors.click,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: colors.accent.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: colors.accent, width: 1.5),
-        ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: uiText(
-            context,
-            color: colors.accent,
-            size: 11,
-            weight: FontWeight.bold,
-            letterSpacing: 0.8,
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: InkWell(
+        onTap: () async {
+          final uri = Uri.parse(widget.url);
+          try {
+            await launchUrl(uri);
+          } catch (_) {}
+        },
+        borderRadius: BorderRadius.circular(6),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 140),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          decoration: BoxDecoration(
+            color: _isHovered
+                ? colors.accent.withValues(alpha: 0.15)
+                : colors.resultsBg,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: _isHovered
+                  ? colors.accent
+                  : colors.dividerStrong.withValues(alpha: 0.8),
+              width: 1.0,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (widget.icon != null) ...[
+                Icon(
+                  widget.icon,
+                  size: 13,
+                  color: _isHovered ? colors.accent : colors.textSecondary,
+                ),
+                const SizedBox(width: 6),
+              ],
+              Text(
+                widget.label,
+                style: uiText(
+                  context,
+                  color: _isHovered ? colors.accent : colors.textPrimary,
+                  size: 10,
+                  weight: FontWeight.w800,
+                  letterSpacing: 0.6,
+                ),
+              ),
+            ],
           ),
         ),
       ),

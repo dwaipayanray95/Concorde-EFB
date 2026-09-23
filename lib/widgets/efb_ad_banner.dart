@@ -6,7 +6,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../core/app_colors.dart';
 import '../core/ui_text.dart';
 import '../core/app_links.dart';
-import 'efb_flat_card.dart';
 
 class EfbAdBanner extends StatefulWidget {
   const EfbAdBanner({super.key});
@@ -67,7 +66,7 @@ class _EfbAdBannerState extends State<EfbAdBanner> {
       builder: (context) => AlertDialog(
         backgroundColor: colors.surface,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(12),
           side: BorderSide(color: colors.dividerStrong, width: 1.5),
         ),
         title: Text(
@@ -77,7 +76,7 @@ class _EfbAdBannerState extends State<EfbAdBanner> {
             context,
             color: colors.textPrimary,
             weight: FontWeight.w900,
-            size: 16,
+            size: 15,
             letterSpacing: 1.5,
           ),
         ),
@@ -90,7 +89,7 @@ class _EfbAdBannerState extends State<EfbAdBanner> {
               style: uiText(
                 context,
                 color: colors.textSecondary,
-                size: 13,
+                size: 12,
                 height: 1.5,
               ),
             ),
@@ -107,26 +106,26 @@ class _EfbAdBannerState extends State<EfbAdBanner> {
                 }
                 if (context.mounted) Navigator.of(context).pop();
               },
-              icon: const Icon(Icons.history, color: Colors.white, size: 20),
+              icon: const Icon(Icons.history, color: Color(0xFF101012), size: 18),
               label: Text(
-                'Click to Support (Web)',
+                'Support via Web / Stripe',
                 style: uiText(
                   context,
-                  weight: FontWeight.bold,
-                  color: Colors.white,
-                  size: 13,
+                  weight: FontWeight.w900,
+                  color: const Color(0xFF101012),
+                  size: 12.5,
                 ),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: colors.accent,
-                minimumSize: const Size(double.infinity, 48),
+                minimumSize: const Size(double.infinity, 44),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 elevation: 0,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             OutlinedButton.icon(
               onPressed: () async {
                 final url = Uri.parse(AppLinks.githubSponsors);
@@ -139,21 +138,21 @@ class _EfbAdBannerState extends State<EfbAdBanner> {
                 }
                 if (context.mounted) Navigator.of(context).pop();
               },
-              icon: Icon(Icons.favorite_border, color: colors.accent, size: 18),
+              icon: Icon(Icons.favorite_border, color: colors.accent, size: 17),
               label: Text(
                 'Sponsor on GitHub',
                 style: uiText(
                   context,
                   weight: FontWeight.bold,
                   color: colors.accent,
-                  size: 13,
+                  size: 12.5,
                 ),
               ),
               style: OutlinedButton.styleFrom(
-                side: BorderSide(color: colors.accent, width: 1.5),
-                minimumSize: const Size(double.infinity, 44),
+                side: BorderSide(color: colors.accent, width: 1.2),
+                minimumSize: const Size(double.infinity, 42),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(8),
                 ),
               ),
             ),
@@ -268,77 +267,98 @@ class _EfbAdBannerState extends State<EfbAdBanner> {
         cursor: SystemMouseCursors.click,
         child: GestureDetector(
           onTap: () => _showDonateDialog(context),
-          child: SizedBox(
-            height: double.infinity,
-            child: EfbFlatCard(
-              background: colors.resultsBg,
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              borderRadius: BorderRadius.circular(16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Icon(Icons.favorite, color: colors.departure, size: 28),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'SUPPORT CONCORDE EFB DEVELOPMENT',
-                                overflow: TextOverflow.ellipsis,
-                                style: uiText(
-                                  context,
-                                  size: 12,
-                                  weight: FontWeight.w900,
-                                  color: colors.textPrimary,
-                                  letterSpacing: 1.5,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Help keep this flight planner free and updated by sponsoring or donating.',
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: uiText(
-                                  context,
-                                  size: 11,
-                                  color: colors.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: colors.accent.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: colors.accent, width: 1.5),
-                    ),
-                    child: Text(
-                      'DONATE NOW',
-                      style: uiText(
-                        context,
-                        size: 11,
-                        weight: FontWeight.bold,
-                        color: colors.accent,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                  ),
-                ],
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: colors.dividerStrong.withValues(alpha: 0.7),
+                width: 1.2,
               ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: colors.accent.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: colors.accent.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      Icons.favorite_rounded,
+                      color: colors.accent,
+                      size: 18,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'SUPPORT CONCORDE EFB',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: uiText(
+                          context,
+                          size: 11.5,
+                          weight: FontWeight.w900,
+                          color: colors.textPrimary,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Help keep this flight planner free, updated & maintained.',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: uiText(
+                          context,
+                          size: 10,
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colors.accent,
+                    borderRadius: BorderRadius.circular(6),
+                    boxShadow: [
+                      BoxShadow(
+                        color: colors.accent.withValues(alpha: 0.25),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    'DONATE NOW',
+                    style: uiText(
+                      context,
+                      size: 10.5,
+                      weight: FontWeight.w900,
+                      color: const Color(0xFF101012),
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),

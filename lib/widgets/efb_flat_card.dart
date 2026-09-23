@@ -24,7 +24,7 @@ class EfbFlatCard extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: background ?? colors.surface,
-        borderRadius: borderRadius ?? BorderRadius.circular(16),
+        borderRadius: borderRadius ?? BorderRadius.circular(10),
         border: accentTop != null
             ? Border(
                 top: BorderSide(color: accentTop!, width: 4),

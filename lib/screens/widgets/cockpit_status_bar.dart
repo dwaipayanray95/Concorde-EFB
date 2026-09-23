@@ -137,154 +137,160 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
               width: 1.2,
             ),
           ),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Flight Deck Identity: Call Sign, Reg, Pax
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildHeaderPill(
-                      context,
-                      label: 'CALL SIGN',
-                      value: callSign,
-                      isPopulated: callSign.isNotEmpty && callSign != '--',
-                    ),
-                    const SizedBox(width: 8),
-                    _buildHeaderPill(
-                      context,
-                      label: 'REG',
-                      value: registration,
-                      isPopulated: registration.isNotEmpty && registration != '--',
-                    ),
-                    const SizedBox(width: 8),
-                    _buildHeaderPill(
-                      context,
-                      label: 'PAX',
-                      value: isFlightLoaded ? '$paxCount' : '--',
-                      isPopulated: isFlightLoaded,
-                    ),
-                  ],
-                ),
-                const SizedBox(width: 14),
-                Container(
-                  width: 1,
-                  height: 18,
-                  color: colors.dividerStrong.withValues(alpha: 0.5),
-                ),
-                const SizedBox(width: 14),
-
-                // Route pill
-                Semantics(
-                  label: hasRoute
-                      ? 'Active route: $depIcao to $arrIcao, ${plannedDistance.round()} nautical miles'
-                      : 'No active route set',
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: colors.resultsBg,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: colors.dividerStrong.withValues(alpha: 0.5),
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (hasRoute) ...[
-                          Text(
-                            depIcao,
-                            style: uiText(
-                              context,
-                              size: 12,
-                              weight: FontWeight.w900,
-                              color: colors.departure,
-                            ),
+          child: Row(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Flight Deck Identity: Call Sign, Reg, Pax
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildHeaderPill(
+                            context,
+                            label: 'CALL SIGN',
+                            value: callSign,
+                            isPopulated: callSign.isNotEmpty && callSign != '--',
                           ),
-                          const SizedBox(width: 6),
-                          Icon(Icons.arrow_forward, size: 12, color: colors.textDim),
-                          const SizedBox(width: 6),
-                          Text(
-                            arrIcao,
-                            style: uiText(
-                              context,
-                              size: 12,
-                              weight: FontWeight.w900,
-                              color: colors.arrival,
-                            ),
+                          const SizedBox(width: 8),
+                          _buildHeaderPill(
+                            context,
+                            label: 'REG',
+                            value: registration,
+                            isPopulated: registration.isNotEmpty && registration != '--',
                           ),
-                          if (plannedDistance > 0) ...[
-                            const SizedBox(width: 8),
-                            Text(
-                              '• ${plannedDistance.round()} NM',
-                              style: uiText(
-                                context,
-                                size: 11,
-                                weight: FontWeight.w600,
-                                color: colors.textDim,
-                              ),
-                            ),
-                          ],
-                        ] else ...[
-                          Text(
-                            'NO ACTIVE ROUTE',
-                            style: uiText(
-                              context,
-                              size: 11,
-                              weight: FontWeight.w700,
-                              color: colors.textDim,
-                              letterSpacing: 0.5,
-                            ),
+                          const SizedBox(width: 8),
+                          _buildHeaderPill(
+                            context,
+                            label: 'PAX',
+                            value: isFlightLoaded ? '$paxCount' : '--',
+                            isPopulated: isFlightLoaded,
                           ),
                         ],
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-
-                // SimConnect Status Pill
-                _buildSimPill(context, monitorState.isConnected, bridgeStatus),
-                const SizedBox(width: 12),
-
-                // Live Zulu / UTC Clock
-                Semantics(
-                  label: 'Universal Coordinated Time Zulu: ${_formatZulu(_nowUtc)}',
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: colors.resultsBg,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: colors.dividerStrong.withValues(alpha: 0.6),
-                        width: 1,
                       ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.schedule, size: 14, color: colors.accent),
-                        const SizedBox(width: 6),
-                        Text(
-                          _formatZulu(_nowUtc),
-                          style: uiText(
-                            context,
-                            size: 12,
-                            weight: FontWeight.w900,
-                            color: colors.textPrimary,
-                            letterSpacing: 1.0,
+                      const SizedBox(width: 14),
+                      Container(
+                        width: 1,
+                        height: 18,
+                        color: colors.dividerStrong.withValues(alpha: 0.5),
+                      ),
+                      const SizedBox(width: 14),
+
+                      // Route pill
+                      Semantics(
+                        label: hasRoute
+                            ? 'Active route: $depIcao to $arrIcao, ${plannedDistance.round()} nautical miles'
+                            : 'No active route set',
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: colors.resultsBg,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: colors.dividerStrong.withValues(alpha: 0.5),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (hasRoute) ...[
+                                Text(
+                                  depIcao,
+                                  style: uiText(
+                                    context,
+                                    size: 12,
+                                    weight: FontWeight.w900,
+                                    color: colors.departure,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Icon(Icons.arrow_forward, size: 12, color: colors.textDim),
+                                const SizedBox(width: 6),
+                                Text(
+                                  arrIcao,
+                                  style: uiText(
+                                    context,
+                                    size: 12,
+                                    weight: FontWeight.w900,
+                                    color: colors.arrival,
+                                  ),
+                                ),
+                                if (plannedDistance > 0) ...[
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '• ${plannedDistance.round()} NM',
+                                    style: uiText(
+                                      context,
+                                      size: 11,
+                                      weight: FontWeight.w600,
+                                      color: colors.textDim,
+                                    ),
+                                  ),
+                                ],
+                              ] else ...[
+                                Text(
+                                  'NO ACTIVE ROUTE',
+                                  style: uiText(
+                                    context,
+                                    size: 11,
+                                    weight: FontWeight.w700,
+                                    color: colors.textDim,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 12),
+
+                      // SimConnect Status Pill
+                      _buildSimPill(context, monitorState.isConnected, bridgeStatus),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 12),
+
+              // Live Zulu / UTC Clock (always right-aligned)
+              Semantics(
+                label: 'Universal Coordinated Time Zulu: ${_formatZulu(_nowUtc)}',
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: colors.resultsBg,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: colors.dividerStrong.withValues(alpha: 0.6),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.schedule, size: 14, color: colors.accent),
+                      const SizedBox(width: 6),
+                      Text(
+                        _formatZulu(_nowUtc),
+                        style: uiText(
+                          context,
+                          size: 12,
+                          weight: FontWeight.w900,
+                          color: colors.textPrimary,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],
