@@ -35,23 +35,31 @@ void main() async {
   final isDark = savedTheme == 'dark';
   final windowBg = isDark ? AppColors.dark.bg : AppColors.light.bg;
 
-  // Initialize window manager for Desktop platforms
-  await windowManager.ensureInitialized();
+  final isDesktop =
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.macOS ||
+          defaultTargetPlatform == TargetPlatform.linux);
 
-  WindowOptions windowOptions = WindowOptions(
-    size: const Size(1200, 700), // Defined size to fit all widgets comfortably
-    center: true,
-    backgroundColor: windowBg,
-    skipTaskbar: false,
-    titleBarStyle: TitleBarStyle.normal,
-    title: 'Concorde EFB',
-  );
+  if (isDesktop) {
+    // Initialize window manager for Desktop platforms
+    await windowManager.ensureInitialized();
 
-  windowManager.waitUntilReadyToShow(windowOptions, () async {
-    await windowManager.show();
-    await windowManager.focus();
-    await windowManager.setPreventClose(true);
-  });
+    WindowOptions windowOptions = WindowOptions(
+      size: const Size(1200, 700), // Defined size to fit all widgets comfortably
+      center: true,
+      backgroundColor: windowBg,
+      skipTaskbar: false,
+      titleBarStyle: TitleBarStyle.normal,
+      title: 'Concorde EFB',
+    );
+
+    windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+      await windowManager.setPreventClose(true);
+    });
+  }
 
   runApp(const ProviderScope(child: ConcordeEfbApp()));
 }

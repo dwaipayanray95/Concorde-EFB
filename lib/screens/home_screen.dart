@@ -37,16 +37,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
   final ScrollController _tab0Controller = ScrollController();
   final ScrollController _tab2Controller = ScrollController();
 
+  bool get _isDesktop =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.macOS ||
+          defaultTargetPlatform == TargetPlatform.linux);
+
   @override
   void initState() {
     super.initState();
-    windowManager.addListener(this);
+    if (_isDesktop) {
+      windowManager.addListener(this);
+    }
     _checkForUpdates();
   }
 
   @override
   void dispose() {
-    windowManager.removeListener(this);
+    if (_isDesktop) {
+      windowManager.removeListener(this);
+    }
     _tab0Controller.dispose();
     _tab2Controller.dispose();
     super.dispose();
