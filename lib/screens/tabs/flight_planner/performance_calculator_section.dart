@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/efb_providers.dart';
 import '../../../widgets/wind_arrow.dart';
 import '../../../widgets/efb_card.dart';
-import '../../../widgets/top_arc_border.dart';
 import '../../../core/app_colors.dart';
 import '../../../core/ui_text.dart';
 import '../../../core/concorde_constants.dart';
@@ -158,34 +157,63 @@ class _LegCard extends ConsumerWidget {
     final isFeasible = (feasibility?.feasible ?? true) && isWeightFeasible;
     final metarStr = metarAsync.asData?.value ?? '';
     final parsedWind = MetarParser.parseWind(metarStr);
-    final statusColor = isFeasible ? colors.arrival : colors.departure;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final statusBorderColor = isFeasible ? colors.dividerStrong.withValues(alpha: isDark ? 0.6 : 0.8) : colors.error;
 
-    return TopArcBorder(
-      color: statusColor,
-      background: colors.resultsBg,
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.resultsBg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: statusBorderColor,
+          width: isFeasible ? 1.0 : 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.06),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Identity row
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
             decoration: BoxDecoration(
-              color: colors.resultsBg,
-              border: Border(bottom: BorderSide(color: colors.divider)),
+              color: isDark ? const Color(0xFF141417) : const Color(0xFFEBEBEF),
+              border: Border(
+                bottom: BorderSide(
+                  color: colors.dividerStrong.withValues(alpha: isDark ? 0.5 : 0.7),
+                  width: 1.0,
+                ),
+              ),
             ),
             child: Row(
               children: [
-                Icon(legIcon, size: 18, color: statusColor),
-                const SizedBox(width: 10),
+                Container(
+                  width: 3,
+                  height: 12,
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    color: isFeasible ? colors.accent : colors.error,
+                    borderRadius: BorderRadius.circular(1.5),
+                  ),
+                ),
+                Icon(legIcon, size: 14, color: isFeasible ? colors.accent : colors.error),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     legLabel,
                     style: uiText(
                       context,
-                      size: 12,
-                      weight: FontWeight.w900,
-                      color: colors.textSecondary,
-                      letterSpacing: 2,
+                      size: 11,
+                      weight: FontWeight.w800,
+                      color: colors.textPrimary,
+                      letterSpacing: 1.4,
                     ),
                   ),
                 ),
