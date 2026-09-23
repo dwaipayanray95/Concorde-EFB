@@ -62,8 +62,15 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
     final plannedDistance = ref.watch(plannedDistanceProvider);
     final monitorState = ref.watch(flightMonitorProvider);
     final bridgeStatus = SimBridgeLauncher.status.value;
+    final callSign = ref.watch(callSignProvider);
+    final registration = ref.watch(registrationProvider);
+    final paxCount = ref.watch(paxCountProvider);
+    final simbriefLoaded = ref.watch(simbriefLoadedProvider);
 
     final hasRoute = depIcao.isNotEmpty && arrIcao.isNotEmpty;
+    final isFlightLoaded = simbriefLoaded ||
+        (callSign.isNotEmpty && callSign != '--') ||
+        (registration.isNotEmpty && registration != '--');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -143,22 +150,22 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
                     _buildHeaderPill(
                       context,
                       label: 'CALL SIGN',
-                      value: ref.watch(callSignProvider),
-                      color: colors.accent,
+                      value: callSign,
+                      isPopulated: callSign.isNotEmpty && callSign != '--',
                     ),
                     const SizedBox(width: 8),
                     _buildHeaderPill(
                       context,
                       label: 'REG',
-                      value: ref.watch(registrationProvider),
-                      color: colors.accent,
+                      value: registration,
+                      isPopulated: registration.isNotEmpty && registration != '--',
                     ),
                     const SizedBox(width: 8),
                     _buildHeaderPill(
                       context,
                       label: 'PAX',
-                      value: '${ref.watch(paxCountProvider)}',
-                      color: colors.arrival,
+                      value: isFlightLoaded ? '$paxCount' : '--',
+                      isPopulated: isFlightLoaded,
                     ),
                   ],
                 ),
@@ -344,22 +351,35 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
     BuildContext context, {
     required String label,
     required String value,
-    required Color color,
+    bool? isPopulated,
   }) {
     final colors = context.colors;
-    final isPopulated = value.isNotEmpty && value != '--';
+    final populated = isPopulated ?? (value.isNotEmpty && value != '--');
+    const activeText = Color(0xFF101012);
 
     return Semantics(
-      label: '$label: ${value.isEmpty ? "none" : value}',
-      child: Container(
+      label: '$label: ${value.isEmpty || value == "--" ? "none" : value}',
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: colors.resultsBg,
+          color: populated ? colors.accent : colors.resultsBg,
           borderRadius: BorderRadius.circular(6),
           border: Border.all(
-            color: colors.dividerStrong.withValues(alpha: 0.5),
+            color: populated
+                ? colors.accent
+                : colors.dividerStrong.withValues(alpha: 0.5),
             width: 1,
           ),
+          boxShadow: populated
+              ? [
+                  BoxShadow(
+                    color: colors.accent.withValues(alpha: 0.25),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ]
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -369,9 +389,11 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
               style: uiText(
                 context,
                 size: 9.5,
-                weight: FontWeight.w700,
-                color: colors.textDim,
-                letterSpacing: 0.5,
+                weight: populated ? FontWeight.w800 : FontWeight.w700,
+                color: populated
+                    ? activeText.withValues(alpha: 0.75)
+                    : colors.textDim,
+                letterSpacing: 0.6,
               ),
             ),
             Text(
@@ -380,7 +402,8 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
                 context,
                 size: 11,
                 weight: FontWeight.w900,
-                color: isPopulated ? color : colors.textDim,
+                color: populated ? activeText : colors.textDim,
+                letterSpacing: 0.8,
               ),
             ),
           ],
