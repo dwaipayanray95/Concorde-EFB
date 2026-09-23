@@ -308,6 +308,7 @@ class _NavRailItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    const activeText = Color(0xFF101012);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -315,20 +316,18 @@ class _NavRailItem extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
           hoverColor: colors.resultsBg.withValues(alpha: 0.5),
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
+            duration: const Duration(milliseconds: 160),
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
             decoration: BoxDecoration(
-              color: isSelected
-                  ? colors.accent.withValues(alpha: 0.16)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(10),
+              color: isSelected ? colors.accent : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
               border: isSelected
                   ? Border.all(
-                      color: colors.accent.withValues(alpha: 0.4),
-                      width: 1.2,
+                      color: colors.accent,
+                      width: 1.0,
                     )
                   : null,
             ),
@@ -338,7 +337,7 @@ class _NavRailItem extends StatelessWidget {
                 Icon(
                   icon,
                   size: 22,
-                  color: isSelected ? colors.accent : colors.textSecondary,
+                  color: isSelected ? activeText : colors.textSecondary,
                 ),
                 const SizedBox(height: 5),
                 Text(
@@ -346,8 +345,8 @@ class _NavRailItem extends StatelessWidget {
                   style: uiText(
                     context,
                     size: 9.5,
-                    weight: isSelected ? FontWeight.w900 : FontWeight.w600,
-                    color: isSelected ? colors.accent : colors.textSecondary,
+                    weight: FontWeight.w900,
+                    color: isSelected ? activeText : colors.textSecondary,
                     letterSpacing: 0.8,
                   ),
                 ),

@@ -337,7 +337,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                           selectedIndex: selectedTab,
                           height: 56,
                           backgroundColor: Colors.transparent,
-                          indicatorColor: colors.accent.withValues(alpha: 0.18),
+                          indicatorColor: colors.accent,
                           labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
                           onDestinationSelected: (idx) {
                             setState(() => selectedTab = idx);
@@ -345,17 +345,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                           destinations: [
                             NavigationDestination(
                               icon: Icon(Icons.flight_takeoff, color: colors.textSecondary, size: 20),
-                              selectedIcon: Icon(Icons.flight_takeoff, color: colors.accent, size: 20),
+                              selectedIcon: const Icon(Icons.flight_takeoff, color: Color(0xFF101012), size: 20),
                               label: 'PLAN',
                             ),
                             NavigationDestination(
                               icon: Icon(Icons.playlist_add_check, color: colors.textSecondary, size: 20),
-                              selectedIcon: Icon(Icons.playlist_add_check, color: colors.accent, size: 20),
+                              selectedIcon: const Icon(Icons.playlist_add_check, color: Color(0xFF101012), size: 20),
                               label: 'CHECK',
                             ),
                             NavigationDestination(
                               icon: Icon(Icons.monitor_heart, color: colors.textSecondary, size: 20),
-                              selectedIcon: Icon(Icons.monitor_heart, color: colors.accent, size: 20),
+                              selectedIcon: const Icon(Icons.monitor_heart, color: Color(0xFF101012), size: 20),
                               label: 'MONITOR',
                             ),
                           ],
