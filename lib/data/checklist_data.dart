@@ -60,9 +60,8 @@ Map<String, List<ChecklistItem>> buildChecklistData({
       ChecklistItem(
         id: 'cd_fmc',
         item: 'FMC / Route',
-        status:
-            'SET DEP/ARR, FLIGHT NO, CRUISE FL, SPEED to 250, & INITIAL ALT',
-        note: 'Refer to manual or import via SimBrief',
+        status: 'INITIALIZED / SET',
+        note: 'DEP/ARR, FLIGHT NO, CRUISE FL, SPD 250, INIT ALT',
       ),
       ChecklistItem(
         id: 'cd_pos_init',

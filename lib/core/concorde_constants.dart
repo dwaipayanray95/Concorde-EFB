@@ -62,6 +62,11 @@ class _Fuel {
   final double cruiseFuelFlowKgHAtFl500 = 20500.0;
   final double cruiseFuelFlowKgHAtFl600 = 17000.0;
   final double descentFuelFlowKgH = 4536.0;
+
+  /// Standard British Airways / Air France Concorde holding & final reserve.
+  /// 30 minutes subsonic holding (nominal ~5,500-6,000 kg depending on weight/altitude).
+  /// British Airways / Air France Concorde dispatch rules standard minimum final reserve is 6,000 kg.
+  final double defaultFinalReserveKg = 6000.0;
 }
 
 class _Runway {

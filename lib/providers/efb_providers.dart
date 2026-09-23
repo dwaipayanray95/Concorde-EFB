@@ -322,7 +322,7 @@ final contingencyPctProvider = NotifierProvider<ContingencyPctNotifier, double>(
 
 class FinalReserveFuelNotifier extends Notifier<double> {
   @override
-  double build() => 3600.0;
+  double build() => ConcordeConstants.fuel.defaultFinalReserveKg;
   void set(double val) => state = val;
 }
 

@@ -320,7 +320,9 @@ class _NavRailItem extends StatelessWidget {
           hoverColor: colors.resultsBg.withValues(alpha: 0.5),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 160),
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+            width: double.infinity,
+            height: 56,
+            alignment: Alignment.center,
             decoration: BoxDecoration(
               color: isSelected ? colors.accent : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
@@ -332,6 +334,7 @@ class _NavRailItem extends StatelessWidget {
                   : null,
             ),
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
@@ -339,9 +342,12 @@ class _NavRailItem extends StatelessWidget {
                   size: 22,
                   color: isSelected ? activeText : colors.textSecondary,
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 4),
                 Text(
                   label,
+                  maxLines: 1,
+                  overflow: TextOverflow.clip,
+                  textAlign: TextAlign.center,
                   style: uiText(
                     context,
                     size: 9.5,
