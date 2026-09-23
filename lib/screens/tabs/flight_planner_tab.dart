@@ -7,7 +7,7 @@ import 'flight_planner/flight_plan_section.dart';
 import 'flight_planner/cruise_fuel_section.dart';
 import 'flight_planner/performance_calculator_section.dart';
 
-/// Flight Planner tab: sub-segmented between [ROUTE & FUEL] and [PERFORMANCE & SPEEDS]
+/// Flight Planner tab: sub-segmented between [ROUTE & FUEL] and [PERFORMANCE CALCULATOR]
 /// for optimal landscape tablet display without overwhelming vertical scrolling.
 class FlightPlannerTab extends StatefulWidget {
   const FlightPlannerTab({super.key});
@@ -58,7 +58,7 @@ class _FlightPlannerTabState extends State<FlightPlannerTab> {
                 child: _buildSubTabButton(
                   context,
                   index: 1,
-                  label: 'PERFORMANCE & SPEEDS',
+                  label: 'PERFORMANCE CALCULATOR',
                   icon: Icons.speed,
                 ),
               ),

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/efb_providers.dart';
 import '../../../widgets/wind_arrow.dart';
-import '../../../widgets/efb_card.dart';
 import '../../../core/app_colors.dart';
 import '../../../core/ui_text.dart';
 import '../../../core/concorde_constants.dart';
@@ -31,74 +30,85 @@ class _PerformanceCalculatorSectionState
   Widget build(BuildContext context) {
     final colors = context.colors;
 
-    return EfbCard(
-      title: 'PERFORMANCE CALCULATOR',
-      icon: Icons.calculate_outlined,
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: _LegCard(
-                legLabel: 'DEPARTURE / TAKEOFF',
-                legIcon: Icons.flight_takeoff,
-                accent: colors.departure,
-                icao: ref.watch(departureIcaoProvider),
-                onIcaoChanged: (v) =>
-                    ref.read(departureIcaoProvider.notifier).set(v),
-                airport: ref.watch(depAirportProvider),
-                currentRunwayId: ref.watch(departureRunwayIdProvider),
-                onRunwayChanged: (v) =>
-                    ref.read(departureRunwayIdProvider.notifier).set(v ?? ''),
-                runway: ref.watch(departureRunwayProvider),
-                metarAsync: ref.watch(departureMetarFutureProvider),
-                onRefreshMetar: () =>
-                    ref.invalidate(departureMetarFutureProvider),
-                showRaw: showDepRaw,
-                onToggleRaw: () => setState(() => showDepRaw = !showDepRaw),
-                weightKg: ref.watch(weightsProvider)['TOW']!,
-                weightLabel: 'TOW',
-                speeds: ref.watch(takeoffSpeedsProvider),
-                speedColor: colors.accent,
-                feasibility: ref.watch(takeoffFeasibilityProvider),
-                maxWeightKg: ConcordeConstants.weights.mtowKg,
-                noReheatFeasibility: ref.watch(
-                  takeoffFeasibilityNoReheatProvider,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            VerticalDivider(color: colors.divider, width: 1, thickness: 1),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _LegCard(
-                legLabel: 'ARRIVAL / LANDING',
-                legIcon: Icons.flight_land,
-                accent: colors.arrival,
-                icao: ref.watch(arrivalIcaoProvider),
-                onIcaoChanged: (v) =>
-                    ref.read(arrivalIcaoProvider.notifier).set(v),
-                airport: ref.watch(arrAirportProvider),
-                currentRunwayId: ref.watch(arrivalRunwayIdProvider),
-                onRunwayChanged: (v) =>
-                    ref.read(arrivalRunwayIdProvider.notifier).set(v ?? ''),
-                runway: ref.watch(arrivalRunwayProvider),
-                metarAsync: ref.watch(arrivalMetarFutureProvider),
-                onRefreshMetar: () =>
-                    ref.invalidate(arrivalMetarFutureProvider),
-                showRaw: showArrRaw,
-                onToggleRaw: () => setState(() => showArrRaw = !showArrRaw),
-                weightKg: ref.watch(weightsProvider)['LW']!,
-                weightLabel: 'LW',
-                speeds: ref.watch(landingSpeedsProvider),
-                speedColor: colors.arrival,
-                feasibility: ref.watch(landingFeasibilityProvider),
-                maxWeightKg: ConcordeConstants.weights.mlwKg,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 800;
+
+        final departureLeg = _LegCard(
+          legLabel: 'DEPARTURE / TAKEOFF',
+          legIcon: Icons.flight_takeoff,
+          accent: colors.departure,
+          icao: ref.watch(departureIcaoProvider),
+          onIcaoChanged: (v) =>
+              ref.read(departureIcaoProvider.notifier).set(v),
+          airport: ref.watch(depAirportProvider),
+          currentRunwayId: ref.watch(departureRunwayIdProvider),
+          onRunwayChanged: (v) =>
+              ref.read(departureRunwayIdProvider.notifier).set(v ?? ''),
+          runway: ref.watch(departureRunwayProvider),
+          metarAsync: ref.watch(departureMetarFutureProvider),
+          onRefreshMetar: () =>
+              ref.invalidate(departureMetarFutureProvider),
+          showRaw: showDepRaw,
+          onToggleRaw: () => setState(() => showDepRaw = !showDepRaw),
+          weightKg: ref.watch(weightsProvider)['TOW']!,
+          weightLabel: 'TOW',
+          speeds: ref.watch(takeoffSpeedsProvider),
+          speedColor: colors.accent,
+          feasibility: ref.watch(takeoffFeasibilityProvider),
+          maxWeightKg: ConcordeConstants.weights.mtowKg,
+          noReheatFeasibility: ref.watch(
+            takeoffFeasibilityNoReheatProvider,
+          ),
+        );
+
+        final arrivalLeg = _LegCard(
+          legLabel: 'ARRIVAL / LANDING',
+          legIcon: Icons.flight_land,
+          accent: colors.arrival,
+          icao: ref.watch(arrivalIcaoProvider),
+          onIcaoChanged: (v) =>
+              ref.read(arrivalIcaoProvider.notifier).set(v),
+          airport: ref.watch(arrAirportProvider),
+          currentRunwayId: ref.watch(arrivalRunwayIdProvider),
+          onRunwayChanged: (v) =>
+              ref.read(arrivalRunwayIdProvider.notifier).set(v ?? ''),
+          runway: ref.watch(arrivalRunwayProvider),
+          metarAsync: ref.watch(arrivalMetarFutureProvider),
+          onRefreshMetar: () =>
+              ref.invalidate(arrivalMetarFutureProvider),
+          showRaw: showArrRaw,
+          onToggleRaw: () => setState(() => showArrRaw = !showArrRaw),
+          weightKg: ref.watch(weightsProvider)['LW']!,
+          weightLabel: 'LW',
+          speeds: ref.watch(landingSpeedsProvider),
+          speedColor: colors.arrival,
+          feasibility: ref.watch(landingFeasibilityProvider),
+          maxWeightKg: ConcordeConstants.weights.mlwKg,
+        );
+
+        if (isNarrow) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              departureLeg,
+              const SizedBox(height: 16),
+              arrivalLeg,
+            ],
+          );
+        }
+
+        return IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: departureLeg),
+              const SizedBox(width: 16),
+              Expanded(child: arrivalLeg),
+            ],
+          ),
+        );
+      },
     );
   }
 }

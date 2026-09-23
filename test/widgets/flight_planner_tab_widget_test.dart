@@ -14,11 +14,12 @@ void main() {
       expect(find.text('VIEW CHANGELOG'), findsOneWidget);
       expect(find.text('JOIN DISCORD'), findsOneWidget);
 
-      // Switch to Performance & Speeds sub-tab
-      await tester.tap(find.text('PERFORMANCE & SPEEDS'));
+      // Switch to Performance Calculator sub-tab
+      await tester.tap(find.text('PERFORMANCE CALCULATOR'));
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('PERFORMANCE CALCULATOR'), findsOneWidget);
+      expect(find.text('DEPARTURE / TAKEOFF'), findsOneWidget);
+      expect(find.text('ARRIVAL / LANDING'), findsOneWidget);
     });
 
     testWidgets('shows the default departure/arrival ICAOs', (tester) async {
