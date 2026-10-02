@@ -1,5 +1,16 @@
 [
     {
+        "date": "2026-10-03",
+        "title": "Rebuilt SimConnect bridge",
+        "items": [
+            "Flight Monitor: SimConnect bridge rewritten from scratch for reliable, always-on connection to MSFS 2020/2024",
+            "Connects automatically whenever MSFS starts, and reconnects by itself after the sim quits, crashes or reloads",
+            "Bridge no longer opens a console window, restarts itself if it ever crashes, and clears hung bridges left from older versions",
+            "Status bar now explains exactly what it's waiting for (MSFS not running, in menu/paused, etc.)",
+            "Fixed ground speed being shown in m/s instead of knots"
+        ]
+    },
+    {
         "date": "2026-07-01",
         "title": "ui and FL Monitor changes",
         "items": [

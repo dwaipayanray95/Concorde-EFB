@@ -52,7 +52,13 @@ class _FlightMonitorSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        FmToolbar(isConnected: monitorState.isConnected, telemetry: telemetry),
+        FmToolbar(
+          isConnected: monitorState.isConnected,
+          telemetry: telemetry,
+          bridgeMessage: monitorState.bridge.socketConnected
+              ? monitorState.bridge.message
+              : null,
+        ),
         const SizedBox(height: 28),
 
         AbsorbPointer(

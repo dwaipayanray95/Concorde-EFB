@@ -9,10 +9,14 @@ class FmToolbar extends StatelessWidget {
   final bool isConnected;
   final TelemetryModel telemetry;
 
+  /// Live explanation from the bridge (e.g. "Waiting for MSFS"), if reachable.
+  final String? bridgeMessage;
+
   const FmToolbar({
     super.key,
     required this.isConnected,
     required this.telemetry,
+    this.bridgeMessage,
   });
 
   @override
@@ -65,9 +69,12 @@ class FmToolbar extends StatelessWidget {
                           'BRIDGE EXE MISSING — CHECK ANTIVIRUS QUARANTINE',
                         SimBridgeStatus.launchFailed =>
                           'BRIDGE FAILED TO LAUNCH — ${SimBridgeLauncher.lastError ?? "unknown error"}',
+                        _ when bridgeMessage != null &&
+                                bridgeMessage!.isNotEmpty =>
+                          bridgeMessage!.toUpperCase(),
                         SimBridgeStatus.started ||
                         SimBridgeStatus.alreadyRunning =>
-                          'BRIDGE RUNNING — WAITING FOR MSFS SIMCONNECT',
+                          'STARTING BRIDGE…',
                         _ => null,
                       };
                       if (detail == null) return const SizedBox.shrink();

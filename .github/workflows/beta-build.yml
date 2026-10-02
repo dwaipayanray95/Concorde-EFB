@@ -53,7 +53,8 @@ jobs:
 
       - name: Build msfs_bridge.exe
         run: |
-          pyinstaller --noconfirm --clean --onedir --console `
+          pyinstaller --noconfirm --clean --onedir --noconsole `
+            --add-binary "$(python -c 'import SimConnect,os;print(os.path.join(os.path.dirname(SimConnect.__file__),"SimConnect.dll"))');." `
             --distpath windows/simbridge `
             --name msfs_bridge `
             tools/simbridge/msfs_bridge.py

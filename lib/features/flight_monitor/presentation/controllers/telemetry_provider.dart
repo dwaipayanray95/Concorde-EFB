@@ -6,17 +6,28 @@ import '../../../../core/sim_bridge_launcher.dart';
 
 class FlightMonitorState {
   final TelemetryModel? currentTelemetry;
+
+  /// True only while live telemetry is actually flowing from MSFS.
   final bool isConnected;
 
-  FlightMonitorState({this.currentTelemetry, this.isConnected = false});
+  /// Full bridge/SimConnect state for diagnostics in the UI.
+  final BridgeStatus bridge;
+
+  FlightMonitorState({
+    this.currentTelemetry,
+    this.isConnected = false,
+    this.bridge = BridgeStatus.offline,
+  });
 
   FlightMonitorState copyWith({
     TelemetryModel? currentTelemetry,
     bool? isConnected,
+    BridgeStatus? bridge,
   }) {
     return FlightMonitorState(
       currentTelemetry: currentTelemetry ?? this.currentTelemetry,
       isConnected: isConnected ?? this.isConnected,
+      bridge: bridge ?? this.bridge,
     );
   }
 }
@@ -26,61 +37,57 @@ class FlightMonitorNotifier extends Notifier<FlightMonitorState> {
   /// is wasted work. 10 Hz is visually indistinguishable on a dashboard.
   static const Duration _uiUpdateInterval = Duration(milliseconds: 100);
 
-  /// If the bridge process we spawned is alive but has delivered zero real
-  /// telemetry for this long, restart it -- see SimBridgeLauncher.restart
-  /// for why a stuck first-connect-before-MSFS-is-up state doesn't recover
-  /// on its own within the same process.
-  static const _watchdogTimeout = Duration(seconds: 90);
-  static const _maxAutoRestarts = 3;
+  /// If a bridge process we spawned is running but its WebSocket hasn't been
+  /// reachable for this long, it is hung -- respawn it. (SimConnect itself
+  /// reconnects inside the bridge, so this only covers the process/socket.)
+  static const _watchdogTimeout = Duration(seconds: 20);
 
   late WebSocketClient _wsClient;
   StreamSubscription<TelemetryModel>? _wsSubscription;
-  Timer? _pingTimer;
+  StreamSubscription<BridgeStatus>? _statusSubscription;
+  Timer? _watchdogTimer;
   DateTime _lastUiUpdate = DateTime.fromMillisecondsSinceEpoch(0);
-  int _disconnectedSeconds = 0;
-  int _autoRestartCount = 0;
+  int _unreachableSeconds = 0;
 
   @override
   FlightMonitorState build() {
-    _wsClient = WebSocketClient('ws://localhost:8082');
+    _wsClient = WebSocketClient('ws://127.0.0.1:8082');
 
-    // Connect websocket stream in background
-    _wsSubscription = _wsClient.connect().listen(
-      _handleLiveTelemetry,
-      onError: (_) => _handleDisconnect(),
-      onDone: () => _handleDisconnect(),
-    );
+    _wsSubscription = _wsClient.connect().listen(_handleLiveTelemetry);
+    _statusSubscription = _wsClient.statusStream.listen(_handleStatus);
 
-    // Setup periodic connection state checks
-    _pingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (state.isConnected != _wsClient.isConnected) {
-        state = state.copyWith(isConnected: _wsClient.isConnected);
-      }
-
+    _watchdogTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (_wsClient.isConnected) {
-        _disconnectedSeconds = 0;
+        _unreachableSeconds = 0;
         return;
       }
-      // Only watch a bridge process WE spawned -- never touch an
+      // Only ever restart a bridge process WE spawned -- never an
       // externally/manually run dev bridge (SimBridgeStatus.alreadyRunning).
       if (SimBridgeLauncher.status.value != SimBridgeStatus.started) return;
-      if (_autoRestartCount >= _maxAutoRestarts) return;
-
-      _disconnectedSeconds++;
-      if (_disconnectedSeconds >= _watchdogTimeout.inSeconds) {
-        _disconnectedSeconds = 0;
-        _autoRestartCount++;
+      if (++_unreachableSeconds >= _watchdogTimeout.inSeconds) {
+        _unreachableSeconds = 0;
         SimBridgeLauncher.restart();
       }
     });
 
     ref.onDispose(() {
-      _pingTimer?.cancel();
+      _watchdogTimer?.cancel();
       _wsSubscription?.cancel();
+      _statusSubscription?.cancel();
       _wsClient.disconnect();
     });
 
     return FlightMonitorState();
+  }
+
+  void _handleStatus(BridgeStatus s) {
+    final live = s.socketConnected && s.receivingData;
+    state = FlightMonitorState(
+      // Drop stale frames once data stops so the UI doesn't show frozen values.
+      currentTelemetry: live ? state.currentTelemetry : null,
+      isConnected: live,
+      bridge: s,
+    );
   }
 
   void _handleLiveTelemetry(TelemetryModel telemetry) {
@@ -89,12 +96,6 @@ class FlightMonitorNotifier extends Notifier<FlightMonitorState> {
     _lastUiUpdate = now;
 
     state = state.copyWith(currentTelemetry: telemetry, isConnected: true);
-  }
-
-  void _handleDisconnect() {
-    if (state.isConnected) {
-      state = state.copyWith(isConnected: false);
-    }
   }
 }
 
