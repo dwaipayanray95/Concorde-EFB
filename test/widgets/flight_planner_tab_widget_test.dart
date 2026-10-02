@@ -20,6 +20,12 @@ void main() {
 
       expect(find.text('DEPARTURE / TAKEOFF'), findsOneWidget);
       expect(find.text('ARRIVAL / LANDING'), findsOneWidget);
+
+      // Runway-condition selector on both legs; switching it must not throw.
+      expect(find.text('RWY COND'), findsNWidgets(2));
+      await tester.tap(find.text('WET').first);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('shows the default departure/arrival ICAOs', (tester) async {

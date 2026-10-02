@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:concorde_efb/models/concorde_models.dart';
 import 'package:concorde_efb/core/metar_parser.dart';
 
 void main() {
@@ -161,6 +162,79 @@ void main() {
     test('tailwind is negative headwind', () {
       final c = MetarParser.calculateComponents(90, 10, 270);
       expect(c.headwindKt, closeTo(-10, 0.1));
+    });
+  });
+
+  group('MetarParser weather / runway condition / age', () {
+    test('summary distinguishes overcast from broken and lists weather', () {
+      expect(
+        MetarParser.parseWeatherSummary(
+          'EGLL 141150Z 24010KT 6000 -RA OVC008 12/08 Q1013',
+        ),
+        'LIGHT RAIN · OVERCAST 800 FT',
+      );
+      expect(
+        MetarParser.parseWeatherSummary(
+          'EGLL 141150Z 24010KT 9999 FEW020 BKN045 12/08 Q1013',
+        ),
+        'BROKEN 4500 FT',
+      );
+      expect(
+        MetarParser.parseWeatherSummary('LFPG 141200Z VRB03KT CAVOK 15/10 Q1018'),
+        'CAVOK',
+      );
+      expect(
+        MetarParser.parseWeatherSummary(
+          'KJFK 141151Z 28018G28KT 3SM +TSRA BKN025CB 25/22 A2992',
+        ),
+        'HEAVY THUNDERSTORM RAIN · BROKEN 2500 FT · CB',
+      );
+    });
+
+    test('station identifier is never read as weather', () {
+      expect(
+        MetarParser.parsePresentWeather('SARA 141150Z 24010KT 9999 12/08 Q1013'),
+        isEmpty,
+      );
+    });
+
+    test('runway condition inferred from weather', () {
+      expect(
+        MetarParser.inferRunwayCondition('EGLL 141150Z 24010KT 9999 FEW030 12/08 Q1013'),
+        RunwayCondition.dry,
+      );
+      expect(
+        MetarParser.inferRunwayCondition('EGLL 141150Z 24010KT 6000 -DZ OVC008 12/08 Q1013'),
+        RunwayCondition.wet,
+      );
+      expect(
+        MetarParser.inferRunwayCondition('EGLL 141150Z 24010KT 9999 FEW030 12/08 Q1013 RERA'),
+        RunwayCondition.wet,
+      );
+      expect(
+        MetarParser.inferRunwayCondition('CYUL 141200Z 05012KT 1SM -SN OVC010 M05/M07 A2992'),
+        RunwayCondition.contaminated,
+      );
+      expect(
+        MetarParser.inferRunwayCondition('EGLL 141150Z 24010KT 2000 FZDZ OVC004 M01/M02 Q1013'),
+        RunwayCondition.contaminated,
+      );
+    });
+
+    test('observation age in minutes', () {
+      final now = DateTime.utc(2026, 10, 14, 12, 30);
+      expect(
+        MetarParser.metarAgeMinutes('EGLL 141150Z 24010KT 9999 12/08 Q1013', now: now),
+        40,
+      );
+      // Day 30 seen on the 1st belongs to the previous month.
+      expect(
+        MetarParser.parseObservationTime(
+          'EGLL 302350Z 24010KT 9999 12/08 Q1013',
+          now: DateTime.utc(2026, 10, 1, 0, 10),
+        ),
+        DateTime.utc(2026, 9, 30, 23, 50),
+      );
     });
   });
 }

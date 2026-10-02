@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/efb_providers.dart';
@@ -8,8 +7,9 @@ import '../../../widgets/efb_text_field.dart';
 import '../../../core/app_colors.dart';
 import '../../../core/ui_text.dart';
 import '../../../core/concorde_constants.dart';
-import '../../../core/formatters.dart';
+import '../../../core/concorde_logic.dart';
 import '../../../models/concorde_models.dart';
+import '../../../core/formatters.dart';
 
 /// CRUISE & FUEL MANAGEMENT card: distance/FL/fuel inputs, computed TOW,
 /// fuel endurance, and the fuel breakdown panel.
@@ -23,26 +23,16 @@ class CruiseAndFuelSection extends ConsumerWidget {
     final mission = ref.watch(missionProfileProvider);
     final weights = ref.watch(weightsProvider);
     final extra = ref.watch(extraFuelProvider);
-    final totalFuel = fuel.blockKg + extra;
-    final isOverCapacity = totalFuel > ConcordeConstants.weights.fuelCapacityKg;
+    final totalFuel = weights.plannedFuel;
+    final isOverCapacity = weights.overCapacity;
     final direction = ref.watch(flightDirectionProvider);
-
-    // Calculate dynamic flight burn rate (kg/hour) and fuel endurance
-    final double averageBurnRate = mission.totalTimeH > 0 && mission.tripKg > 0
-        ? (mission.tripKg / mission.totalTimeH)
-        : ConcordeConstants.fuel.cruiseFuelFlowKgHAtFl500;
-
-    final double airborneFuel = math.max(0.0, totalFuel - fuel.taxiKg);
-    final double fuelEnduranceH = averageBurnRate > 0
-        ? (airborneFuel / averageBurnRate)
-        : 0.0;
-
-    final double reserveFuel =
-        fuel.finalReserveKg + fuel.alternateKg + fuel.contingencyKg;
-    final double reserveTimeH = averageBurnRate > 0
-        ? (reserveFuel / averageBurnRate)
-        : 0.0;
-    final double etePlusReservesH = mission.totalTimeH + reserveTimeH;
+    final endurance = ref.watch(fuelEnduranceProvider);
+    final altStatus = ref.watch(alternateStatusProvider);
+    final altIcao = ref.watch(alternateIcaoProvider);
+    final altNm = ref.watch(alternateDistanceProvider);
+    // Reheat is lit for the takeoff (~1.5 min) and the transonic
+    // acceleration up to ~M1.7 (roughly 2/3 of the accel phase).
+    final reheatMin = 1.5 + mission.accel.timeH * 60 * 2 / 3;
 
     return EfbCard(
       title: 'CRUISE & FUEL MANAGEMENT',
@@ -191,21 +181,23 @@ class CruiseAndFuelSection extends ConsumerWidget {
                           _StatEntry(
                             label: 'COMPUTED TOW',
                             value:
-                                '${numFormat.format(weights['TOW']!.round())} kg',
+                                '${numFormat.format(weights.tow.round())} kg',
+                            subtext:
+                                'LW ${numFormat.format(weights.lw.round())} kg · ZFW ${numFormat.format(weights.zfw.round())} kg',
                           ),
                           _StatEntry(
                             label: 'FUEL ENDURANCE',
-                            value: _formatHoursMinutes(fuelEnduranceH),
+                            value: _formatHoursMinutes(endurance.enduranceH),
                           ),
                           _StatEntry(
                             label: 'ETE + RESERVES',
-                            value: _formatHoursMinutes(etePlusReservesH),
+                            value: _formatHoursMinutes(endurance.requiredH),
                           ),
                           _StatEntry(
                             label: 'PASSENGERS',
                             value: '${ref.watch(paxCountProvider)} pax',
                             subtext:
-                                '${numFormat.format(weights['PAX']!.round())} kg @ 84 kg each',
+                                '${numFormat.format(weights.pax.round())} kg @ 84 kg each',
                           ),
                         ],
                       ),
@@ -235,18 +227,36 @@ class CruiseAndFuelSection extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Reheat safety: climb reheat within ${ConcordeConstants.fuel.reheatMinutesCap} min cap.',
+                'Reheat safety: ~${reheatMin.round()} min planned reheat (takeoff + transonic), '
+                '${ConcordeConstants.fuel.reheatMinutesCap} min cap.',
                 style: uiText(
                   context,
-                  color:
-                      mission.climb.timeH * 60 <=
-                          ConcordeConstants.fuel.reheatMinutesCap
+                  color: reheatMin <= ConcordeConstants.fuel.reheatMinutesCap
                       ? colors.textDim
                       : colors.error,
                   size: 12,
                 ),
               ),
-              if (fuelEnduranceH < etePlusReservesH)
+              if (mission.flCappedForDistance)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    mission.selectedCruiseFl >= ConcordeLogic.supersonicMinFl &&
+                            !mission.supersonic
+                        ? 'Sector too short for supersonic cruise -- planned subsonic (M0.95) at FL${mission.targetCruiseFl}.'
+                        : 'Sector too short to reach FL${mission.selectedCruiseFl} -- planned at FL${mission.targetCruiseFl}.',
+                    style: uiText(context, color: colors.accent, size: 12),
+                  ),
+                ),
+              if (_alternateWarning(altStatus, altIcao, altNm) case final msg?)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    msg,
+                    style: uiText(context, color: colors.accent, size: 12),
+                  ),
+                ),
+              if (!endurance.sufficient)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
@@ -277,12 +287,26 @@ class CruiseAndFuelSection extends ConsumerWidget {
   }
 }
 
+String? _alternateWarning(AlternateStatus status, String icao, double nm) {
+  return switch (status) {
+    AlternateStatus.ok => null,
+    AlternateStatus.missing =>
+      'No alternate selected -- alternate fuel is 0 kg. Add an alternate for a legal dispatch.',
+    AlternateStatus.sameAsArrival =>
+      'Alternate is the same as the arrival airport -- choose a different alternate.',
+    AlternateStatus.unknownAirport =>
+      'Alternate $icao not found in the airport database -- alternate fuel is 0 kg.',
+    AlternateStatus.tooFar =>
+      'Alternate $icao is ${nm.round()} nm from the arrival -- beyond a sensible diversion range '
+          '(${ConcordeConstants.fuel.maxSensibleAlternateNm.round()} nm). Alternate fuel is very high.',
+  };
+}
+
 String _formatHoursMinutes(double hoursDecimal) {
   final h = hoursDecimal.floor();
   final m = ((hoursDecimal - h) * 60).round();
   return '${h}h ${m.toString().padLeft(2, '0')}m';
 }
-
 
 class _StatEntry {
   final String label;
@@ -401,9 +425,15 @@ class _FuelBreakdownPanel extends StatelessWidget {
 
     // Authentic thermal paper substrate
     final paperBg = isDark ? const Color(0xFF161619) : const Color(0xFFFAF9F5);
-    final paperBorder = isDark ? const Color(0xFF2E2E34) : const Color(0xFFE2E0D8);
-    final inkPrimary = isDark ? const Color(0xFFF4F4F5) : const Color(0xFF18181B);
-    final inkSecondary = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF52525B);
+    final paperBorder = isDark
+        ? const Color(0xFF2E2E34)
+        : const Color(0xFFE2E0D8);
+    final inkPrimary = isDark
+        ? const Color(0xFFF4F4F5)
+        : const Color(0xFF18181B);
+    final inkSecondary = isDark
+        ? const Color(0xFFA1A1AA)
+        : const Color(0xFF52525B);
     final inkDim = isDark ? const Color(0xFF71717A) : const Color(0xFF8C8C94);
 
     return Container(
@@ -470,9 +500,15 @@ class _FuelBreakdownPanel extends StatelessWidget {
                       ],
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
-                        border: Border.all(color: colors.accent.withValues(alpha: 0.5), width: 1),
+                        border: Border.all(
+                          color: colors.accent.withValues(alpha: 0.5),
+                          width: 1,
+                        ),
                         borderRadius: BorderRadius.circular(3),
                         color: colors.accent.withValues(alpha: 0.08),
                       ),
@@ -491,7 +527,10 @@ class _FuelBreakdownPanel extends StatelessWidget {
                 ),
 
                 const SizedBox(height: 10),
-                _ThermalDivider(color: paperBorder, style: _ThermalDividerStyle.dashed),
+                _ThermalDivider(
+                  color: paperBorder,
+                  style: _ThermalDividerStyle.dashed,
+                ),
                 const SizedBox(height: 8),
 
                 // Monospace Dot-Matrix Fuel Line Items
@@ -539,7 +578,10 @@ class _FuelBreakdownPanel extends StatelessWidget {
                 ),
 
                 const SizedBox(height: 4),
-                _ThermalDivider(color: paperBorder, style: _ThermalDividerStyle.dotted),
+                _ThermalDivider(
+                  color: paperBorder,
+                  style: _ThermalDividerStyle.dotted,
+                ),
                 const SizedBox(height: 6),
 
                 _ThermalPrintRow(
@@ -553,19 +595,29 @@ class _FuelBreakdownPanel extends StatelessWidget {
 
                 const SizedBox(height: 8),
                 // Double thermal print rule
-                _ThermalDivider(color: paperBorder, style: _ThermalDividerStyle.doubleLine),
+                _ThermalDivider(
+                  color: paperBorder,
+                  style: _ThermalDividerStyle.doubleLine,
+                ),
                 const SizedBox(height: 12),
 
                 // Total Required readout stamped block
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E1E22) : const Color(0xFFF1EFE8),
+                    color: isDark
+                        ? const Color(0xFF1E1E22)
+                        : const Color(0xFFF1EFE8),
                     borderRadius: BorderRadius.circular(4),
                     border: Border.all(
                       color: isOverCapacity
                           ? colors.error
-                          : (isDark ? const Color(0xFF38383F) : const Color(0xFFD6D3C8)),
+                          : (isDark
+                                ? const Color(0xFF38383F)
+                                : const Color(0xFFD6D3C8)),
                       width: 1,
                     ),
                   ),
@@ -591,7 +643,10 @@ class _FuelBreakdownPanel extends StatelessWidget {
                               if (isOverCapacity) ...[
                                 const SizedBox(width: 6),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                    vertical: 1,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: colors.error,
                                     borderRadius: BorderRadius.circular(2),
@@ -633,7 +688,9 @@ class _FuelBreakdownPanel extends StatelessWidget {
                               weight: FontWeight.w900,
                               color: isOverCapacity
                                   ? colors.error
-                                  : (isDark ? colors.accent : const Color(0xFFB45309)),
+                                  : (isDark
+                                        ? colors.accent
+                                        : const Color(0xFFB45309)),
                               letterSpacing: 0.5,
                             ),
                           ),
@@ -762,10 +819,7 @@ class _ThermalDivider extends StatelessWidget {
   final Color color;
   final _ThermalDividerStyle style;
 
-  const _ThermalDivider({
-    required this.color,
-    required this.style,
-  });
+  const _ThermalDivider({required this.color, required this.style});
 
   @override
   Widget build(BuildContext context) {
@@ -840,7 +894,8 @@ class _DotLeaderPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _DotLeaderPainter oldDelegate) => oldDelegate.color != color;
+  bool shouldRepaint(covariant _DotLeaderPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 /// Paints realistic jagged serrated teeth on top and bottom torn thermal paper edges.
@@ -921,4 +976,3 @@ class _PerforatedEdgePainter extends CustomPainter {
       oldDelegate.fillColor != fillColor ||
       oldDelegate.isTop != isTop;
 }
-

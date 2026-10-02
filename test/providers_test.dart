@@ -2,56 +2,55 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:concorde_efb/providers/efb_providers.dart';
 import 'package:concorde_efb/core/concorde_constants.dart';
+import 'package:concorde_efb/models/concorde_models.dart';
 
 void main() {
   group('weightsProvider', () {
-    test('TOW is OEW + pax weight + fuel', () {
+    test('ZFW = OEW + pax; TOW = ZFW + fuel on board - taxi fuel', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
       container.read(paxCountProvider.notifier).set(100);
-      final weights = container.read(weightsProvider);
+      final w = container.read(weightsProvider);
+      final taxi = container.read(taxiFuelProvider);
 
       final expectedPax = 100 * ConcordeConstants.weights.paxMassKg;
-      final expectedTow =
-          ConcordeConstants.weights.oewKg + expectedPax + weights['FUEL']!;
-      expect(weights['TOW'], closeTo(expectedTow, 0.01));
-      expect(weights['PAX'], closeTo(expectedPax, 0.01));
+      expect(w.pax, closeTo(expectedPax, 0.01));
+      expect(
+        w.zfw,
+        closeTo(ConcordeConstants.weights.oewKg + expectedPax, 0.01),
+      );
+      expect(w.ramp, closeTo(w.zfw + w.fuelOnBoard, 0.01));
+      expect(w.tow, closeTo(w.ramp - taxi, 0.01));
     });
 
-    test('LW is TOW minus trip fuel burned, never negative', () {
+    test('LW is TOW minus trip fuel, never below ZFW', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      final weights = container.read(weightsProvider);
-      expect(weights['LW'], greaterThanOrEqualTo(0.0));
-      expect(weights['LW'], lessThanOrEqualTo(weights['TOW']!));
+      final w = container.read(weightsProvider);
+      final trip = container.read(missionProfileProvider).tripKg;
+      expect(w.lw, closeTo(w.tow - trip, 0.01));
+      expect(w.lw, greaterThanOrEqualTo(w.zfw));
     });
 
-    test('effective fuel is capped at the aircraft fuel capacity', () {
+    test('fuel on board is capped at the aircraft fuel capacity', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      // Force total fuel far past the 95,681 kg tank capacity.
       container.read(extraFuelProvider.notifier).set(2000000);
 
-      final weights = container.read(weightsProvider);
+      final w = container.read(weightsProvider);
+      expect(w.fuelOnBoard, ConcordeConstants.weights.fuelCapacityKg);
       expect(
-        weights['EFFECTIVE_FUEL'],
-        ConcordeConstants.weights.fuelCapacityKg,
-      );
-      // Raw FUEL is allowed to report the (unrealistic) uncapped total...
-      expect(
-        weights['FUEL'],
+        w.plannedFuel,
         greaterThan(ConcordeConstants.weights.fuelCapacityKg),
       );
-      // ...but weight math (TOW) must use the capped figure, not blow past
-      // what the aircraft could ever physically weigh.
-      final expectedTow =
-          ConcordeConstants.weights.oewKg +
-          weights['PAX']! +
-          ConcordeConstants.weights.fuelCapacityKg;
-      expect(weights['TOW'], closeTo(expectedTow, 0.01));
+      expect(w.overCapacity, isTrue);
+      expect(
+        w.ramp,
+        closeTo(w.zfw + ConcordeConstants.weights.fuelCapacityKg, 0.01),
+      );
     });
 
     test('extra passengers increase TOW', () {
@@ -59,31 +58,56 @@ void main() {
       addTearDown(container.dispose);
 
       container.read(paxCountProvider.notifier).set(50);
-      final lightTow = container.read(weightsProvider)['TOW']!;
+      final lightTow = container.read(weightsProvider).tow;
 
-      container.read(paxCountProvider.notifier).set(150);
-      final heavyTow = container.read(weightsProvider)['TOW']!;
+      container.read(paxCountProvider.notifier).set(100);
+      final heavyTow = container.read(weightsProvider).tow;
 
       expect(heavyTow, greaterThan(lightTow));
+    });
+
+    test('full pax + full fuel stays under MTOW', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      container.read(paxCountProvider.notifier).set(100);
+      container.read(extraFuelProvider.notifier).set(2000000);
+      expect(
+        container.read(weightsProvider).ramp,
+        lessThan(ConcordeConstants.weights.mtowKg),
+      );
+    });
+  });
+
+  group('fuelEnduranceProvider', () {
+    test('a plan that fits in the tanks has sufficient endurance', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      expect(container.read(fuelEnduranceProvider).sufficient, isTrue);
+    });
+
+    test('a plan capped by tank capacity is flagged insufficient', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      container.read(plannedDistanceProvider.notifier).set(3900);
+      container.read(finalReserveFuelProvider.notifier).set(15000);
+      expect(container.read(weightsProvider).overCapacity, isTrue);
+      expect(container.read(fuelEnduranceProvider).sufficient, isFalse);
     });
   });
 
   group('takeoffSpeedsProvider / landingSpeedsProvider', () {
-    test('derive directly from the current TOW/LW weights', () {
+    test('ordering V1 <= VR < V2 and VAPP above VREF', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      final weights = container.read(weightsProvider);
       final takeoff = container.read(takeoffSpeedsProvider);
       final landing = container.read(landingSpeedsProvider);
 
-      expect(takeoff['V1']!, lessThan(takeoff['VR']!));
-      expect(takeoff['VR']!, lessThan(takeoff['V2']!));
-      expect(landing['VAPP']! - landing['VLS']!, closeTo(15, 0.01));
-
-      // Sanity: recomputing straight from the weights matches the provider.
-      expect(weights['TOW'], isNotNull);
-      expect(weights['LW'], isNotNull);
+      expect(takeoff.v1, lessThanOrEqualTo(takeoff.vr));
+      expect(takeoff.vr, lessThan(takeoff.v2));
+      expect(landing.vapp - landing.vref, inInclusiveRange(5, 20));
     });
 
     test('a heavier aircraft needs faster takeoff speeds', () {
@@ -91,12 +115,32 @@ void main() {
       addTearDown(container.dispose);
 
       container.read(paxCountProvider.notifier).set(20);
-      final lightV1 = container.read(takeoffSpeedsProvider)['V1']!;
+      final lightVr = container.read(takeoffSpeedsProvider).vr;
 
-      container.read(paxCountProvider.notifier).set(200);
-      final heavyV1 = container.read(takeoffSpeedsProvider)['V1']!;
+      container.read(paxCountProvider.notifier).set(100);
+      container.read(extraFuelProvider.notifier).set(10000);
+      final heavyVr = container.read(takeoffSpeedsProvider).vr;
 
-      expect(heavyV1, greaterThan(lightV1));
+      expect(heavyVr, greaterThan(lightVr));
+    });
+  });
+
+  group('alternateStatusProvider', () {
+    test('empty alternate is flagged missing', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      container.read(alternateIcaoProvider.notifier).set('');
+      expect(container.read(alternateStatusProvider), AlternateStatus.missing);
+    });
+
+    test('alternate equal to arrival is flagged', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      container.read(alternateIcaoProvider.notifier).set('KJFK');
+      expect(
+        container.read(alternateStatusProvider),
+        AlternateStatus.sameAsArrival,
+      );
     });
   });
 

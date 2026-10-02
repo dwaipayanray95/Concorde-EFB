@@ -1,5 +1,23 @@
 [
     {
+        "date": "2026-10-02",
+        "title": "v3.7.0 — Fuel & performance model overhaul",
+        "items": [
+            "Fuel: rebuilt the trip-fuel model phase by phase (takeoff, subsonic climb, transonic acceleration, Mach 2 cruise-climb, descent) and calibrated it against real Concorde sectors (LHR–JFK ≈ 71 t trip, 3h13 airborne)",
+            "Fuel: short sectors are automatically planned subsonic and at a lower level, instead of always climbing to Mach 2",
+            "Fuel: alternate fuel now uses a proper subsonic diversion profile, and you get a warning when no alternate is set, it's the arrival airport, or it's more than 500 nm away",
+            "Fuel: endurance check now uses the fuel that actually fits in the tanks, with reserves burned at holding fuel flow",
+            "Weights: takeoff weight no longer includes taxi fuel; ZFW and landing weight are shown",
+            "Performance: 10 kt tailwind limit, gusts now count toward crosswind/tailwind limits, and variable winds are treated as worst case",
+            "Performance: a missing METAR is flagged instead of being treated as calm wind",
+            "Performance: new runway condition selector (AUTO/DRY/WET/CONTAM) — AUTO reads rain/snow/freezing precipitation from the METAR",
+            "Performance: takeoff distance scales with weight squared; V-speeds recalibrated (V1 165 / VR 195 / V2 220 kt at MTOW, VREF 165 kt at MLW) with wet/contaminated V1 reduction and wind-adjusted VAPP",
+            "Runways: departure defaults to the longest runway; SimBrief's arrival runway is kept when it exists in the database",
+            "Route: imported plans without a SimBrief distance now add SID/STAR and airway allowance to the great-circle distance",
+            "Weather: METARs refresh every 10 minutes, show their age, and the summary now shows present weather and the actual ceiling (e.g. LIGHT RAIN · OVERCAST 800 FT)"
+        ]
+    },
+    {
         "date": "2026-10-03",
         "title": "Rebuilt SimConnect bridge",
         "items": [
@@ -155,7 +173,7 @@
             "0f804e2 add a call sign and arcft rgstrn box and gave them some colours",
             "53ab38f split call sign and registration into two units",
             "c73118b feat(simbrief): split callsign into callsign + aircraft registration in UI",
-            "43612d4 feat(simbrief): inject dep/arr runway tokens into imported route string (VIDP/27 \u2026 OMDB/30R)",
+            "43612d4 feat(simbrief): inject dep/arr runway tokens into imported route string (VIDP/27 … OMDB/30R)",
             "811c97b feat(simbrief): auto-fill DEP/ARR METAR on import to populate wind components",
             "d31917d starting work on newer",
             "8858caa Merge beta changes for v1.1.2 from build 2612251804",
@@ -252,7 +270,7 @@
         "date": "2025-12-24",
         "title": "Commits",
         "items": [
-            "d494d75 fix(tests): make altitudeBurnFactor heuristic stable (FL450\u22481.20, FL600\u22481.00) while keeping UI FL limits",
+            "d494d75 fix(tests): make altitudeBurnFactor heuristic stable (FL450≈1.20, FL600≈1.00) while keeping UI FL limits",
             "a05b530 Hygiene fixes and updated the readme with changelog and future plan",
             "6ad0654 fix(fl): make FL editable, allow <300, enforce Non-RVSM snapping, auto-pick compliant default FL",
             "ba460e5 Updated the correct file for v0.85 changes to reflect",
@@ -272,7 +290,7 @@
         "date": "2025-12-08",
         "title": "Commits",
         "items": [
-            "c22b724 chore(release): bump app version to v0.83 \u2014 update header, index.html, README, and built JS",
+            "c22b724 chore(release): bump app version to v0.83 — update header, index.html, README, and built JS",
             "b75996f chore: fix runway selection, add fuel capacity warning, and retune Concorde landing speeds"
         ]
     },

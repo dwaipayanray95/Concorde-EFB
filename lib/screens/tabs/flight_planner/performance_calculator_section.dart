@@ -39,27 +39,30 @@ class _PerformanceCalculatorSectionState
           legIcon: Icons.flight_takeoff,
           accent: colors.departure,
           icao: ref.watch(departureIcaoProvider),
-          onIcaoChanged: (v) =>
-              ref.read(departureIcaoProvider.notifier).set(v),
+          onIcaoChanged: (v) => ref.read(departureIcaoProvider.notifier).set(v),
           airport: ref.watch(depAirportProvider),
           currentRunwayId: ref.watch(departureRunwayIdProvider),
           onRunwayChanged: (v) =>
               ref.read(departureRunwayIdProvider.notifier).set(v ?? ''),
           runway: ref.watch(departureRunwayProvider),
           metarAsync: ref.watch(departureMetarFutureProvider),
-          onRefreshMetar: () =>
-              ref.invalidate(departureMetarFutureProvider),
+          onRefreshMetar: () => ref.invalidate(departureMetarFutureProvider),
           showRaw: showDepRaw,
           onToggleRaw: () => setState(() => showDepRaw = !showDepRaw),
-          weightKg: ref.watch(weightsProvider)['TOW']!,
+          weightKg: ref.watch(weightsProvider).tow,
           weightLabel: 'TOW',
-          speeds: ref.watch(takeoffSpeedsProvider),
+          speeds: {
+            'V1': ref.watch(takeoffSpeedsProvider).v1,
+            'VR': ref.watch(takeoffSpeedsProvider).vr,
+            'V2': ref.watch(takeoffSpeedsProvider).v2,
+          },
+          conditionMode: ref.watch(departureRunwayConditionProvider),
+          onConditionChanged: (m) =>
+              ref.read(departureRunwayConditionProvider.notifier).set(m),
           speedColor: colors.accent,
           feasibility: ref.watch(takeoffFeasibilityProvider),
           maxWeightKg: ConcordeConstants.weights.mtowKg,
-          noReheatFeasibility: ref.watch(
-            takeoffFeasibilityNoReheatProvider,
-          ),
+          noReheatFeasibility: ref.watch(takeoffFeasibilityNoReheatProvider),
         );
 
         final arrivalLeg = _LegCard(
@@ -67,21 +70,25 @@ class _PerformanceCalculatorSectionState
           legIcon: Icons.flight_land,
           accent: colors.arrival,
           icao: ref.watch(arrivalIcaoProvider),
-          onIcaoChanged: (v) =>
-              ref.read(arrivalIcaoProvider.notifier).set(v),
+          onIcaoChanged: (v) => ref.read(arrivalIcaoProvider.notifier).set(v),
           airport: ref.watch(arrAirportProvider),
           currentRunwayId: ref.watch(arrivalRunwayIdProvider),
           onRunwayChanged: (v) =>
               ref.read(arrivalRunwayIdProvider.notifier).set(v ?? ''),
           runway: ref.watch(arrivalRunwayProvider),
           metarAsync: ref.watch(arrivalMetarFutureProvider),
-          onRefreshMetar: () =>
-              ref.invalidate(arrivalMetarFutureProvider),
+          onRefreshMetar: () => ref.invalidate(arrivalMetarFutureProvider),
           showRaw: showArrRaw,
           onToggleRaw: () => setState(() => showArrRaw = !showArrRaw),
-          weightKg: ref.watch(weightsProvider)['LW']!,
+          weightKg: ref.watch(weightsProvider).lw,
           weightLabel: 'LW',
-          speeds: ref.watch(landingSpeedsProvider),
+          speeds: {
+            'VREF': ref.watch(landingSpeedsProvider).vref,
+            'VAPP': ref.watch(landingSpeedsProvider).vapp,
+          },
+          conditionMode: ref.watch(arrivalRunwayConditionProvider),
+          onConditionChanged: (m) =>
+              ref.read(arrivalRunwayConditionProvider.notifier).set(m),
           speedColor: colors.arrival,
           feasibility: ref.watch(landingFeasibilityProvider),
           maxWeightKg: ConcordeConstants.weights.mlwKg,
@@ -90,11 +97,7 @@ class _PerformanceCalculatorSectionState
         if (isNarrow) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              departureLeg,
-              const SizedBox(height: 16),
-              arrivalLeg,
-            ],
+            children: [departureLeg, const SizedBox(height: 16), arrivalLeg],
           );
         }
 
@@ -134,6 +137,8 @@ class _LegCard extends ConsumerWidget {
   final RunwayFeasibility? feasibility;
   final double maxWeightKg;
   final RunwayFeasibility? noReheatFeasibility;
+  final RunwayConditionMode conditionMode;
+  final ValueChanged<RunwayConditionMode> onConditionChanged;
 
   const _LegCard({
     required this.legLabel,
@@ -156,13 +161,14 @@ class _LegCard extends ConsumerWidget {
     required this.feasibility,
     required this.maxWeightKg,
     this.noReheatFeasibility,
+    required this.conditionMode,
+    required this.onConditionChanged,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
-    final totalFuel = ref.watch(weightsProvider)['FUEL'] ?? 0.0;
-    final isFuelOver = totalFuel > ConcordeConstants.weights.fuelCapacityKg;
+    final isFuelOver = ref.watch(weightsProvider).overCapacity;
     final isWeightFeasible = weightKg <= maxWeightKg;
     final isFeasible = (feasibility?.feasible ?? true) && isWeightFeasible;
     final metarStr = metarAsync.asData?.value ?? '';
@@ -197,7 +203,9 @@ class _LegCard extends ConsumerWidget {
               border: Border(
                 bottom: BorderSide(
                   color: isFeasible
-                      ? colors.dividerStrong.withValues(alpha: isDark ? 0.5 : 0.7)
+                      ? colors.dividerStrong.withValues(
+                          alpha: isDark ? 0.5 : 0.7,
+                        )
                       : colors.error.withValues(alpha: 0.5),
                   width: isFeasible ? 1.0 : 1.5,
                 ),
@@ -214,7 +222,11 @@ class _LegCard extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(1.5),
                   ),
                 ),
-                Icon(legIcon, size: 14, color: isFeasible ? colors.accent : colors.error),
+                Icon(
+                  legIcon,
+                  size: 14,
+                  color: isFeasible ? colors.accent : colors.error,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -296,7 +308,10 @@ class _LegCard extends ConsumerWidget {
                               airport: airport,
                               currentId: currentRunwayId,
                               onChanged: onRunwayChanged,
-                              hasDeficit: (feasibility != null && feasibility!.runwayLengthM < feasibility!.requiredLengthMEst),
+                              hasDeficit:
+                                  (feasibility != null &&
+                                  feasibility!.runwayLengthM <
+                                      feasibility!.requiredLengthMEst),
                             ),
                           ],
                         ),
@@ -340,6 +355,25 @@ class _LegCard extends ConsumerWidget {
                   onToggleRaw: onToggleRaw,
                   onRefresh: onRefreshMetar,
                 ),
+                const SizedBox(height: 14),
+                _RunwayConditionSelector(
+                  mode: conditionMode,
+                  resolved: feasibility?.condition,
+                  onChanged: onConditionChanged,
+                ),
+                if (feasibility != null && !feasibility!.windDataAvailable) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    'NO WIND DATA -- crosswind/tailwind limits not checked. '
+                    'Verify the wind before dispatch.',
+                    style: uiText(
+                      context,
+                      size: 11,
+                      weight: FontWeight.w700,
+                      color: colors.accent,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 20),
                 Divider(color: colors.divider, height: 1),
                 const SizedBox(height: 20),
@@ -654,6 +688,8 @@ class _WeatherStrip extends StatelessWidget {
     final vis = MetarParser.parseVisibilityKm(metarStr);
     final cat = MetarParser.parseFlightCategory(metarStr);
     final summary = MetarParser.parseWeatherSummary(metarStr);
+    final ageMin = MetarParser.metarAgeMinutes(metarStr);
+    final gust = parsed.windGustKt;
 
     // Solid category color as the whole strip's background (not just the
     // badge), so text needs to switch to white-on-color rather than the
@@ -688,7 +724,9 @@ class _WeatherStrip extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
-                  isError && metarStr.isEmpty ? 'OFFLINE' : (metarStr.isEmpty && isLoading ? 'FETCHING' : cat),
+                  isError && metarStr.isEmpty
+                      ? 'OFFLINE'
+                      : (metarStr.isEmpty && isLoading ? 'FETCHING' : cat),
                   style: uiText(
                     context,
                     size: 12,
@@ -701,7 +739,9 @@ class _WeatherStrip extends StatelessWidget {
                 Text(
                   isError && metarStr.isEmpty
                       ? 'Unable to fetch METAR'
-                      : (tempC != null ? '${tempC.round()}°C, $summary' : (isLoading ? 'Updating weather...' : '--')),
+                      : (tempC != null
+                            ? '${tempC.round()}°C, $summary'
+                            : (isLoading ? 'Updating weather...' : '--')),
                   style: uiText(
                     context,
                     size: 12,
@@ -719,8 +759,10 @@ class _WeatherStrip extends StatelessWidget {
                     children: [
                       _WeatherStat(
                         label: 'WIND',
-                        value:
-                            '${parsed.windDirDeg?.round() ?? 'VRB'}° ${parsed.windSpeedKt?.round() ?? '--'}kt',
+                        value: parsed.windSpeedKt == null
+                            ? '--'
+                            : '${parsed.windDirDeg?.round().toString().padLeft(3, '0') ?? 'VRB'}° '
+                                  '${parsed.windSpeedKt!.round()}${gust != null ? 'G${gust.round()}' : ''}kt',
                         labelColor: dimOnCat,
                         valueColor: catColor,
                       ),
@@ -738,6 +780,13 @@ class _WeatherStrip extends StatelessWidget {
                         labelColor: dimOnCat,
                         valueColor: catColor,
                       ),
+                      if (ageMin != null)
+                        _WeatherStat(
+                          label: 'AGE',
+                          value: ageMin > 90 ? '${ageMin}m OLD' : '${ageMin}m',
+                          labelColor: dimOnCat,
+                          valueColor: catColor,
+                        ),
                       _WeatherStat(
                         label: 'ELEV',
                         value: '${runway?.elevationFt?.round() ?? '--'}ft',
@@ -845,7 +894,9 @@ class _AnimatedRefreshButtonState extends State<_AnimatedRefreshButton>
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      tooltip: widget.isLoading ? 'Fetching ATIS/METAR...' : 'Refresh ATIS/METAR',
+      tooltip: widget.isLoading
+          ? 'Fetching ATIS/METAR...'
+          : 'Refresh ATIS/METAR',
       icon: RotationTransition(
         turns: _controller,
         child: Icon(Icons.refresh, size: 18, color: widget.color),
@@ -922,21 +973,36 @@ class _RunwayMarginText extends StatelessWidget {
     // Collect all exceedances / decision barriers
     final violations = <String>[];
     if (!isWeightFeasible) {
-      violations.add('AIRCRAFT EXCEEDS MAX WEIGHT (${numFormat.format(maxWeightKg)} kg)');
+      violations.add(
+        'AIRCRAFT EXCEEDS MAX WEIGHT (${numFormat.format(maxWeightKg)} kg)',
+      );
     }
     if (isFuelOver) {
-      violations.add('EXCEEDS FUEL CAPACITY (${numFormat.format(ConcordeConstants.weights.fuelCapacityKg)} kg)');
+      violations.add(
+        'EXCEEDS FUEL CAPACITY (${numFormat.format(ConcordeConstants.weights.fuelCapacityKg)} kg)',
+      );
     }
     if (f != null) {
       if (f.runwayLengthM < f.requiredLengthMEst) {
         final deficit = (f.requiredLengthMEst - f.runwayLengthM).round();
-        violations.add('RUNWAY LENGTH DEFICIT (-$deficit m shortfall for dispatch)');
+        violations.add(
+          'RUNWAY LENGTH DEFICIT (-$deficit m shortfall for dispatch)',
+        );
       }
       if (!f.altitudeOk) {
-        violations.add('AIRFIELD OUTSIDE ALTITUDE LIMITS (${ConcordeConstants.runway.minAirfieldAltFt.round()} - ${ConcordeConstants.runway.maxAirfieldAltFt.round()} ft)');
+        violations.add(
+          'AIRFIELD OUTSIDE ALTITUDE LIMITS (${ConcordeConstants.runway.minAirfieldAltFt.round()} - ${ConcordeConstants.runway.maxAirfieldAltFt.round()} ft)',
+        );
       }
       if (!f.crosswindOk) {
-        violations.add('EXCEEDS MAX CROSSWIND LIMIT (${ConcordeConstants.runway.maxCrosswindKt.round()} kt)');
+        violations.add(
+          'EXCEEDS MAX CROSSWIND LIMIT (${ConcordeConstants.runway.maxCrosswindKt.round()} kt)',
+        );
+      }
+      if (!f.tailwindOk) {
+        violations.add(
+          'EXCEEDS MAX TAILWIND LIMIT (${ConcordeConstants.runway.maxTailwindKt.round()} kt)',
+        );
       }
     }
 
@@ -949,10 +1015,18 @@ class _RunwayMarginText extends StatelessWidget {
       );
     }
 
-    final reqRunway = f != null ? numFormat.format(f.requiredLengthMEst.round()) : '--';
-    final availRunway = f != null ? numFormat.format(f.runwayLengthM.round()) : '--';
-    final marginM = f != null ? (f.runwayLengthM - f.requiredLengthMEst).round() : 0;
-    final marginText = marginM >= 0 ? '+$marginM m margin' : '$marginM m deficit';
+    final reqRunway = f != null
+        ? numFormat.format(f.requiredLengthMEst.round())
+        : '--';
+    final availRunway = f != null
+        ? numFormat.format(f.runwayLengthM.round())
+        : '--';
+    final marginM = f != null
+        ? (f.runwayLengthM - f.requiredLengthMEst).round()
+        : 0;
+    final marginText = marginM >= 0
+        ? '+$marginM m margin'
+        : '$marginM m deficit';
 
     if (hasViolations) {
       return Container(
@@ -970,11 +1044,7 @@ class _RunwayMarginText extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.block,
-                  size: 15,
-                  color: colors.error,
-                ),
+                Icon(Icons.block, size: 15, color: colors.error),
                 const SizedBox(width: 8),
                 Text(
                   'DISPATCH DECISION: PERFORMANCE NO-GO',
@@ -990,40 +1060,41 @@ class _RunwayMarginText extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             // Specific exceedance lines
-            ...violations.map((v) => Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '• ',
-                    style: uiText(
-                      context,
-                      size: 11,
-                      weight: FontWeight.w900,
-                      color: colors.error,
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      v,
+            ...violations.map(
+              (v) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '• ',
                       style: uiText(
                         context,
                         size: 11,
-                        weight: FontWeight.w700,
-                        color: isDark ? const Color(0xFFFCA5A5) : colors.error,
-                        letterSpacing: 0.3,
+                        weight: FontWeight.w900,
+                        color: colors.error,
                       ),
                     ),
-                  ),
-                ],
+                    Expanded(
+                      child: Text(
+                        v,
+                        style: uiText(
+                          context,
+                          size: 11,
+                          weight: FontWeight.w700,
+                          color: isDark
+                              ? const Color(0xFFFCA5A5)
+                              : colors.error,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            )),
-            const SizedBox(height: 6),
-            Container(
-              height: 1,
-              color: colors.error.withValues(alpha: 0.25),
             ),
+            const SizedBox(height: 6),
+            Container(height: 1, color: colors.error.withValues(alpha: 0.25)),
             const SizedBox(height: 6),
             RichText(
               text: TextSpan(
@@ -1107,6 +1178,90 @@ class _RunwayMarginText extends StatelessWidget {
             ),
           ),
         ],
+      ],
+    );
+  }
+}
+
+/// AUTO / DRY / WET / CONTAM selector. AUTO derives the surface state from
+/// the METAR present/recent weather and shows what it resolved to.
+class _RunwayConditionSelector extends StatelessWidget {
+  final RunwayConditionMode mode;
+  final RunwayCondition? resolved;
+  final ValueChanged<RunwayConditionMode> onChanged;
+
+  const _RunwayConditionSelector({
+    required this.mode,
+    required this.resolved,
+    required this.onChanged,
+  });
+
+  static String _label(RunwayConditionMode m) => switch (m) {
+    RunwayConditionMode.auto => 'AUTO',
+    RunwayConditionMode.dry => 'DRY',
+    RunwayConditionMode.wet => 'WET',
+    RunwayConditionMode.contaminated => 'CONTAM',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final resolvedText = resolved == null
+        ? ''
+        : ' · ${resolved!.name.toUpperCase()}';
+    return Row(
+      children: [
+        Text(
+          'RWY COND',
+          style: uiText(
+            context,
+            size: 10,
+            weight: FontWeight.w800,
+            color: colors.textDim,
+            letterSpacing: 1,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: RunwayConditionMode.values.map((m) {
+              final selected = m == mode;
+              return InkWell(
+                borderRadius: BorderRadius.circular(6),
+                onTap: () => onChanged(m),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: selected ? colors.accent : Colors.transparent,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: selected ? colors.accent : colors.dividerStrong,
+                    ),
+                  ),
+                  child: Text(
+                    m == RunwayConditionMode.auto && selected
+                        ? '${_label(m)}$resolvedText'
+                        : _label(m),
+                    style: uiText(
+                      context,
+                      size: 10,
+                      weight: FontWeight.w800,
+                      color: selected
+                          ? AppColors.dark.bg
+                          : colors.textSecondary,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
       ],
     );
   }

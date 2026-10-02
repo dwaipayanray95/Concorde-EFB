@@ -34,16 +34,12 @@ class _ChecklistsTabState extends ConsumerState<ChecklistsTab> {
     final landingSpeeds = ref.watch(landingSpeedsProvider);
     final takeoffSpeeds = ref.watch(takeoffSpeedsProvider);
     final simbriefLoaded = ref.watch(simbriefLoadedProvider);
-    final vappSpeed = landingSpeeds['VAPP'];
-    final vappStr = (simbriefLoaded && vappSpeed != null)
-        ? '${vappSpeed.round()} KT'
+    final vappStr = simbriefLoaded
+        ? '${landingSpeeds.vapp.round()} KT'
         : 'VAPP';
-    final v1 = takeoffSpeeds['V1'];
-    final vr = takeoffSpeeds['VR'];
-    final v2 = takeoffSpeeds['V2'];
-    final vSpeedsStr =
-        (simbriefLoaded && v1 != null && vr != null && v2 != null)
-        ? 'V1:${v1.round()} VR:${vr.round()} V2:${v2.round()}'
+    final vSpeedsStr = simbriefLoaded
+        ? 'V1:${takeoffSpeeds.v1.round()} VR:${takeoffSpeeds.vr.round()} '
+              'V2:${takeoffSpeeds.v2.round()}'
         : 'V-Speeds';
 
     final checklistData = buildChecklistData(
@@ -65,7 +61,9 @@ class _ChecklistsTabState extends ConsumerState<ChecklistsTab> {
               color: colors.resultsBg,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color: colors.dividerStrong.withValues(alpha: isDark ? 0.6 : 0.8),
+                color: colors.dividerStrong.withValues(
+                  alpha: isDark ? 0.6 : 0.8,
+                ),
                 width: 1.0,
               ),
               boxShadow: [
@@ -91,121 +89,132 @@ class _ChecklistsTabState extends ConsumerState<ChecklistsTab> {
                   final isCompleted =
                       checkedCount == totalCount && totalCount > 0;
 
-                    final activeText = const Color(0xFF101012);
+                  final activeText = const Color(0xFF101012);
 
-                    return InkWell(
-                      onTap: () =>
-                          setState(() => selectedChecklistPhase = phase.id),
-                      borderRadius: BorderRadius.circular(8),
-                      mouseCursor: SystemMouseCursors.click,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 160),
-                        margin: const EdgeInsets.symmetric(
-                          vertical: 3,
-                          horizontal: 4,
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 10,
-                          horizontal: 14,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? colors.accent
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(8),
-                          border: isSelected
-                              ? Border.all(
-                                  color: colors.accent,
-                                  width: 1.0,
-                                )
-                              : null,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    phase.name,
-                                    style: uiText(
-                                      context,
-                                      size: 12.5,
-                                      weight: isSelected
-                                          ? FontWeight.w900
-                                          : FontWeight.w600,
-                                      color: isSelected
-                                          ? activeText
-                                          : (isCompleted ? colors.textPrimary : colors.textSecondary),
-                                      letterSpacing: 0.3,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 7,
-                                    vertical: 3,
-                                  ),
-                                  decoration: BoxDecoration(
+                  return InkWell(
+                    onTap: () =>
+                        setState(() => selectedChecklistPhase = phase.id),
+                    borderRadius: BorderRadius.circular(8),
+                    mouseCursor: SystemMouseCursors.click,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      margin: const EdgeInsets.symmetric(
+                        vertical: 3,
+                        horizontal: 4,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 10,
+                        horizontal: 14,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isSelected ? colors.accent : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                        border: isSelected
+                            ? Border.all(color: colors.accent, width: 1.0)
+                            : null,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  phase.name,
+                                  style: uiText(
+                                    context,
+                                    size: 12.5,
+                                    weight: isSelected
+                                        ? FontWeight.w900
+                                        : FontWeight.w600,
                                     color: isSelected
-                                        ? (isCompleted
-                                            ? const Color(0xFF064E3B)
-                                            : activeText.withValues(alpha: 0.15))
+                                        ? activeText
                                         : (isCompleted
-                                            ? colors.successBg
-                                            : colors.inputBg),
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(
-                                      color: isSelected
-                                          ? (isCompleted
-                                              ? const Color(0xFF059669)
-                                              : activeText.withValues(alpha: 0.3))
-                                          : (isCompleted
-                                              ? colors.success.withValues(alpha: 0.4)
-                                              : colors.dividerStrong),
-                                      width: 1.0,
-                                    ),
+                                              ? colors.textPrimary
+                                              : colors.textSecondary),
+                                    letterSpacing: 0.3,
                                   ),
-                                  child: Text(
-                                    '$checkedCount/$totalCount',
-                                    style: uiText(
-                                      context,
-                                      size: 10,
-                                      weight: FontWeight.w900,
-                                      color: isSelected
-                                          ? (isCompleted ? Colors.white : activeText)
-                                          : (isCompleted
-                                              ? colors.success
-                                              : colors.textDim),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(2),
-                              child: LinearProgressIndicator(
-                                value: totalCount == 0
-                                    ? 0
-                                    : checkedCount / totalCount,
-                                minHeight: 3,
-                                backgroundColor: isSelected
-                                    ? activeText.withValues(alpha: 0.2)
-                                    : colors.dividerStrong.withValues(alpha: 0.35),
-                                valueColor: AlwaysStoppedAnimation(
-                                  isSelected
-                                      ? (isCompleted ? const Color(0xFF047857) : activeText)
-                                      : (isCompleted ? colors.success : colors.accent),
                                 ),
                               ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 7,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? (isCompleted
+                                            ? const Color(0xFF064E3B)
+                                            : activeText.withValues(
+                                                alpha: 0.15,
+                                              ))
+                                      : (isCompleted
+                                            ? colors.successBg
+                                            : colors.inputBg),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? (isCompleted
+                                              ? const Color(0xFF059669)
+                                              : activeText.withValues(
+                                                  alpha: 0.3,
+                                                ))
+                                        : (isCompleted
+                                              ? colors.success.withValues(
+                                                  alpha: 0.4,
+                                                )
+                                              : colors.dividerStrong),
+                                    width: 1.0,
+                                  ),
+                                ),
+                                child: Text(
+                                  '$checkedCount/$totalCount',
+                                  style: uiText(
+                                    context,
+                                    size: 10,
+                                    weight: FontWeight.w900,
+                                    color: isSelected
+                                        ? (isCompleted
+                                              ? Colors.white
+                                              : activeText)
+                                        : (isCompleted
+                                              ? colors.success
+                                              : colors.textDim),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(2),
+                            child: LinearProgressIndicator(
+                              value: totalCount == 0
+                                  ? 0
+                                  : checkedCount / totalCount,
+                              minHeight: 3,
+                              backgroundColor: isSelected
+                                  ? activeText.withValues(alpha: 0.2)
+                                  : colors.dividerStrong.withValues(
+                                      alpha: 0.35,
+                                    ),
+                              valueColor: AlwaysStoppedAnimation(
+                                isSelected
+                                    ? (isCompleted
+                                          ? const Color(0xFF047857)
+                                          : activeText)
+                                    : (isCompleted
+                                          ? colors.success
+                                          : colors.accent),
+                              ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    );
+                    ),
+                  );
                 }).toList(),
               ),
             ),
@@ -220,7 +229,9 @@ class _ChecklistsTabState extends ConsumerState<ChecklistsTab> {
               color: colors.resultsBg,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color: colors.dividerStrong.withValues(alpha: isDark ? 0.6 : 0.8),
+                color: colors.dividerStrong.withValues(
+                  alpha: isDark ? 0.6 : 0.8,
+                ),
                 width: 1.0,
               ),
               boxShadow: [
@@ -237,12 +248,19 @@ class _ChecklistsTabState extends ConsumerState<ChecklistsTab> {
               children: [
                 // Compact Integrated Titlebar
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF141417) : const Color(0xFFEBEBEF),
+                    color: isDark
+                        ? const Color(0xFF141417)
+                        : const Color(0xFFEBEBEF),
                     border: Border(
                       bottom: BorderSide(
-                        color: colors.dividerStrong.withValues(alpha: isDark ? 0.5 : 0.7),
+                        color: colors.dividerStrong.withValues(
+                          alpha: isDark ? 0.5 : 0.7,
+                        ),
                         width: 1.0,
                       ),
                     ),
@@ -258,7 +276,11 @@ class _ChecklistsTabState extends ConsumerState<ChecklistsTab> {
                           borderRadius: BorderRadius.circular(1.5),
                         ),
                       ),
-                      Icon(Icons.playlist_add_check, size: 16, color: colors.accent),
+                      Icon(
+                        Icons.playlist_add_check,
+                        size: 16,
+                        color: colors.accent,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -284,11 +306,18 @@ class _ChecklistsTabState extends ConsumerState<ChecklistsTab> {
                         },
                         borderRadius: BorderRadius.circular(6),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.refresh, size: 13, color: colors.error),
+                              Icon(
+                                Icons.refresh,
+                                size: 13,
+                                color: colors.error,
+                              ),
                               const SizedBox(width: 5),
                               Text(
                                 'RESET PHASE',
@@ -309,7 +338,10 @@ class _ChecklistsTabState extends ConsumerState<ChecklistsTab> {
                 ),
                 Expanded(
                   child: ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     itemCount: currentItems.length,
                     separatorBuilder: (context, index) => Padding(
                       padding: const EdgeInsets.symmetric(vertical: 2),
@@ -370,7 +402,8 @@ class _ChecklistsTabState extends ConsumerState<ChecklistsTab> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Row(
-                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
                                       children: [
                                         Text(
                                           item.item.toUpperCase(),
@@ -390,9 +423,17 @@ class _ChecklistsTabState extends ConsumerState<ChecklistsTab> {
                                         const SizedBox(width: 8),
                                         Expanded(
                                           child: CustomPaint(
-                                            size: const Size(double.infinity, 12),
+                                            size: const Size(
+                                              double.infinity,
+                                              12,
+                                            ),
                                             painter: _DotLeaderPainter(
-                                              color: colors.dividerStrong.withValues(alpha: isChecked ? 0.2 : 0.4),
+                                              color: colors.dividerStrong
+                                                  .withValues(
+                                                    alpha: isChecked
+                                                        ? 0.2
+                                                        : 0.4,
+                                                  ),
                                             ),
                                           ),
                                         ),
@@ -408,7 +449,9 @@ class _ChecklistsTabState extends ConsumerState<ChecklistsTab> {
                                                 : colors.accent.withValues(
                                                     alpha: 0.1,
                                                   ),
-                                            borderRadius: BorderRadius.circular(4),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
                                             border: Border.all(
                                               color: isChecked
                                                   ? colors.dividerStrong

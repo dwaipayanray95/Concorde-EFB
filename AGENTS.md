@@ -14,7 +14,7 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `3.4.10+44` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+- Current version: `3.7.0+51` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
   `public/changelog/entries.json` in sync when cutting a release — README no longer carries its
   own changelog, it just links to that page.
 - Theme system: unified light/dark `AppColors` (`lib/core/app_colors.dart`) resolved via
@@ -49,19 +49,27 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 These are heuristic/indicative models, not certified performance data. Core constants live in
 `lib/core/concorde_constants.dart`; the math lives in `lib/core/concorde_logic.dart`.
 
-- MTOW `185,066 kg`, MLW `111,130 kg`, fuel capacity `95,681 kg`, OEW `78,700 kg`.
-- Full pax count `100`, default pax mass `84 kg`.
-- Nominal cruise TAS `1164 kt` (Mach `2.04`), base burn `24.45 kg/NM`, climb burn factor `1.7`,
-  descent burn factor `0.5`, reheat cap `25 min`.
-- Runway references: takeoff `11800 ft` (~3597 m) at MTOW baseline; landing `2200 m` at MLW
-  baseline.
+- MTOW `185,070 kg`, MLW `111,130 kg`, MZFW `92,080 kg`, fuel capacity `95,681 kg`, OEW `78,700 kg`.
+  Full pax `100` x `84 kg` + full fuel stays under MTOW, so MTOW can't be exceeded by payload alone.
+- Weights (`ConcordeLogic.computeWeights`): ZFW = OEW + pax; fuel on board = min(block + extra,
+  capacity); ramp = ZFW + FOB; TOW = ramp - taxi; LW = TOW - trip.
+- Trip fuel (`buildCruiseMissionProfile`) = sum of phases, each fuel flow x phase time:
+  takeoff allowance 2 t + subsonic climb to FL280 (26 t/h, 2,000 fpm, 360 kt GS) -> transonic accel
+  FL280->FL500 (16 min, 220 nm, 60 t/h) -> Mach 2.04 cruise-climb FL500->selected FL (TAS ~1,170 kt;
+  21 t/h at FL500 tapering to 17.5 t/h at FL600) -> decel/descent (3 nm/1000 ft + 30 nm, 8.5 t/h).
+  Below FL410 (or if the sector is too short for supersonic) the profile is subsonic M0.95 at 15 t/h,
+  with the FL capped to what the distance allows. Golden test: LHR-JFK 3,150 nm -> ~71 t, ~3h13
+  (`test/golden_flight_test.dart`). Keep it passing when touching any fuel constant.
+- Alternate fuel = subsonic diversion profile (no takeoff allowance) + 1 t missed approach.
+  Endurance: trip lasts the ETE, the rest burns at 12 t/h holding; required = ETE + reserves at holding.
 - Cruise FL: clamped to `[0, 590]`; above FL410 snapped to Non-RVSM sets (Eastbound `410, 450,
   490, 530, 570`; Westbound `430, 470, 510, 550, 590`), direction inferred from DEP→ARR bearing.
-- Runway feasibility scales with weight + weather correction (pressure altitude, ISA temp
-  deviation, headwind/tailwind); tailwind penalties are intentionally stronger than headwind
-  credits.
-- Total fuel required = block fuel + trim fuel. Endurance compares airborne fuel endurance
-  against ETE + reserves.
+- Runway: takeoff distance = 3,597 m x (TOW/MTOW)^2 (x1.35 without reheat); landing = 2,200 m x
+  (LW/MLW)^1.15; then + pressure-alt / temperature / wind / surface (wet +15%, contaminated +30%
+  takeoff / +40% landing) corrections. Hard limits: 30 kt crosswind (gust-inclusive), 10 kt tailwind
+  (gust-inclusive), airfield altitude; VRB wind = worst case; missing wind is flagged, not calm.
+- Speeds: V1/VR/V2 = 165/195/220 kt at MTOW scaled by sqrt(W/MTOW) (V1 -8 wet / -15 contaminated);
+  VREF 165 kt at MLW scaled by sqrt(W/MLW); VAPP = VREF + clamp(half headwind + gust, 5..20).
 
 ## 4) External Data and Integrations
 
@@ -70,9 +78,9 @@ These are heuristic/indicative models, not certified performance data. Core cons
   - `https://raw.githubusercontent.com/davidmegginson/ourairports-data/master/airports.csv`
   - `https://raw.githubusercontent.com/davidmegginson/ourairports-data/master/runways.csv`
   - `https://raw.githubusercontent.com/davidmegginson/ourairports-data/master/navaids.csv`
-- METAR fetch (`lib/services/metar_service.dart`): primary
-  `https://aviationweather.gov/api/data/metar?ids=<ICAO>&format=raw`, fallback
-  `https://metar.vatsim.net/<ICAO>`.
+- METAR fetch (`lib/services/metar_service.dart`): primary `https://metar.vatsim.net/<ICAO>`
+  (the app targets VATSIM), then aviationweather.gov, then the NOAA/NWS text feed. Total failure
+  throws `MetarUnavailableException` (UI shows OFFLINE). Providers auto-refresh every 10 min.
 - SimBrief import (`lib/services/simbrief_service.dart`):
   `https://www.simbrief.com/api/xml.fetcher.php?username=<user>&json=1`.
 - Flight Monitor telemetry bridge:
@@ -206,8 +214,22 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 
 - SimConnect Bridge Rewrite: `tools/simbridge/msfs_bridge.py` now calls SimConnect.dll directly via ctypes (one data definition, `PERIOD_SIM_FRAME` push, dispatch thread handling OPEN/QUIT/EXCEPTION, heartbeat via `RequestSystemState`, auto-reconnect in-process) instead of the polling Python-SimConnect wrapper; sends `{"type":"status"}` + `{"type":"telemetry"}` frames; bundled with `--noconsole --add-binary SimConnect.dll` (the DLL was previously missing from the PyInstaller build). `SimBridgeLauncher` now supervises/respawns the process and kills a hung leftover `msfs_bridge.exe`; MSFS-launch restart removed (`startWatching` is a no-op). Logs to `%LOCALAPPDATA%\ConcordeEFB\simbridge.log`.
 
+- Fuel & performance model overhaul (v3.7.0): phase-based trip fuel calibrated to real sectors with a golden test, subsonic/short-sector fallback, subsonic alternate profile + alternate warnings, capacity-aware endurance, TOW excludes taxi, typed `WeightSummary`/`TakeoffSpeeds`/`LandingSpeeds`, 10 kt tailwind limit, gust/VRB handling, missing-wind flag, AUTO/DRY/WET/CONTAM runway condition, W^2 takeoff distance, recalibrated V-speeds, longest-runway departure default, route-distance estimate for file imports, METAR auto-refresh/age/weather summary, shared runway-env provider, `flutter analyze` in beta CI.
+
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.
+
+### Deferred backlog (agreed with the owner, not started)
+
+- Supersonic-over-land: warn when the route crosses land at Mach 2 (VATSIM users fly it anyway, so
+  a warning only), with TOD/deceleration-point calculations.
+- No-reheat takeoff thresholds (155 t gate, x1.35 factor) are placeholders pending DC Designs data.
+- Ads / AdMob compliance: privacy policy, Play data-safety, UMP consent.
+- Crash reporting.
+- Persist flight plan / fuel inputs / checklist progress across restarts.
+- Code signing for the installer and `msfs_bridge.exe`.
+- Feature ideas: CG / trim-tank transfer planner, live planned-vs-actual fuel, telemetry-driven
+  checklist auto-advance, exportable takeoff/landing card, kg/lb toggle, TAF + alternate weather.
 
 ## 8) Known Constraints and Gotchas
 

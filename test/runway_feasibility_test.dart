@@ -246,28 +246,116 @@ void main() {
   });
 
   group('ConcordeLogic.computeTakeoffSpeeds / computeLandingSpeeds', () {
-    test('V1 < VR < V2 always holds', () {
-      final speeds = ConcordeLogic.computeTakeoffSpeeds(170000);
-      expect(speeds['V1']!, lessThan(speeds['VR']!));
-      expect(speeds['VR']!, lessThan(speeds['V2']!));
+    test('V1 <= VR < V2 always holds', () {
+      for (final w in [1.0, 120000.0, 170000.0, 185070.0]) {
+        for (final c in RunwayCondition.values) {
+          final s = ConcordeLogic.computeTakeoffSpeeds(w, condition: c);
+          expect(s.v1, lessThanOrEqualTo(s.vr));
+          expect(s.vr, lessThan(s.v2));
+        }
+      }
     });
 
-    test('takeoff speeds never fall below the published floors', () {
-      final speeds = ConcordeLogic.computeTakeoffSpeeds(1.0); // absurdly light
-      expect(speeds['V1']!, greaterThanOrEqualTo(160));
-      expect(speeds['VR']!, greaterThanOrEqualTo(170));
-      expect(speeds['V2']!, greaterThanOrEqualTo(190));
+    test('MTOW gives the published heavy-weight speeds', () {
+      final s = ConcordeLogic.computeTakeoffSpeeds(185070);
+      expect(s.v1, 165);
+      expect(s.vr, 195);
+      expect(s.v2, 220);
     });
 
-    test('VAPP is always 15 kt above VLS once above the floor', () {
-      final speeds = ConcordeLogic.computeLandingSpeeds(105000);
-      expect(speeds['VAPP']! - speeds['VLS']!, closeTo(15, 0.01));
+    test('takeoff speeds never fall below the floors', () {
+      final s = ConcordeLogic.computeTakeoffSpeeds(1.0);
+      expect(s.v1, greaterThanOrEqualTo(130));
+      expect(s.vr, greaterThanOrEqualTo(165));
+      expect(s.v2, greaterThanOrEqualTo(185));
     });
 
-    test('landing speeds never fall below the published floors', () {
-      final speeds = ConcordeLogic.computeLandingSpeeds(1.0);
-      expect(speeds['VLS']!, greaterThanOrEqualTo(170));
-      expect(speeds['VAPP']!, greaterThanOrEqualTo(185));
+    test('wet / contaminated runways reduce V1', () {
+      final dry = ConcordeLogic.computeTakeoffSpeeds(180000);
+      final wet = ConcordeLogic.computeTakeoffSpeeds(
+        180000,
+        condition: RunwayCondition.wet,
+      );
+      final contam = ConcordeLogic.computeTakeoffSpeeds(
+        180000,
+        condition: RunwayCondition.contaminated,
+      );
+      expect(wet.v1, lessThan(dry.v1));
+      expect(contam.v1, lessThan(wet.v1));
+      expect(wet.vr, dry.vr);
+    });
+
+    test('VREF 165 kt at MLW; VAPP additive is 5..20 kt', () {
+      final calm = ConcordeLogic.computeLandingSpeeds(111130);
+      expect(calm.vref, 165);
+      expect(calm.vapp, 170);
+      final gusty = ConcordeLogic.computeLandingSpeeds(
+        111130,
+        headwindKt: 20,
+        gustIncrementKt: 15,
+      );
+      expect(gusty.vapp, 185);
+    });
+
+    test('landing speeds never fall below the floor', () {
+      final s = ConcordeLogic.computeLandingSpeeds(1.0);
+      expect(s.vref, greaterThanOrEqualTo(145));
+    });
+  });
+
+  group('tailwind / wind data / surface', () {
+    RunwayEnvironmentInputs env(String metar, {double hdg = 270}) =>
+        ConcordeLogic.runwayEnvFromMetar(metar: metar, runwayHeadingDeg: hdg);
+
+    test('tailwind above 10 kt is a NO-GO', () {
+      final e = env('EGLL 141150Z 09012KT 9999 FEW030 12/08 Q1013');
+      expect(e.tailwindKt, closeTo(12, 0.01));
+      final f = ConcordeLogic.takeoffFeasibleM(5000, 150000, env: e);
+      expect(f.tailwindOk, isFalse);
+      expect(f.feasible, isFalse);
+    });
+
+    test('gust is used for the crosswind limit', () {
+      final e = env('EGLL 141150Z 18020G35KT 9999 FEW030 12/08 Q1013');
+      expect(e.crosswindKt, closeTo(35, 0.01));
+      expect(
+        ConcordeLogic.landingFeasibleM(4000, 100000, env: e).crosswindOk,
+        isFalse,
+      );
+    });
+
+    test('VRB wind is treated as worst-case tail/crosswind', () {
+      final e = env('LFPG 141200Z VRB08KT CAVOK 15/10 Q1018');
+      expect(e.tailwindKt, 8);
+      expect(e.crosswindKt, 8);
+    });
+
+    test('missing METAR is flagged, not treated as calm', () {
+      final e = env('');
+      expect(e.windDataAvailable, isFalse);
+      expect(e.headwindKt, isNull);
+      final f = ConcordeLogic.takeoffFeasibleM(4000, 150000, env: e);
+      expect(f.windDataAvailable, isFalse);
+    });
+
+    test('rain makes the runway wet and lengthens the landing', () {
+      final dry = env('EGLL 141150Z 27005KT 9999 FEW030 12/08 Q1013');
+      final wet = env('EGLL 141150Z 27005KT 9999 -RA BKN010 12/08 Q1013');
+      expect(wet.condition, RunwayCondition.wet);
+      final fd = ConcordeLogic.landingFeasibleM(3000, 100000, env: dry);
+      final fw = ConcordeLogic.landingFeasibleM(3000, 100000, env: wet);
+      expect(fw.correctionBreakdownPct['surface'], 0.15);
+      expect(fd.correctionBreakdownPct['surface'], 0.0);
+      expect(fw.correctionFactor - fd.correctionFactor, closeTo(0.15, 0.001));
+    });
+
+    test('takeoff distance scales with weight squared', () {
+      final half = ConcordeLogic.takeoffFeasibleM(5000, 185070 * 0.8);
+      final full = ConcordeLogic.takeoffFeasibleM(5000, 185070);
+      expect(
+        half.baseRequiredLengthMEst / full.baseRequiredLengthMEst,
+        closeTo(0.64, 0.001),
+      );
     });
   });
 }

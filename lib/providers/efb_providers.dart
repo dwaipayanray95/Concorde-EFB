@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/airport_database_service.dart';
 import '../core/concorde_logic.dart';
-import '../core/metar_parser.dart' as mp;
 import '../models/concorde_models.dart';
 import '../models/airport.dart';
 import '../core/concorde_constants.dart';
@@ -21,13 +20,7 @@ final airportDbProvider = FutureProvider<AirportDatabaseService>((ref) async {
 class DepartureIcaoNotifier extends Notifier<String> {
   @override
   String build() => 'EGLL';
-  void set(String val) {
-    val = val.toUpperCase();
-    if (state != val) {
-      state = val;
-      ref.invalidate(departureMetarFutureProvider);
-    }
-  }
+  void set(String val) => state = val.trim().toUpperCase();
 }
 
 final departureIcaoProvider = NotifierProvider<DepartureIcaoNotifier, String>(
@@ -37,13 +30,7 @@ final departureIcaoProvider = NotifierProvider<DepartureIcaoNotifier, String>(
 class ArrivalIcaoNotifier extends Notifier<String> {
   @override
   String build() => 'KJFK';
-  void set(String val) {
-    val = val.toUpperCase();
-    if (state != val) {
-      state = val;
-      ref.invalidate(arrivalMetarFutureProvider);
-    }
-  }
+  void set(String val) => state = val.trim().toUpperCase();
 }
 
 final arrivalIcaoProvider = NotifierProvider<ArrivalIcaoNotifier, String>(
@@ -53,7 +40,7 @@ final arrivalIcaoProvider = NotifierProvider<ArrivalIcaoNotifier, String>(
 class AlternateIcaoNotifier extends Notifier<String> {
   @override
   String build() => 'KBOS';
-  void set(String val) => state = val.toUpperCase();
+  void set(String val) => state = val.trim().toUpperCase();
 }
 
 final alternateIcaoProvider = NotifierProvider<AlternateIcaoNotifier, String>(
@@ -185,21 +172,17 @@ class DepartureRunwayIdNotifier extends Notifier<String> {
     // departure airport changes -- covers both the user typing a new ICAO
     // and the airport DB finishing its async load after this provider's
     // first build.
+    // Departure always defaults to the longest runway (Concorde is
+    // runway-length limited); the pilot can still override it.
     ref.listen(depAirportProvider, (previous, next) {
       if (next?.icao != previous?.icao) {
         state = _longestRunwayId(next);
-        ref.invalidate(departureMetarFutureProvider);
       }
     });
     return _longestRunwayId(ref.read(depAirportProvider));
   }
 
-  void set(String val) {
-    if (state != val) {
-      state = val;
-      ref.invalidate(departureMetarFutureProvider);
-    }
-  }
+  void set(String val) => state = val;
 }
 
 final departureRunwayIdProvider =
@@ -210,21 +193,20 @@ final departureRunwayIdProvider =
 class ArrivalRunwayIdNotifier extends Notifier<String> {
   @override
   String build() {
+    // Keep a runway that was already chosen for the new airport (e.g.
+    // the planned runway from a SimBrief import, which can be set before
+    // this listener sees the airport change); otherwise fall back to the
+    // longest runway.
     ref.listen(arrAirportProvider, (previous, next) {
-      if (next?.icao != previous?.icao) {
+      if (next?.icao != previous?.icao &&
+          !(next?.runways.any((r) => r.id == state) ?? false)) {
         state = _longestRunwayId(next);
-        ref.invalidate(arrivalMetarFutureProvider);
       }
     });
     return _longestRunwayId(ref.read(arrAirportProvider));
   }
 
-  void set(String val) {
-    if (state != val) {
-      state = val;
-      ref.invalidate(arrivalMetarFutureProvider);
-    }
-  }
+  void set(String val) => state = val;
 }
 
 final arrivalRunwayIdProvider =
@@ -245,20 +227,28 @@ final arrAirportProvider = Provider<Airport?>((ref) {
   return db?.airports[icao];
 });
 
-// Better approach: Make METARs FutureProviders based on ICAO
-final departureMetarFutureProvider = FutureProvider<String>((ref) async {
-  final icao = ref.watch(departureIcaoProvider);
-  if (icao.isEmpty) return '';
-  final metar = await MetarService().fetchMetar(icao);
-  return metar ?? '';
-});
+/// METARs are refreshed automatically every [metarRefreshInterval] while
+/// watched, and whenever the ICAO changes.
+const metarRefreshInterval = Duration(minutes: 10);
 
-final arrivalMetarFutureProvider = FutureProvider<String>((ref) async {
-  final icao = ref.watch(arrivalIcaoProvider);
+Future<String> _fetchMetar(Ref ref, String icao) async {
+  final timer = Timer(metarRefreshInterval, ref.invalidateSelf);
+  ref.onDispose(timer.cancel);
   if (icao.isEmpty) return '';
   final metar = await MetarService().fetchMetar(icao);
-  return metar ?? '';
-});
+  // Surface a failure as an error state (UI shows OFFLINE + retry) rather
+  // than an empty string that looks like "no weather".
+  if (metar == null) throw MetarUnavailableException(icao);
+  return metar;
+}
+
+final departureMetarFutureProvider = FutureProvider<String>(
+  (ref) => _fetchMetar(ref, ref.watch(departureIcaoProvider)),
+);
+
+final arrivalMetarFutureProvider = FutureProvider<String>(
+  (ref) => _fetchMetar(ref, ref.watch(arrivalIcaoProvider)),
+);
 
 final flightDirectionProvider = Provider<String?>((ref) {
   final dep = ref.watch(depAirportProvider);
@@ -388,6 +378,15 @@ final alternateDistanceProvider = Provider<double>((ref) {
   return ConcordeLogic.greatCircleNM(arr.lat, arr.lon, alt.lat, alt.lon);
 });
 
+final alternateStatusProvider = Provider<AlternateStatus>((ref) {
+  return ConcordeLogic.alternateStatus(
+    alternateIcao: ref.watch(alternateIcaoProvider),
+    arrivalIcao: ref.watch(arrivalIcaoProvider),
+    alternateResolved: ref.watch(altAirportProvider) != null,
+    alternateNm: ref.watch(alternateDistanceProvider),
+  );
+});
+
 final missionProfileProvider = Provider<CruiseMissionProfile>((ref) {
   final distance = ref.watch(plannedDistanceProvider);
   final cruiseFL = ref.watch(cruiseFLProvider);
@@ -396,18 +395,13 @@ final missionProfileProvider = Provider<CruiseMissionProfile>((ref) {
 
 final fuelBreakdownProvider = Provider<BlockFuelBreakdown>((ref) {
   final mission = ref.watch(missionProfileProvider);
-  final taxi = ref.watch(taxiFuelProvider);
-  final contingency = ref.watch(contingencyPctProvider);
-  final reserve = ref.watch(finalReserveFuelProvider);
-  final altDist = ref.watch(alternateDistanceProvider);
-
   return ConcordeLogic.blockFuelKg(
     BlockFuelInputs(
       tripKg: mission.tripKg,
-      taxiKg: taxi,
-      contingencyPct: contingency,
-      finalReserveKg: reserve,
-      alternateNm: altDist,
+      taxiKg: ref.watch(taxiFuelProvider),
+      contingencyPct: ref.watch(contingencyPctProvider),
+      finalReserveKg: ref.watch(finalReserveFuelProvider),
+      alternateNm: ref.watch(alternateDistanceProvider),
     ),
   );
 });
@@ -417,37 +411,22 @@ final paxWeightProvider = Provider<double>((ref) {
   return count * ConcordeConstants.weights.paxMassKg;
 });
 
-final weightsProvider = Provider<Map<String, double>>((ref) {
+final weightsProvider = Provider<WeightSummary>((ref) {
   final fuel = ref.watch(fuelBreakdownProvider);
-  final extra = ref.watch(extraFuelProvider);
-  final totalFuel = fuel.blockKg + extra;
-  final effectiveFuel = math.min(
-    totalFuel,
-    ConcordeConstants.weights.fuelCapacityKg,
+  return ConcordeLogic.computeWeights(
+    paxKg: ref.watch(paxWeightProvider),
+    plannedFuelKg: fuel.blockKg + ref.watch(extraFuelProvider),
+    taxiKg: fuel.taxiKg,
+    tripKg: ref.watch(missionProfileProvider).tripKg,
   );
-  final paxWeight = ref.watch(paxWeightProvider);
-
-  final tow = ConcordeConstants.weights.oewKg + paxWeight + effectiveFuel;
-  final mission = ref.watch(missionProfileProvider);
-  final lw = math.max(0.0, tow - mission.tripKg);
-
-  return {
-    'TOW': tow,
-    'LW': lw,
-    'FUEL': totalFuel,
-    'EFFECTIVE_FUEL': effectiveFuel,
-    'PAX': paxWeight,
-  };
 });
 
-final takeoffSpeedsProvider = Provider<Map<String, double>>((ref) {
-  final weights = ref.watch(weightsProvider);
-  return ConcordeLogic.computeTakeoffSpeeds(weights['TOW']!);
-});
-
-final landingSpeedsProvider = Provider<Map<String, double>>((ref) {
-  final weights = ref.watch(weightsProvider);
-  return ConcordeLogic.computeLandingSpeeds(weights['LW']!);
+final fuelEnduranceProvider = Provider<FuelEndurance>((ref) {
+  return ConcordeLogic.computeEndurance(
+    fuel: ref.watch(fuelBreakdownProvider),
+    fuelOnBoardKg: ref.watch(weightsProvider).fuelOnBoard,
+    eteH: ref.watch(missionProfileProvider).totalTimeH,
+  );
 });
 
 class UseReheatTakeoffNotifier extends Notifier<bool> {
@@ -461,137 +440,94 @@ final useReheatTakeoffProvider =
       UseReheatTakeoffNotifier.new,
     );
 
-final takeoffFeasibilityProvider = Provider<RunwayFeasibility?>((ref) {
+class RunwayConditionModeNotifier extends Notifier<RunwayConditionMode> {
+  @override
+  RunwayConditionMode build() => RunwayConditionMode.auto;
+  void set(RunwayConditionMode val) => state = val;
+}
+
+final departureRunwayConditionProvider =
+    NotifierProvider<RunwayConditionModeNotifier, RunwayConditionMode>(
+      RunwayConditionModeNotifier.new,
+    );
+
+final arrivalRunwayConditionProvider =
+    NotifierProvider<RunwayConditionModeNotifier, RunwayConditionMode>(
+      RunwayConditionModeNotifier.new,
+    );
+
+/// Runway environment (pressure, temperature, wind, surface) for the
+/// selected departure runway, or null when no runway is selected.
+final departureEnvProvider = Provider<RunwayEnvironmentInputs?>((ref) {
   final runway = ref.watch(departureRunwayProvider);
-  final weights = ref.watch(weightsProvider);
-  final useReheat = ref.watch(useReheatTakeoffProvider);
   if (runway == null) return null;
-
-  final metarAsync = ref.watch(departureMetarFutureProvider);
-  final metar = metarAsync.value ?? '';
-
-  final tempC = mp.MetarParser.parseTempC(metar);
-  final parsedQnh = mp.MetarParser.parseQnh(metar);
-  final parsedWind = mp.MetarParser.parseWind(metar);
-
-  double headwind = 0.0;
-  double crosswind = 0.0;
-  final windDirection = parsedWind.windDirDeg;
-  final windSpeed = parsedWind.windSpeedKt;
-  if (windDirection != null && windSpeed != null) {
-    final angleRad = (windDirection - runway.heading) * math.pi / 180.0;
-    headwind = windSpeed * math.cos(angleRad);
-    crosswind = (windSpeed * math.sin(angleRad)).abs();
-  }
-
-  MetarQnh? qnhInput;
-  if (parsedQnh != null) {
-    qnhInput = MetarQnh(unit: parsedQnh.unit, value: parsedQnh.value);
-  }
-
-  final env = RunwayEnvironmentInputs(
-    runwayElevFt: runway.elevationFt?.toDouble(),
-    qnh: qnhInput,
-    oatC: tempC,
-    headwindKt: headwind,
-    crosswindKt: crosswind,
+  return ConcordeLogic.runwayEnvFromMetar(
+    metar: ref.watch(departureMetarFutureProvider).value ?? '',
+    runwayHeadingDeg: runway.heading.toDouble(),
+    runwayElevFt: runway.elevationFt,
+    conditionMode: ref.watch(departureRunwayConditionProvider),
   );
+});
 
+final arrivalEnvProvider = Provider<RunwayEnvironmentInputs?>((ref) {
+  final runway = ref.watch(arrivalRunwayProvider);
+  if (runway == null) return null;
+  return ConcordeLogic.runwayEnvFromMetar(
+    metar: ref.watch(arrivalMetarFutureProvider).value ?? '',
+    runwayHeadingDeg: runway.heading.toDouble(),
+    runwayElevFt: runway.elevationFt,
+    conditionMode: ref.watch(arrivalRunwayConditionProvider),
+  );
+});
+
+final takeoffSpeedsProvider = Provider<TakeoffSpeeds>((ref) {
+  return ConcordeLogic.computeTakeoffSpeeds(
+    ref.watch(weightsProvider).tow,
+    condition:
+        ref.watch(departureEnvProvider)?.condition ?? RunwayCondition.dry,
+  );
+});
+
+final landingSpeedsProvider = Provider<LandingSpeeds>((ref) {
+  final env = ref.watch(arrivalEnvProvider);
+  return ConcordeLogic.computeLandingSpeeds(
+    ref.watch(weightsProvider).lw,
+    headwindKt: env?.headwindKt,
+    gustIncrementKt: env?.gustIncrementKt ?? 0,
+  );
+});
+
+RunwayFeasibility? _takeoffFeasibility(Ref ref, {required bool useReheat}) {
+  final runway = ref.watch(departureRunwayProvider);
+  if (runway == null) return null;
   return ConcordeLogic.takeoffFeasibleM(
     runway.lengthM,
-    weights['TOW']!,
-    env: env,
+    ref.watch(weightsProvider).tow,
+    env: ref.watch(departureEnvProvider),
     useReheat: useReheat,
     runwayWidthFt: runway.widthFt,
   );
-});
+}
+
+final takeoffFeasibilityProvider = Provider<RunwayFeasibility?>(
+  (ref) =>
+      _takeoffFeasibility(ref, useReheat: ref.watch(useReheatTakeoffProvider)),
+);
 
 /// Same takeoff feasibility check, but always forced to no-reheat -- lets
 /// the UI tell the pilot when reheat isn't actually required for this
 /// takeoff, regardless of [useReheatTakeoffProvider]'s own setting.
-final takeoffFeasibilityNoReheatProvider = Provider<RunwayFeasibility?>((ref) {
-  final runway = ref.watch(departureRunwayProvider);
-  final weights = ref.watch(weightsProvider);
-  if (runway == null) return null;
-
-  final metarAsync = ref.watch(departureMetarFutureProvider);
-  final metar = metarAsync.value ?? '';
-
-  final tempC = mp.MetarParser.parseTempC(metar);
-  final parsedQnh = mp.MetarParser.parseQnh(metar);
-  final parsedWind = mp.MetarParser.parseWind(metar);
-
-  double headwind = 0.0;
-  double crosswind = 0.0;
-  final windDirection = parsedWind.windDirDeg;
-  final windSpeed = parsedWind.windSpeedKt;
-  if (windDirection != null && windSpeed != null) {
-    final angleRad = (windDirection - runway.heading) * math.pi / 180.0;
-    headwind = windSpeed * math.cos(angleRad);
-    crosswind = (windSpeed * math.sin(angleRad)).abs();
-  }
-
-  MetarQnh? qnhInput;
-  if (parsedQnh != null) {
-    qnhInput = MetarQnh(unit: parsedQnh.unit, value: parsedQnh.value);
-  }
-
-  final env = RunwayEnvironmentInputs(
-    runwayElevFt: runway.elevationFt?.toDouble(),
-    qnh: qnhInput,
-    oatC: tempC,
-    headwindKt: headwind,
-    crosswindKt: crosswind,
-  );
-
-  return ConcordeLogic.takeoffFeasibleM(
-    runway.lengthM,
-    weights['TOW']!,
-    env: env,
-    useReheat: false,
-    runwayWidthFt: runway.widthFt,
-  );
-});
+final takeoffFeasibilityNoReheatProvider = Provider<RunwayFeasibility?>(
+  (ref) => _takeoffFeasibility(ref, useReheat: false),
+);
 
 final landingFeasibilityProvider = Provider<RunwayFeasibility?>((ref) {
   final runway = ref.watch(arrivalRunwayProvider);
-  final weights = ref.watch(weightsProvider);
   if (runway == null) return null;
-
-  final metarAsync = ref.watch(arrivalMetarFutureProvider);
-  final metar = metarAsync.value ?? '';
-
-  final tempC = mp.MetarParser.parseTempC(metar);
-  final parsedQnh = mp.MetarParser.parseQnh(metar);
-  final parsedWind = mp.MetarParser.parseWind(metar);
-
-  double headwind = 0.0;
-  double crosswind = 0.0;
-  final windDirection = parsedWind.windDirDeg;
-  final windSpeed = parsedWind.windSpeedKt;
-  if (windDirection != null && windSpeed != null) {
-    final angleRad = (windDirection - runway.heading) * math.pi / 180.0;
-    headwind = windSpeed * math.cos(angleRad);
-    crosswind = (windSpeed * math.sin(angleRad)).abs();
-  }
-
-  MetarQnh? qnhInput;
-  if (parsedQnh != null) {
-    qnhInput = MetarQnh(unit: parsedQnh.unit, value: parsedQnh.value);
-  }
-
-  final env = RunwayEnvironmentInputs(
-    runwayElevFt: runway.elevationFt?.toDouble(),
-    qnh: qnhInput,
-    oatC: tempC,
-    headwindKt: headwind,
-    crosswindKt: crosswind,
-  );
-
   return ConcordeLogic.landingFeasibleM(
     runway.lengthM,
-    weights['LW']!,
-    env: env,
+    ref.watch(weightsProvider).lw,
+    env: ref.watch(arrivalEnvProvider),
     runwayWidthFt: runway.widthFt,
   );
 });

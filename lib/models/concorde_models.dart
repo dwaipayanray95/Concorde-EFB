@@ -46,6 +46,18 @@ class CruiseMissionProfile {
   final int initialCruiseFl;
   final int targetCruiseFl;
 
+  /// The FL the pilot selected. [targetCruiseFl] can be lower when the
+  /// sector is too short to climb that high (see [flCappedForDistance]).
+  final int selectedCruiseFl;
+
+  /// True when the profile includes the transonic acceleration and Mach 2
+  /// cruise; false for a subsonic (M0.95) profile.
+  final bool supersonic;
+
+  /// True when the selected FL (or supersonic cruise) wasn't reachable in
+  /// the planned distance and the profile was flown lower/subsonic.
+  final bool flCappedForDistance;
+
   const CruiseMissionProfile({
     required this.climb,
     required this.accel,
@@ -62,6 +74,9 @@ class CruiseMissionProfile {
     required this.avgCruiseTasKt,
     required this.initialCruiseFl,
     required this.targetCruiseFl,
+    required this.selectedCruiseFl,
+    required this.supersonic,
+    required this.flCappedForDistance,
   });
 }
 
@@ -71,7 +86,6 @@ class BlockFuelInputs {
   final double? contingencyPct;
   final double? finalReserveKg;
   final double? alternateNm;
-  final double? burnKgPerNm;
 
   const BlockFuelInputs({
     required this.tripKg,
@@ -79,7 +93,6 @@ class BlockFuelInputs {
     this.contingencyPct,
     this.finalReserveKg,
     this.alternateNm,
-    this.burnKgPerNm,
   });
 }
 
@@ -101,12 +114,39 @@ class BlockFuelBreakdown {
   });
 }
 
+/// Runway surface state. Drives the wet/contaminated distance factors and
+/// the V1 reduction.
+enum RunwayCondition { dry, wet, contaminated }
+
+/// What the pilot picked in the runway-condition selector; [auto] derives
+/// the condition from the METAR present/recent weather.
+enum RunwayConditionMode { auto, dry, wet, contaminated }
+
 class RunwayEnvironmentInputs {
   final double? runwayElevFt;
   final MetarQnh? qnh;
   final double? oatC;
+
+  /// Steady headwind component (negative = tailwind). Null when the METAR
+  /// has no usable wind (missing METAR, or calm/unparseable).
   final double? headwindKt;
+
+  /// Crosswind component, gust-inclusive (the conservative figure that is
+  /// checked against the crosswind limit). Null when wind is unknown.
   final double? crosswindKt;
+
+  /// Tailwind component used against the tailwind limit, gust-inclusive
+  /// (0 when the wind is a headwind). Null when wind is unknown.
+  final double? tailwindKt;
+
+  /// Gust increment above the steady wind (kt), 0 when no gust reported.
+  final double gustIncrementKt;
+
+  final RunwayCondition condition;
+
+  /// False when there was no METAR / no parseable wind group -- the UI
+  /// must say so instead of silently treating the wind as calm.
+  final bool windDataAvailable;
 
   const RunwayEnvironmentInputs({
     this.runwayElevFt,
@@ -114,8 +154,77 @@ class RunwayEnvironmentInputs {
     this.oatC,
     this.headwindKt,
     this.crosswindKt,
+    this.tailwindKt,
+    this.gustIncrementKt = 0,
+    this.condition = RunwayCondition.dry,
+    this.windDataAvailable = true,
   });
 }
+
+/// Aircraft weights for the current plan (kg).
+class WeightSummary {
+  final double zfw;
+
+  /// Fuel actually on board (planned fuel capped at tank capacity).
+  final double fuelOnBoard;
+
+  /// Fuel the plan asks for (block + extra), may exceed capacity.
+  final double plannedFuel;
+
+  /// Ramp/taxi weight -- includes taxi fuel.
+  final double ramp;
+
+  /// Start-of-takeoff weight (ramp minus taxi fuel).
+  final double tow;
+
+  /// Landing weight (takeoff weight minus trip fuel).
+  final double lw;
+  final double pax;
+
+  const WeightSummary({
+    required this.zfw,
+    required this.fuelOnBoard,
+    required this.plannedFuel,
+    required this.ramp,
+    required this.tow,
+    required this.lw,
+    required this.pax,
+  });
+
+  bool get overCapacity => plannedFuel > fuelOnBoard;
+}
+
+class TakeoffSpeeds {
+  final double v1;
+  final double vr;
+  final double v2;
+  const TakeoffSpeeds({required this.v1, required this.vr, required this.v2});
+}
+
+class LandingSpeeds {
+  /// Reference landing speed at the threshold.
+  final double vref;
+
+  /// Approach speed: VREF + wind/gust additive.
+  final double vapp;
+  const LandingSpeeds({required this.vref, required this.vapp});
+}
+
+/// Fuel endurance vs requirement, both burned at realistic rates: trip
+/// fuel over the planned ETE, everything beyond it at holding fuel flow.
+class FuelEndurance {
+  final double airborneFuelKg;
+  final double enduranceH;
+  final double requiredH;
+  const FuelEndurance({
+    required this.airborneFuelKg,
+    required this.enduranceH,
+    required this.requiredH,
+  });
+  bool get sufficient => enduranceH + 1e-9 >= requiredH;
+}
+
+enum AlternateStatus { ok, missing, unknownAirport, sameAsArrival, tooFar }
 
 class MetarQnh {
   final String unit; // "hPa" or "inHg"
@@ -142,6 +251,13 @@ class RunwayFeasibility {
   final bool altitudeOk;
   final bool crosswindOk;
 
+  /// Tailwind within the 10 kt limit (true when wind is unknown).
+  final bool tailwindOk;
+
+  /// False when no wind data was available for this check.
+  final bool windDataAvailable;
+  final RunwayCondition condition;
+
   const RunwayFeasibility({
     required this.baseRequiredLengthMEst,
     required this.requiredLengthMEst,
@@ -153,5 +269,8 @@ class RunwayFeasibility {
     this.widthOk = true,
     this.altitudeOk = true,
     this.crosswindOk = true,
+    this.tailwindOk = true,
+    this.windDataAvailable = true,
+    this.condition = RunwayCondition.dry,
   });
 }

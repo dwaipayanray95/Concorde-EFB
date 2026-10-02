@@ -10,6 +10,7 @@ import '../../../core/ui_text.dart';
 import '../../../core/concorde_logic.dart';
 import '../../../services/simbrief_service.dart';
 import '../../../services/flight_plan_import_service.dart';
+import '../../../models/airport.dart';
 
 /// FLIGHT PLAN card: three ways to load a plan -- SimBrief import, a
 /// dropped .pln/route-XML file, or hand-typed route -- plus the
@@ -32,7 +33,9 @@ class FlightPlanSection extends ConsumerWidget {
     if (plan.alternateIcao != null && plan.alternateIcao!.isNotEmpty) {
       ref.read(alternateIcaoProvider.notifier).set(plan.alternateIcao!);
     }
-    ref.read(simbriefRouteProvider.notifier).set(plan.route.isEmpty ? '--' : plan.route);
+    ref
+        .read(simbriefRouteProvider.notifier)
+        .set(plan.route.isEmpty ? '--' : plan.route);
     ref.read(flightPlanSourceProvider.notifier).set(source);
     ref.read(checklistProvider.notifier).resetAll();
 
@@ -40,20 +43,28 @@ class FlightPlanSection extends ConsumerWidget {
     final dep = db?.airports[plan.departureIcao];
     final arr = db?.airports[plan.arrivalIcao];
 
-    if (plan.departureRunway != null && plan.departureRunway!.isNotEmpty) {
-      final match = _findMatchingRunwayId(dep?.runways, plan.departureRunway!);
-      ref.read(departureRunwayIdProvider.notifier).set(match ?? plan.departureRunway!);
-    }
-    if (plan.arrivalRunway != null && plan.arrivalRunway!.isNotEmpty) {
-      final match = _findMatchingRunwayId(arr?.runways, plan.arrivalRunway!);
-      ref.read(arrivalRunwayIdProvider.notifier).set(match ?? plan.arrivalRunway!);
-    }
+    // Departure deliberately stays on the longest runway (Concorde is
+    // takeoff-length limited); the pilot can still pick another one.
+    _applyArrivalRunway(ref, arr, plan.arrivalRunway);
 
     if (dep != null && arr != null) {
-      ref.read(plannedDistanceProvider.notifier).set(
-            ConcordeLogic.greatCircleNM(dep.lat, dep.lon, arr.lat, arr.lon),
+      ref
+          .read(plannedDistanceProvider.notifier)
+          .set(
+            ConcordeLogic.estimatedRouteDistanceNm(
+              ConcordeLogic.greatCircleNM(dep.lat, dep.lon, arr.lat, arr.lon),
+            ),
           );
     }
+  }
+
+  /// Selects the planned arrival runway only if it exists in the airport
+  /// database -- an unknown id would break the runway dropdown. Otherwise
+  /// the arrival runway provider keeps its longest-runway default.
+  static void _applyArrivalRunway(WidgetRef ref, Airport? arr, String? rwy) {
+    if (rwy == null || rwy.isEmpty) return;
+    final match = _findMatchingRunwayId(arr?.runways, rwy);
+    if (match != null) ref.read(arrivalRunwayIdProvider.notifier).set(match);
   }
 
   static String? _findMatchingRunwayId(List<dynamic>? runways, String rwyId) {
@@ -92,14 +103,22 @@ class FlightPlanSection extends ConsumerWidget {
 
       if (plan == null) {
         if (context.mounted) {
-          _showSnack(context, 'Could not find a route in "${picked.name}" -- unrecognized format.', colors.error);
+          _showSnack(
+            context,
+            'Could not find a route in "${picked.name}" -- unrecognized format.',
+            colors.error,
+          );
         }
         return;
       }
 
       _applyParsedPlan(ref, plan, FlightPlanSource.file);
       if (context.mounted) {
-        _showSnack(context, 'Flight plan imported from ${picked.name}.', colors.success);
+        _showSnack(
+          context,
+          'Flight plan imported from ${picked.name}.',
+          colors.success,
+        );
       }
     } catch (e) {
       if (context.mounted) {
@@ -114,7 +133,10 @@ class FlightPlanSection extends ConsumerWidget {
       SnackBar(
         content: Text(text, style: uiText(context, color: Colors.white)),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: background == colors.success || background == colors.error ? background : colors.surface,
+        backgroundColor:
+            background == colors.success || background == colors.error
+            ? background
+            : colors.surface,
       ),
     );
   }
@@ -125,7 +147,9 @@ class FlightPlanSection extends ConsumerWidget {
     final arrCtl = TextEditingController(text: ref.read(arrivalIcaoProvider));
     final altCtl = TextEditingController(text: ref.read(alternateIcaoProvider));
     final routeCtl = TextEditingController(
-      text: ref.read(simbriefRouteProvider) == '--' ? '' : ref.read(simbriefRouteProvider),
+      text: ref.read(simbriefRouteProvider) == '--'
+          ? ''
+          : ref.read(simbriefRouteProvider),
     );
 
     final applied = await showDialog<bool>(
@@ -138,7 +162,13 @@ class FlightPlanSection extends ConsumerWidget {
         ),
         title: Text(
           'MANUAL ROUTE ENTRY',
-          style: uiText(dialogContext, color: colors.textPrimary, weight: FontWeight.w900, size: 16, letterSpacing: 1.5),
+          style: uiText(
+            dialogContext,
+            color: colors.textPrimary,
+            weight: FontWeight.w900,
+            size: 16,
+            letterSpacing: 1.5,
+          ),
         ),
         content: SizedBox(
           width: 420,
@@ -178,7 +208,13 @@ class FlightPlanSection extends ConsumerWidget {
                 const SizedBox(height: 14),
                 Text(
                   'ROUTE (PASTE OR TYPE)',
-                  style: uiText(dialogContext, color: colors.textSecondary, size: 11, weight: FontWeight.bold, letterSpacing: 0.5),
+                  style: uiText(
+                    dialogContext,
+                    color: colors.textSecondary,
+                    size: 11,
+                    weight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Container(
@@ -191,12 +227,24 @@ class FlightPlanSection extends ConsumerWidget {
                     controller: routeCtl,
                     maxLines: 3,
                     textCapitalization: TextCapitalization.characters,
-                    style: uiText(dialogContext, color: colors.textPrimary, weight: FontWeight.bold, size: 14),
+                    style: uiText(
+                      dialogContext,
+                      color: colors.textPrimary,
+                      weight: FontWeight.bold,
+                      size: 14,
+                    ),
                     decoration: InputDecoration(
                       hintText: 'e.g. DVR KONAN UL9 KOK UN57 REMBA ...',
-                      hintStyle: uiText(dialogContext, color: colors.textDim, size: 13),
+                      hintStyle: uiText(
+                        dialogContext,
+                        color: colors.textDim,
+                        size: 13,
+                      ),
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
                     ),
                   ),
                 ),
@@ -207,7 +255,14 @@ class FlightPlanSection extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text('CANCEL', style: uiText(dialogContext, color: colors.textDim, weight: FontWeight.bold)),
+            child: Text(
+              'CANCEL',
+              style: uiText(
+                dialogContext,
+                color: colors.textDim,
+                weight: FontWeight.bold,
+              ),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -222,7 +277,11 @@ class FlightPlanSection extends ConsumerWidget {
               final dep = preParsed.departureIcao.trim().toUpperCase();
               final arr = preParsed.arrivalIcao.trim().toUpperCase();
               if (dep.length != 4 || arr.length != 4) {
-                _showSnack(dialogContext, 'Departure and arrival need valid 4-letter ICAO codes.', colors.error);
+                _showSnack(
+                  dialogContext,
+                  'Departure and arrival need valid 4-letter ICAO codes.',
+                  colors.error,
+                );
                 return;
               }
               depCtl.text = dep;
@@ -232,9 +291,18 @@ class FlightPlanSection extends ConsumerWidget {
             style: ElevatedButton.styleFrom(
               backgroundColor: colors.accent,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-            child: Text('APPLY', style: uiText(dialogContext, color: Colors.white, weight: FontWeight.bold)),
+            child: Text(
+              'APPLY',
+              style: uiText(
+                dialogContext,
+                color: Colors.white,
+                weight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -284,7 +352,9 @@ class FlightPlanSection extends ConsumerWidget {
     return EfbCard(
       title: 'FLIGHT PLAN',
       icon: Icons.map_outlined,
-      right: source == FlightPlanSource.none ? null : _sourceBadge(context, source),
+      right: source == FlightPlanSource.none
+          ? null
+          : _sourceBadge(context, source),
       child: Column(
         children: [
           // Import methods row: SimBrief (inline field + button), then two
@@ -335,40 +405,48 @@ class FlightPlanSection extends ConsumerWidget {
                             ref
                                 .read(arrivalIcaoProvider.notifier)
                                 .set(ofp['destination']?['icao_code'] ?? '');
+                            // SimBrief returns a list when several
+                            // alternates are planned -- take the first.
+                            final alt = ofp['alternate'] is List
+                                ? ((ofp['alternate'] as List).isNotEmpty
+                                      ? (ofp['alternate'] as List).first
+                                      : null)
+                                : ofp['alternate'];
                             ref
                                 .read(alternateIcaoProvider.notifier)
-                                .set(ofp['alternate']?['icao_code'] ?? '');
+                                .set(
+                                  alt is Map ? (alt['icao_code'] ?? '') : '',
+                                );
+                            // route_distance is the flown route distance
+                            // (SID/airways/STAR), not the great circle.
                             ref
                                 .read(plannedDistanceProvider.notifier)
                                 .set(
                                   double.tryParse(
-                                        ofp['general']?['route_distance'] ??
-                                            '0',
+                                        '${ofp['general']?['route_distance'] ?? '0'}',
                                       ) ??
                                       0.0,
                                 );
                             ref
                                 .read(paxCountProvider.notifier)
                                 .set(
-                                  int.tryParse(
-                                        ofp['weights']?['pax_count'] ?? '100',
-                                      ) ??
-                                      100,
+                                  (int.tryParse(
+                                            '${ofp['weights']?['pax_count'] ?? '100'}',
+                                          ) ??
+                                          100)
+                                      .clamp(0, 100),
                                 );
 
-                            ref
-                                .read(departureRunwayIdProvider.notifier)
-                                .set(ofp['origin']?['plan_rwy'] ?? '');
-                            ref
-                                .read(arrivalRunwayIdProvider.notifier)
-                                .set(ofp['destination']?['plan_rwy'] ?? '');
+                            _applyArrivalRunway(
+                              ref,
+                              ref.read(arrAirportProvider),
+                              ofp['destination']?['plan_rwy']?.toString(),
+                            );
 
                             ref
                                 .read(simbriefRouteProvider.notifier)
                                 .set(ofp['general']?['route'] ?? '--');
-                            ref
-                                .read(simbriefLoadedProvider.notifier)
-                                .set(true);
+                            ref.read(simbriefLoadedProvider.notifier).set(true);
                             ref
                                 .read(flightPlanSourceProvider.notifier)
                                 .set(FlightPlanSource.simbrief);
@@ -383,9 +461,7 @@ class FlightPlanSection extends ConsumerWidget {
                             );
                           }
                         } finally {
-                          ref
-                              .read(simbriefLoadingProvider.notifier)
-                              .set(false);
+                          ref.read(simbriefLoadingProvider.notifier).set(false);
                         }
                       },
               ),
@@ -633,7 +709,13 @@ class FlightPlanSection extends ConsumerWidget {
       ),
       child: Text(
         'SOURCE: $label',
-        style: uiText(context, color: colors.accent, size: 9, weight: FontWeight.bold, letterSpacing: 0.5),
+        style: uiText(
+          context,
+          color: colors.accent,
+          size: 9,
+          weight: FontWeight.bold,
+          letterSpacing: 0.5,
+        ),
       ),
     );
   }
@@ -658,7 +740,12 @@ class _ImportButton extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       waitDuration: const Duration(milliseconds: 250),
-      textStyle: uiText(context, size: 11, weight: FontWeight.bold, color: Colors.white),
+      textStyle: uiText(
+        context,
+        size: 11,
+        weight: FontWeight.bold,
+        color: Colors.white,
+      ),
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(8),
@@ -675,13 +762,18 @@ class _ImportButton extends StatelessWidget {
             disabledBackgroundColor: colors.accent.withValues(alpha: 0.35),
             elevation: 0,
             padding: EdgeInsets.zero,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
           child: loading
               ? const SizedBox(
                   width: 16,
                   height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF090B10)),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Color(0xFF090B10),
+                  ),
                 )
               : Icon(icon, size: 20),
         ),
@@ -805,10 +897,7 @@ class _PhaseTimeColumn extends StatelessWidget {
               weight: FontWeight.w900,
             ),
             children: [
-              TextSpan(
-                text: '$h',
-                style: const TextStyle(fontSize: 14),
-              ),
+              TextSpan(text: '$h', style: const TextStyle(fontSize: 14)),
               TextSpan(
                 text: 'h ',
                 style: uiText(
@@ -851,4 +940,3 @@ class _PhaseTimeColumn extends StatelessWidget {
     );
   }
 }
-

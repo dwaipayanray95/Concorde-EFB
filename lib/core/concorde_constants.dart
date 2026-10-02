@@ -27,46 +27,67 @@ class _Speeds {
 class _Fuel {
   const _Fuel();
 
-  /// Whole-mission average (95,681 kg capacity / 3,900 nm published range —
-  /// matches the manual's own "46.85 lb/mi (13.2 kg/km)" spec figure). This
-  /// is NOT a pure cruise rate — it has climb/reheat overhead baked in — so
-  /// it's only appropriate for a short, low-altitude/subsonic leg where
-  /// climb+descent dominate rather than sustained supersonic cruise, i.e.
-  /// the alternate-airport diversion leg in [ConcordeLogic.blockFuelKg].
-  /// The main trip profile uses the phase-based hourly rates below instead.
-  final double alternateBurnKgPerNm = 24.45;
+  // ---------------------------------------------------------------------
+  // Phase model (4 engines combined). Calibrated so a full LHR-JFK sector
+  // (~3,150 nm flown) lands at ~70-75 t trip fuel / ~3h10 airborne, which
+  // matches published averages (~20-22 t/h whole-flight burn, "about a
+  // quarter to a third of the fuel used to reach Mach 2", 95.7 t capacity
+  // arriving with ~10-15 t). Sources: concordesst.com powerplant tables,
+  // BA Concorde Flying Manual / DC Designs manual worked examples,
+  // published BA/AF block figures. Indicative, not certified data.
+  // ---------------------------------------------------------------------
+
+  /// Engines at ground idle (4 x ~1,100 kg/h) -- taxi and Flight Monitor
+  /// "on ground" phase.
+  final double idleFuelFlowKgH = 4400.0;
+
+  /// Subsonic climb (dry power) to the transonic acceleration level.
+  final double climbFuelFlowKgH = 26000.0;
+
+  /// Takeoff roll + initial climb in full reheat (~1.5 min at ~80-90 t/h),
+  /// added to the departure climb only (not to an alternate climb-out).
+  final double takeoffAllowanceKg = 2000.0;
+
+  /// Transonic acceleration M0.95 -> M2.0 (reheat on to ~M1.7, then
+  /// max-dry climb). Average over the whole phase at altitude -- full
+  /// sea-level reheat (~90 t/h) is far higher than what the engines can
+  /// burn at FL280-FL500, so the sea-level figure is NOT used here.
+  final double transonicAccelFuelFlowKgH = 60000.0;
+
+  /// Full-reheat sea-level figure (4 x 22,500 kg/h) -- only used by the
+  /// live Flight Monitor when reheat is actually lit.
+  final double reheatFuelFlowKgH = 90000.0;
+
+  /// Steady Mach 2 supercruise. Heavy/low at the start of cruise
+  /// (~21 t/h at FL500), light/high at the end (~17.5 t/h at FL600;
+  /// published "~4,800 US gal/h" at FL600 ~= 14.5-18 t/h).
+  final double supersonicCruiseFuelFlowKgHAtFl500 = 21000.0;
+  final double supersonicCruiseFuelFlowKgHAtFl600 = 17500.0;
+
+  /// Subsonic cruise (M0.95, FL250-FL390): Concorde is inefficient
+  /// subsonic -- ~15 t/h at ~550 kt TAS ~= 27 kg/nm.
+  final double subsonicCruiseFuelFlowKgH = 15000.0;
+
+  /// Deceleration + descent + approach average. Idle descent can be as low
+  /// as ~4.5 t/h ("as low as 10,000 lb/h" per the manual), but the
+  /// approach is flown on the back of the drag curve at high thrust, so
+  /// the whole-phase average is higher.
+  final double descentFuelFlowKgH = 8500.0;
+
+  /// Holding / reserve burn: 30 min subsonic hold ~= 6,000 kg.
+  final double holdingFuelFlowKgH = 12000.0;
+
+  /// Missed approach + go-around allowance added to the alternate leg.
+  final double missedApproachKg = 1000.0;
 
   final int reheatMinutesCap = 25;
 
-  // Phase-based fuel flow (4 engines combined), sourced from the DC Designs
-  // manual's own worked examples cross-checked against real Olympus 593
-  // engine specs (concordesst.com powerplant table) and published real-world
-  // block fuel for transatlantic Concorde flights (~91-92 t / ~3.5h):
-  //   - idle:   1,100 kg/h/engine x4  (concordesst.com "Idle Power")
-  //   - climb:  10,500 kg/h/engine x4 (concordesst.com "Full Power", no
-  //     reheat -- the subsonic/low-supersonic climb before the transonic
-  //     accel burst, not yet in supercruise)
-  //   - reheat: 22,500 kg/h/engine x4 (concordesst.com "Full Re-heated
-  //     Power" -- the ~90 nm transonic acceleration burst through Mach 2)
-  //   - cruise: ~18,000-20,500 kg/h total at steady Mach 2 (the manual's own
-  //     "10,000 lb/engine/h" worked example, corroborated by real BA flight
-  //     data and by back-solving real block fuel/flight-time). This is
-  //     LOWER than "climb" full-power because level supercruise only needs
-  //     enough thrust to overcome drag, not max continuous thrust.
-  //   - descent: manual states "as low as 10,000 lb/h TOTAL" during descent,
-  //     which also matches concordesst.com's idle-power figure almost
-  //     exactly (4,400 kg/h) -- engines are throttled back to near-idle.
-  final double idleFuelFlowKgH = 4400.0;
-  final double climbFuelFlowKgH = 42000.0;
-  final double reheatFuelFlowKgH = 90000.0;
-  final double cruiseFuelFlowKgHAtFl500 = 20500.0;
-  final double cruiseFuelFlowKgHAtFl600 = 17000.0;
-  final double descentFuelFlowKgH = 4536.0;
-
-  /// Standard British Airways / Air France Concorde holding & final reserve.
-  /// 30 minutes subsonic holding (nominal ~5,500-6,000 kg depending on weight/altitude).
-  /// British Airways / Air France Concorde dispatch rules standard minimum final reserve is 6,000 kg.
+  /// Standard BA/AF Concorde final reserve (30 min hold) = 6,000 kg.
   final double defaultFinalReserveKg = 6000.0;
+
+  /// Alternates beyond this are flagged as outside a sensible diversion
+  /// range for Concorde dispatch.
+  final double maxSensibleAlternateNm = 500.0;
 }
 
 class _Runway {
@@ -78,6 +99,10 @@ class _Runway {
   // 01.01.02 "Airplane General / Performance".
   final double minRunwayWidthFt = 150;
   final double maxCrosswindKt = 30;
+
+  /// Maximum tailwind component for takeoff and landing -- 10 kt (BA
+  /// Concorde Flying Manual, Operating Limitations).
+  final double maxTailwindKt = 10;
   final double minAirfieldAltFt = -1000;
   final double maxAirfieldAltFt = 8000;
 }
