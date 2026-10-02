@@ -28,9 +28,10 @@ class EfbNavRail extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final monitorState = ref.watch(flightMonitorProvider);
     final bridgeStatus = SimBridgeLauncher.status.value;
+    final leftInset = MediaQuery.paddingOf(context).left;
 
     return Container(
-      width: 76,
+      width: 76.0 + leftInset,
       decoration: BoxDecoration(
         color: colors.surface,
         border: Border(
@@ -41,101 +42,117 @@ class EfbNavRail extends ConsumerWidget {
         ),
       ),
       child: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 12),
-            // Aircraft badge / App icon
-            Tooltip(
-              message: 'Concorde EFB ${AppVersion.display}',
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: colors.resultsBg,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: colors.dividerStrong.withValues(alpha: 0.8),
-                    width: 1.2,
-                  ),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.asset(
-                    'assets/app-icon.png',
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Icon(
-                      Icons.airplanemode_active,
-                      color: colors.accent,
-                      size: 26,
+        right: false,
+        child: SizedBox(
+          width: 76,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                physics: const ClampingScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IntrinsicHeight(
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 12),
+                        // Aircraft badge / App icon
+                        Tooltip(
+                          message: 'Concorde EFB ${AppVersion.display}',
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: colors.resultsBg,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: colors.dividerStrong.withValues(alpha: 0.8),
+                                width: 1.2,
+                              ),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Image.asset(
+                                'assets/app-icon.png',
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => Icon(
+                                  Icons.airplanemode_active,
+                                  color: colors.accent,
+                                  size: 26,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        Divider(
+                          color: colors.dividerStrong.withValues(alpha: 0.4),
+                          height: 1,
+                          indent: 14,
+                          endIndent: 14,
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Navigation Items
+                        _NavRailItem(
+                          icon: Icons.flight_takeoff,
+                          label: 'PLAN',
+                          isSelected: selectedIndex == 0,
+                          onTap: () => onDestinationSelected(0),
+                        ),
+                        const SizedBox(height: 12),
+                        _NavRailItem(
+                          icon: Icons.playlist_add_check,
+                          label: 'CHECK',
+                          isSelected: selectedIndex == 1,
+                          onTap: () => onDestinationSelected(1),
+                        ),
+                        const SizedBox(height: 12),
+                        _NavRailItem(
+                          icon: Icons.monitor_heart,
+                          label: 'MONITOR',
+                          isSelected: selectedIndex == 2,
+                          onTap: () => onDestinationSelected(2),
+                        ),
+
+                        const Spacer(),
+
+                        // SimConnect status indicator
+                        _buildBridgeStatusIndicator(context, monitorState.isConnected, bridgeStatus),
+                        const SizedBox(height: 8),
+
+                        // Theme toggle
+                        Tooltip(
+                          message: themeMode == ThemeMode.dark ? 'Light mode' : 'Dark mode',
+                          child: IconButton(
+                            icon: Icon(
+                              themeMode == ThemeMode.dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                              color: colors.textSecondary,
+                              size: 20,
+                            ),
+                            onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
+                          ),
+                        ),
+
+                        // Utility / Settings menu
+                        Tooltip(
+                          message: 'EFB Settings & Links',
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.settings_outlined,
+                              color: colors.textSecondary,
+                              size: 20,
+                            ),
+                            onPressed: () => _showSettingsDialog(context),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                     ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 18),
-            Divider(
-              color: colors.dividerStrong.withValues(alpha: 0.4),
-              height: 1,
-              indent: 14,
-              endIndent: 14,
-            ),
-            const SizedBox(height: 16),
-
-            // Navigation Items
-            _NavRailItem(
-              icon: Icons.flight_takeoff,
-              label: 'PLAN',
-              isSelected: selectedIndex == 0,
-              onTap: () => onDestinationSelected(0),
-            ),
-            const SizedBox(height: 12),
-            _NavRailItem(
-              icon: Icons.playlist_add_check,
-              label: 'CHECK',
-              isSelected: selectedIndex == 1,
-              onTap: () => onDestinationSelected(1),
-            ),
-            const SizedBox(height: 12),
-            _NavRailItem(
-              icon: Icons.monitor_heart,
-              label: 'MONITOR',
-              isSelected: selectedIndex == 2,
-              onTap: () => onDestinationSelected(2),
-            ),
-
-            const Spacer(),
-
-            // SimConnect status indicator
-            _buildBridgeStatusIndicator(context, monitorState.isConnected, bridgeStatus),
-            const SizedBox(height: 8),
-
-            // Theme toggle
-            Tooltip(
-              message: themeMode == ThemeMode.dark ? 'Light mode' : 'Dark mode',
-              child: IconButton(
-                icon: Icon(
-                  themeMode == ThemeMode.dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                  color: colors.textSecondary,
-                  size: 20,
-                ),
-                onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
-              ),
-            ),
-
-            // Utility / Settings menu
-            Tooltip(
-              message: 'EFB Settings & Links',
-              child: IconButton(
-                icon: Icon(
-                  Icons.settings_outlined,
-                  color: colors.textSecondary,
-                  size: 20,
-                ),
-                onPressed: () => _showSettingsDialog(context),
-              ),
-            ),
-            const SizedBox(height: 12),
-          ],
+              );
+            },
+          ),
         ),
       ),
     );

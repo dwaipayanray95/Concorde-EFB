@@ -260,76 +260,82 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
             builder: (context, constraints) {
               final isCompact = constraints.maxWidth < 720;
 
-              final mainContent = SafeArea(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Cockpit Top Status Bar
-                    Padding(
-                      padding: isCompact
-                          ? const EdgeInsets.fromLTRB(12, 10, 12, 8)
-                          : const EdgeInsets.fromLTRB(20, 14, 20, 12),
-                      child: CockpitStatusBar(
-                        hasUpdate: _hasUpdate,
-                        latestVersion: _latestVersion,
+              Widget buildMainContent({required bool safeLeft}) {
+                return SafeArea(
+                  left: safeLeft,
+                  right: true,
+                  top: true,
+                  bottom: true,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Cockpit Top Status Bar
+                      Padding(
+                        padding: isCompact
+                            ? const EdgeInsets.fromLTRB(12, 10, 12, 8)
+                            : const EdgeInsets.fromLTRB(20, 14, 20, 12),
+                        child: CockpitStatusBar(
+                          hasUpdate: _hasUpdate,
+                          latestVersion: _latestVersion,
+                        ),
                       ),
-                    ),
 
-                    // Tab View Content
-                    Expanded(
-                      child: selectedTab == 0
-                          ? SmoothScrollWrapper(
-                              controller: _tab0Controller,
-                              child: SingleChildScrollView(
+                      // Tab View Content
+                      Expanded(
+                        child: selectedTab == 0
+                            ? SmoothScrollWrapper(
                                 controller: _tab0Controller,
-                                key: const ValueKey('scroll-tab-0'),
-                                scrollDirection: Axis.vertical,
-                                physics: const BouncingScrollPhysics(),
+                                child: SingleChildScrollView(
+                                  controller: _tab0Controller,
+                                  key: const ValueKey('scroll-tab-0'),
+                                  scrollDirection: Axis.vertical,
+                                  physics: const BouncingScrollPhysics(),
+                                  padding: EdgeInsets.fromLTRB(
+                                    isCompact ? 12 : 20,
+                                    4,
+                                    isCompact ? 12 : 20,
+                                    24,
+                                  ),
+                                  child: const FlightPlannerTab(),
+                                ),
+                              )
+                            : selectedTab == 1
+                            ? Padding(
+                                key: const ValueKey('padding-tab-1'),
                                 padding: EdgeInsets.fromLTRB(
                                   isCompact ? 12 : 20,
                                   4,
                                   isCompact ? 12 : 20,
                                   24,
                                 ),
-                                child: const FlightPlannerTab(),
-                              ),
-                            )
-                          : selectedTab == 1
-                          ? Padding(
-                              key: const ValueKey('padding-tab-1'),
-                              padding: EdgeInsets.fromLTRB(
-                                isCompact ? 12 : 20,
-                                4,
-                                isCompact ? 12 : 20,
-                                24,
-                              ),
-                              child: const ChecklistsTab(),
-                            )
-                          : SmoothScrollWrapper(
-                              controller: _tab2Controller,
-                              child: SingleChildScrollView(
+                                child: const ChecklistsTab(),
+                              )
+                            : SmoothScrollWrapper(
                                 controller: _tab2Controller,
-                                key: const ValueKey('scroll-tab-2'),
-                                scrollDirection: Axis.vertical,
-                                physics: const BouncingScrollPhysics(),
-                                padding: EdgeInsets.fromLTRB(
-                                  isCompact ? 12 : 20,
-                                  4,
-                                  isCompact ? 12 : 20,
-                                  24,
+                                child: SingleChildScrollView(
+                                  controller: _tab2Controller,
+                                  key: const ValueKey('scroll-tab-2'),
+                                  scrollDirection: Axis.vertical,
+                                  physics: const BouncingScrollPhysics(),
+                                  padding: EdgeInsets.fromLTRB(
+                                    isCompact ? 12 : 20,
+                                    4,
+                                    isCompact ? 12 : 20,
+                                    24,
+                                  ),
+                                  child: const FlightMonitorTab(),
                                 ),
-                                child: const FlightMonitorTab(),
                               ),
-                            ),
-                    ),
-                  ],
-                ),
-              );
+                      ),
+                    ],
+                  ),
+                );
+              }
 
               if (isCompact) {
                 return Column(
                   children: [
-                    Expanded(child: mainContent),
+                    Expanded(child: buildMainContent(safeLeft: true)),
                     // Compact Bottom Navigation for mobile screens
                     Container(
                       decoration: BoxDecoration(
@@ -388,7 +394,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                   ),
 
                   // 2. Main EFB tablet content area
-                  Expanded(child: mainContent),
+                  Expanded(child: buildMainContent(safeLeft: false)),
                 ],
               );
             },
