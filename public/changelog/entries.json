@@ -1,6 +1,14 @@
 [
     {
         "date": "2026-10-03",
+        "title": "v5.5.3 — Cleaner Windows installs and updates",
+        "items": [
+            "Updating Concorde EFB now fully replaces the previous version's files, so leftovers from old versions can no longer cause problems",
+            "Uninstalling now removes the whole install folder; your settings are kept for the next install"
+        ]
+    },
+    {
+        "date": "2026-10-03",
         "title": "v5.5.2 — Version number now always matches the build",
         "items": [
             "The version shown in Settings and the update check now come from the app's real build version instead of a stale hardcoded value",

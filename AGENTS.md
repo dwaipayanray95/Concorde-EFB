@@ -14,7 +14,7 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `5.5.2+65` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+- Current version: `5.5.3+66` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
   `public/changelog/entries.json` in sync — README no longer carries its own changelog, it just
   links to that page.
 - **Versioning rule (mandatory for every agent):** every change that alters user-visible behavior
@@ -268,6 +268,7 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 - v5.5.0: `LiveAlert.repeatEvery` -- urgent warnings (MACH > MMO, GEAR SPEED, CG AFT/FWD LIMIT, GEAR UP — BELOW 250 KT) re-chime every 2 s, DESCEND NOW every 12 s, others once; 500 ms repeat timer in `AlertChimeNotifier`; warning.wav regenerated louder (same tones, tanh limiter, -0.3 dBFS).
 - v5.5.1: height above ground comes from the airport DB, not the bridge (owner preference): `TelemetryModel.heightAboveGround(fieldElevationFt:)` = MSL altitude - departure/arrival elevation. Used by the gear-up alert (arrival), TOD/ETA descent distance (arrival) and `classifyBurnPhase` (departure, plus the sim's `onGround` flag, new optional param).
 - v5.5.2: version display/update check read `pubspec.yaml` via `package_info_plus` (`appVersionProvider` in `lib/core/app_version.dart`; no hardcoded Dart version); Inno Setup takes `/DAppVer=` from CI.
+- v5.5.3: Inno installer wipes the previous install (`[InstallDelete]`, guarded by `IsExistingInstall`) and uninstall removes `{app}`; settings live in `%APPDATA%` (SharedPreferences) so they survive. Only the airport-DB cache lives in `{app}\\concorde_efb`.
 
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.
