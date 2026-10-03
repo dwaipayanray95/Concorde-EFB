@@ -258,7 +258,11 @@ jobs:
           echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/upload-keystore.jks" >> "$GITHUB_ENV"
 
       - name: Build APK
-        run: flutter build apk --${{ env.MODE }}
+        # APK for direct installs: 64-bit ARM only (nearly all phones since ~2017),
+        # about a third of the size of the all-processors build. The release .aab
+        # below still contains every processor type; Google Play serves each
+        # phone only the part it needs.
+        run: flutter build apk --${{ env.MODE }} --target-platform android-arm64
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ inputs.mode == 'release' && secrets.ANDROID_KEYSTORE_PASSWORD || '' }}
           ANDROID_KEY_ALIAS: ${{ inputs.mode == 'release' && secrets.ANDROID_KEY_ALIAS || '' }}
