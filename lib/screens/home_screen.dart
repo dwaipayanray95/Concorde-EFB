@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../features/flight_monitor/presentation/controllers/alert_chime.dart';
 import 'package:http/http.dart' as http;
 import 'package:window_manager/window_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -217,6 +218,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final airportDbAsync = ref.watch(airportDbProvider);
+    // Keeps the alert chimes listening on every tab.
+    ref.watch(alertChimeProvider);
 
     return airportDbAsync.when(
       loading: () => Scaffold(

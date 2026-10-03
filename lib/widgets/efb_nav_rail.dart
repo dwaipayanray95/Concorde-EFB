@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/ad_consent_service.dart';
+import '../features/flight_monitor/presentation/controllers/alert_chime.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -284,6 +285,66 @@ class EfbNavRail extends ConsumerWidget {
               icon: Icons.favorite_border,
               label: 'Support Development',
               url: AppLinks.donate,
+            ),
+            const SizedBox(height: 8),
+            // Flight Monitor alert chimes: one chime per new alert.
+            Consumer(
+              builder: (context, ref, _) {
+                final on = ref.watch(alertChimeProvider);
+                final chime = ref.read(alertChimeProvider.notifier);
+                Widget test(String label, bool critical) => TextButton(
+                  onPressed: () => chime.preview(critical: critical),
+                  child: Text(
+                    label,
+                    style: uiText(
+                      context,
+                      size: 10,
+                      weight: FontWeight.w800,
+                      color: colors.accent,
+                    ),
+                  ),
+                );
+                return Container(
+                  padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
+                  decoration: BoxDecoration(
+                    color: colors.inputBg,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: colors.dividerStrong.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        on
+                            ? Icons.volume_up_outlined
+                            : Icons.volume_off_outlined,
+                        size: 16,
+                        color: colors.accent,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Alert chimes',
+                          style: uiText(
+                            context,
+                            size: 13,
+                            color: colors.textPrimary,
+                            weight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      test('WARNING', true),
+                      test('CAUTION', false),
+                      Switch(
+                        value: on,
+                        activeThumbColor: colors.accent,
+                        onChanged: chime.setEnabled,
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 8),
             _SettingButton(

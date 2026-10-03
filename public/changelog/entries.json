@@ -1,6 +1,15 @@
 [
     {
         "date": "2026-10-03",
+        "title": "v5.4.0 — Alert chimes",
+        "items": [
+            "Flight Monitor alerts now chime once when they appear: a two-tone chime for red warnings, a single soft chime for amber cautions — never a repeating master-caution loop",
+            "Alerts are checked on every tab, so you hear them even while on the Planner or Checklists",
+            "Mute with the speaker button on the alert row, or in Settings → Alert chimes (with test buttons for each chime)"
+        ]
+    },
+    {
+        "date": "2026-10-03",
         "title": "v5.3.0 — Numbers from the DC Designs Concorde manual",
         "items": [
             "CG limits and ideal CG now follow the manual's CG-vs-Mach chart (about 53.5–54% MAC for takeoff and landing, 59% at Mach 2); the Flight Monitor's TRANSFER AFT / FWD advice uses it",

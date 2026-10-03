@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/app_colors.dart';
-import '../../../../../core/concorde_constants.dart';
 import '../../../../../core/formatters.dart';
-import '../../../../../core/live_flight_math.dart';
 import '../../controllers/live_nav_provider.dart';
+import '../../controllers/live_alerts_provider.dart';
+import '../../controllers/alert_chime.dart';
 import '../../../../../core/ui_text.dart';
 import '../../../../../models/concorde_models.dart';
 import '../../../../../providers/efb_providers.dart';
@@ -39,7 +39,6 @@ class MfdStrip extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
-    final dest = ref.watch(arrAirportProvider);
     final destIcao = ref.watch(arrivalIcaoProvider);
     final fuelPlan = ref.watch(fuelBreakdownProvider);
 
@@ -51,42 +50,9 @@ class MfdStrip extends ConsumerWidget {
     final reservesWithAlt = finalReserve + fuelPlan.alternateKg;
 
     // --- annunciators ---
-    final warnings = <(String, bool)>[]; // (text, isCritical)
-    if (isLive) {
-      final cg = cgLimitsForMach(t.mach);
-      if (t.cgPct > cg.aft) warnings.add(('CG AFT LIMIT', true));
-      if (t.cgPct < cg.fwd) warnings.add(('CG FWD LIMIT', true));
-      if (t.mach > ConcordeConstants.speeds.mmo) {
-        warnings.add(('MACH > MMO', true));
-      }
-      if (t.gearLabel != 'UP' &&
-          !t.onGround &&
-          t.ias > ConcordeConstants.speeds.vleKt) {
-        warnings.add(('GEAR SPEED', true));
-      }
-      // DC Designs manual: gear lights flash red below 250 kt IAS with the
-      // gear up -- i.e. low and slow on approach without the gear down.
-      if (t.gearLabel == 'UP' &&
-          !t.onGround &&
-          t.ias < 250 &&
-          t.vs < -300 &&
-          t.altitude < 5000) {
-        warnings.add(('GEAR UP — BELOW 250 KT', true));
-      }
-      if (pred != null && phase != FlightBurnPhase.ground) {
-        if (pred.fuelAtDestKg < finalReserve) {
-          warnings.add(('FUEL BELOW FINAL RESERVE AT DEST', true));
-        } else if (pred.fuelAtDestKg < reservesWithAlt) {
-          warnings.add(('NO ALTERNATE FUEL AT DEST', false));
-        }
-        if (pred.distToTodNm <= 10 &&
-            pred.distToTodNm > -20 &&
-            phase == FlightBurnPhase.cruise) {
-          warnings.add(('DESCEND NOW', false));
-        }
-      }
-      if (dest == null) warnings.add(('NO DESTINATION IN PLAN', false));
-    }
+    final warnings = [
+      for (final a in ref.watch(liveAlertsProvider)) (a.text, a.critical),
+    ];
 
     final todText = pred == null
         ? '--'
@@ -144,37 +110,63 @@ class MfdStrip extends ConsumerWidget {
           const SizedBox(height: 12),
           Container(height: 1, color: colors.divider),
           const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: !isLive
-                ? [
-                    _pill(
-                      context,
-                      'NO LIVE DATA',
-                      colors.dividerStrong,
-                      colors.textSecondary,
-                    ),
-                  ]
-                : warnings.isEmpty
-                ? [
-                    _pill(
-                      context,
-                      'ALL SYSTEMS NORMAL',
-                      colors.success,
-                      AppColors.dark.bg,
-                    ),
-                  ]
-                : warnings
-                      .map(
-                        (w) => _pill(
-                          context,
-                          w.$1,
-                          w.$2 ? colors.error : colors.accent,
-                          w.$2 ? Colors.white : AppColors.dark.bg,
-                        ),
-                      )
-                      .toList(),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: !isLive
+                      ? [
+                          _pill(
+                            context,
+                            'NO LIVE DATA',
+                            colors.dividerStrong,
+                            colors.textSecondary,
+                          ),
+                        ]
+                      : warnings.isEmpty
+                      ? [
+                          _pill(
+                            context,
+                            'ALL SYSTEMS NORMAL',
+                            colors.success,
+                            AppColors.dark.bg,
+                          ),
+                        ]
+                      : warnings
+                            .map(
+                              (w) => _pill(
+                                context,
+                                w.$1,
+                                w.$2 ? colors.error : colors.accent,
+                                w.$2 ? Colors.white : AppColors.dark.bg,
+                              ),
+                            )
+                            .toList(),
+                ),
+              ),
+              // Alert chime on/off (one chime per new alert, never a loop).
+              IconButton(
+                tooltip: ref.watch(alertChimeProvider)
+                    ? 'Alert chimes on'
+                    : 'Alert chimes muted',
+                visualDensity: VisualDensity.compact,
+                icon: Icon(
+                  ref.watch(alertChimeProvider)
+                      ? Icons.volume_up_outlined
+                      : Icons.volume_off_outlined,
+                  size: 18,
+                  color: ref.watch(alertChimeProvider)
+                      ? colors.accent
+                      : colors.textDim,
+                ),
+                onPressed: () => ref
+                    .read(alertChimeProvider.notifier)
+                    .setEnabled(!ref.read(alertChimeProvider)),
+              ),
+            ],
           ),
         ],
       ),
