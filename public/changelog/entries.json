@@ -1,6 +1,16 @@
 [
     {
         "date": "2026-10-03",
+        "title": "v5.5.0 — Repeating chimes for urgent warnings",
+        "items": [
+            "Urgent warnings (Mach overspeed, gear overspeed, CG limits, gear up below 250 kt on approach) now re-chime every 2 seconds until corrected",
+            "DESCEND NOW re-chimes every 12 seconds until you start down",
+            "Other alerts still chime once",
+            "Warning chime is louder (same sound)"
+        ]
+    },
+    {
+        "date": "2026-10-03",
         "title": "v5.4.0 — Alert chimes",
         "items": [
             "Flight Monitor alerts now chime once when they appear: a two-tone chime for red warnings, a single soft chime for amber cautions — never a repeating master-caution loop",

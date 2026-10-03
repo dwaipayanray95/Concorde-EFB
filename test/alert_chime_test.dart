@@ -73,4 +73,48 @@ void main() {
     await set(c, [warning]);
     expect(chime.played, isEmpty);
   });
+
+  test('urgent warnings re-chime every 2 s, DESCEND NOW every 12 s', () async {
+    final c = make();
+    addTearDown(c.dispose);
+    final chime = c.read(alertChimeProvider.notifier);
+    const overspeed = LiveAlert(
+      'MACH > MMO',
+      critical: true,
+      repeatEvery: Duration(seconds: 2),
+    );
+    const descend = LiveAlert(
+      'DESCEND NOW',
+      critical: false,
+      repeatEvery: Duration(seconds: 12),
+    );
+    await set(c, [overspeed, descend]);
+    expect(chime.played, [true]); // first appearance: one (warning) chime
+
+    final t0 = DateTime.now();
+    chime.checkRepeatsAt(t0.add(const Duration(seconds: 1)));
+    expect(chime.played.length, 1); // not yet
+    chime.checkRepeatsAt(t0.add(const Duration(seconds: 2, milliseconds: 100)));
+    expect(chime.played, [true, true]); // overspeed repeat
+    chime.checkRepeatsAt(
+      t0.add(const Duration(seconds: 12, milliseconds: 200)),
+    );
+    // Both due: a single chime, the most severe.
+    expect(chime.played, [true, true, true]);
+
+    // Cleared: no more repeats.
+    await set(c, []);
+    chime.checkRepeatsAt(t0.add(const Duration(seconds: 30)));
+    expect(chime.played.length, 3);
+  });
+
+  test('one-shot alerts never repeat', () async {
+    final c = make();
+    addTearDown(c.dispose);
+    final chime = c.read(alertChimeProvider.notifier);
+    const fuel = LiveAlert('FUEL BELOW FINAL RESERVE AT DEST', critical: true);
+    await set(c, [fuel]);
+    chime.checkRepeatsAt(DateTime.now().add(const Duration(minutes: 5)));
+    expect(chime.played, [true]);
+  });
 }
