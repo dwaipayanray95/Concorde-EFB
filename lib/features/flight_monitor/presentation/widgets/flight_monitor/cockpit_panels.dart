@@ -313,7 +313,7 @@ class EnginesPanel extends StatelessWidget {
 // CG + trim: corridor for the current Mach, target, transfer advice.
 // ---------------------------------------------------------------------------
 
-class CgTrimCard extends StatelessWidget {
+class CgTrimCard extends ConsumerWidget {
   final TelemetryModel t;
   const CgTrimCard({super.key, required this.t});
 
@@ -321,13 +321,20 @@ class CgTrimCard extends StatelessWidget {
   static const _scaleMax = 62.0;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final lim = cgLimitsForMach(t.mach);
-    // Ideal CG for this Mach from the DC Designs manual's CG chart.
-    final target = cgTargetForMach(t.mach);
+    // On the ground and below 10,000 ft: the 56 % takeoff CG, no corridor.
+    final takeoff =
+        t.onGround ||
+        t.heightAboveGround(
+              fieldElevationFt: ref.watch(depAirportProvider)?.elevationFt,
+            ) <
+            cgCorridorArmFt;
+    // Otherwise the ideal CG for this Mach from the DC Designs CG chart.
+    final target = takeoff ? takeoffCgTargetPct : cgTargetForMach(t.mach);
     final cg = t.cgPct;
-    final outside = cg < lim.fwd || cg > lim.aft;
+    final outside = !takeoff && (cg < lim.fwd || cg > lim.aft);
     final (advice, adviceColor) = outside
         ? (
             cg < lim.fwd
@@ -447,7 +454,9 @@ class CgTrimCard extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                'TARGET ${target.toStringAsFixed(1)} @ M${t.mach.toStringAsFixed(2)}',
+                takeoff
+                    ? 'TAKEOFF TARGET ${target.toStringAsFixed(1)}'
+                    : 'TARGET ${target.toStringAsFixed(1)} @ M${t.mach.toStringAsFixed(2)}',
                 style: uiText(context, size: 9, color: colors.success),
               ),
               const Spacer(),

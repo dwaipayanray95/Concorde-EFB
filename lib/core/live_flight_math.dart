@@ -24,6 +24,14 @@ double _interp(List<(double, double)> table, double x) {
 }
 
 // (mach, % MAC) -- DC Designs manual CG chart.
+/// Takeoff CG (owner, per the DC Designs procedures): 56 % is set for
+/// takeoff and held until the Mach corridor applies above 10,000 ft.
+const takeoffCgTargetPct = 56.0;
+
+/// Below this height above the departure field the CG card shows the
+/// takeoff target and the CG limit alerts stay off.
+const cgCorridorArmFt = 10000.0;
+
 const _cgFwdLimit = <(double, double)>[
   (0.0, 51.3),
   (0.82, 51.3),

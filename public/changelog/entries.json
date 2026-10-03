@@ -1,6 +1,13 @@
 [
     {
         "date": "2026-10-03",
+        "title": "v5.7.0 — Takeoff CG target",
+        "items": [
+            "The CG card now shows a 56% TAKEOFF TARGET on the ground and below 10,000 ft, with transfer advice towards it; above 10,000 ft it switches to the Mach-based target and limits"
+        ]
+    },
+    {
+        "date": "2026-10-03",
         "title": "v5.6.1 — Attitude indicator and climb alert fixes",
         "items": [
             "The Flight Monitor attitude indicator now banks the right way (it was mirrored)",

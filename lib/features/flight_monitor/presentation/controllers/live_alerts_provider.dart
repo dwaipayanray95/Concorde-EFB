@@ -50,7 +50,7 @@ final liveAlertsProvider = Provider<List<LiveAlert>>((ref) {
       t.heightAboveGround(
             fieldElevationFt: ref.watch(depAirportProvider)?.elevationFt,
           ) >
-          10000;
+          cgCorridorArmFt;
   if (moving && t.cgPct > cg.aft) {
     alerts.add(
       const LiveAlert('CG AFT LIMIT', critical: true, repeatEvery: _urgent),
