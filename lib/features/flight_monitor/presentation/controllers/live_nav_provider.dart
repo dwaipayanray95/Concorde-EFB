@@ -1,0 +1,100 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../core/concorde_logic.dart';
+import '../../../../core/concorde_fuel_schematic.dart';
+import '../../../../core/live_flight_math.dart';
+import '../../../../core/route_math.dart';
+import '../../../../models/concorde_models.dart';
+import '../../../../providers/efb_providers.dart';
+import 'telemetry_provider.dart';
+
+/// Everything the Flight Monitor derives from live telemetry + the plan,
+/// computed once and shared (MFD strip, progress bar, ...).
+class LiveNav {
+  final FlightBurnPhase phase;
+
+  /// Fuel flow used for predictions: smoothed sim value, or the phase model
+  /// before any real flow is seen.
+  final double fuelFlowKgH;
+  final double fuelOnBoardKg;
+
+  /// Planned route length (nm) -- the whole trip.
+  final double routeNm;
+
+  /// Prediction to destination, null without a destination / live data.
+  final LiveFlightPrediction? prediction;
+
+  const LiveNav({
+    required this.phase,
+    required this.fuelFlowKgH,
+    required this.fuelOnBoardKg,
+    required this.routeNm,
+    required this.prediction,
+  });
+
+  /// 0..1 progress along the route.
+  double get progress {
+    final p = prediction;
+    if (p == null || routeNm <= 0) return 0;
+    return (1 - p.distToDestNm / routeNm).clamp(0.0, 1.0);
+  }
+
+  /// 0..1 position of the top of descent along the route.
+  double? get todProgress {
+    final p = prediction;
+    if (p == null || routeNm <= 0) return null;
+    final flownNm = routeNm - p.distToDestNm;
+    return ((flownNm + p.distToTodNm) / routeNm).clamp(0.0, 1.0);
+  }
+}
+
+final liveNavProvider = Provider<LiveNav?>((ref) {
+  final monitor = ref.watch(flightMonitorProvider);
+  final t = monitor.currentTelemetry;
+  if (t == null) return null;
+
+  final phase = ConcordeLogic.classifyBurnPhase(
+    altitudeFt: t.altitude,
+    vsFpm: t.vs,
+    reheatActive: t.reheatActive,
+  );
+  final smoothed = monitor.smoothedFuelFlowKgH ?? 0;
+  final flow = smoothed >= 500
+      ? smoothed
+      : ConcordeLogic.phaseFuelFlowKgH(phase, t.altitude / 100);
+  final fob = ConcordeFuelSchematic.totalFuelKg(
+    ConcordeFuelSchematic.computeTankFills(t),
+  );
+
+  final dest = ref.watch(arrAirportProvider);
+  LiveFlightPrediction? prediction;
+  if (dest != null) {
+    // Distance still to fly along the planned route, or the great circle
+    // scaled by this plan's route/great-circle ratio when no fixes exist.
+    final polyline = ref.watch(routePolylineProvider);
+    final dist = polyline != null
+        ? RouteMath.remainingAlongRouteNm(t.latitude, t.longitude, polyline)
+        : ConcordeLogic.greatCircleNM(
+                t.latitude,
+                t.longitude,
+                dest.lat,
+                dest.lon,
+              ) *
+              ref.watch(routeFactorProvider);
+    prediction = predictToDestination(
+      distToDestNm: dist,
+      altitudeFt: t.altitude,
+      groundSpeedKt: t.gs,
+      fuelFlowKgH: flow,
+      fuelOnBoardKg: fob,
+    );
+  }
+
+  return LiveNav(
+    phase: phase,
+    fuelFlowKgH: flow,
+    fuelOnBoardKg: fob,
+    routeNm: ref.watch(plannedDistanceProvider),
+    prediction: prediction,
+  );
+});

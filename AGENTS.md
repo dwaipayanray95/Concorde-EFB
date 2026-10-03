@@ -14,7 +14,7 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `5.1.0+59` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+- Current version: `5.2.0+60` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
   `public/changelog/entries.json` in sync — README no longer carries its own changelog, it just
   links to that page.
 - **Versioning rule (mandatory for every agent):** every change that alters user-visible behavior
@@ -250,6 +250,7 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 - v4.5.0: `CockpitStatusBar` always shows CALL SIGN/REG/PAX plus planned TOTAL/CLB (climb+transonic accel)/CRZ/DES times from `missionProfileProvider`; `DispatchBanner` is a flat solid-colour block placed above the Planner/Performance sub-tab selector; Privacy Policy + Ad Privacy Options live in the nav-rail Settings dialog (removed from the footer); Design Lab removed from Settings (`lib/design_system/design_lab.dart` kept only for its test).
 - v5.0.0 (owner-requested major): status bar compacted to one row at >= 1024 px (labels C/S, REG, PAX, ETE, CLB, CRZ, DES; SIM LIVE pill removed -- sim status is the `EfbNavRail` dot only); fuel strip stamp is `OVER CAPACITY` / `FUEL SHORT` / `FUEL OK`; stat subtexts wrap to 2 lines; route chip shows only the route; `AppFooter` is just `EfbAdBanner` (links live in Settings; `efb_launches_badge.dart` no longer shown).
 - v5.1.0: Flight Monitor over Wi-Fi for Android/iOS phones and tablets (see section 4 "Wi-Fi link"); `WifiLinkCard` at the top of the Monitor tab (desktop: share toggle + IP + pairing code; mobile: discovery chips, IP + code, status/rejection); iOS `NSLocalNetworkUsageDescription`; privacy page updated. Screenshot harness supports `--dart-define=TARGET=windows` for desktop-only UI.
+- v5.2.0: Flight Monitor redesign -- `_CockpitLayout` in `flight_monitor_tab.dart`: MFD strip, `FlightProgressBar`, `PfdPanel` (`pfd_panel.dart`: ADI CustomPainter + speed/alt columns, HDG/gear/nose/G) beside `EnginesPanel`, fuel schematic beside `CgTrimCard` (Mach corridor, target = fwd + 60% of corridor, TRANSFER advice, trim tanks 9+10 / 11) + fuel burn, environment + touchdown row; stacks below 900 px. Shared `liveNavProvider` (`controllers/live_nav_provider.dart`) computes phase/flow/FOB/route prediction for MFD strip + progress bar. New theme tokens `adiSky`/`adiGround`. Removed `HeroPfdRow`, `CgCard`, `EnginesReheatCard`, `GForceCard`.
 
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.

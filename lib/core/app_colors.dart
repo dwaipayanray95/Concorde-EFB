@@ -26,6 +26,11 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color lifrBg;
   final Color lifr;
 
+  /// Attitude indicator sky / ground (muted so they sit in the monochrome
+  /// palette rather than looking like a toy horizon).
+  final Color adiSky;
+  final Color adiGround;
+
   const AppColors({
     required this.bg,
     required this.surface,
@@ -50,6 +55,8 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.ifr,
     required this.lifrBg,
     required this.lifr,
+    required this.adiSky,
+    required this.adiGround,
   });
 
   static const light = AppColors(
@@ -76,6 +83,8 @@ class AppColors extends ThemeExtension<AppColors> {
     ifr: Color(0xFFEA580C),
     lifrBg: Color(0xFFF5D0FE),
     lifr: Color(0xFFC026D3),
+    adiSky: Color(0xFF3A5A78),
+    adiGround: Color(0xFF6B4F35),
   );
 
   static const dark = AppColors(
@@ -102,6 +111,8 @@ class AppColors extends ThemeExtension<AppColors> {
     ifr: Color(0xFFF97316),
     lifrBg: Color(0xFF311038),
     lifr: Color(0xFFE879F9),
+    adiSky: Color(0xFF1F3A55),
+    adiGround: Color(0xFF4A3524),
   );
 
   @override
@@ -129,6 +140,8 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? ifr,
     Color? lifrBg,
     Color? lifr,
+    Color? adiSky,
+    Color? adiGround,
   }) {
     return AppColors(
       bg: bg ?? this.bg,
@@ -154,6 +167,8 @@ class AppColors extends ThemeExtension<AppColors> {
       ifr: ifr ?? this.ifr,
       lifrBg: lifrBg ?? this.lifrBg,
       lifr: lifr ?? this.lifr,
+      adiSky: adiSky ?? this.adiSky,
+      adiGround: adiGround ?? this.adiGround,
     );
   }
 
@@ -184,6 +199,8 @@ class AppColors extends ThemeExtension<AppColors> {
       ifr: Color.lerp(ifr, other.ifr, t)!,
       lifrBg: Color.lerp(lifrBg, other.lifrBg, t)!,
       lifr: Color.lerp(lifr, other.lifr, t)!,
+      adiSky: Color.lerp(adiSky, other.adiSky, t)!,
+      adiGround: Color.lerp(adiGround, other.adiGround, t)!,
     );
   }
 }

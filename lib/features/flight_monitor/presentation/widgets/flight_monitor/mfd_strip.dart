@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/app_colors.dart';
 import '../../../../../core/concorde_constants.dart';
-import '../../../../../core/concorde_logic.dart';
 import '../../../../../core/formatters.dart';
 import '../../../../../core/live_flight_math.dart';
-import '../../../../../core/route_math.dart';
+import '../../controllers/live_nav_provider.dart';
 import '../../../../../core/ui_text.dart';
 import '../../../../../models/concorde_models.dart';
 import '../../../../../providers/efb_providers.dart';
@@ -44,44 +43,9 @@ class MfdStrip extends ConsumerWidget {
     final destIcao = ref.watch(arrivalIcaoProvider);
     final fuelPlan = ref.watch(fuelBreakdownProvider);
 
-    final phase = ConcordeLogic.classifyBurnPhase(
-      altitudeFt: t.altitude,
-      vsFpm: t.vs,
-      reheatActive: t.reheatActive,
-    );
-    final flow = (fuelFlowKgH ?? 0) >= 500
-        ? fuelFlowKgH!
-        : ConcordeLogic.phaseFuelFlowKgH(phase, t.altitude / 100);
-
-    // Distance still to fly along the planned route (imported fixes), or
-    // the great circle scaled by this plan's route/great-circle ratio.
-    final polyline = ref.watch(routePolylineProvider);
-    final routeFactor = ref.watch(routeFactorProvider);
-    final distToDest = !isLive || dest == null
-        ? null
-        : (polyline != null
-              ? RouteMath.remainingAlongRouteNm(
-                  t.latitude,
-                  t.longitude,
-                  polyline,
-                )
-              : ConcordeLogic.greatCircleNM(
-                      t.latitude,
-                      t.longitude,
-                      dest.lat,
-                      dest.lon,
-                    ) *
-                    routeFactor);
-
-    final pred = distToDest != null
-        ? predictToDestination(
-            distToDestNm: distToDest,
-            altitudeFt: t.altitude,
-            groundSpeedKt: t.gs,
-            fuelFlowKgH: flow,
-            fuelOnBoardKg: totalFuelKg,
-          )
-        : null;
+    final nav = ref.watch(liveNavProvider);
+    final phase = nav?.phase ?? FlightBurnPhase.ground;
+    final pred = isLive ? nav?.prediction : null;
 
     final finalReserve = fuelPlan.finalReserveKg;
     final reservesWithAlt = finalReserve + fuelPlan.alternateKg;

@@ -1,6 +1,17 @@
 [
     {
         "date": "2026-10-03",
+        "title": "v5.2.0 — Flight Monitor redesign",
+        "items": [
+            "New glass-cockpit Flight Monitor: primary flight display with an artificial horizon (pitch ladder, roll scale) between speed/Mach and altitude/vertical-speed readouts, plus heading, gear, nose and G",
+            "Route progress bar: departure to arrival with your aircraft's position and the top-of-descent marker",
+            "Engine panel: four throttle bars with per-engine reheat lights and total fuel flow",
+            "CG & trim: the allowed CG range for your current Mach with a target marker, TRANSFER AFT / FWD / ON TARGET advice and forward/aft trim tank contents",
+            "Fuel schematic legend no longer overflows on tablets"
+        ]
+    },
+    {
+        "date": "2026-10-03",
         "title": "v5.1.0 — Flight Monitor on phones & tablets over Wi-Fi",
         "items": [
             "Desktop: new SHARE TO PHONE / TABLET switch on the Flight Monitor tab shows this PC's address and a 6-digit pairing code",

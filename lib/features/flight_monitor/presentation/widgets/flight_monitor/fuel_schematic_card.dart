@@ -54,22 +54,27 @@ class FuelSchematicCard extends StatelessWidget {
           _SchematicPaint(chips: chips),
           const SizedBox(height: 16),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              _LegendDot(
-                color: colors.departure,
-                label: 'FUEL TRANSFER — 1·2·3·4',
+              // Legend wraps on narrower cards instead of overflowing.
+              Expanded(
+                child: Wrap(
+                  spacing: 16,
+                  runSpacing: 6,
+                  children: [
+                    _LegendDot(
+                      color: colors.departure,
+                      label: 'FUEL TRANSFER — 1·2·3·4',
+                    ),
+                    _LegendDot(
+                      color: colors.accent,
+                      label: 'MAIN — 5·5A·6·7·7A·8',
+                    ),
+                    _LegendDot(color: colors.mvfr, label: 'TRIM — 9·10·11'),
+                  ],
+                ),
               ),
-              const SizedBox(width: 16),
-              _LegendDot(
-                color: colors.accent,
-                label: 'MAIN — 5·5A·6·7·7A·8',
-              ),
-              const SizedBox(width: 16),
-              _LegendDot(
-                color: colors.mvfr,
-                label: 'TRIM — 9·10·11',
-              ),
-              const Spacer(),
+              const SizedBox(width: 12),
               Text(
                 'TOTAL FUEL ',
                 style: uiText(

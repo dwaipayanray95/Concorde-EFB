@@ -4,7 +4,8 @@ import '../../core/concorde_fuel_schematic.dart';
 import '../../features/flight_monitor/presentation/controllers/telemetry_provider.dart';
 import '../../features/flight_monitor/data/models/telemetry_model.dart';
 import '../../features/flight_monitor/presentation/widgets/flight_monitor/fm_toolbar.dart';
-import '../../features/flight_monitor/presentation/widgets/flight_monitor/hero_pfd_row.dart';
+import '../../features/flight_monitor/presentation/widgets/flight_monitor/pfd_panel.dart';
+import '../../features/flight_monitor/presentation/widgets/flight_monitor/cockpit_panels.dart';
 import '../../features/flight_monitor/presentation/widgets/flight_monitor/mfd_strip.dart';
 import '../../features/flight_monitor/presentation/widgets/flight_monitor/wifi_link_card.dart';
 import '../../features/flight_monitor/presentation/widgets/flight_monitor/fuel_schematic_card.dart';
@@ -70,26 +71,13 @@ class _FlightMonitorSection extends StatelessWidget {
           absorbing: !isLive,
           child: Opacity(
             opacity: isLive ? 1.0 : 0.45,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                MfdStrip(
-                  t: telemetry,
-                  totalFuelKg: totalFuelKg,
-                  fuelFlowKgH: monitorState.smoothedFuelFlowKgH,
-                  isLive: isLive,
-                ),
-                const SizedBox(height: 16),
-                HeroPfdRow(t: telemetry, isConnected: isLive),
-                const SizedBox(height: 16),
-                _SupportGrid(
-                  t: telemetry,
-                  chips: chips,
-                  totalFuelKg: totalFuelKg,
-                  fuelFlowKgH: monitorState.smoothedFuelFlowKgH,
-                  touchdown: monitorState.lastTouchdown,
-                ),
-              ],
+            child: _CockpitLayout(
+              t: telemetry,
+              isLive: isLive,
+              chips: chips,
+              totalFuelKg: totalFuelKg,
+              fuelFlowKgH: monitorState.smoothedFuelFlowKgH,
+              touchdown: monitorState.lastTouchdown,
             ),
           ),
         ),
@@ -98,91 +86,106 @@ class _FlightMonitorSection extends StatelessWidget {
   }
 }
 
-class _SupportGrid extends StatelessWidget {
+/// Glass-cockpit page:
+///   MFD strip (phase / nav / fuel prediction / annunciators)
+///   route progress bar
+///   PFD (attitude + speed/alt)      | engines
+///   fuel schematic                  | CG + trim, fuel burn
+///   environment | last touchdown
+/// Narrow screens stack everything in the same order.
+class _CockpitLayout extends StatelessWidget {
   final TelemetryModel t;
+  final bool isLive;
   final List<FuelTankChip> chips;
   final double totalFuelKg;
   final double? fuelFlowKgH;
   final TouchdownRecord? touchdown;
-  const _SupportGrid({
+
+  const _CockpitLayout({
     required this.t,
+    required this.isLive,
     required this.chips,
     required this.totalFuelKg,
-    this.fuelFlowKgH,
-    this.touchdown,
+    required this.fuelFlowKgH,
+    required this.touchdown,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Fuel schematic (the Concorde-specific centrepiece) beside the CG,
-    // engines and fuel-burn cards; the smaller environmental / G / landing
-    // cards share one row underneath. Narrow screens stack everything.
-    final side = [
-      CgCard(t: t),
-      EnginesReheatCard(t: t),
-      FuelBurnCard(t: t, totalFuelKg: totalFuelKg, fuelFlowKgH: fuelFlowKgH),
-    ];
-    final bottom = [
-      EnvironmentalCard(t: t),
-      GForceCard(t: t),
-      TouchdownCard(touchdown: touchdown),
-    ];
+    const gap = SizedBox(height: 16, width: 16);
+    final mfd = MfdStrip(
+      t: t,
+      totalFuelKg: totalFuelKg,
+      fuelFlowKgH: fuelFlowKgH,
+      isLive: isLive,
+    );
+    final pfd = PfdPanel(t: t);
+    final engines = EnginesPanel(t: t, fuelFlowKgH: fuelFlowKgH);
+    final fuel = FuelSchematicCard(chips: chips, totalKg: totalFuelKg);
+    final cg = CgTrimCard(t: t);
+    final burn = FuelBurnCard(
+      t: t,
+      totalFuelKg: totalFuelKg,
+      fuelFlowKgH: fuelFlowKgH,
+    );
+    final env = EnvironmentalCard(t: t);
+    final td = TouchdownCard(touchdown: touchdown);
+
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth < 900) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              FuelSchematicCard(chips: chips, totalKg: totalFuelKg),
-              for (final w in [...side, ...bottom]) ...[
-                const SizedBox(height: 12),
+              for (final (i, w) in [
+                mfd,
+                const FlightProgressBar(),
+                pfd,
+                engines,
+                cg,
+                fuel,
+                burn,
+                env,
+                td,
+              ].indexed) ...[
+                if (i > 0) const SizedBox(height: 12),
                 w,
               ],
             ],
           );
         }
+        Widget row(List<(int, Widget)> cells) => IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final (i, c) in cells.indexed) ...[
+                if (i > 0) gap,
+                Expanded(flex: c.$1, child: c.$2),
+              ],
+            ],
+          ),
+        );
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: FuelSchematicCard(
-                      chips: chips,
-                      totalKg: totalFuelKg,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 2,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        for (var i = 0; i < side.length; i++) ...[
-                          if (i > 0) const SizedBox(height: 16),
-                          side[i],
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
+            mfd,
+            const SizedBox(height: 12),
+            const FlightProgressBar(),
+            gap,
+            row([(3, pfd), (2, engines)]),
+            gap,
+            row([
+              (3, fuel),
+              (
+                2,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [cg, gap, burn],
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (var i = 0; i < bottom.length; i++) ...[
-                    if (i > 0) const SizedBox(width: 16),
-                    Expanded(child: bottom[i]),
-                  ],
-                ],
-              ),
-            ),
+            ]),
+            gap,
+            row([(1, env), (1, td)]),
           ],
         );
       },
