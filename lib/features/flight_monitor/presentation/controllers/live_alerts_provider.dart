@@ -41,10 +41,9 @@ final liveAlertsProvider = Provider<List<LiveAlert>>((ref) {
 
   final alerts = <LiveAlert>[];
   final cg = cgLimitsForMach(t.mach);
-  // CG limits only matter once rolling/airborne -- at the gate the crew is
-  // still fuelling and transferring, and the menu-to-cockpit load briefly
-  // reports a default CG.
-  final moving = !t.onGround || t.gs > 30;
+  // CG limits are armed once all four engines are running (or airborne) --
+  // before that the crew is still fuelling/transferring at the gate.
+  final moving = !t.onGround || t.allEnginesRunning;
   if (moving && t.cgPct > cg.aft) {
     alerts.add(
       const LiveAlert('CG AFT LIMIT', critical: true, repeatEvery: _urgent),

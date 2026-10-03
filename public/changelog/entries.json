@@ -1,6 +1,13 @@
 [
     {
         "date": "2026-10-03",
+        "title": "v5.5.3 — CG alerts arm after engine start",
+        "items": [
+            "CG AFT / FWD LIMIT warnings now only arm once all four engines are running (or in flight), so fuelling and trim transfers at the gate stay quiet"
+        ]
+    },
+    {
+        "date": "2026-10-03",
         "title": "v5.5.2 — No alarms in the MSFS menu, tap to silence",
         "items": [
             "No alerts or chimes while MSFS is in its menu or loading screen — the Flight Monitor waits until a flight is actually loaded (no more 8,000 NM to destination or negative fuel)",
