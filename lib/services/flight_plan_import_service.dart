@@ -1,3 +1,5 @@
+import '../models/concorde_models.dart';
+
 /// Where a loaded flight plan came from — surfaced in the UI so the user
 /// knows why the fields are populated the way they are.
 enum FlightPlanSource { none, simbrief, file, manual }
@@ -13,7 +15,12 @@ class ParsedFlightPlan {
   final String route;
   final double? cruiseAltFt;
 
+  /// Route fixes with coordinates (excluding the airports), when the
+  /// source carries them (.pln WorldPosition). Empty for a hand-typed route.
+  final List<RoutePoint> fixes;
+
   const ParsedFlightPlan({
+    this.fixes = const [],
     required this.departureIcao,
     required this.arrivalIcao,
     this.alternateIcao,
@@ -79,7 +86,11 @@ class FlightPlanImportService {
       if (ident == null || ident.trim().isEmpty) continue;
 
       final airway = _tag(block, 'ATCAirway');
-      waypoints.add(_PlnWaypoint(ident: ident.trim().toUpperCase(), airway: airway?.trim().toUpperCase()));
+      waypoints.add(_PlnWaypoint(
+        ident: ident.trim().toUpperCase(),
+        airway: airway?.trim().toUpperCase(),
+        position: parseWorldPosition(_tag(block, 'WorldPosition')),
+      ));
     }
 
     // Build the enroute string. Drop leading/trailing points if they repeat
@@ -121,7 +132,29 @@ class FlightPlanImportService {
       arrivalRunway: arrRwy,
       route: routeString,
       cruiseAltFt: cruiseAlt,
+      fixes: [
+        for (final w in enroute)
+          if (w.position != null)
+            RoutePoint(w.ident, w.position!.$1, w.position!.$2),
+      ],
     );
+  }
+
+  /// Parses an MSFS `<WorldPosition>` such as
+  /// `N51° 28' 39.00",W0° 27' 41.00",+000083.00` into (lat, lon).
+  static (double, double)? parseWorldPosition(String? raw) {
+    if (raw == null) return null;
+    final m = RegExp(
+      r'''([NS])\s*(\d+)°\s*(\d+)'\s*([\d.]+)"?\s*,\s*([EW])\s*(\d+)°\s*(\d+)'\s*([\d.]+)''',
+    ).firstMatch(raw);
+    if (m == null) return null;
+    double dms(int i) =>
+        double.parse(m.group(i)!) +
+        double.parse(m.group(i + 1)!) / 60 +
+        double.parse(m.group(i + 2)!) / 3600;
+    final lat = dms(2) * (m.group(1) == 'S' ? -1 : 1);
+    final lon = dms(6) * (m.group(5) == 'W' ? -1 : 1);
+    return (lat, lon);
   }
 
   /// Helper to convert runway number + designator to standard ID format:
@@ -310,6 +343,7 @@ class FlightPlanImportService {
 class _PlnWaypoint {
   final String ident;
   final String? airway;
+  final (double, double)? position;
 
-  const _PlnWaypoint({required this.ident, this.airway});
+  const _PlnWaypoint({required this.ident, this.airway, this.position});
 }

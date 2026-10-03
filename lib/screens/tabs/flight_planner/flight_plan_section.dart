@@ -11,6 +11,8 @@ import '../../../core/concorde_logic.dart';
 import '../../../services/simbrief_service.dart';
 import '../../../services/flight_plan_import_service.dart';
 import '../../../models/airport.dart';
+import '../../../models/concorde_models.dart';
+import '../../../core/route_math.dart';
 
 /// FLIGHT PLAN card: three ways to load a plan -- SimBrief import, a
 /// dropped .pln/route-XML file, or hand-typed route -- plus the
@@ -47,14 +49,30 @@ class FlightPlanSection extends ConsumerWidget {
     // takeoff-length limited); the pilot can still pick another one.
     _applyArrivalRunway(ref, arr, plan.arrivalRunway);
 
+    ref
+        .read(plannedRouteProvider.notifier)
+        .set(
+          PlannedRoute(
+            departureIcao: plan.departureIcao,
+            arrivalIcao: plan.arrivalIcao,
+            fixes: plan.fixes,
+          ),
+        );
+
     if (dep != null && arr != null) {
-      ref
-          .read(plannedDistanceProvider.notifier)
-          .set(
-            ConcordeLogic.estimatedRouteDistanceNm(
+      // Fuel is planned on the distance actually flown: the sum of the
+      // route legs when the plan has fix coordinates, otherwise the great
+      // circle plus airway/SID/STAR allowances.
+      final routeNm = plan.fixes.isNotEmpty
+          ? RouteMath.polylineNm([
+              RoutePoint(dep.icao, dep.lat, dep.lon),
+              ...plan.fixes,
+              RoutePoint(arr.icao, arr.lat, arr.lon),
+            ])
+          : ConcordeLogic.estimatedRouteDistanceNm(
               ConcordeLogic.greatCircleNM(dep.lat, dep.lon, arr.lat, arr.lon),
-            ),
-          );
+            );
+      ref.read(plannedDistanceProvider.notifier).set(routeNm);
     }
   }
 
@@ -416,6 +434,30 @@ class FlightPlanSection extends ConsumerWidget {
                                 .read(alternateIcaoProvider.notifier)
                                 .set(
                                   alt is Map ? (alt['icao_code'] ?? '') : '',
+                                );
+                            // Alternate route distance as planned by
+                            // SimBrief (set after the ICAO, which clears it).
+                            ref
+                                .read(alternateRouteDistanceProvider.notifier)
+                                .set(
+                                  alt is Map
+                                      ? double.tryParse(
+                                          '${alt['distance'] ?? ''}',
+                                        )
+                                      : null,
+                                );
+                            ref
+                                .read(plannedRouteProvider.notifier)
+                                .set(
+                                  PlannedRoute(
+                                    departureIcao:
+                                        '${ofp['origin']?['icao_code'] ?? ''}'
+                                            .toUpperCase(),
+                                    arrivalIcao:
+                                        '${ofp['destination']?['icao_code'] ?? ''}'
+                                            .toUpperCase(),
+                                    fixes: SimBriefService.navlogFixes(ofp),
+                                  ),
                                 );
                             // route_distance is the flown route distance
                             // (SID/airways/STAR), not the great circle.

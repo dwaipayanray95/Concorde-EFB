@@ -283,3 +283,26 @@ class DispatchSummary {
   const DispatchSummary({required this.noGo, required this.cautions});
   bool get isGo => noGo.isEmpty;
 }
+
+/// One fix of the planned route (SID, airways, STAR) with its position.
+class RoutePoint {
+  final String ident;
+  final double lat;
+  final double lon;
+  const RoutePoint(this.ident, this.lat, this.lon);
+}
+
+/// The planned route's fixes, tied to the airport pair they were imported
+/// for so a stale route is never used after the user changes DEP/ARR.
+class PlannedRoute {
+  final String departureIcao;
+  final String arrivalIcao;
+
+  /// Fixes in order, excluding the two airports themselves.
+  final List<RoutePoint> fixes;
+  const PlannedRoute({
+    required this.departureIcao,
+    required this.arrivalIcao,
+    required this.fixes,
+  });
+}

@@ -40,8 +40,72 @@ final arrivalIcaoProvider = NotifierProvider<ArrivalIcaoNotifier, String>(
 class AlternateIcaoNotifier extends Notifier<String> {
   @override
   String build() => 'KBOS';
-  void set(String val) => state = val.trim().toUpperCase();
+  void set(String val) {
+    final v = val.trim().toUpperCase();
+    if (v == state) return;
+    state = v;
+    // A planned alternate route distance belongs to the old alternate.
+    ref.read(alternateRouteDistanceProvider.notifier).set(null);
+  }
 }
+
+/// Alternate route distance from the flight plan (SimBrief), if known.
+/// When null, the alternate distance is estimated from the great circle
+/// plus airway/terminal allowances.
+class AlternateRouteDistanceNotifier extends Notifier<double?> {
+  @override
+  double? build() => null;
+  void set(double? val) => state = val;
+}
+
+final alternateRouteDistanceProvider =
+    NotifierProvider<AlternateRouteDistanceNotifier, double?>(
+      AlternateRouteDistanceNotifier.new,
+    );
+
+/// The imported route's fixes (SimBrief navlog / .pln), if any.
+class PlannedRouteNotifier extends Notifier<PlannedRoute?> {
+  @override
+  PlannedRoute? build() => null;
+  void set(PlannedRoute? val) => state = val;
+}
+
+final plannedRouteProvider =
+    NotifierProvider<PlannedRouteNotifier, PlannedRoute?>(
+      PlannedRouteNotifier.new,
+    );
+
+/// Full route polyline DEP -> fixes -> ARR, or null when there is no
+/// imported route for the current airport pair (e.g. the user typed new
+/// ICAOs after importing).
+final routePolylineProvider = Provider<List<RoutePoint>?>((ref) {
+  final route = ref.watch(plannedRouteProvider);
+  final dep = ref.watch(depAirportProvider);
+  final arr = ref.watch(arrAirportProvider);
+  if (route == null || dep == null || arr == null) return null;
+  if (route.departureIcao != dep.icao || route.arrivalIcao != arr.icao) {
+    return null;
+  }
+  if (route.fixes.isEmpty) return null;
+  return [
+    RoutePoint(dep.icao, dep.lat, dep.lon),
+    ...route.fixes,
+    RoutePoint(arr.icao, arr.lat, arr.lon),
+  ];
+});
+
+/// Route distance / great-circle distance for the current plan (how much
+/// longer the flown route is). Used to turn any great-circle figure into a
+/// route figure when no fix-by-fix route is available.
+final routeFactorProvider = Provider<double>((ref) {
+  final dep = ref.watch(depAirportProvider);
+  final arr = ref.watch(arrAirportProvider);
+  final planned = ref.watch(plannedDistanceProvider);
+  if (dep == null || arr == null) return ConcordeLogic.routeInefficiencyFactor;
+  final gc = ConcordeLogic.greatCircleNM(dep.lat, dep.lon, arr.lat, arr.lon);
+  if (gc < 1 || planned <= 0) return ConcordeLogic.routeInefficiencyFactor;
+  return (planned / gc).clamp(1.0, 1.6);
+});
 
 final alternateIcaoProvider = NotifierProvider<AlternateIcaoNotifier, String>(
   AlternateIcaoNotifier.new,
@@ -371,11 +435,17 @@ final arrivalRunwayProvider = Provider<Runway?>((ref) {
   }
 });
 
+/// Alternate distance as flown: the plan's alternate route distance when
+/// imported, else great circle + airway/terminal allowances.
 final alternateDistanceProvider = Provider<double>((ref) {
+  final planned = ref.watch(alternateRouteDistanceProvider);
+  if (planned != null && planned > 0) return planned;
   final arr = ref.watch(arrAirportProvider);
   final alt = ref.watch(altAirportProvider);
   if (arr == null || alt == null) return 0.0;
-  return ConcordeLogic.greatCircleNM(arr.lat, arr.lon, alt.lat, alt.lon);
+  return ConcordeLogic.estimatedRouteDistanceNm(
+    ConcordeLogic.greatCircleNM(arr.lat, arr.lon, alt.lat, alt.lon),
+  );
 });
 
 final alternateStatusProvider = Provider<AlternateStatus>((ref) {

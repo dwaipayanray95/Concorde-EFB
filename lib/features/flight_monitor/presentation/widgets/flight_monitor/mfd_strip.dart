@@ -5,6 +5,7 @@ import '../../../../../core/concorde_constants.dart';
 import '../../../../../core/concorde_logic.dart';
 import '../../../../../core/formatters.dart';
 import '../../../../../core/live_flight_math.dart';
+import '../../../../../core/route_math.dart';
 import '../../../../../core/ui_text.dart';
 import '../../../../../models/concorde_models.dart';
 import '../../../../../providers/efb_providers.dart';
@@ -52,12 +53,29 @@ class MfdStrip extends ConsumerWidget {
         ? fuelFlowKgH!
         : ConcordeLogic.phaseFuelFlowKgH(phase, t.altitude / 100);
 
-    final pred = isLive && dest != null
+    // Distance still to fly along the planned route (imported fixes), or
+    // the great circle scaled by this plan's route/great-circle ratio.
+    final polyline = ref.watch(routePolylineProvider);
+    final routeFactor = ref.watch(routeFactorProvider);
+    final distToDest = !isLive || dest == null
+        ? null
+        : (polyline != null
+              ? RouteMath.remainingAlongRouteNm(
+                  t.latitude,
+                  t.longitude,
+                  polyline,
+                )
+              : ConcordeLogic.greatCircleNM(
+                      t.latitude,
+                      t.longitude,
+                      dest.lat,
+                      dest.lon,
+                    ) *
+                    routeFactor);
+
+    final pred = distToDest != null
         ? predictToDestination(
-            lat: t.latitude,
-            lon: t.longitude,
-            destLat: dest.lat,
-            destLon: dest.lon,
+            distToDestNm: distToDest,
             altitudeFt: t.altitude,
             groundSpeedKt: t.gs,
             fuelFlowKgH: flow,

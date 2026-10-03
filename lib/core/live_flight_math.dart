@@ -38,7 +38,7 @@ CgLimits cgLimitsForMach(double mach) {
 
 /// Live navigation/fuel prediction toward the destination.
 class LiveFlightPrediction {
-  /// Great-circle distance to the destination (nm).
+  /// Distance still to fly to the destination along the route (nm).
   final double distToDestNm;
 
   /// Distance from the aircraft to the top of descent (nm); negative when
@@ -59,22 +59,20 @@ class LiveFlightPrediction {
   });
 }
 
-/// Predicts TOD and landing fuel from live state. The remaining distance
-/// is split into "cruise until TOD" flown at the current ground speed and
+/// Predicts TOD and landing fuel from live state. [distToDestNm] is the
+/// distance still to fly along the route (see [RouteMath]). It is split
+/// into "cruise until TOD" flown at the current ground speed and
 /// smoothed fuel flow, plus the descent segment from the current altitude
 /// using the same descent model as the planner (3 nm / 1,000 ft + 30 nm,
 /// descent fuel flow).
 LiveFlightPrediction predictToDestination({
-  required double lat,
-  required double lon,
-  required double destLat,
-  required double destLon,
+  required double distToDestNm,
   required double altitudeFt,
   required double groundSpeedKt,
   required double fuelFlowKgH,
   required double fuelOnBoardKg,
 }) {
-  final dist = ConcordeLogic.greatCircleNM(lat, lon, destLat, destLon);
+  final dist = math.max(distToDestNm, 0.0);
   final descent = ConcordeLogic.estimateDescent(altitudeFt);
   final toTod = dist - descent.distNm;
   final gs = math.max(groundSpeedKt, 150.0);

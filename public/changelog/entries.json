@@ -1,6 +1,17 @@
 [
     {
         "date": "2026-10-03",
+        "title": "v4.3.0 — Route distances everywhere",
+        "items": [
+            "Fuel and time are planned on the distance actually flown along the route (SID, airways, STAR), not the straight line between airports",
+            "Imported .pln plans: distance is now the sum of every route leg, using each fix's coordinates",
+            "SimBrief: the route's fixes and the alternate's planned route distance are imported",
+            "Flight Monitor: distance to destination, top of descent, ETA and fuel at destination now follow your route's remaining legs",
+            "Alternate fuel uses the planned alternate route distance when SimBrief provides it"
+        ]
+    },
+    {
+        "date": "2026-10-03",
         "title": "v4.2.0 — Privacy policy & ad consent",
         "items": [
             "New privacy policy page, linked from the app footer (PRIVACY)",

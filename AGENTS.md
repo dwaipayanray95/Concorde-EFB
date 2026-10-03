@@ -14,7 +14,7 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `4.2.0+54` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+- Current version: `4.3.0+55` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
   `public/changelog/entries.json` in sync — README no longer carries its own changelog, it just
   links to that page.
 - **Versioning rule (mandatory for every agent):** every change that alters user-visible behavior
@@ -71,6 +71,13 @@ These are heuristic/indicative models, not certified performance data. Core cons
   (`test/golden_flight_test.dart`). Keep it passing when touching any fuel constant.
 - Alternate fuel = subsonic diversion profile (no takeoff allowance) + 1 t missed approach.
   Endurance: trip lasts the ETE, the rest burns at 12 t/h holding; required = ETE + reserves at holding.
+- **Distances are always ROUTE distances (owner rule).** Never use the airport-to-airport great
+  circle for fuel, time, TOD or ETA. Sources, in order: SimBrief `route_distance` / the sum of
+  imported route legs (`RouteMath.polylineNm`, fixes from SimBrief navlog or `.pln` WorldPosition,
+  stored in `plannedRouteProvider`); live remaining distance = `RouteMath.remainingAlongRouteNm`
+  along `routePolylineProvider`. Only when no fixes exist fall back to great circle x
+  `routeFactorProvider` (planned/GC ratio) or `estimatedRouteDistanceNm` (GC x 1.04 + 40 nm).
+  Alternate: SimBrief alternate `distance` if present, else the estimate.
 - Cruise FL: clamped to `[0, 590]`; above FL410 snapped to Non-RVSM sets (Eastbound `410, 450,
   490, 530, 570`; Westbound `430, 470, 510, 550, 590`), direction inferred from DEP→ARR bearing.
 - Runway: takeoff distance = 3,597 m x (TOW/MTOW)^2 (x1.35 without reheat); landing = 2,200 m x
@@ -227,6 +234,7 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 - v4.0.0: fuel release strip header shows real flight data (call sign/route, source, FL, distance, ETE, FUEL OK/SHORT stamp); METAR strip reorganised into category row + equal-width readout row, age spelled out below the strip (`formatMetarAge`); semantic versioning rule added (section 1).
 - v4.1.0: planner `DispatchBanner` driven by `dispatchSummaryProvider` (all NO-GO/caution checks in one place); raw METAR always visible. Flight Monitor: `MfdStrip` (phase, dist to dest, TOD, ETA, fuel at dest vs reserve+alt, annunciators) using `lib/core/live_flight_math.dart` (`predictToDestination`, Mach-dependent `cgLimitsForMach` — indicative, verify vs DC Designs manual); fixed gear/droop decoding (bridge sends 0-1 fractions, see `TelemetryModel.gearLabel`/`droopLabel`); smoothed actual fuel flow (30 s EMA) + latched `TouchdownRecord` in `FlightMonitorNotifier`; removed dead `GearFlapsDroopCard`.
 - v4.2.0: privacy policy page (`public/privacy/index.html`, deployed by `pages.yml`, `AppLinks.privacy`, footer PRIVACY link); Google UMP consent via `lib/services/ad_consent_service.dart` -- AdMob is initialised only after consent (`adsReady`), started post-first-frame from `main.dart`; footer AD PRIVACY OPTIONS shown when UMP requires it. Keep the privacy page's "online services" table in sync whenever a new network call is added. Supersonic-over-land feature dropped by the owner (people fly it on VATSIM).
+- v4.3.0: route distances everywhere -- `lib/core/route_math.dart` (polyline length, remaining-along-route), route fixes imported from SimBrief navlog (`SimBriefService.navlogFixes`) and `.pln` `<WorldPosition>` (`FlightPlanImportService.parseWorldPosition`), `plannedRouteProvider`/`routePolylineProvider`/`routeFactorProvider`, `alternateRouteDistanceProvider`; MFD strip uses remaining route distance; `predictToDestination` now takes `distToDestNm`.
 
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.
