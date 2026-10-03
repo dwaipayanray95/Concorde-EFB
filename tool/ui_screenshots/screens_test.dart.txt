@@ -1,0 +1,121 @@
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:concorde_efb/main.dart';
+import 'package:concorde_efb/models/airport.dart';
+import 'package:concorde_efb/providers/efb_providers.dart';
+import 'package:concorde_efb/services/airport_database_service.dart';
+import 'package:concorde_efb/features/flight_monitor/presentation/controllers/telemetry_provider.dart';
+import 'package:concorde_efb/features/flight_monitor/data/models/telemetry_model.dart';
+import 'package:concorde_efb/features/flight_monitor/data/services/websocket_client.dart';
+
+const outDir = String.fromEnvironment('OUT');
+const sizes = String.fromEnvironment('SIZES', defaultValue: '1280x800,915x412');
+const tabs = String.fromEnvironment('TABS', defaultValue: 'plan,perf,check,monitor');
+
+class FakeMonitor extends FlightMonitorNotifier {
+  @override
+  FlightMonitorState build() => FlightMonitorState(
+    isConnected: true,
+    smoothedFuelFlowKgH: 19400,
+    bridge: const BridgeStatus(socketConnected: true, simConnected: true, receivingData: true, message: 'Connected to MSFS'),
+    currentTelemetry: TelemetryModel.fromJson({
+      'basic': {'altitude': 56200, 'ias': 470, 'tas': 1168, 'gs': 1185, 'heading': 262, 'vs': 120,
+        'pitch': 3.1, 'roll': 0.4, 'latitude': 50.2, 'longitude': -38.5, 'gForce': 1.0,
+        'gearPosition': 0.0, 'flapsPosition': 0, 'zuluTime': '10:42:15'},
+      'concorde': {'mach': 2.02, 'tat': 118, 'cgPct': 58.9, 'fuelBurnTotal': 19400,
+        'reheatActive': [false, false, false, false], 'throttlePct': [92, 92, 92, 92],
+        'snootAngle': 0.0, 'fuelTanks': {'left': 40, 'right': 40, 'center': 30, 'trimForward': 0, 'trimAft': 60},
+        'fuelTanksKg': {'1': 2800, '2': 2900, '3': 2900, '4': 2800, '5': 3600, '6': 3600, '7': 3700, '8': 3700,
+          '5A': 1500, '7A': 1500, '9': 0, '10': 0, '11': 9800}},
+      'events': {'onGround': false},
+    }),
+  );
+}
+
+Future<void> _fonts() async {
+  final reg = File('/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf').readAsBytesSync();
+  final bold = File('/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf').readAsBytesSync();
+  for (final v in ['regular', '100', '200', '300', '500', '600', '700', '800', '900', 'italic']) {
+    final l = FontLoader('JetBrainsMono_$v');
+    l.addFont(Future.value(ByteData.sublistView(['600','700','800','900'].contains(v) ? bold : reg)));
+    await l.load();
+  }
+  final r = FontLoader('Roboto');
+  r.addFont(Future.value(ByteData.sublistView(File('/tmp/flutter/bin/cache/artifacts/material_fonts/Roboto-Regular.ttf').readAsBytesSync())));
+  await r.load();
+  final icons = FontLoader('MaterialIcons');
+  icons.addFont(Future.value(ByteData.sublistView(File('/tmp/flutter/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf').readAsBytesSync())));
+  await icons.load();
+}
+
+const metarDep = 'EGLL 031150Z 24012KT 9999 FEW030 SCT045 14/08 Q1018';
+const metarArr = 'KJFK 031151Z 31015G24KT 10SM BKN015 OVC030 18/11 A3002';
+
+void main() {
+  for (final dark in [false, true]) {
+    for (final sz in sizes.split(',')) {
+      final wh = sz.split('x').map(double.parse).toList();
+      final size = Size(wh[0], wh[1]);
+      testWidgets('screens dark=$dark $sz', (tester) async {
+        GoogleFonts.config.allowRuntimeFetching = false;
+        await _fonts();
+        SharedPreferences.setMockInitialValues({'theme_mode': dark ? 'dark' : 'light'});
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1.0;
+        final overflows = <String>[];
+        final prev = FlutterError.onError;
+        FlutterError.onError = (d) {
+          final m = d.exceptionAsString();
+          if (m.contains('overflow')) {
+            final loc = RegExp(r'lib/[^ :]+:\d+').firstMatch(d.toString())?.group(0) ?? '?';
+            overflows.add('${m.split('\n').first} @ $loc');
+          }
+        };
+        final db = AirportDatabaseService()
+          ..airports = {
+            'EGLL': Airport(icao: 'EGLL', name: 'London Heathrow', lat: 51.4706, lon: -0.4619, elevationFt: 83,
+              runways: [Runway(id: '27L', heading: 270, lengthM: 3660, elevationFt: 77, widthFt: 164), Runway(id: '27R', heading: 270, lengthM: 3902, elevationFt: 83, widthFt: 164)]),
+            'KJFK': Airport(icao: 'KJFK', name: 'John F Kennedy Intl', lat: 40.6398, lon: -73.7789, elevationFt: 13,
+              runways: [Runway(id: '31L', heading: 302, lengthM: 3460, elevationFt: 12, widthFt: 150), Runway(id: '13R', heading: 122, lengthM: 4423, elevationFt: 13, widthFt: 200)]),
+            'KBOS': Airport(icao: 'KBOS', name: 'Boston Logan', lat: 42.3656, lon: -71.0096, elevationFt: 20,
+              runways: [Runway(id: '22R', heading: 215, lengthM: 3073, elevationFt: 18, widthFt: 150)]),
+          };
+        await tester.pumpWidget(ProviderScope(
+          overrides: [
+            airportDbProvider.overrideWith((ref) async => db),
+            departureMetarFutureProvider.overrideWith((ref) async => metarDep),
+            arrivalMetarFutureProvider.overrideWith((ref) async => metarArr),
+            flightMonitorProvider.overrideWith(FakeMonitor.new),
+          ],
+          child: const ConcordeEfbApp(),
+        ));
+        for (var i = 0; i < 30; i++) { await tester.pump(const Duration(milliseconds: 100)); }
+        final tag = '${dark ? 'dark' : 'light'}_$sz';
+        Future<void> shot(String name) async {
+          for (var i = 0; i < 15; i++) { await tester.pump(const Duration(milliseconds: 100)); }
+          await expectLater(find.byType(MaterialApp), matchesGoldenFile('$outDir/${tag}_$name.png'));
+        }
+        final t = tabs.split(',');
+        if (t.contains('plan')) await shot('1_plan');
+        if (t.contains('perf')) {
+          final perf = find.text('PERFORMANCE CALCULATOR');
+          if (perf.evaluate().isNotEmpty) { await tester.tap(perf.first); await shot('2_perf'); }
+        }
+        for (final e in [('CHECK', 'check', '3_check'), ('MONITOR', 'monitor', '4_monitor')]) {
+          if (!t.contains(e.$2)) continue;
+          final f = find.text(e.$1);
+          if (f.evaluate().isNotEmpty) { await tester.tap(f.first); await shot(e.$3); }
+        }
+        FlutterError.onError = prev;
+        // ignore: avoid_print
+        print('OVERFLOWS $tag: ${overflows.toSet().join(' | ')}');
+      });
+    }
+  }
+}

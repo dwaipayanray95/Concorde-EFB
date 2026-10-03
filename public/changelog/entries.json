@@ -1,6 +1,21 @@
 [
     {
         "date": "2026-10-03",
+        "title": "v4.4.0 — Phone layout, smarter runways & Flight Monitor redesign",
+        "items": [
+            "Runways: the default runway is now the longest one without a tailwind (avoiding strong crosswinds) and follows METAR updates until you pick one yourself — no more false NO-GO from a tailwind runway",
+            "Wind arrows are coloured by what the wind does to that runway: green comfortable, amber close to limits or any tailwind, red outside limits",
+            "Phones: status bar scrolls away, compact navigation rail, one-line dispatch banner (tap to expand), fuel release strip stacks under the inputs, no overflowing layouts",
+            "Checklists: on phones, phases are a horizontal strip; with the sim connected, the current flight phase is selected automatically and other phases are greyed out",
+            "Planner: Flight Plan card condensed into one row with the route, distance and ETE together",
+            "Planner: fuel card shows a single ENDURANCE MARGIN instead of two identical times",
+            "Flight Monitor: one compact flight-data bar (IAS, Mach, TAS, GS, ALT, V/S, HDG, attitude, gear, nose) so the fuel schematic, CG and engines sit above the fold",
+            "Status bar: call sign / registration / pax only appear once a flight is loaded",
+            "Fixed gusty winds overlapping in the METAR strip"
+        ]
+    },
+    {
+        "date": "2026-10-03",
         "title": "v4.3.0 — Route distances everywhere",
         "items": [
             "Fuel and time are planned on the distance actually flown along the route (SID, airways, STAR), not the straight line between airports",

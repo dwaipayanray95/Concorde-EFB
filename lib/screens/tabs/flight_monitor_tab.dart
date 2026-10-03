@@ -110,42 +110,78 @@ class _SupportGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        IntrinsicHeight(
-          child: Row(
+    // Fuel schematic (the Concorde-specific centrepiece) beside the CG,
+    // engines and fuel-burn cards; the smaller environmental / G / landing
+    // cards share one row underneath. Narrow screens stack everything.
+    final side = [
+      CgCard(t: t),
+      EnginesReheatCard(t: t),
+      FuelBurnCard(t: t, totalFuelKg: totalFuelKg, fuelFlowKgH: fuelFlowKgH),
+    ];
+    final bottom = [
+      EnvironmentalCard(t: t),
+      GForceCard(t: t),
+      TouchdownCard(touchdown: touchdown),
+    ];
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 900) {
+          return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                flex: 3,
-                child: FuelSchematicCard(chips: chips, totalKg: totalFuelKg),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    CgCard(t: t),
-                    const SizedBox(height: 16),
-                    EnvironmentalCard(t: t),
-                    const SizedBox(height: 16),
-                    FuelBurnCard(
-                      t: t,
-                      totalFuelKg: totalFuelKg,
-                      fuelFlowKgH: fuelFlowKgH,
-                    ),
-                    const SizedBox(height: 16),
-                    GForceCard(t: t),
-                    const SizedBox(height: 16),
-                    TouchdownCard(touchdown: touchdown),
-                  ],
-                ),
-              ),
+              FuelSchematicCard(chips: chips, totalKg: totalFuelKg),
+              for (final w in [...side, ...bottom]) ...[
+                const SizedBox(height: 12),
+                w,
+              ],
             ],
-          ),
-        ),
-      ],
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: FuelSchematicCard(
+                      chips: chips,
+                      totalKg: totalFuelKg,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (var i = 0; i < side.length; i++) ...[
+                          if (i > 0) const SizedBox(height: 16),
+                          side[i],
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var i = 0; i < bottom.length; i++) ...[
+                    if (i > 0) const SizedBox(width: 16),
+                    Expanded(child: bottom[i]),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

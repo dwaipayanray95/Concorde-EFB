@@ -20,7 +20,13 @@ final airportDbProvider = FutureProvider<AirportDatabaseService>((ref) async {
 class DepartureIcaoNotifier extends Notifier<String> {
   @override
   String build() => 'EGLL';
-  void set(String val) => state = val.trim().toUpperCase();
+  void set(String val) {
+    final v = val.trim().toUpperCase();
+    if (v == state) return;
+    state = v;
+    // A new airport always starts from the automatic runway pick.
+    ref.read(departureRunwayIdProvider.notifier).resetToAuto();
+  }
 }
 
 final departureIcaoProvider = NotifierProvider<DepartureIcaoNotifier, String>(
@@ -30,7 +36,13 @@ final departureIcaoProvider = NotifierProvider<DepartureIcaoNotifier, String>(
 class ArrivalIcaoNotifier extends Notifier<String> {
   @override
   String build() => 'KJFK';
-  void set(String val) => state = val.trim().toUpperCase();
+  void set(String val) {
+    final v = val.trim().toUpperCase();
+    if (v == state) return;
+    state = v;
+    // A new airport always starts from the automatic runway pick.
+    ref.read(arrivalRunwayIdProvider.notifier).resetToAuto();
+  }
 }
 
 final arrivalIcaoProvider = NotifierProvider<ArrivalIcaoNotifier, String>(
@@ -218,35 +230,85 @@ final simbriefLoadedProvider = NotifierProvider<SimbriefLoadedNotifier, bool>(
 );
 
 // --- Runways State ---
-/// Longest runway at [airport] (matches the biggest ID for a tie), or ''
-/// if it has none / isn't resolved yet.
-String _longestRunwayId(Airport? airport) {
+/// Default runway from the current METAR (gust-inclusive components):
+///  1. no tailwind (else the least tailwind),
+///  2. crosswind at most 15 kt when such a runway exists,
+///  3. longest (Concorde is runway-length limited).
+/// With no usable wind, simply the longest. '' if the airport has no
+/// runways / isn't resolved yet.
+String bestRunwayId(Airport? airport, String metar) {
   if (airport == null || airport.runways.isEmpty) return '';
-  return airport.runways.reduce((a, b) => b.lengthM > a.lengthM ? b : a).id;
-}
-
-class DepartureRunwayIdNotifier extends Notifier<String> {
-  @override
-  String build() {
-    // The runway dropdown's `items` are rebuilt from the new airport as
-    // soon as the ICAO resolves to it, but this id (e.g. "26L") may be from
-    // the OLD airport's runway list -- if it doesn't exist in the new list,
-    // DropdownButton's "exactly one matching item" assertion crashes.
-    // Re-pick (longest runway, a sensible default) whenever the resolved
-    // departure airport changes -- covers both the user typing a new ICAO
-    // and the airport DB finishing its async load after this provider's
-    // first build.
-    // Departure always defaults to the longest runway (Concorde is
-    // runway-length limited); the pilot can still override it.
-    ref.listen(depAirportProvider, (previous, next) {
-      if (next?.icao != previous?.icao) {
-        state = _longestRunwayId(next);
-      }
-    });
-    return _longestRunwayId(ref.read(depAirportProvider));
+  RunwayEnvironmentInputs env(Runway r) => ConcordeLogic.runwayEnvFromMetar(
+    metar: metar,
+    runwayHeadingDeg: r.heading.toDouble(),
+  );
+  double tail(Runway r) {
+    final t = env(r).tailwindKt ?? 0.0;
+    return t > 0.5 ? t : 0.0;
   }
 
-  void set(String val) => state = val;
+  int strongCross(Runway r) => (env(r).crosswindKt ?? 0.0) > 15 ? 1 : 0;
+  final ranked = [...airport.runways]
+    ..sort((a, b) {
+      final t = tail(a).compareTo(tail(b));
+      if (t != 0) return t;
+      final c = strongCross(a).compareTo(strongCross(b));
+      if (c != 0) return c;
+      return b.lengthM.compareTo(a.lengthM);
+    });
+  return ranked.first.id;
+}
+
+/// Selected runway for one leg. Picks [bestRunwayId] automatically and
+/// re-picks it when the airport or the METAR changes -- until the pilot
+/// (or a SimBrief import) chooses a runway, which is then kept for that
+/// airport. A new airport always resets to automatic.
+///
+/// The automatic pick also matters for correctness: the dropdown's items
+/// are rebuilt from the new airport, and an id from the old airport would
+/// trip DropdownButton's "exactly one matching item" assertion.
+abstract class _RunwayIdNotifier extends Notifier<String> {
+  Provider<Airport?> get airport;
+  FutureProvider<String> get metar;
+  bool _manual = false;
+
+  String _auto() =>
+      bestRunwayId(ref.read(airport), ref.read(metar).value ?? '');
+
+  @override
+  String build() {
+    ref.listen(airport, (previous, next) {
+      if (next?.icao == previous?.icao) return;
+      final keep =
+          _manual && (next?.runways.any((r) => r.id == state) ?? false);
+      if (!keep) {
+        _manual = false;
+        state = _auto();
+      }
+    });
+    ref.listen(metar, (_, _) {
+      if (!_manual) state = _auto();
+    });
+    return _auto();
+  }
+
+  /// Back to automatic selection (used when the ICAO is retyped).
+  void resetToAuto() {
+    _manual = false;
+    state = _auto();
+  }
+
+  void set(String val) {
+    _manual = true;
+    state = val;
+  }
+}
+
+class DepartureRunwayIdNotifier extends _RunwayIdNotifier {
+  @override
+  Provider<Airport?> get airport => depAirportProvider;
+  @override
+  FutureProvider<String> get metar => departureMetarFutureProvider;
 }
 
 final departureRunwayIdProvider =
@@ -254,23 +316,11 @@ final departureRunwayIdProvider =
       DepartureRunwayIdNotifier.new,
     );
 
-class ArrivalRunwayIdNotifier extends Notifier<String> {
+class ArrivalRunwayIdNotifier extends _RunwayIdNotifier {
   @override
-  String build() {
-    // Keep a runway that was already chosen for the new airport (e.g.
-    // the planned runway from a SimBrief import, which can be set before
-    // this listener sees the airport change); otherwise fall back to the
-    // longest runway.
-    ref.listen(arrAirportProvider, (previous, next) {
-      if (next?.icao != previous?.icao &&
-          !(next?.runways.any((r) => r.id == state) ?? false)) {
-        state = _longestRunwayId(next);
-      }
-    });
-    return _longestRunwayId(ref.read(arrAirportProvider));
-  }
-
-  void set(String val) => state = val;
+  Provider<Airport?> get airport => arrAirportProvider;
+  @override
+  FutureProvider<String> get metar => arrivalMetarFutureProvider;
 }
 
 final arrivalRunwayIdProvider =

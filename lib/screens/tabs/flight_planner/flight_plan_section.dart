@@ -7,6 +7,7 @@ import '../../../widgets/efb_card.dart';
 import '../../../widgets/efb_text_field.dart';
 import '../../../core/app_colors.dart';
 import '../../../core/ui_text.dart';
+import '../../../core/formatters.dart';
 import '../../../core/concorde_logic.dart';
 import '../../../services/simbrief_service.dart';
 import '../../../services/flight_plan_import_service.dart';
@@ -373,25 +374,19 @@ class FlightPlanSection extends ConsumerWidget {
       right: source == FlightPlanSource.none
           ? null
           : _sourceBadge(context, source),
-      child: Column(
-        children: [
-          // Import methods row: SimBrief (inline field + button), then two
-          // compact buttons for the file and manual-entry paths.
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final wide = constraints.maxWidth >= 900;
+          final simbriefField = EfbTextField(
+            label: 'SIMBRIEF USERNAME / ID (OPTIONAL)',
+            showLabel: false,
+            initialValue: ref.watch(simbriefUserProvider),
+            onChanged: (v) => ref.read(simbriefUserProvider.notifier).set(v),
+            placeholder: 'SimBrief username / ID',
+          );
+          final importButtons = Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(
-                flex: 2,
-                child: EfbTextField(
-                  label: 'SIMBRIEF USERNAME / ID (OPTIONAL)',
-                  showLabel: false,
-                  initialValue: ref.watch(simbriefUserProvider),
-                  onChanged: (v) =>
-                      ref.read(simbriefUserProvider.notifier).set(v),
-                  placeholder: 'SimBrief username / ID (optional)',
-                ),
-              ),
-              const SizedBox(width: 10),
               _ImportButton(
                 icon: Icons.cloud_download_outlined,
                 loading: isLoading,
@@ -519,219 +514,182 @@ class FlightPlanSection extends ConsumerWidget {
                 tooltip: 'Manual: Enter ICAO & route string',
                 onPressed: () => _openManualEntry(context, ref),
               ),
-              const SizedBox(width: 20),
-              // Flight Phase Time Strip
-              Expanded(
-                flex: 3,
-                child: _FlightPhaseStrip(
-                  phases: [
-                    MapEntry('TOTAL FLIGHT TIME', mission.totalTimeH),
-                    MapEntry('CLIMB', mission.climb.timeH),
-                    MapEntry('CRUISE', mission.cruise.timeH),
-                    MapEntry('DESCENT', mission.descent.timeH),
-                  ],
-                ),
-              ),
             ],
-          ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                flex: 1,
-                child: Container(
-                  height: 48,
-                  width: double.infinity,
-                  alignment: Alignment.centerLeft,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: colors.inputBg,
-                    borderRadius: BorderRadius.circular(12),
+          );
+          final routeChip = InkWell(
+            onTap: () {
+              if (msfsRoute.isNotEmpty) {
+                Clipboard.setData(ClipboardData(text: msfsRoute));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Route copied to clipboard!',
+                      style: uiText(context, color: Colors.white),
+                    ),
+                    behavior: SnackBarBehavior.floating,
+                    backgroundColor: colors.surface,
                   ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${ref.watch(departureIcaoProvider)} → ${ref.watch(arrivalIcaoProvider)}',
+                );
+
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    backgroundColor: colors.surface,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: colors.dividerStrong, width: 1.5),
+                    ),
+                    title: Text(
+                      'FULL ROUTE',
+                      style: uiText(
+                        context,
+                        color: colors.textPrimary,
+                        weight: FontWeight.w900,
+                        size: 16,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    content: SingleChildScrollView(
+                      child: SelectableText(
+                        msfsRoute,
                         style: uiText(
                           context,
-                          color: colors.textPrimary,
-                          size: 13,
-                          weight: FontWeight.w600,
+                          color: colors.textSecondary,
+                          size: 14,
+                          height: 1.5,
                         ),
                       ),
-                      const SizedBox(height: 1),
-                      Text(
-                        'ALT: ${ref.watch(alternateIcaoProvider)}',
-                        style: uiText(
-                          context,
-                          color: colors.textDim,
-                          size: 10,
-                          weight: FontWeight.bold,
+                    ),
+                    actions: [
+                      TextButton.icon(
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: msfsRoute));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Route copied to clipboard!',
+                                style: uiText(context, color: Colors.white),
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: colors.surface,
+                            ),
+                          );
+                        },
+                        icon: Icon(
+                          Icons.copy_all,
+                          size: 16,
+                          color: colors.accent,
+                        ),
+                        label: Text(
+                          'COPY',
+                          style: uiText(
+                            context,
+                            color: colors.accent,
+                            weight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text(
+                          'CLOSE',
+                          style: uiText(
+                            context,
+                            color: colors.textDim,
+                            weight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
+                );
+              }
+            },
+            mouseCursor: SystemMouseCursors.click,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              height: 48,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: colors.inputBg,
+                borderRadius: BorderRadius.circular(12),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                flex: 3,
-                child: InkWell(
-                  onTap: () {
-                    if (msfsRoute.isNotEmpty) {
-                      Clipboard.setData(ClipboardData(text: msfsRoute));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Route copied to clipboard!',
-                            style: uiText(context, color: Colors.white),
-                          ),
-                          behavior: SnackBarBehavior.floating,
-                          backgroundColor: colors.surface,
-                        ),
-                      );
-
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          backgroundColor: colors.surface,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            side: BorderSide(
-                              color: colors.dividerStrong,
-                              width: 1.5,
-                            ),
-                          ),
-                          title: Text(
-                            'FULL ROUTE',
-                            style: uiText(
-                              context,
-                              color: colors.textPrimary,
-                              weight: FontWeight.w900,
-                              size: 16,
-                              letterSpacing: 1.5,
-                            ),
-                          ),
-                          content: SingleChildScrollView(
-                            child: SelectableText(
-                              msfsRoute,
-                              style: uiText(
-                                context,
-                                color: colors.textSecondary,
-                                size: 14,
-                                height: 1.5,
-                              ),
-                            ),
-                          ),
-                          actions: [
-                            TextButton.icon(
-                              onPressed: () {
-                                Clipboard.setData(
-                                  ClipboardData(text: msfsRoute),
-                                );
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Route copied to clipboard!',
-                                      style: uiText(
-                                        context,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    behavior: SnackBarBehavior.floating,
-                                    backgroundColor: colors.surface,
-                                  ),
-                                );
-                              },
-                              icon: Icon(
-                                Icons.copy_all,
-                                size: 16,
-                                color: colors.accent,
-                              ),
-                              label: Text(
-                                'COPY',
-                                style: uiText(
-                                  context,
-                                  color: colors.accent,
-                                  weight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.of(context).pop(),
-                              child: Text(
-                                'CLOSE',
-                                style: uiText(
-                                  context,
-                                  color: colors.textDim,
-                                  weight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-                  },
-                  mouseCursor: SystemMouseCursors.click,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    height: 48,
-                    width: double.infinity,
-                    alignment: Alignment.centerLeft,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: colors.inputBg,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.route, color: colors.textDim, size: 16),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            msfsRoute.isEmpty ? '--' : msfsRoute,
-                            overflow: TextOverflow.ellipsis,
-                            style: uiText(
-                              context,
-                              color: msfsRoute.isEmpty
-                                  ? colors.textDim
-                                  : colors.textPrimary,
-                              size: 13,
-                              weight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(
-                          Icons.copy_all,
-                          color: msfsRoute.isEmpty
-                              ? colors.textDim.withValues(alpha: 0.5)
-                              : colors.accent,
-                          size: 16,
-                        ),
-                      ],
+              child: Row(
+                children: [
+                  Icon(Icons.route, color: colors.textDim, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      msfsRoute.isEmpty ? '--' : msfsRoute,
+                      overflow: TextOverflow.ellipsis,
+                      style: uiText(
+                        context,
+                        color: msfsRoute.isEmpty
+                            ? colors.textDim
+                            : colors.textPrimary,
+                        size: 13,
+                        weight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                ),
+                  const SizedBox(width: 10),
+                  // Route distance + ETE: the two numbers that drive
+                  // the fuel plan, right next to the route they're for.
+                  Text(
+                    '${numFormat.format(ref.watch(plannedDistanceProvider).round())} NM · '
+                    '${_hhmm(mission.totalTimeH)}',
+                    style: uiText(
+                      context,
+                      color: colors.accent,
+                      size: 12,
+                      weight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Icon(
+                    Icons.copy_all,
+                    color: msfsRoute.isEmpty
+                        ? colors.textDim.withValues(alpha: 0.5)
+                        : colors.accent,
+                    size: 16,
+                  ),
+                ],
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                flex: 1,
-                child: _InfoChip(
-                  label: 'ROUTE DISTANCE',
-                  value: '${ref.watch(plannedDistanceProvider).round()} NM',
-                  alignLeft: true,
-                  isNumeric: true,
-                ),
+            ),
+          );
+          if (wide) {
+            return Row(
+              children: [
+                Expanded(flex: 2, child: simbriefField),
+                const SizedBox(width: 10),
+                importButtons,
+                const SizedBox(width: 16),
+                Expanded(flex: 5, child: routeChip),
+              ],
+            );
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(child: simbriefField),
+                  const SizedBox(width: 10),
+                  importButtons,
+                ],
               ),
+              const SizedBox(height: 10),
+              routeChip,
             ],
-          ),
-        ],
+          );
+        },
       ),
     );
+  }
+
+  static String _hhmm(double hours) {
+    final m = (hours * 60).round();
+    return '${m ~/ 60}h ${(m % 60).toString().padLeft(2, '0')}m';
   }
 
   Widget _sourceBadge(BuildContext context, FlightPlanSource source) {
@@ -824,161 +782,3 @@ class _ImportButton extends StatelessWidget {
   }
 }
 
-class _InfoChip extends StatelessWidget {
-  final String label;
-  final String value;
-  final bool alignLeft;
-  final bool isNumeric;
-
-  const _InfoChip({
-    required this.label,
-    required this.value,
-    this.alignLeft = false,
-    this.isNumeric = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Container(
-      height: 48,
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: colors.inputBg,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: alignLeft
-            ? CrossAxisAlignment.start
-            : CrossAxisAlignment.center,
-        children: [
-          Text(
-            label,
-            style: uiText(
-              context,
-              size: 9,
-              weight: FontWeight.bold,
-              color: colors.textDim,
-              letterSpacing: 1,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: uiText(
-              context,
-              size: 14,
-              weight: FontWeight.bold,
-              color: colors.textPrimary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FlightPhaseStrip extends StatelessWidget {
-  final List<MapEntry<String, double>> phases;
-  const _FlightPhaseStrip({required this.phases});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Container(
-      height: 48,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: colors.inputBg,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          for (var i = 0; i < phases.length; i++) ...[
-            if (i > 0)
-              Container(
-                width: 1,
-                height: 26,
-                margin: const EdgeInsets.symmetric(horizontal: 8),
-                color: colors.dividerStrong.withValues(alpha: 0.5),
-              ),
-            Expanded(
-              child: _PhaseTimeColumn(
-                label: phases[i].key,
-                hoursDecimal: phases[i].value,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _PhaseTimeColumn extends StatelessWidget {
-  final String label;
-  final double hoursDecimal;
-  const _PhaseTimeColumn({required this.label, required this.hoursDecimal});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final h = hoursDecimal.floor();
-    final m = ((hoursDecimal - h) * 60).round();
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        RichText(
-          text: TextSpan(
-            style: uiText(
-              context,
-              color: colors.textPrimary,
-              weight: FontWeight.w900,
-            ),
-            children: [
-              TextSpan(text: '$h', style: const TextStyle(fontSize: 14)),
-              TextSpan(
-                text: 'h ',
-                style: uiText(
-                  context,
-                  size: 9.5,
-                  color: colors.textDim,
-                  weight: FontWeight.w600,
-                ),
-              ),
-              TextSpan(
-                text: m.toString().padLeft(2, '0'),
-                style: const TextStyle(fontSize: 14),
-              ),
-              TextSpan(
-                text: 'm',
-                style: uiText(
-                  context,
-                  size: 9.5,
-                  color: colors.textDim,
-                  weight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 1),
-        Text(
-          label,
-          style: uiText(
-            context,
-            size: 8.5,
-            weight: FontWeight.bold,
-            color: colors.textDim,
-            letterSpacing: 0.5,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
-    );
-  }
-}

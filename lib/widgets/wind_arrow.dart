@@ -1,12 +1,16 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../core/app_colors.dart';
+import '../core/concorde_constants.dart';
 import '../core/ui_text.dart';
 
 class WindArrow extends StatelessWidget {
   final double? runwayHeading;
   final double? windDir;
   final double? windSpeedKt;
+
+  /// Gust speed (kt), if reported -- used for the limit colouring.
+  final double? windGustKt;
   final double size;
   final Color? color;
 
@@ -20,6 +24,7 @@ class WindArrow extends StatelessWidget {
     required this.runwayHeading,
     required this.windDir,
     this.windSpeedKt,
+    this.windGustKt,
     this.size = 24.0,
     this.color,
     this.runwayLabel,
@@ -68,16 +73,23 @@ class WindArrow extends StatelessWidget {
     final arrowRotation = (relWind + 180) % 360;
     final arrowRadians = arrowRotation * math.pi / 180;
 
-    Color arrowColor = color ?? colors.arrival;
+    // Colour by what the wind does to THIS runway, gust-inclusive, against
+    // the Concorde limits (30 kt crosswind, 10 kt tailwind):
+    //   green  = comfortable, amber = getting close / any tailwind,
+    //   red    = outside limits.
+    Color arrowColor = color ?? colors.success;
     if (windSpeedKt != null) {
-      if (windSpeedKt! < 6) {
-        arrowColor = colors.arrival;
-      } else if (windSpeedKt! < 16) {
-        arrowColor = colors.accent;
-      } else if (windSpeedKt! < 26) {
-        arrowColor = colors.mvfr;
-      } else {
+      final w = math.max(windGustKt ?? 0, windSpeedKt!);
+      final rad = (windDir! - runwayHeading!) * math.pi / 180;
+      final cross = (w * math.sin(rad)).abs();
+      final tail = math.max(0.0, -w * math.cos(rad));
+      if (cross > ConcordeConstants.runway.maxCrosswindKt ||
+          tail > ConcordeConstants.runway.maxTailwindKt) {
         arrowColor = colors.error;
+      } else if (cross > 20 || tail > 3 || w >= 25) {
+        arrowColor = colors.accent;
+      } else {
+        arrowColor = colors.success;
       }
     }
 

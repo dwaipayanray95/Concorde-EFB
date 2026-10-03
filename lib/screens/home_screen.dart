@@ -150,11 +150,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
             content: Text(
               'If you enjoy using Concorde EFB for MSFS, please consider giving it a rating on flightsim.to!',
               textAlign: TextAlign.center,
-              style: uiText(
-                context,
-                color: colors.textSecondary,
-                size: 13,
-              ),
+              style: uiText(context, color: colors.textSecondary, size: 13),
             ),
             actionsAlignment: MainAxisAlignment.center,
             actions: [
@@ -259,6 +255,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
           body: LayoutBuilder(
             builder: (context, constraints) {
               final isCompact = constraints.maxWidth < 720;
+              // Phone landscape: every pixel of height counts, so the
+              // status bar scrolls away with the content (and is dropped on
+              // the checklist tab, which needs its fixed height).
+              final isShort = constraints.maxHeight < 560;
+
+              final statusBar = CockpitStatusBar(
+                hasUpdate: _hasUpdate,
+                latestVersion: _latestVersion,
+              );
+              Widget withScrollingStatusBar(Widget tab) => isShort
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [statusBar, const SizedBox(height: 10), tab],
+                    )
+                  : tab;
 
               Widget buildMainContent({required bool safeLeft}) {
                 return SafeArea(
@@ -270,15 +281,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // Cockpit Top Status Bar
-                      Padding(
-                        padding: isCompact
-                            ? const EdgeInsets.fromLTRB(12, 10, 12, 8)
-                            : const EdgeInsets.fromLTRB(20, 14, 20, 12),
-                        child: CockpitStatusBar(
-                          hasUpdate: _hasUpdate,
-                          latestVersion: _latestVersion,
+                      if (!isShort)
+                        Padding(
+                          padding: isCompact
+                              ? const EdgeInsets.fromLTRB(12, 10, 12, 8)
+                              : const EdgeInsets.fromLTRB(20, 14, 20, 12),
+                          child: statusBar,
                         ),
-                      ),
+                      if (isShort) const SizedBox(height: 8),
 
                       // Tab View Content
                       Expanded(
@@ -296,7 +306,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                                     isCompact ? 12 : 20,
                                     24,
                                   ),
-                                  child: const FlightPlannerTab(),
+                                  child: withScrollingStatusBar(
+                                    const FlightPlannerTab(),
+                                  ),
                                 ),
                               )
                             : selectedTab == 1
@@ -323,7 +335,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                                     isCompact ? 12 : 20,
                                     24,
                                   ),
-                                  child: const FlightMonitorTab(),
+                                  child: withScrollingStatusBar(
+                                    const FlightMonitorTab(),
+                                  ),
                                 ),
                               ),
                       ),
@@ -354,24 +368,49 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                           height: 56,
                           backgroundColor: Colors.transparent,
                           indicatorColor: colors.accent,
-                          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                          labelBehavior:
+                              NavigationDestinationLabelBehavior.alwaysShow,
                           onDestinationSelected: (idx) {
                             setState(() => selectedTab = idx);
                           },
                           destinations: [
                             NavigationDestination(
-                              icon: Icon(Icons.flight_takeoff, color: colors.textSecondary, size: 20),
-                              selectedIcon: const Icon(Icons.flight_takeoff, color: Color(0xFF101012), size: 20),
+                              icon: Icon(
+                                Icons.flight_takeoff,
+                                color: colors.textSecondary,
+                                size: 20,
+                              ),
+                              selectedIcon: const Icon(
+                                Icons.flight_takeoff,
+                                color: Color(0xFF101012),
+                                size: 20,
+                              ),
                               label: 'PLAN',
                             ),
                             NavigationDestination(
-                              icon: Icon(Icons.playlist_add_check, color: colors.textSecondary, size: 20),
-                              selectedIcon: const Icon(Icons.playlist_add_check, color: Color(0xFF101012), size: 20),
+                              icon: Icon(
+                                Icons.playlist_add_check,
+                                color: colors.textSecondary,
+                                size: 20,
+                              ),
+                              selectedIcon: const Icon(
+                                Icons.playlist_add_check,
+                                color: Color(0xFF101012),
+                                size: 20,
+                              ),
                               label: 'CHECK',
                             ),
                             NavigationDestination(
-                              icon: Icon(Icons.monitor_heart, color: colors.textSecondary, size: 20),
-                              selectedIcon: const Icon(Icons.monitor_heart, color: Color(0xFF101012), size: 20),
+                              icon: Icon(
+                                Icons.monitor_heart,
+                                color: colors.textSecondary,
+                                size: 20,
+                              ),
+                              selectedIcon: const Icon(
+                                Icons.monitor_heart,
+                                color: Color(0xFF101012),
+                                size: 20,
+                              ),
                               label: 'MONITOR',
                             ),
                           ],

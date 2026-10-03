@@ -68,7 +68,8 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
     final simbriefLoaded = ref.watch(simbriefLoadedProvider);
 
     final hasRoute = depIcao.isNotEmpty && arrIcao.isNotEmpty;
-    final isFlightLoaded = simbriefLoaded ||
+    final isFlightLoaded =
+        simbriefLoaded ||
         (callSign.isNotEmpty && callSign != '--') ||
         (registration.isNotEmpty && registration != '--');
 
@@ -110,7 +111,10 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
                     } catch (_) {}
                   },
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
@@ -146,39 +150,45 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Flight Deck Identity: Call Sign, Reg, Pax
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _buildHeaderPill(
-                            context,
-                            label: 'CALL SIGN',
-                            value: callSign,
-                            isPopulated: callSign.isNotEmpty && callSign != '--',
-                          ),
-                          const SizedBox(width: 8),
-                          _buildHeaderPill(
-                            context,
-                            label: 'REG',
-                            value: registration,
-                            isPopulated: registration.isNotEmpty && registration != '--',
-                          ),
-                          const SizedBox(width: 8),
-                          _buildHeaderPill(
-                            context,
-                            label: 'PAX',
-                            value: isFlightLoaded ? '$paxCount' : '--',
-                            isPopulated: isFlightLoaded,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(width: 14),
-                      Container(
-                        width: 1,
-                        height: 18,
-                        color: colors.dividerStrong.withValues(alpha: 0.5),
-                      ),
-                      const SizedBox(width: 14),
+                      // Flight Deck Identity: Call Sign, Reg, Pax -- only once a
+                      // flight is loaded; empty "--" pills just waste space.
+                      if (isFlightLoaded) ...[
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildHeaderPill(
+                              context,
+                              label: 'CALL SIGN',
+                              value: callSign,
+                              isPopulated:
+                                  callSign.isNotEmpty && callSign != '--',
+                            ),
+                            const SizedBox(width: 8),
+                            _buildHeaderPill(
+                              context,
+                              label: 'REG',
+                              value: registration,
+                              isPopulated:
+                                  registration.isNotEmpty &&
+                                  registration != '--',
+                            ),
+                            const SizedBox(width: 8),
+                            _buildHeaderPill(
+                              context,
+                              label: 'PAX',
+                              value: isFlightLoaded ? '$paxCount' : '--',
+                              isPopulated: isFlightLoaded,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(width: 14),
+                        Container(
+                          width: 1,
+                          height: 18,
+                          color: colors.dividerStrong.withValues(alpha: 0.5),
+                        ),
+                        const SizedBox(width: 14),
+                      ],
 
                       // Route pill
                       Semantics(
@@ -186,12 +196,17 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
                             ? 'Active route: $depIcao to $arrIcao, ${plannedDistance.round()} nautical miles'
                             : 'No active route set',
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: colors.resultsBg,
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(
-                              color: colors.dividerStrong.withValues(alpha: 0.5),
+                              color: colors.dividerStrong.withValues(
+                                alpha: 0.5,
+                              ),
                               width: 1,
                             ),
                           ),
@@ -209,7 +224,11 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
                                   ),
                                 ),
                                 const SizedBox(width: 6),
-                                Icon(Icons.arrow_forward, size: 12, color: colors.textDim),
+                                Icon(
+                                  Icons.arrow_forward,
+                                  size: 12,
+                                  color: colors.textDim,
+                                ),
                                 const SizedBox(width: 6),
                                 Text(
                                   arrIcao,
@@ -251,7 +270,11 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
                       const SizedBox(width: 12),
 
                       // SimConnect Status Pill
-                      _buildSimPill(context, monitorState.isConnected, bridgeStatus),
+                      _buildSimPill(
+                        context,
+                        monitorState.isConnected,
+                        bridgeStatus,
+                      ),
                     ],
                   ),
                 ),
@@ -260,9 +283,13 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
 
               // Live Zulu / UTC Clock (always right-aligned)
               Semantics(
-                label: 'Universal Coordinated Time Zulu: ${_formatZulu(_nowUtc)}',
+                label:
+                    'Universal Coordinated Time Zulu: ${_formatZulu(_nowUtc)}',
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: colors.resultsBg,
                     borderRadius: BorderRadius.circular(6),
@@ -297,7 +324,11 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
     );
   }
 
-  Widget _buildSimPill(BuildContext context, bool isConnected, SimBridgeStatus? bridgeStatus) {
+  Widget _buildSimPill(
+    BuildContext context,
+    bool isConnected,
+    SimBridgeStatus? bridgeStatus,
+  ) {
     final colors = context.colors;
     Color statusColor;
     String statusText;
@@ -305,7 +336,8 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
     if (isConnected) {
       statusColor = colors.arrival;
       statusText = 'SIM LIVE';
-    } else if (bridgeStatus == SimBridgeStatus.started || bridgeStatus == SimBridgeStatus.alreadyRunning) {
+    } else if (bridgeStatus == SimBridgeStatus.started ||
+        bridgeStatus == SimBridgeStatus.alreadyRunning) {
       statusColor = colors.mvfr;
       statusText = 'WAITING SIM';
     } else {

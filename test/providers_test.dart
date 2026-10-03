@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:concorde_efb/providers/efb_providers.dart';
 import 'package:concorde_efb/core/concorde_constants.dart';
 import 'package:concorde_efb/models/concorde_models.dart';
+import 'package:concorde_efb/models/airport.dart';
 
 void main() {
   group('weightsProvider', () {
@@ -231,6 +232,46 @@ void main() {
       final d = container.read(dispatchSummaryProvider);
       expect(d.cautions, contains('No alternate'));
       expect(d.noGo.any((s) => s.contains('lternate')), isFalse);
+    });
+  });
+
+  group('bestRunwayId', () {
+    final jfk = Airport(
+      icao: 'KJFK',
+      name: 'JFK',
+      lat: 40.64,
+      lon: -73.78,
+      runways: [
+        Runway(id: '13R', heading: 122, lengthM: 4423),
+        Runway(id: '31L', heading: 302, lengthM: 3460),
+        Runway(id: '04L', heading: 31, lengthM: 3682),
+      ],
+    );
+
+    test('no wind -> longest runway', () {
+      expect(bestRunwayId(jfk, ''), '13R');
+    });
+
+    test('avoids a tailwind runway even if it is the longest', () {
+      expect(
+        bestRunwayId(jfk, 'KJFK 031151Z 31015G24KT 10SM BKN015 18/11 A3002'),
+        '31L',
+      );
+    });
+
+    test('every runway with tailwind -> least tailwind', () {
+      final one = Airport(
+        icao: 'XXXX',
+        name: 'x',
+        lat: 0,
+        lon: 0,
+        runways: [
+          Runway(id: '09', heading: 90, lengthM: 3000),
+          Runway(id: '18', heading: 180, lengthM: 3500),
+        ],
+      );
+      // Wind from 300: tailwind on 09 (~15) and 18 (~13 kt).
+      expect(bestRunwayId(one, 'XXXX 031151Z 30026KT 9999 18/11 Q1013'), '18');
     });
   });
 }

@@ -3,11 +3,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:concorde_efb/screens/tabs/checklists_tab.dart';
 import 'test_harness.dart';
 
+void _desktop(WidgetTester tester) {
+  tester.view.physicalSize = const Size(1280, 800);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+}
+
 void main() {
   group('ChecklistsTab', () {
     testWidgets('renders the default phase without overflowing or throwing', (
       tester,
     ) async {
+      _desktop(tester);
       await pumpBoundedScreen(tester, const ChecklistsTab());
 
       expect(tester.takeException(), isNull);
@@ -22,6 +30,7 @@ void main() {
     testWidgets('switching phases swaps the right panel content', (
       tester,
     ) async {
+      _desktop(tester);
       await pumpBoundedScreen(tester, const ChecklistsTab());
 
       await tester.tap(find.text('Before Takeoff & Taxi'));
@@ -64,6 +73,20 @@ void main() {
       await pumpBoundedScreen(tester, const ChecklistsTab());
 
       expect(tester.takeException(), isNull);
+    });
+    testWidgets('phone landscape: phases become a horizontal strip', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(740, 360);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await pumpBoundedScreen(tester, const ChecklistsTab());
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('COLD & DARK SETUP  0/11'), findsOneWidget);
+      expect(find.text('BATTERY SWITCH'), findsOneWidget);
     });
   });
 }

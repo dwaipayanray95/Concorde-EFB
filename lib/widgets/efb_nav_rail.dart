@@ -47,6 +47,10 @@ class EfbNavRail extends ConsumerWidget {
           width: 76,
           child: LayoutBuilder(
             builder: (context, constraints) {
+              // Phone landscape: drop the logo block and tighten gaps so all
+              // destinations + utilities fit without scrolling.
+              final short = constraints.maxHeight < 440;
+              final gap = short ? 4.0 : 12.0;
               return SingleChildScrollView(
                 physics: const ClampingScrollPhysics(),
                 child: ConstrainedBox(
@@ -54,43 +58,48 @@ class EfbNavRail extends ConsumerWidget {
                   child: IntrinsicHeight(
                     child: Column(
                       children: [
-                        const SizedBox(height: 12),
-                        // Aircraft badge / App icon
-                        Tooltip(
-                          message: 'Concorde EFB ${AppVersion.display}',
-                          child: Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: colors.resultsBg,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: colors.dividerStrong.withValues(alpha: 0.8),
-                                width: 1.2,
+                        SizedBox(height: short ? 8 : 12),
+                        if (!short) ...[
+                          // Aircraft badge / App icon
+                          Tooltip(
+                            message: 'Concorde EFB ${AppVersion.display}',
+                            child: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: colors.resultsBg,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: colors.dividerStrong.withValues(
+                                    alpha: 0.8,
+                                  ),
+                                  width: 1.2,
+                                ),
                               ),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: Image.asset(
-                                'assets/app-icon.png',
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => Icon(
-                                  Icons.airplanemode_active,
-                                  color: colors.accent,
-                                  size: 26,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: Image.asset(
+                                  'assets/app-icon.png',
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Icon(
+                                        Icons.airplanemode_active,
+                                        color: colors.accent,
+                                        size: 26,
+                                      ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 18),
-                        Divider(
-                          color: colors.dividerStrong.withValues(alpha: 0.4),
-                          height: 1,
-                          indent: 14,
-                          endIndent: 14,
-                        ),
-                        const SizedBox(height: 16),
+                          const SizedBox(height: 18),
+                          Divider(
+                            color: colors.dividerStrong.withValues(alpha: 0.4),
+                            height: 1,
+                            indent: 14,
+                            endIndent: 14,
+                          ),
+                          const SizedBox(height: 16),
+                        ],
 
                         // Navigation Items
                         _NavRailItem(
@@ -99,14 +108,14 @@ class EfbNavRail extends ConsumerWidget {
                           isSelected: selectedIndex == 0,
                           onTap: () => onDestinationSelected(0),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: gap),
                         _NavRailItem(
                           icon: Icons.playlist_add_check,
                           label: 'CHECK',
                           isSelected: selectedIndex == 1,
                           onTap: () => onDestinationSelected(1),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: gap),
                         _NavRailItem(
                           icon: Icons.monitor_heart,
                           label: 'MONITOR',
@@ -117,19 +126,28 @@ class EfbNavRail extends ConsumerWidget {
                         const Spacer(),
 
                         // SimConnect status indicator
-                        _buildBridgeStatusIndicator(context, monitorState.isConnected, bridgeStatus),
-                        const SizedBox(height: 8),
+                        _buildBridgeStatusIndicator(
+                          context,
+                          monitorState.isConnected,
+                          bridgeStatus,
+                        ),
+                        SizedBox(height: short ? 0 : 8),
 
                         // Theme toggle
                         Tooltip(
-                          message: themeMode == ThemeMode.dark ? 'Light mode' : 'Dark mode',
+                          message: themeMode == ThemeMode.dark
+                              ? 'Light mode'
+                              : 'Dark mode',
                           child: IconButton(
                             icon: Icon(
-                              themeMode == ThemeMode.dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                              themeMode == ThemeMode.dark
+                                  ? Icons.light_mode_outlined
+                                  : Icons.dark_mode_outlined,
                               color: colors.textSecondary,
                               size: 20,
                             ),
-                            onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
+                            onPressed: () =>
+                                ref.read(themeModeProvider.notifier).toggle(),
                           ),
                         ),
 
@@ -145,7 +163,7 @@ class EfbNavRail extends ConsumerWidget {
                             onPressed: () => _showSettingsDialog(context),
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: short ? 4 : 12),
                       ],
                     ),
                   ),
@@ -158,15 +176,20 @@ class EfbNavRail extends ConsumerWidget {
     );
   }
 
-  Widget _buildBridgeStatusIndicator(BuildContext context, bool isConnected, SimBridgeStatus? bridgeStatus) {
+  Widget _buildBridgeStatusIndicator(
+    BuildContext context,
+    bool isConnected,
+    SimBridgeStatus? bridgeStatus,
+  ) {
     final colors = context.colors;
     Color dotColor;
     String tooltipMsg;
 
     if (isConnected) {
-      dotColor = colors.arrival; // Green
+      dotColor = colors.success; // Green
       tooltipMsg = 'SimConnect Telemetry Online';
-    } else if (bridgeStatus == SimBridgeStatus.started || bridgeStatus == SimBridgeStatus.alreadyRunning) {
+    } else if (bridgeStatus == SimBridgeStatus.started ||
+        bridgeStatus == SimBridgeStatus.alreadyRunning) {
       dotColor = colors.mvfr; // Amber
       tooltipMsg = 'Bridge Running • Waiting on MSFS SimConnect';
     } else {
@@ -272,23 +295,41 @@ class EfbNavRail extends ConsumerWidget {
               },
               borderRadius: BorderRadius.circular(8),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: colors.inputBg,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: colors.dividerStrong.withValues(alpha: 0.5)),
+                  border: Border.all(
+                    color: colors.dividerStrong.withValues(alpha: 0.5),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.palette_outlined, size: 16, color: colors.accent),
+                    Icon(
+                      Icons.palette_outlined,
+                      size: 16,
+                      color: colors.accent,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         'Design Lab / Component Catalog',
-                        style: uiText(context, size: 13, color: colors.textPrimary, weight: FontWeight.w600),
+                        style: uiText(
+                          context,
+                          size: 13,
+                          color: colors.textPrimary,
+                          weight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                    Icon(Icons.arrow_forward_ios, size: 12, color: colors.textDim),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      size: 12,
+                      color: colors.textDim,
+                    ),
                   ],
                 ),
               ),
@@ -300,7 +341,11 @@ class EfbNavRail extends ConsumerWidget {
             onPressed: () => Navigator.of(context).pop(),
             child: Text(
               'CLOSE',
-              style: uiText(context, weight: FontWeight.bold, color: colors.accent),
+              style: uiText(
+                context,
+                weight: FontWeight.bold,
+                color: colors.accent,
+              ),
             ),
           ),
         ],
@@ -344,10 +389,7 @@ class _NavRailItem extends StatelessWidget {
               color: isSelected ? colors.accent : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
               border: isSelected
-                  ? Border.all(
-                      color: colors.accent,
-                      width: 1.0,
-                    )
+                  ? Border.all(color: colors.accent, width: 1.0)
                   : null,
             ),
             child: Column(
@@ -415,7 +457,9 @@ class _SettingButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: colors.inputBg,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: colors.dividerStrong.withValues(alpha: 0.5)),
+          border: Border.all(
+            color: colors.dividerStrong.withValues(alpha: 0.5),
+          ),
         ),
         child: Row(
           children: [
@@ -432,7 +476,12 @@ class _SettingButton extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: uiText(context, size: 12, weight: FontWeight.w600, color: colors.textPrimary),
+                style: uiText(
+                  context,
+                  size: 12,
+                  weight: FontWeight.w600,
+                  color: colors.textPrimary,
+                ),
               ),
             ),
             Icon(Icons.open_in_new, size: 14, color: colors.textDim),

@@ -23,7 +23,6 @@ class PerformanceCalculatorSection extends ConsumerStatefulWidget {
 
 class _PerformanceCalculatorSectionState
     extends ConsumerState<PerformanceCalculatorSection> {
-
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
@@ -324,6 +323,7 @@ class _LegCard extends ConsumerWidget {
                               runwayHeading: runway?.heading.toDouble(),
                               windDir: parsedWind.windDirDeg,
                               windSpeedKt: parsedWind.windSpeedKt,
+                              windGustKt: parsedWind.windGustKt,
                               color: colors.accent,
                               size: 148,
                               runwayLabel: runway?.id,
@@ -765,6 +765,7 @@ class _WeatherStrip extends StatelessWidget {
                 child: Row(
                   children: [
                     _WeatherCell(
+                      flex: 3,
                       label: 'WIND',
                       value: windText,
                       labelColor: dimOnCat,
@@ -872,7 +873,9 @@ class _WeatherCell extends StatelessWidget {
   final String value;
   final Color labelColor;
   final Color valueColor;
+  final int flex;
   const _WeatherCell({
+    this.flex = 2,
     required this.label,
     required this.value,
     required this.labelColor,
@@ -881,36 +884,42 @@ class _WeatherCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Gusty winds ("310°/15G24KT") get a wider cell, and every cell keeps
+    // a right gap so values never run into the next one.
     return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: uiText(
-              context,
-              size: 9,
-              weight: FontWeight.w800,
-              color: labelColor,
-              letterSpacing: 1,
-            ),
-          ),
-          const SizedBox(height: 2),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              value,
-              maxLines: 1,
+      flex: flex,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
               style: uiText(
                 context,
-                size: 13,
+                size: 9,
                 weight: FontWeight.w800,
-                color: valueColor,
+                color: labelColor,
+                letterSpacing: 1,
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 2),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                maxLines: 1,
+                style: uiText(
+                  context,
+                  size: 13,
+                  weight: FontWeight.w800,
+                  color: valueColor,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
