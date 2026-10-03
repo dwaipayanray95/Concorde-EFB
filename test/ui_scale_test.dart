@@ -7,16 +7,21 @@ Widget _host(Size size, void Function(Size, double) onBuild) {
     textDirection: TextDirection.ltr,
     child: MediaQuery(
       data: MediaQueryData(size: size),
-      child: SizedBox(
-        width: size.width,
-        height: size.height,
-        child: PhoneUiScaler(
+      // Align gives the box loose constraints; without it the test screen
+      // would force the box to fill the whole 800x600 surface.
+      child: Align(
+        alignment: Alignment.topLeft,
+        child: SizedBox(
+          width: size.width,
+          height: size.height,
+          child: PhoneUiScaler(
           child: Builder(
             builder: (context) {
               onBuild(MediaQuery.of(context).size, UiScale.of(context));
               return const SizedBox.expand();
             },
           ),
+        ),
         ),
       ),
     ),
