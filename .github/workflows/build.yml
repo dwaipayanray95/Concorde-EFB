@@ -1,0 +1,347 @@
+name: Build
+
+# One manual workflow for every build. Run it from the Actions tab.
+#
+#   platforms  tick any of Windows / Android / macOS (all ticked by default)
+#   mode       debug / profile  -> GitHub PRE-release  pre-<ver>-build<N>-<mode>
+#                                  notes = changes since the previous pre-release
+#              release          -> GitHub RELEASE      v<ver>  (tag is created from
+#                                  pubspec.yaml's version; notes = changes since the
+#                                  previous v* release; draft by default)
+#
+# GitHub has no multi-select input, so each platform is its own checkbox.
+# Release notes are written by Gemini from the commits + the hand-written
+# public/changelog/entries.json; if the key is missing or the API fails, a plain
+# commit list is used so a build is never blocked on the AI.
+on:
+  workflow_dispatch:
+    inputs:
+      windows:
+        description: 'Windows (Inno Setup installer + bundled SimConnect bridge)'
+        type: boolean
+        default: true
+      android:
+        description: 'Android (APK, plus AAB in release mode)'
+        type: boolean
+        default: true
+      macos:
+        description: 'macOS (DMG)'
+        type: boolean
+        default: true
+      mode:
+        description: 'Build mode. debug/profile = pre-release for testing, release = public release.'
+        type: choice
+        options: [release, profile, debug]
+        default: profile
+      draft:
+        description: 'Release mode only: create the release as a draft so you can review it first'
+        type: boolean
+        default: true
+      gemini_notes:
+        description: 'Write release notes with Gemini (off = plain commit list)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  GEMINI_MODEL: gemini-3.6-flash
+  GEMINI_THINKING_LEVEL: low
+
+jobs:
+  # ---------------------------------------------------------------- prepare
+  prepare:
+    name: Plan (version, tag, notes)
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.plan.outputs.version }}
+      build: ${{ steps.plan.outputs.build }}
+      tag: ${{ steps.plan.outputs.tag }}
+      base: ${{ steps.plan.outputs.base }}
+      prerelease: ${{ steps.plan.outputs.prerelease }}
+      stem: ${{ steps.plan.outputs.stem }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version, tag and previous release
+        id: plan
+        env:
+          MODE: ${{ inputs.mode }}
+          ANY_PLATFORM: ${{ inputs.windows || inputs.android || inputs.macos }}
+        run: |
+          set -euo pipefail
+          if [ "$ANY_PLATFORM" != "true" ]; then
+            echo "::error::Select at least one platform."; exit 1
+          fi
+
+          line=$(grep -E '^version:[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+\+[0-9]+' pubspec.yaml || true)
+          [ -n "$line" ] || { echo "::error::Could not parse version+build from pubspec.yaml"; exit 1; }
+          full=$(echo "$line" | sed -E 's/^version:[[:space:]]*//; s/[[:space:]].*$//')
+          version=${full%%+*}
+          build=${full##*+}
+
+          latest_release=$(git tag --list 'v*' --sort=-v:refname | head -n1)
+
+          if [ "$MODE" = "release" ]; then
+            if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+              echo "::error::Release builds must run from main (this run is on $GITHUB_REF)."; exit 1
+            fi
+            tag="v$version"
+            if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+              echo "::error::Tag $tag already exists. Bump the version in pubspec.yaml (and add a changelog entry) first."; exit 1
+            fi
+            if ! grep -q "\"title\": \"v$version " public/changelog/entries.json; then
+              echo "::error::public/changelog/entries.json has no entry titled \"v$version — ...\"."; exit 1
+            fi
+            base="$latest_release"
+            prerelease=false
+          else
+            tag="pre-$version-build$build-$MODE"
+            if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+              tag="$tag-r$GITHUB_RUN_NUMBER"   # same build re-run: keep tags unique
+            fi
+            base=$(git tag --list 'pre-*' 'beta-*' --sort=-creatordate | head -n1)
+            [ -n "$base" ] || base="$latest_release"
+            prerelease=true
+          fi
+
+          echo "version=$version"       >> "$GITHUB_OUTPUT"
+          echo "build=$build"           >> "$GITHUB_OUTPUT"
+          echo "tag=$tag"               >> "$GITHUB_OUTPUT"
+          echo "base=$base"             >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+          echo "stem=ConcordeEFB_v${version}_${MODE}" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Build plan"
+            echo "- Mode: \`$MODE\`  Version: \`$version+$build\`"
+            echo "- Tag: \`$tag\` ($([ "$prerelease" = true ] && echo pre-release || echo release))"
+            echo "- Notes cover: \`${base:-last 50 commits}..${GITHUB_SHA::7}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Generate release notes
+        uses: ./actions/ai-release-notes
+        with:
+          gemini-api-key: ${{ inputs.gemini_notes && secrets.GEMINI_API_KEY || '' }}
+          base-ref: ${{ steps.plan.outputs.base }}
+          head-ref: ${{ github.sha }}
+          model: ${{ env.GEMINI_MODEL }}
+          thinking-level: ${{ env.GEMINI_THINKING_LEVEL }}
+          version: ${{ steps.plan.outputs.version }}
+          prerelease: ${{ steps.plan.outputs.prerelease }}
+          tag: ${{ steps.plan.outputs.tag }}
+
+      - name: Show notes
+        run: |
+          { echo "### Release notes"; cat release_notes.md; } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: release_notes.md
+
+  # ----------------------------------------------------------------- verify
+  verify:
+    name: Analyze & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+  # ---------------------------------------------------------------- windows
+  windows:
+    name: Windows (${{ inputs.mode }})
+    if: inputs.windows
+    needs: [prepare, verify]
+    runs-on: windows-latest
+    env:
+      MODE: ${{ inputs.mode }}
+      VERSION: ${{ needs.prepare.outputs.version }}
+      STEM: ${{ needs.prepare.outputs.stem }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build msfs_bridge.exe
+        shell: pwsh
+        run: |
+          pip install pyinstaller -r tools/simbridge/requirements.txt
+          pyinstaller --noconfirm --clean --onedir --noconsole `
+            --add-binary "$(python -c 'import SimConnect,os;print(os.path.join(os.path.dirname(SimConnect.__file__),"SimConnect.dll"))');." `
+            --distpath windows/simbridge `
+            --name msfs_bridge `
+            tools/simbridge/msfs_bridge.py
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Build Windows app
+        run: flutter build windows --${{ env.MODE }}
+
+      - name: Build installer (Inno Setup)
+        shell: pwsh
+        run: |
+          $dir = (Get-Culture).TextInfo.ToTitleCase($env:MODE)   # Debug / Profile / Release
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
+            "/DAppVer=$env:VERSION" "/DBuildDir=$dir" "/DOutName=${env:STEM}_windows_setup" inno_setup.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed" }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-windows
+          path: build/windows/${{ needs.prepare.outputs.stem }}_windows_setup.exe
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------- android
+  android:
+    name: Android (${{ inputs.mode }})
+    if: inputs.android
+    needs: [prepare, verify]
+    runs-on: ubuntu-latest
+    env:
+      MODE: ${{ inputs.mode }}
+      STEM: ${{ needs.prepare.outputs.stem }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --${{ env.MODE }}
+
+      - name: Build AAB (release only)
+        if: inputs.mode == 'release'
+        run: flutter build appbundle --release
+
+      - name: Collect
+        run: |
+          mkdir -p dist
+          cp "build/app/outputs/flutter-apk/app-$MODE.apk" "dist/${STEM}_android.apk"
+          if [ "$MODE" = "release" ]; then
+            cp build/app/outputs/bundle/release/app-release.aab "dist/${STEM}_android.aab"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-android
+          path: dist/*
+          if-no-files-found: error
+
+  # ------------------------------------------------------------------ macos
+  macos:
+    name: macOS (${{ inputs.mode }})
+    if: inputs.macos
+    needs: [prepare, verify]
+    runs-on: macos-latest
+    env:
+      MODE: ${{ inputs.mode }}
+      STEM: ${{ needs.prepare.outputs.stem }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Build macOS app
+        run: flutter build macos --${{ env.MODE }}
+
+      - name: Package DMG
+        run: |
+          case "$MODE" in
+            debug) dir=Debug ;; profile) dir=Profile ;; *) dir=Release ;;
+          esac
+          app=$(ls -d "build/macos/Build/Products/$dir/"*.app | head -n1)
+          mkdir -p stage dist
+          ditto "$app" "stage/$(basename "$app")"
+          ln -s /Applications stage/Applications
+          hdiutil create -volname "Concorde EFB" -srcfolder stage -ov -format UDZO "dist/${STEM}_macos.dmg"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-macos
+          path: dist/*.dmg
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------- publish
+  publish:
+    name: Publish GitHub ${{ inputs.mode == 'release' && 'release' || 'pre-release' }}
+    needs: [prepare, windows, android, macos]
+    # Run even when some platforms were skipped (unticked); never when one failed.
+    if: >-
+      !cancelled() &&
+      needs.prepare.result == 'success' &&
+      !contains(needs.*.result, 'failure')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dist-*
+          path: dist
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+          BUILD: ${{ needs.prepare.outputs.build }}
+          PRERELEASE: ${{ needs.prepare.outputs.prerelease }}
+          MODE: ${{ inputs.mode }}
+          DRAFT: ${{ inputs.draft }}
+        run: |
+          set -euo pipefail
+          ls -l dist
+          if [ "$PRERELEASE" = "true" ]; then
+            title="Concorde EFB v$VERSION (build $BUILD, $MODE) — test build"
+            flags=(--prerelease)
+          else
+            title="Concorde EFB v$VERSION"
+            flags=(--latest)
+            [ "$DRAFT" = "true" ] && flags+=(--draft)
+          fi
+          gh release create "$TAG" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "$title" \
+            --notes-file release_notes.md \
+            "${flags[@]}"
+          echo "Published \`$TAG\`" >> "$GITHUB_STEP_SUMMARY"

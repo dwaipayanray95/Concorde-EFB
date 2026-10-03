@@ -1,38 +1,56 @@
-name: 'EZ AI Release Notes'
-description: 'Generates beautiful release notes from git diffs using Google Gemini AI, with a clean offline fallback.'
+name: 'AI Release Notes'
+description: 'Writes user-friendly release notes for the commits between two refs using Gemini, with an offline commit-list fallback.'
 inputs:
   gemini-api-key:
-    description: 'Google Gemini API key. If omitted, uses template-based offline generation.'
+    description: 'Google Gemini API key. If empty, the offline template is used.'
     required: false
-  publish:
-    description: 'Whether to create/update the GitHub release automatically (true/false)'
+    default: ''
+  base-ref:
+    description: 'Tag/commit to diff from. Empty = last 50 commits.'
+    required: false
+    default: ''
+  head-ref:
+    description: 'Tag/commit to diff to.'
+    required: false
+    default: 'HEAD'
+  model:
+    description: 'Gemini model id.'
+    required: false
+    default: 'gemini-3.6-flash'
+  thinking-level:
+    description: 'Gemini thinking level (minimal/low/medium/high).'
+    required: false
+    default: 'low'
+  version:
+    description: 'App version these notes are for (e.g. 5.5.2).'
+    required: false
+    default: ''
+  prerelease:
+    description: '"true" for a test build, "false" for a public release.'
     required: false
     default: 'false'
+  tag:
+    description: 'Tag these notes will be published under (used for the compare link).'
+    required: false
+    default: ''
+  output:
+    description: 'File to write the notes to.'
+    required: false
+    default: 'release_notes.md'
 runs:
   using: 'composite'
   steps:
-    - name: Ensure Git History is Fetched
-      run: |
-        # Ensure deep history is loaded so we can find commits and tags
-        git fetch --prune --unshallow || git fetch --tags || true
-      shell: bash
-
-    - name: Run Release Notes Script
+    - name: Generate release notes
       run: node "${{ github.action_path }}/generate-release-notes.js"
       env:
         GEMINI_API_KEY: ${{ inputs.gemini-api-key }}
-      shell: bash
-
-    - name: Create GitHub Release (Optional)
-      if: ${{ inputs.publish == 'true' }}
-      run: |
-        TAG_NAME=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0.0")
-        if [ -f "release_notes.md" ]; then
-          echo "Publishing release for tag $TAG_NAME"
-          gh release create "$TAG_NAME" -F release_notes.md --title "$TAG_NAME Release" || gh release edit "$TAG_NAME" -F release_notes.md --title "$TAG_NAME Release"
-        else
-          echo "No release_notes.md found. Skipping release creation."
-        fi
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
+        BASE_REF: ${{ inputs.base-ref }}
+        HEAD_REF: ${{ inputs.head-ref }}
+        GEMINI_MODEL: ${{ inputs.model }}
+        GEMINI_THINKING_LEVEL: ${{ inputs.thinking-level }}
+        APP_VERSION: ${{ inputs.version }}
+        IS_PRERELEASE: ${{ inputs.prerelease }}
+        RELEASE_TAG: ${{ inputs.tag }}
+        NOTES_OUTPUT: ${{ inputs.output }}
+        REPO: ${{ github.repository }}
       shell: bash

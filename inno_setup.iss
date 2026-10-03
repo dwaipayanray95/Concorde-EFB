@@ -1,6 +1,15 @@
-; AppVer is passed by CI from pubspec.yaml: ISCC /DAppVer=5.5.2
+; Passed by CI: ISCC /DAppVer=5.5.2 /DBuildDir=Release /DOutName=ConcordeEFB_v5.5.2_release_windows
+;   AppVer   - version from pubspec.yaml
+;   BuildDir - Flutter output folder: Debug, Profile or Release
+;   OutName  - installer file name without .exe
 #ifndef AppVer
   #define AppVer "0.0.0"
+#endif
+#ifndef BuildDir
+  #define BuildDir "Release"
+#endif
+#ifndef OutName
+  #define OutName "Concorde-EFB-Installer"
 #endif
 
 [Setup]
@@ -21,13 +30,13 @@ UninstallDisplayName=Concorde EFB
 Compression=lzma2
 SolidCompression=yes
 OutputDir=build\windows
-OutputBaseFilename=Concorde-EFB-Installer
+OutputBaseFilename={#OutName}
 ArchitecturesInstallIn64BitMode=x64
 DisableWelcomePage=no
 DisableDirPage=no
 
 [Files]
-Source: "build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs
+Source: "build\windows\x64\runner\{#BuildDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\Concorde EFB"; Filename: "{app}\concorde_efb.exe"

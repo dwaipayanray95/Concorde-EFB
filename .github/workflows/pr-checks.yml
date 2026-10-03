@@ -1,0 +1,32 @@
+name: PR Checks
+
+# Size label, secret scan and a warn-only licence check on every pull request.
+# Builds and releases live in build.yml (manual dispatch).
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  pr-checks:
+    name: PR Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: PR Size Labeler
+        uses: ./actions/pr-pilot
+
+      - name: Security Scan
+        uses: ./actions/security-scan
+
+      - name: License Check (warn-only)
+        uses: ./actions/license-guard
+        with:
+          fail-on-violation: 'false'

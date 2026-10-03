@@ -175,8 +175,13 @@ the sim this app targets) gives a number, it wins; the code comments cite it. Co
 - `public/changelog/entries.json` — changelog source of truth (drives the standalone changelog
   page and update banner text).
 - `.github/workflows/pages.yml` — GitHub Pages deployment (marketing site + changelog).
-- `.github/workflows/beta-build.yml`, `.github/workflows/release-build.yml` — Flutter build/
-  release pipelines (Windows installer via Inno Setup, macOS DMG, Android APK).
+- `.github/workflows/build.yml` — the single manual (`workflow_dispatch`) build/release pipeline:
+  Windows/Android/macOS checkboxes + mode debug/profile/release. debug/profile -> pre-release
+  `pre-<ver>-build<N>-<mode>` (notes = diff since previous pre-release); release -> `v<ver>` tag
+  created from pubspec (notes = diff since previous `v*`, draft by default, main only, needs a
+  changelog entry). Windows always ships via Inno Setup (`/DAppVer /DBuildDir /DOutName`) with a
+  fresh PyInstaller `msfs_bridge.exe`. Notes: `actions/ai-release-notes` (Gemini, offline fallback).
+  `.github/workflows/pr-checks.yml` — PR size label/secret scan/licence check.
 
 ## 6) Build, Run, and Deploy Commands
 
@@ -190,7 +195,7 @@ the sim this app targets) gives a number, it wins; the code comments cite it. Co
 - Build Android: `flutter build apk` / `flutter build appbundle`
 - The bundled bridge exe under `windows/simbridge/` is a separate PyInstaller build of
   `tools/simbridge/msfs_bridge.py` — it is not rebuilt automatically by `flutter build`; check the
-  release workflow (`.github/workflows/release-build.yml`) for how/when it's regenerated and
+  build workflow (`.github/workflows/build.yml`) for how/when it's regenerated and
   bundled.
 
 ## 7) Completed Features and Timeline
@@ -334,5 +339,4 @@ stale like the old React-era version of this file did.
 - Changelog history: `public/changelog/entries.json`
 - Human-readable overview: `README.md`
 - Web deployment pipeline: `.github/workflows/pages.yml`
-- Desktop/mobile release pipelines: `.github/workflows/beta-build.yml`,
-  `.github/workflows/release-build.yml`
+- Desktop/mobile build + release pipeline: `.github/workflows/build.yml`

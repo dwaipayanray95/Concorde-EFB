@@ -1,241 +1,179 @@
-const { execSync } = require('child_process');
+// Writes release notes for BASE_REF..HEAD_REF. Gemini turns the commits and
+// the hand-written changelog entries into plain-language notes for end users;
+// if there is no key or the API fails, a categorised commit list is written
+// instead so a release is never blocked on the AI.
+const { execFileSync } = require('child_process');
 const fs = require('fs');
 const https = require('https');
 
-// Helper to run shell commands safely
-function run(cmd) {
+const env = (k, d = '') => (process.env[k] || d).trim();
+const BASE = env('BASE_REF');
+const HEAD = env('HEAD_REF', 'HEAD');
+const OUT = env('NOTES_OUTPUT', 'release_notes.md');
+const PRE = env('IS_PRERELEASE') === 'true';
+const VERSION = env('APP_VERSION');
+const REPO = env('REPO');
+
+function git(...args) {
   try {
-    return execSync(cmd, { encoding: 'utf8' }).trim();
+    return execFileSync('git', args, { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 }).trim();
   } catch (err) {
-    console.error(`Error running command "${cmd}":`, err.message);
+    console.error(`git ${args.join(' ')} failed: ${err.message}`);
     return '';
   }
 }
 
-// Get the latest tag or a fallback
-function getTags() {
-  const tags = run('git tag --sort=-v:refname').split('\n').filter(Boolean);
-  return tags;
+function truncate(text, max) {
+  return text.length > max ? text.slice(0, max) + '\n... [truncated]' : text;
 }
 
-// Main logic
-async function main() {
-  console.log('Starting AI Release Notes generation...');
-
-  const tags = getTags();
-  let baseRef = '';
-  let headRef = 'HEAD';
-
-  if (tags.length === 0) {
-    console.log('No tags found in repository. Analyzing all commits up to HEAD.');
-    // Find initial commit and take first line in case of multiple root commits
-    const rootCommits = run('git rev-list --max-parents=0 HEAD').split('\n').filter(Boolean);
-    baseRef = rootCommits[0] || '';
-  } else if (tags.length === 1) {
-    console.log(`Only one tag found (${tags[0]}). Comparing initial commit to ${tags[0]}.`);
-    const rootCommits = run('git rev-list --max-parents=0 HEAD').split('\n').filter(Boolean);
-    baseRef = rootCommits[0] || '';
-    headRef = tags[0];
-  } else {
-    // tags[0] is the newest tag, tags[1] is the previous one
-    baseRef = tags[1];
-    headRef = tags[0];
-    console.log(`Comparing changes from ${baseRef} to ${headRef}.`);
-  }
-
-  if (!baseRef || !headRef) {
-    console.error('Could not determine base or head commit reference.');
-    fs.writeFileSync('release_notes.md', 'No base or head commits found.');
-    return;
-  }
-
-  // Get commits list
-  const commitLog = run(`git log ${baseRef}..${headRef} --oneline`);
-  if (!commitLog) {
-    console.log('No commits found between refs.');
-    fs.writeFileSync('release_notes.md', 'No changes detected.');
-    return;
-  }
-
-  console.log('Commits found:\n', commitLog);
-
-  // Get code diff summary
-  const diffSummary = run(`git diff --stat ${baseRef}..${headRef}`);
-  console.log('Diff Summary:\n', diffSummary);
-
-  // Collect the diff itself, but truncate if it's too large to prevent token limits
-  let diffDetails = run(`git diff ${baseRef}..${headRef}`);
-  const maxDiffLength = 50000; // ~50KB limit to be safe
-  if (diffDetails.length > maxDiffLength) {
-    console.log(`Diff is large (${diffDetails.length} chars). Truncating to fit API limits.`);
-    diffDetails = diffDetails.substring(0, maxDiffLength) + '\n\n... [Diff truncated due to size] ...';
-  }
-
-  const geminiKey = process.env.GEMINI_API_KEY;
-
-  if (!geminiKey) {
-    console.log('⚠️ GEMINI_API_KEY environment variable not found. Using offline template fallback.');
-    const fallbackNotes = generateOfflineNotes(commitLog, diffSummary);
-    fs.writeFileSync('release_notes.md', fallbackNotes);
-    console.log('Release notes written to release_notes.md (Offline mode)');
-    return;
-  }
-
-  console.log('GEMINI_API_KEY found. Generating release notes using Gemini...');
-  try {
-    const aiNotes = await callGeminiAPI(geminiKey, commitLog, diffSummary, diffDetails);
-    fs.writeFileSync('release_notes.md', aiNotes);
-    console.log('Release notes written to release_notes.md (AI mode)');
-  } catch (error) {
-    console.error('Gemini API call failed. Falling back to offline generation.', error.message);
-    const fallbackNotes = generateOfflineNotes(commitLog, diffSummary);
-    fs.writeFileSync('release_notes.md', fallbackNotes);
-  }
-}
-
-// Generate classic, clean notes when offline
-function generateOfflineNotes(commits, diffSummary) {
-  const commitLines = commits.split('\n').filter(Boolean);
-  
-  const categorized = {
-    Features: [],
-    Fixes: [],
-    Chore: [],
-    Other: []
-  };
-
-  commitLines.forEach(line => {
-    const message = line.substring(line.indexOf(' ') + 1);
-    if (/^(feat|feature)/i.test(message)) {
-      categorized.Features.push(message);
-    } else if (/^(fix|bugfix)/i.test(message)) {
-      categorized.Fixes.push(message);
-    } else if (/^(chore|style|refactor|test|ci)/i.test(message)) {
-      categorized.Chore.push(message);
-    } else {
-      categorized.Other.push(message);
-    }
-  });
-
-  let notes = '# 📦 Release Notes\n\n## 🔍 What\'s Changed\n\n';
-  
-  if (categorized.Features.length > 0) {
-    notes += '### 🚀 New Features\n';
-    categorized.Features.forEach(msg => notes += `- ${msg}\n`);
-    notes += '\n';
-  }
-  if (categorized.Fixes.length > 0) {
-    notes += '### 🐛 Bug Fixes\n';
-    categorized.Fixes.forEach(msg => notes += `- ${msg}\n`);
-    notes += '\n';
-  }
-  if (categorized.Other.length > 0) {
-    notes += '### 🔄 General Changes\n';
-    categorized.Other.forEach(msg => notes += `- ${msg}\n`);
-    notes += '\n';
-  }
-  if (categorized.Chore.length > 0) {
-    notes += '### ⚙️ Housekeeping\n';
-    categorized.Chore.forEach(msg => notes += `- ${msg}\n`);
-    notes += '\n';
-  }
-
-  notes += '## 📊 Code Statistics\n```text\n' + diffSummary + '\n```\n';
-  notes += '\n*Generated automatically in offline mode.*';
-  return notes;
-}
-
-// Call Google Gemini API using native https module
-function callGeminiAPI(apiKey, commits, diffSummary, diffDetails) {
+function geminiRequest(apiKey, model, body) {
   return new Promise((resolve, reject) => {
-    const model = 'gemini-2.5-flash'; // stable, fast, latest recommended model
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-
-    const prompt = `You are a professional release manager and a vibe coder's assistant.
-Your task is to write a beautiful, engaging, and stylish GitHub Release Notes document based on the Git commits and code diff details provided below.
-
-Guidelines:
-- Analyze the actual code changes in the diff to understand *what* changed and *why*, rather than just repeating commit messages.
-- Group the changes into logical, stylish sections using emojis (e.g. 🚀 Features, 🐛 Bug Fixes, ⚙️ Performance & Quality, 🧹 Housekeeping).
-- Highlight breaking changes clearly using a blockquote or danger callout.
-- Keep the tone cool, developer-friendly, and professional.
-- Do NOT output HTML tags. Use clean GitHub Markdown.
-- Keep bullet points concise and informative.
-- Include a summary of code statistics at the end.
-
----
-COMMITS LIST:
-${commits}
-
----
-DIFF STATS:
-${diffSummary}
-
----
-DETAILED CODE DIFF:
-${diffDetails}
-`;
-
-    const requestData = JSON.stringify({
-      contents: [
-        {
-          parts: [
-            { text: prompt }
-          ]
-        }
-      ],
-      generationConfig: {
-        temperature: 0.2,
-        maxOutputTokens: 2048
-      }
-    });
-
-    const options = {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(requestData),
-        'x-goog-api-key': apiKey // Pass the API key securely in headers instead of URL query parameters!
-      }
-    };
-
-    const req = https.request(url, options, (res) => {
-      let responseBody = '';
-      res.on('data', (chunk) => { responseBody += chunk; });
-      res.on('end', () => {
-        if (res.statusCode !== 200) {
-          // Avoid printing the API key in headers/options errors
-          return reject(new Error(`API Error: Status ${res.statusCode} - ${responseBody.replace(apiKey, '[REDACTED]')}`));
-        }
-        try {
-          const parsed = JSON.parse(responseBody);
-          const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (!text) {
-            return reject(new Error('Empty text content received from Gemini. Maybe filtered or invalid request structure.'));
+    const data = JSON.stringify(body);
+    const req = https.request(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(data),
+          'x-goog-api-key': apiKey,
+        },
+      },
+      (res) => {
+        let out = '';
+        res.on('data', (c) => (out += c));
+        res.on('end', () => {
+          if (res.statusCode !== 200) {
+            const err = new Error(`Gemini ${res.statusCode}: ${out.split(apiKey).join('[REDACTED]').slice(0, 500)}`);
+            err.status = res.statusCode;
+            return reject(err);
           }
-          resolve(text);
-        } catch (e) {
-          reject(new Error(`Failed to parse Gemini response: ${e.message}`));
-        }
-      });
-    });
-
-    req.setTimeout(30000, () => {
-      req.destroy();
-      reject(new Error('API request timeout (30 seconds) exceeded.'));
-    });
-
-    req.on('error', (err) => {
-      reject(err);
-    });
-
-    req.write(requestData);
+          try {
+            const parts = JSON.parse(out)?.candidates?.[0]?.content?.parts || [];
+            const text = parts.filter((p) => !p.thought).map((p) => p.text || '').join('').trim();
+            text ? resolve(text) : reject(new Error('Gemini returned no text'));
+          } catch (e) {
+            reject(new Error(`Bad Gemini response: ${e.message}`));
+          }
+        });
+      },
+    );
+    req.setTimeout(90000, () => req.destroy(new Error('Gemini request timed out')));
+    req.on('error', reject);
+    req.write(data);
     req.end();
   });
 }
 
-// Run main script
-main().catch(err => {
-  console.error('Fatal execution error:', err);
+async function callGemini(apiKey, context) {
+  const model = env('GEMINI_MODEL', 'gemini-3.6-flash');
+  const level = env('GEMINI_THINKING_LEVEL', 'low');
+  const prompt = `You write release notes for Concorde EFB, an Electronic Flight Bag app for the DC Designs Concorde in Microsoft Flight Simulator. The readers are flight sim pilots, not developers.
+
+Write GitHub Markdown release notes for ${VERSION ? 'version ' + VERSION : 'this release'}${PRE ? ' (an internal TEST build, not a public release)' : ''}.
+
+Rules:
+- Describe what changed for the user, in plain language. No commit hashes, file names, function names or jargon.
+- Use only these sections, and omit any that would be empty: "### ✨ New", "### 🛠 Improved", "### 🐛 Fixed".
+- One short bullet per change. Merge related commits into one bullet.
+- Leave out purely internal work (CI, refactors, tests, docs, dependency bumps). If nothing user-visible changed, write a single line saying this build contains internal improvements only.
+- The CHANGELOG ENTRIES below were written by the maintainer and are the most reliable source. Use the commits and code diff only to fill gaps.
+- Never invent features. If you are unsure whether something changed, leave it out.
+- Start directly with the first section. No title, no intro, no sign-off.${PRE ? '\n- Begin with one line in italics saying this is a test build and may be unstable.' : ''}
+
+=== CHANGELOG ENTRIES ADDED IN THIS RANGE ===
+${context.changelog || '(none)'}
+
+=== COMMITS ===
+${context.commits}
+
+=== FILES CHANGED ===
+${context.stat}
+
+=== CODE DIFF (truncated) ===
+${context.diff}
+`;
+  const body = (withThinking) => ({
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    generationConfig: {
+      maxOutputTokens: 4096,
+      ...(withThinking ? { thinkingConfig: { thinkingLevel: level } } : {}),
+    },
+  });
+  for (const withThinking of [true, false]) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        return await geminiRequest(apiKey, model, body(withThinking));
+      } catch (err) {
+        console.error(`Gemini attempt failed (thinking=${withThinking}, try ${attempt}): ${err.message}`);
+        if (err.status === 400 && withThinking) break; // model rejects thinkingConfig: retry without it
+        if (!(err.status === 429 || err.status >= 500 || !err.status)) throw err;
+      }
+    }
+  }
+  throw new Error('Gemini failed after retries');
+}
+
+function offlineNotes(commitLines) {
+  const groups = { '✨ New': [], '🐛 Fixed': [], '🛠 Other changes': [] };
+  for (const line of commitLines) {
+    if (/^(chore|ci|test|docs|style|refactor)(\(|:)/i.test(line)) continue;
+    if (/^feat/i.test(line)) groups['✨ New'].push(line);
+    else if (/^fix/i.test(line)) groups['🐛 Fixed'].push(line);
+    else groups['🛠 Other changes'].push(line);
+  }
+  let notes = '';
+  for (const [title, items] of Object.entries(groups)) {
+    if (items.length) notes += `### ${title}\n${items.map((i) => `- ${i}`).join('\n')}\n\n`;
+  }
+  return notes || 'This build contains internal improvements only.\n';
+}
+
+async function main() {
+  const range = BASE ? `${BASE}..${HEAD}` : '';
+  const commitArgs = ['log', '--no-merges', '--pretty=format:%s'];
+  const commitLines = (range ? git(...commitArgs, range) : git(...commitArgs, '-n', '50', HEAD))
+    .split('\n').filter(Boolean);
+
+  if (!commitLines.length) {
+    fs.writeFileSync(OUT, 'No changes since the previous build.\n');
+    return;
+  }
+
+  let notes;
+  const apiKey = env('GEMINI_API_KEY');
+  if (apiKey) {
+    const diffBase = BASE || git('rev-list', '--max-parents=0', HEAD).split('\n')[0];
+    const span = `${diffBase}..${HEAD}`;
+    const context = {
+      commits: truncate(git('log', '--no-merges', '--pretty=format:- %s%n%b', span), 20000),
+      stat: truncate(git('diff', '--stat', span), 6000),
+      changelog: truncate(
+        git('diff', '--unified=0', span, '--', 'public/changelog/entries.json')
+          .split('\n').filter((l) => l.startsWith('+') && !l.startsWith('+++')).map((l) => l.slice(1)).join('\n'),
+        8000,
+      ),
+      diff: truncate(git('diff', '--unified=1', span, '--', 'lib', 'tools/simbridge', 'android/app/src', 'windows/runner'), 60000),
+    };
+    try {
+      notes = await callGemini(apiKey, context);
+      console.log('Release notes generated with Gemini.');
+    } catch (err) {
+      console.error(`Falling back to offline notes: ${err.message}`);
+    }
+  } else {
+    console.log('No GEMINI_API_KEY; using offline notes.');
+  }
+  if (!notes) notes = offlineNotes(commitLines);
+
+  if (REPO && BASE && process.env.RELEASE_TAG) {
+    notes += `\n---\n[Full changelog](https://github.com/${REPO}/compare/${BASE}...${process.env.RELEASE_TAG})\n`;
+  }
+  fs.writeFileSync(OUT, notes.trim() + '\n');
+}
+
+main().catch((err) => {
+  console.error(err);
   process.exit(1);
 });
