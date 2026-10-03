@@ -1,4 +1,4 @@
-package com.dwaipayanray95.concorde_efb
+package com.theawesomeray.concorde_efb
 
 import io.flutter.embedding.android.FlutterActivity
 

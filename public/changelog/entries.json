@@ -1,6 +1,13 @@
 [
     {
         "date": "2026-10-03",
+        "title": "v5.5.6 — New Android app identity",
+        "items": [
+            "The Android app now uses its permanent package name (com.theawesomeray.concorde_efb). If you installed an earlier Android test build, uninstall it first; this installs as a separate app"
+        ]
+    },
+    {
+        "date": "2026-10-03",
         "title": "v5.5.5 — Android ad setup",
         "items": [
             "Android release builds are now prepared to use the app's own ad configuration; test builds always show harmless sample ads"

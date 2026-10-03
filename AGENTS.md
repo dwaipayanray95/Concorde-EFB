@@ -14,7 +14,7 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `5.5.5+68` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+- Current version: `5.5.6+69` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
   `public/changelog/entries.json` in sync — README no longer carries its own changelog, it just
   links to that page.
 - **Versioning rule (mandatory for every agent):** every change that alters user-visible behavior
@@ -271,6 +271,7 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 - v5.5.3: Inno installer wipes the previous install (`[InstallDelete]`, guarded by `IsExistingInstall`) and uninstall removes `{app}`; settings live in `%APPDATA%` (SharedPreferences) so they survive. 
 - v5.5.4: airport-DB cache moved out of the install folder to `getApplicationCacheDirectory()` (%LOCALAPPDATA% on Windows; temp-dir fallback) -- Program Files is read-only for the unelevated app. Never write next to the exe.
 - v5.5.5: AdMob ids injected, not hardcoded: banner unit via `--dart-define=ADMOB_BANNER_ID` (release only; debug/profile always Google test ads), app id via `ADMOB_APP_ID` env -> manifest placeholder `admobAppId`. CI reads GitHub repo *variables* (ids are public).
+- v5.5.6: Android/Linux application id is `com.theawesomeray.concorde_efb` (matches the AdMob app + Play listing; Kotlin package moved). Windows `CompanyName` and macOS/iOS bundle ids intentionally still `com.dwaipayanray95...` -- the Windows one names the %APPDATA% settings folder, changing it would reset users' settings.
 
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.
