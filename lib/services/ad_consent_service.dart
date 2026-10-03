@@ -31,7 +31,7 @@ class AdConsentService {
 
   /// Testing aid, ignored in release builds. Simulates an EU user so the
   /// consent form shows anywhere:
-  ///   flutter run --dart-define=UMP_TEST_DEVICE=<hash>
+  ///   flutter run --dart-define=UMP_TEST_DEVICE=YOUR_HASH
   /// The hash is printed in logcat ("Use new ConsentDebugSettings.Builder()
   /// .addTestDeviceHashedId(...)") the first time the app requests consent.
   static const _umpTestDevice = String.fromEnvironment('UMP_TEST_DEVICE');

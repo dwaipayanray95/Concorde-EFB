@@ -57,9 +57,7 @@ class _EfbAdBannerState extends State<EfbAdBanner> {
     // Adaptive anchored banner: sized to the screen width, which AdMob fills
     // better (and pays more for) than the fixed 320x50 banner.
     final width = MediaQuery.sizeOf(context).width.truncate();
-    final size = await AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(
-      width,
-    );
+    final size = await AdSize.getLargeAnchoredAdaptiveBannerAdSize(width);
     _loading = false;
     if (!mounted || size == null || _bannerAd != null) return;
 
