@@ -14,9 +14,18 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `3.7.0+51` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
-  `public/changelog/entries.json` in sync when cutting a release — README no longer carries its
-  own changelog, it just links to that page.
+- Current version: `4.0.0+52` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+  `public/changelog/entries.json` in sync — README no longer carries its own changelog, it just
+  links to that page.
+- **Versioning rule (mandatory for every agent):** every change that alters user-visible behavior
+  bumps the version using semantic versioning `MAJOR.MINOR.PATCH`, and ALWAYS increments the
+  `+buildNumber` by 1:
+  - PATCH (`4.0.0` -> `4.0.1`): bug fixes, copy/text tweaks, small visual fixes.
+  - MINOR (`4.0.1` -> `4.1.0`): new features or new UI, backwards-compatible calculation changes.
+  - MAJOR (`4.1.0` -> `5.0.0`): only when the owner asks, or for breaking changes (e.g. removed
+    features, changed saved data formats, reworked core models).
+  Add a matching `public/changelog/entries.json` entry titled `vX.Y.Z — <summary>` in the same
+  commit. Pure refactors/tests/docs with no user-visible change don't bump.
 - Theme system: unified light/dark `AppColors` (`lib/core/app_colors.dart`) resolved via
   `context.colors`, flat Material cards (`lib/widgets/efb_flat_card.dart`), one font family
   (JetBrains Mono via `lib/core/ui_text.dart`). The old glassmorphism system (`UiTokens`,
@@ -215,6 +224,7 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 - SimConnect Bridge Rewrite: `tools/simbridge/msfs_bridge.py` now calls SimConnect.dll directly via ctypes (one data definition, `PERIOD_SIM_FRAME` push, dispatch thread handling OPEN/QUIT/EXCEPTION, heartbeat via `RequestSystemState`, auto-reconnect in-process) instead of the polling Python-SimConnect wrapper; sends `{"type":"status"}` + `{"type":"telemetry"}` frames; bundled with `--noconsole --add-binary SimConnect.dll` (the DLL was previously missing from the PyInstaller build). `SimBridgeLauncher` now supervises/respawns the process and kills a hung leftover `msfs_bridge.exe`; MSFS-launch restart removed (`startWatching` is a no-op). Logs to `%LOCALAPPDATA%\ConcordeEFB\simbridge.log`.
 
 - Fuel & performance model overhaul (v3.7.0): phase-based trip fuel calibrated to real sectors with a golden test, subsonic/short-sector fallback, subsonic alternate profile + alternate warnings, capacity-aware endurance, TOW excludes taxi, typed `WeightSummary`/`TakeoffSpeeds`/`LandingSpeeds`, 10 kt tailwind limit, gust/VRB handling, missing-wind flag, AUTO/DRY/WET/CONTAM runway condition, W^2 takeoff distance, recalibrated V-speeds, longest-runway departure default, route-distance estimate for file imports, METAR auto-refresh/age/weather summary, shared runway-env provider, `flutter analyze` in beta CI.
+- v4.0.0: fuel release strip header shows real flight data (call sign/route, source, FL, distance, ETE, FUEL OK/SHORT stamp); METAR strip reorganised into category row + equal-width readout row, age spelled out below the strip (`formatMetarAge`); semantic versioning rule added (section 1).
 
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.
@@ -269,7 +279,7 @@ stale like the old React-era version of this file did.
   dark mode before reporting done.
 - If behavior changed for users, update `public/changelog/entries.json` (the sole changelog —
   README only links to it, don't add version history back into README).
-- If the version changed, sync `pubspec.yaml`.
+- Bump the version per the versioning rule in section 1 (`pubspec.yaml` + changelog entry).
 - Update this section (7) with a one-line summary of what landed, so it doesn't go stale again.
 
 ## 10) Source-of-Truth References

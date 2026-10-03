@@ -10,6 +10,7 @@ import '../../../core/concorde_constants.dart';
 import '../../../core/concorde_logic.dart';
 import '../../../models/concorde_models.dart';
 import '../../../core/formatters.dart';
+import '../../../services/flight_plan_import_service.dart';
 
 /// CRUISE & FUEL MANAGEMENT card: distance/FL/fuel inputs, computed TOW,
 /// fuel endurance, and the fuel breakdown panel.
@@ -217,6 +218,17 @@ class CruiseAndFuelSection extends ConsumerWidget {
                     alternateDistanceNm: ref
                         .watch(alternateDistanceProvider)
                         .round(),
+                    title: _stripTitle(
+                      ref.watch(callSignProvider),
+                      ref.watch(departureIcaoProvider),
+                      ref.watch(arrivalIcaoProvider),
+                    ),
+                    subtitle:
+                        '${_sourceLabel(ref.watch(flightPlanSourceProvider))} • '
+                        'FL${mission.targetCruiseFl} • '
+                        '${numFormat.format(ref.watch(plannedDistanceProvider).round())} NM • '
+                        'ETE ${_formatHoursMinutes(mission.totalTimeH)}',
+                    fuelOk: !isOverCapacity && endurance.sufficient,
                   ),
                 ),
               ],
@@ -302,9 +314,24 @@ String? _alternateWarning(AlternateStatus status, String icao, double nm) {
   };
 }
 
+/// "BAW1 // EGLL-KJFK" once a call sign is loaded, else just the route.
+String _stripTitle(String callSign, String dep, String arr) {
+  final route = '${dep.isEmpty ? '----' : dep}-${arr.isEmpty ? '----' : arr}';
+  final cs = callSign.trim();
+  return cs.isEmpty || cs == '--' ? '$route // FUEL RELEASE' : '$cs // $route';
+}
+
+String _sourceLabel(FlightPlanSource source) => switch (source) {
+  FlightPlanSource.simbrief => 'SIMBRIEF OFP',
+  FlightPlanSource.file => 'IMPORTED PLAN',
+  FlightPlanSource.manual => 'MANUAL ROUTE',
+  FlightPlanSource.none => 'EFB PLAN',
+};
+
 String _formatHoursMinutes(double hoursDecimal) {
-  final h = hoursDecimal.floor();
-  final m = ((hoursDecimal - h) * 60).round();
+  final total = (hoursDecimal * 60).round();
+  final h = total ~/ 60;
+  final m = total % 60;
   return '${h}h ${m.toString().padLeft(2, '0')}m';
 }
 
@@ -409,8 +436,14 @@ class _FuelBreakdownPanel extends StatelessWidget {
   final double totalFuel;
   final bool isOverCapacity;
   final int alternateDistanceNm;
+  final String title;
+  final String subtitle;
+  final bool fuelOk;
 
   const _FuelBreakdownPanel({
+    required this.title,
+    required this.subtitle,
+    required this.fuelOk,
     required this.fuel,
     required this.extra,
     required this.totalFuel,
@@ -422,6 +455,7 @@ class _FuelBreakdownPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final badgeColor = fuelOk ? colors.success : colors.error;
 
     // Authentic thermal paper substrate
     final paperBg = isDark ? const Color(0xFF161619) : const Color(0xFFFAF9F5);
@@ -477,7 +511,7 @@ class _FuelBreakdownPanel extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'CONCORDE 102 // FUEL REL',
+                          title,
                           style: uiText(
                             context,
                             size: 11,
@@ -488,7 +522,7 @@ class _FuelBreakdownPanel extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'OFP MANIFEST • MSFS SIMCONNECT',
+                          subtitle,
                           style: uiText(
                             context,
                             size: 8.5,
@@ -506,19 +540,19 @@ class _FuelBreakdownPanel extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         border: Border.all(
-                          color: colors.accent.withValues(alpha: 0.5),
+                          color: badgeColor.withValues(alpha: 0.5),
                           width: 1,
                         ),
                         borderRadius: BorderRadius.circular(3),
-                        color: colors.accent.withValues(alpha: 0.08),
+                        color: badgeColor.withValues(alpha: 0.08),
                       ),
                       child: Text(
-                        'DISPATCH',
+                        fuelOk ? 'FUEL OK' : 'FUEL SHORT',
                         style: uiText(
                           context,
                           size: 8,
                           weight: FontWeight.w900,
-                          color: colors.accent,
+                          color: badgeColor,
                           letterSpacing: 1.0,
                         ),
                       ),

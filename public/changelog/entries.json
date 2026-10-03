@@ -1,5 +1,14 @@
 [
     {
+        "date": "2026-10-03",
+        "title": "v4.0.0 — Planner polish",
+        "items": [
+            "Fuel release strip header now shows your actual flight: call sign / route, plan source, cruise FL, distance and ETE, with a FUEL OK / FUEL SHORT stamp",
+            "Performance METAR strip reorganised into two clean rows: flight category + conditions, then equal-width WIND / VIS / TEMP / QNH / ELEV readouts",
+            "METAR age moved below the strip and spelled out (e.g. OBSERVED 36 MINS AGO), flagged OUTDATED after 90 minutes"
+        ]
+    },
+    {
         "date": "2026-10-02",
         "title": "v3.7.0 — Fuel & performance model overhaul",
         "items": [

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:concorde_efb/screens/tabs/flight_planner_tab.dart';
+import 'package:concorde_efb/screens/tabs/flight_planner/performance_calculator_section.dart';
 import 'test_harness.dart';
 
 void main() {
@@ -46,5 +47,12 @@ void main() {
         expect(tester.takeException(), isNull);
       },
     );
+  });
+
+  test('METAR age is spelled out, never abbreviated', () {
+    expect(formatMetarAge(1), '1 MIN');
+    expect(formatMetarAge(36), '36 MINS');
+    expect(formatMetarAge(60), '1 HR');
+    expect(formatMetarAge(125), '2 HRS 5 MINS');
   });
 }

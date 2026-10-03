@@ -709,119 +709,162 @@ class _WeatherStrip extends StatelessWidget {
     const catColor = Colors.white;
     final dimOnCat = Colors.white.withValues(alpha: 0.75);
 
+    final headline = isError && metarStr.isEmpty
+        ? 'OFFLINE'
+        : (metarStr.isEmpty && isLoading ? 'FETCHING' : cat);
+    final conditions = isError && metarStr.isEmpty
+        ? 'Unable to fetch METAR'
+        : (metarStr.isNotEmpty
+              ? summary
+              : (isLoading ? 'Updating weather...' : '--'));
+    final windText = parsed.windSpeedKt == null
+        ? '--'
+        : '${parsed.windDirDeg?.round().toString().padLeft(3, '0') ?? 'VRB'}°/'
+              '${parsed.windSpeedKt!.round()}${gust != null ? 'G${gust.round()}' : ''}KT';
+    final stale = ageMin != null && ageMin > 90;
+
     return InkWell(
       onTap: metarStr.isNotEmpty ? onToggleRaw : null,
+      borderRadius: BorderRadius.circular(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.fromLTRB(16, 10, 8, 12),
             decoration: BoxDecoration(
               color: catBg,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  isError && metarStr.isEmpty
-                      ? 'OFFLINE'
-                      : (metarStr.isEmpty && isLoading ? 'FETCHING' : cat),
-                  style: uiText(
-                    context,
-                    size: 12,
-                    weight: FontWeight.w800,
-                    color: catColor,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Text(
-                  isError && metarStr.isEmpty
-                      ? 'Unable to fetch METAR'
-                      : (tempC != null
-                            ? '${tempC.round()}°C, $summary'
-                            : (isLoading ? 'Updating weather...' : '--')),
-                  style: uiText(
-                    context,
-                    size: 12,
-                    weight: FontWeight.w700,
-                    color: catColor,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Container(width: 1, height: 20, color: dimOnCat),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Wrap(
-                    spacing: 20,
-                    runSpacing: 8,
-                    children: [
-                      _WeatherStat(
-                        label: 'WIND',
-                        value: parsed.windSpeedKt == null
-                            ? '--'
-                            : '${parsed.windDirDeg?.round().toString().padLeft(3, '0') ?? 'VRB'}° '
-                                  '${parsed.windSpeedKt!.round()}${gust != null ? 'G${gust.round()}' : ''}kt',
-                        labelColor: dimOnCat,
-                        valueColor: catColor,
+                // Row 1: flight category + plain-language conditions.
+                Row(
+                  children: [
+                    Text(
+                      headline,
+                      style: uiText(
+                        context,
+                        size: 14,
+                        weight: FontWeight.w900,
+                        color: catColor,
+                        letterSpacing: 0.8,
                       ),
-                      _WeatherStat(
-                        label: 'VIS',
-                        value:
-                            '${vis != null ? (vis >= 10 ? '10+' : vis.toStringAsFixed(1)) : '--'}km',
-                        labelColor: dimOnCat,
-                        valueColor: catColor,
-                      ),
-                      _WeatherStat(
-                        label: 'QNH',
-                        value:
-                            '${qnh?.value.round() ?? '--'}${qnh?.unit ?? ''}',
-                        labelColor: dimOnCat,
-                        valueColor: catColor,
-                      ),
-                      if (ageMin != null)
-                        _WeatherStat(
-                          label: 'AGE',
-                          value: ageMin > 90 ? '${ageMin}m OLD' : '${ageMin}m',
-                          labelColor: dimOnCat,
-                          valueColor: catColor,
+                    ),
+                    const SizedBox(width: 12),
+                    Container(width: 1, height: 16, color: dimOnCat),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        conditions,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: uiText(
+                          context,
+                          size: 12,
+                          weight: FontWeight.w700,
+                          color: catColor,
                         ),
-                      _WeatherStat(
+                      ),
+                    ),
+                    _AnimatedRefreshButton(
+                      isLoading: isLoading,
+                      color: catColor,
+                      onPressed: onRefresh,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Container(height: 1, color: dimOnCat.withValues(alpha: 0.35)),
+                const SizedBox(height: 10),
+                // Row 2: equal-width readouts so the strip never wraps
+                // into ragged rows.
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Row(
+                    children: [
+                      _WeatherCell(
+                        label: 'WIND',
+                        value: windText,
+                        labelColor: dimOnCat,
+                        valueColor: catColor,
+                      ),
+                      _WeatherCell(
+                        label: 'VIS',
+                        value: vis != null
+                            ? (vis >= 10
+                                  ? '10+ KM'
+                                  : '${vis.toStringAsFixed(1)} KM')
+                            : '--',
+                        labelColor: dimOnCat,
+                        valueColor: catColor,
+                      ),
+                      _WeatherCell(
+                        label: 'TEMP',
+                        value: tempC != null ? '${tempC.round()}°C' : '--',
+                        labelColor: dimOnCat,
+                        valueColor: catColor,
+                      ),
+                      _WeatherCell(
+                        label: 'QNH',
+                        value: qnh == null
+                            ? '--'
+                            : (qnh.unit == 'hPa'
+                                  ? '${qnh.value.round()}'
+                                  : qnh.value.toStringAsFixed(2)),
+                        labelColor: dimOnCat,
+                        valueColor: catColor,
+                      ),
+                      _WeatherCell(
                         label: 'ELEV',
-                        value: '${runway?.elevationFt?.round() ?? '--'}ft',
+                        value: '${runway?.elevationFt?.round() ?? '--'} FT',
                         labelColor: dimOnCat,
                         valueColor: catColor,
                       ),
                     ],
                   ),
                 ),
-                _AnimatedRefreshButton(
-                  isLoading: isLoading,
-                  color: catColor,
-                  onPressed: onRefresh,
-                ),
               ],
             ),
           ),
           if (metarStr.isNotEmpty) ...[
             const SizedBox(height: 10),
-            Text(
-              showRaw ? metarStr : 'TAP TO SHOW RAW METAR',
-              style: showRaw
-                  ? uiText(
-                      context,
-                      size: 12,
-                      weight: FontWeight.w500,
-                      color: colors.textSecondary,
-                    )
-                  : uiText(
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    showRaw ? metarStr : 'TAP TO SHOW RAW METAR',
+                    style: showRaw
+                        ? uiText(
+                            context,
+                            size: 12,
+                            weight: FontWeight.w500,
+                            color: colors.textSecondary,
+                          )
+                        : uiText(
+                            context,
+                            size: 9,
+                            weight: FontWeight.w700,
+                            color: colors.textDim,
+                            letterSpacing: 1,
+                          ),
+                  ),
+                ),
+                if (ageMin != null) ...[
+                  const SizedBox(width: 12),
+                  Text(
+                    'OBSERVED ${formatMetarAge(ageMin)} AGO${stale ? ' · OUTDATED' : ''}',
+                    style: uiText(
                       context,
                       size: 9,
-                      weight: FontWeight.w700,
-                      color: colors.textDim,
+                      weight: FontWeight.w800,
+                      color: stale ? colors.error : colors.textDim,
                       letterSpacing: 1,
                     ),
+                  ),
+                ],
+              ],
             ),
           ] else if (isError) ...[
             const SizedBox(height: 8),
@@ -835,6 +878,66 @@ class _WeatherStrip extends StatelessWidget {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// "36 MINS", "1 HR 5 MINS" -- spelled out, never "36m".
+String formatMetarAge(int minutes) {
+  final m = minutes < 0 ? 0 : minutes;
+  String mins(int v) => '$v ${v == 1 ? 'MIN' : 'MINS'}';
+  if (m < 60) return mins(m);
+  final h = m ~/ 60;
+  final hrs = '$h ${h == 1 ? 'HR' : 'HRS'}';
+  return m % 60 == 0 ? hrs : '$hrs ${mins(m % 60)}';
+}
+
+/// One equal-width readout in the METAR strip: small label above value.
+class _WeatherCell extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color labelColor;
+  final Color valueColor;
+  const _WeatherCell({
+    required this.label,
+    required this.value,
+    required this.labelColor,
+    required this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: uiText(
+              context,
+              size: 9,
+              weight: FontWeight.w800,
+              color: labelColor,
+              letterSpacing: 1,
+            ),
+          ),
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              maxLines: 1,
+              style: uiText(
+                context,
+                size: 13,
+                weight: FontWeight.w800,
+                color: valueColor,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -904,47 +1007,6 @@ class _AnimatedRefreshButtonState extends State<_AnimatedRefreshButton>
       padding: const EdgeInsets.all(4),
       constraints: const BoxConstraints(),
       onPressed: widget.isLoading ? null : widget.onPressed,
-    );
-  }
-}
-
-class _WeatherStat extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color? labelColor;
-  final Color? valueColor;
-  const _WeatherStat({
-    required this.label,
-    required this.value,
-    this.labelColor,
-    this.valueColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          '$label ',
-          style: uiText(
-            context,
-            size: 10,
-            weight: FontWeight.w700,
-            color: labelColor ?? colors.textDim,
-          ),
-        ),
-        Text(
-          value,
-          style: uiText(
-            context,
-            size: 12,
-            weight: FontWeight.w700,
-            color: valueColor ?? colors.textPrimary,
-          ),
-        ),
-      ],
     );
   }
 }
