@@ -284,6 +284,9 @@ stale like the old React-era version of this file did.
 - Windows-only features (`tasklist` polling, the bridge exe path resolution) are gated behind
   `defaultTargetPlatform == TargetPlatform.windows` — don't assume they run on macOS/Android/web.
 - Runtime nav DB fetch depends on network availability; offline behavior is limited.
+- Never commit machine-specific paths (e.g. `org.gradle.java.home=C:/Users/...` in
+  `android/gradle.properties` -- it broke macOS/CI Android builds). JDK is chosen per machine via
+  `flutter config --jdk-dir <path>` or `~/.gradle/gradle.properties`.
 - Version is tracked in one place now (`pubspec.yaml`'s `version:`), unlike the old React era
   where it was duplicated across 4 files.
 - All colors must resolve through `context.colors` (`AppColors`) — don't reintroduce hardcoded
