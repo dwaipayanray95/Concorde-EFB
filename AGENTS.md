@@ -14,7 +14,7 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `5.5.9+72` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+- Current version: `5.6.0+73` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
   `public/changelog/entries.json` in sync — README no longer carries its own changelog, it just
   links to that page.
 - **Versioning rule (mandatory for every agent):** every change that alters user-visible behavior
@@ -277,6 +277,7 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 - v5.5.7: AdMob app id now applies to ALL Android build types (UMP consent message is tied to it); only the banner unit differs (release = real, else Google test). Adaptive anchored banner. `--dart-define=UMP_TEST_DEVICE=<hash>` simulates an EEA user in non-release builds to test the consent form.
 - v5.5.8: real AdMob ids hardcoded (public): app `ca-app-pub-9702367158265323~7847975433` in `android/app/build.gradle.kts` (all build types), banner unit `.../2117136608` in `efb_ad_banner.dart` (release builds ONLY; debug/profile always Google's test unit). No repo variables needed.
 - v5.5.9: phone UI zoom: `PhoneUiScaler` (`lib/core/ui_scale.dart`, `kPhoneUiScale = 0.85`, one number to tune) in `MaterialApp.builder` lays the app out on a 1/scale larger virtual canvas on Android/iOS phones (shortest side < 600 dp); `UiScale.of(context)` exposes the factor -- the AdMob banner counter-scales itself (native views can't be shrunk) and requests its width in real dp. Settings dialog is `scrollable`. Breakpoints using `MediaQuery` see the VIRTUAL size.
+- v5.6.0: `TelemetryModel.flightLoaded` (not at 0,0 and fuel > 500 kg) gates `liveNavProvider` + `liveAlertsProvider` -- MSFS menu/loading frames produce no alerts/chimes; CG alerts armed by `allEnginesRunning` (bridge sends per-engine `engineFuelFlowKgH`, > 150 kg/h each; older bridges: total > 1,000 kg/h) or airborne; tap an MFD alert pill -> `AlertChimeNotifier.silence(text)` mutes it 10 s, re-chimes if still active. Chimes are local per device.
 
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.

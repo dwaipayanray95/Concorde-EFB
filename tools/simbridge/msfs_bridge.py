@@ -386,6 +386,7 @@ class TelemetryBuilder:
                 "cgPct": cg * 100.0 if cg < 1.0 else cg,
                 "cgAftLimit": 59.0, "cgFwdLimit": 52.0,
                 "fuelBurnTotal": sum(g(f"ff{i}") for i in range(1, 5)) * LB_TO_KG,
+                "engineFuelFlowKgH": [g(f"ff{i}") * LB_TO_KG for i in range(1, 5)],
                 "fuelTanks": {
                     "left": g("tank_left") * 100.0, "right": g("tank_right") * 100.0,
                     "center": g("tank_center") * 100.0, "trimForward": g("tank_center2") * 100.0,

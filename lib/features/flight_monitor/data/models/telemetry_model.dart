@@ -25,6 +25,9 @@ class TelemetryModel {
   final double cgAftLimit;
   final double cgFwdLimit;
   final double fuelBurnTotal;
+
+  /// Per-engine fuel flow (kg/h), engines 1-4. Empty from older bridges.
+  final List<double> engineFuelFlowKgH;
   final List<bool> reheatActive;
   final List<double> throttlePct;
   final double snootAngle;
@@ -79,6 +82,7 @@ class TelemetryModel {
     required this.cgAftLimit,
     required this.cgFwdLimit,
     required this.fuelBurnTotal,
+    this.engineFuelFlowKgH = const [],
     required this.reheatActive,
     this.throttlePct = const [0.0, 0.0, 0.0, 0.0],
     required this.snootAngle,
@@ -97,6 +101,29 @@ class TelemetryModel {
 
   /// Gear extension 0-100 %. The bridge sends MSFS's "percent over 100"
   /// (a 0-1 fraction); older/dev sources may send 0-100.
+  /// True once MSFS has an actual flight loaded. In the sim's main menu /
+  /// loading screens SimConnect still pushes frames, but with the aircraft
+  /// at 0,0 and empty tanks -- treating those as a flight produced bogus
+  /// alerts (CG AFT LIMIT, 8,000 NM to dest, negative fuel) and chimes.
+  /// All four engines running (each burning fuel). Older bridges without
+  /// per-engine flow fall back to the total: four idling Olympus engines
+  /// burn well over 1,000 kg/h together.
+  bool get allEnginesRunning {
+    if (engineFuelFlowKgH.length >= 4) {
+      return engineFuelFlowKgH.take(4).every((f) => f > 150);
+    }
+    return fuelBurnTotal > 1000;
+  }
+
+  bool get flightLoaded {
+    final atNullIsland = latitude.abs() < 0.1 && longitude.abs() < 0.1;
+    final fuelKg = fuelTanksKg.values.fold<double>(0, (a, b) => a + b);
+    final anyFuel = fuelTanksKg.isNotEmpty
+        ? fuelKg > 500
+        : (fuelLeftTank + fuelRightTank + fuelCenterTank) > 0;
+    return !atNullIsland && anyFuel;
+  }
+
   double get gearPct => gearPosition <= 1.0 ? gearPosition * 100 : gearPosition;
 
   /// Height above an airfield (ft): altitude minus [fieldElevationFt] from
@@ -188,6 +215,10 @@ class TelemetryModel {
       cgAftLimit: (concorde['cgAftLimit'] ?? 59.0).toDouble(),
       cgFwdLimit: (concorde['cgFwdLimit'] ?? 52.0).toDouble(),
       fuelBurnTotal: (concorde['fuelBurnTotal'] ?? 0.0).toDouble(),
+      engineFuelFlowKgH: [
+        for (final v in (concorde['engineFuelFlowKgH'] as List? ?? const []))
+          (v as num).toDouble(),
+      ],
       reheatActive: List<bool>.from(
         concorde['reheatActive'] ?? [false, false, false, false],
       ),
@@ -241,6 +272,7 @@ class TelemetryModel {
         'cgAftLimit': cgAftLimit,
         'cgFwdLimit': cgFwdLimit,
         'fuelBurnTotal': fuelBurnTotal,
+        'engineFuelFlowKgH': engineFuelFlowKgH,
         'reheatActive': reheatActive,
         'throttlePct': throttlePct,
         'snootAngle': snootAngle,

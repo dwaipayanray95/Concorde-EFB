@@ -137,11 +137,22 @@ class MfdStrip extends ConsumerWidget {
                         ]
                       : warnings
                             .map(
-                              (w) => _pill(
-                                context,
-                                w.$1,
-                                w.$2 ? colors.error : colors.accent,
-                                w.$2 ? Colors.white : AppColors.dark.bg,
+                              // Tap a warning to silence its chime for
+                              // 10 s on this device.
+                              (w) => Tooltip(
+                                message: 'Tap to silence for 10 s',
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(4),
+                                  onTap: () => ref
+                                      .read(alertChimeProvider.notifier)
+                                      .silence(w.$1),
+                                  child: _pill(
+                                    context,
+                                    w.$1,
+                                    w.$2 ? colors.error : colors.accent,
+                                    w.$2 ? Colors.white : AppColors.dark.bg,
+                                  ),
+                                ),
                               ),
                             )
                             .toList(),
