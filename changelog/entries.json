@@ -1,6 +1,14 @@
 [
     {
         "date": "2026-10-03",
+        "title": "v5.5.2 \u2014 Version number now always matches the build",
+        "items": [
+            "The version shown in Settings and the update check now come from the app's real build version instead of a stale hardcoded value",
+            "The Windows installer now reports the correct version in Add/Remove Programs"
+        ]
+    },
+    {
+        "date": "2026-10-03",
         "title": "v5.5.1 \u2014 Altitude fixes for high-elevation airports",
         "items": [
             "GEAR UP \u2014 BELOW 250 KT now triggers below 5,000 ft above the arrival airport (was 5,000 ft above sea level, which never fired at airports like Denver or Mexico City)",
