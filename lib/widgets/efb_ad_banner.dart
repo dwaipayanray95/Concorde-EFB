@@ -19,9 +19,17 @@ class _EfbAdBannerState extends State<EfbAdBanner> {
   BannerAd? _bannerAd;
   bool _isLoaded = false;
 
-  final String _adUnitId = kReleaseMode
-      ? 'ca-app-pub-3940256099942544/6300978111'
-      : 'ca-app-pub-3940256099942544/6300978111';
+  // Google's sample banner unit. Debug/profile builds ALWAYS use it: clicking
+  // your own live ads gets an AdMob account suspended for invalid traffic.
+  static const _testBannerId = 'ca-app-pub-3940256099942544/6300978111';
+
+  // Real unit id, injected by CI for release builds only:
+  //   flutter build apk --release --dart-define=ADMOB_BANNER_ID=ca-app-pub-XXXX/YYYY
+  static const _releaseBannerId = String.fromEnvironment('ADMOB_BANNER_ID');
+
+  final String _adUnitId = kReleaseMode && _releaseBannerId.isNotEmpty
+      ? _releaseBannerId
+      : _testBannerId;
 
   @override
   void initState() {

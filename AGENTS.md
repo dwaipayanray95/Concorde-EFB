@@ -14,7 +14,7 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `5.5.4+67` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+- Current version: `5.5.5+68` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
   `public/changelog/entries.json` in sync — README no longer carries its own changelog, it just
   links to that page.
 - **Versioning rule (mandatory for every agent):** every change that alters user-visible behavior
@@ -270,6 +270,7 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 - v5.5.2: version display/update check read `pubspec.yaml` via `package_info_plus` (`appVersionProvider` in `lib/core/app_version.dart`; no hardcoded Dart version); Inno Setup takes `/DAppVer=` from CI.
 - v5.5.3: Inno installer wipes the previous install (`[InstallDelete]`, guarded by `IsExistingInstall`) and uninstall removes `{app}`; settings live in `%APPDATA%` (SharedPreferences) so they survive. 
 - v5.5.4: airport-DB cache moved out of the install folder to `getApplicationCacheDirectory()` (%LOCALAPPDATA% on Windows; temp-dir fallback) -- Program Files is read-only for the unelevated app. Never write next to the exe.
+- v5.5.5: AdMob ids injected, not hardcoded: banner unit via `--dart-define=ADMOB_BANNER_ID` (release only; debug/profile always Google test ads), app id via `ADMOB_APP_ID` env -> manifest placeholder `admobAppId`. CI reads GitHub repo *variables* (ids are public).
 
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.
@@ -279,9 +280,8 @@ stale like the old React-era version of this file did.
 - No-reheat takeoff thresholds (155 t gate, x1.35 factor) remain estimates -- the DC Designs manual
   doesn't give them (checked v5.3.0).
 - Play Console data-safety form (declare advertising ID / device data via AdMob).
-- Replace Google's TEST AdMob IDs with real ones before a Play release:
-  `_adUnitId` in `lib/widgets/efb_ad_banner.dart` and `APPLICATION_ID` in
-  `android/app/src/main/AndroidManifest.xml` are both Google sample IDs (no revenue).
+- Create the AdMob app + banner unit and set the repo variables `ADMOB_APP_ID` /
+  `ADMOB_BANNER_ID` (code is wired up as of v5.5.5; until set, releases show test ads).
 - Crash reporting.
 - Persist flight plan / fuel inputs / checklist progress across restarts.
 - Code signing for the installer and `msfs_bridge.exe`.

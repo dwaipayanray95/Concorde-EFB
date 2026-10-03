@@ -28,6 +28,9 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // AdMob app id for the manifest. Google's sample id unless a release
+        // build supplies the real one via the ADMOB_APP_ID environment variable.
+        manifestPlaceholders["admobAppId"] = "ca-app-pub-3940256099942544~3347511713"
     }
 
     buildTypes {
@@ -35,6 +38,9 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            System.getenv("ADMOB_APP_ID")?.takeIf { it.isNotBlank() }?.let {
+                manifestPlaceholders["admobAppId"] = it
+            }
         }
     }
 }

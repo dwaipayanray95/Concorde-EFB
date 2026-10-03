@@ -1,6 +1,13 @@
 [
     {
         "date": "2026-10-03",
+        "title": "v5.5.5 — Android ad setup",
+        "items": [
+            "Android release builds are now prepared to use the app's own ad configuration; test builds always show harmless sample ads"
+        ]
+    },
+    {
+        "date": "2026-10-03",
         "title": "v5.5.4 — Airport data cache works when installed in Program Files",
         "items": [
             "On Windows the airport database cache is now stored in your user profile, so it saves reliably instead of re-downloading on every launch"
