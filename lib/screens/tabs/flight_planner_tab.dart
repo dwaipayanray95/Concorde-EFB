@@ -28,6 +28,10 @@ class _FlightPlannerTabState extends State<FlightPlannerTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Dispatch decision first, above the Planner / Performance selector.
+        const DispatchBanner(),
+        const SizedBox(height: 12),
+
         // Authentic Cockpit MFD Bezel Segmented Softkey Strip (Full-width tabbed selector)
         Container(
           height: 40,
@@ -66,8 +70,6 @@ class _FlightPlannerTabState extends State<FlightPlannerTab> {
             ],
           ),
         ),
-        const SizedBox(height: 12),
-        const DispatchBanner(),
         const SizedBox(height: 16),
 
         // Sub-tab content

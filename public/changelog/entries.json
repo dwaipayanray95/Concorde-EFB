@@ -1,6 +1,16 @@
 [
     {
         "date": "2026-10-03",
+        "title": "v4.5.0 — Status bar flight times & solid dispatch banner",
+        "items": [
+            "Top status bar: call sign, registration and pax are always shown, plus planned TOTAL, CLIMB, CRUISE and DESCENT times",
+            "Dispatch banner moved above the Planner / Performance selector and redesigned as a solid, bold status block (green GO, amber CAUTION, red NO-GO)",
+            "Privacy Policy (and Ad Privacy Options where required) moved into the Settings menu",
+            "Removed the Design Lab entry from the Settings menu"
+        ]
+    },
+    {
+        "date": "2026-10-03",
         "title": "v4.4.0 — Phone layout, smarter runways & Flight Monitor redesign",
         "items": [
             "Runways: the default runway is now the longest one without a tailwind (avoiding strong crosswinds) and follows METAR updates until you pick one yourself — no more false NO-GO from a tailwind runway",

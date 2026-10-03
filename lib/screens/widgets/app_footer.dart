@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../services/ad_consent_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_colors.dart';
 import '../../core/ui_text.dart';
@@ -70,46 +69,29 @@ class AppFooter extends StatelessWidget {
           width: 1.2,
         ),
       ),
-      // Wrap (not Row) so the extra privacy buttons can't overflow narrow
-      // phone widths.
-      child: ValueListenableBuilder<bool>(
-        valueListenable: AdConsentService.privacyOptionsRequired,
-        builder: (context, showAdPrivacy, _) => Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            const EfbLaunchesBadge(),
-            _FooterLinkButton(
-              icon: Icons.history,
-              label: 'VIEW CHANGELOG',
-              url: AppLinks.changelog,
-            ),
-            _FooterLinkButton(
-              icon: Icons.forum_outlined,
-              label: 'JOIN DISCORD',
-              url: AppLinks.discord,
-            ),
-            _FooterLinkButton(
-              icon: Icons.favorite_border,
-              label: 'GITHUB SPONSOR',
-              url: AppLinks.githubSponsors,
-            ),
-            _FooterLinkButton(
-              icon: Icons.privacy_tip_outlined,
-              label: 'PRIVACY',
-              url: AppLinks.privacy,
-            ),
-            // Only shown where UMP requires it (EEA/UK/CH users on mobile):
-            // lets the user change or withdraw ad consent at any time.
-            if (showAdPrivacy)
-              _FooterLinkButton(
-                icon: Icons.tune,
-                label: 'AD PRIVACY OPTIONS',
-                onTap: AdConsentService.showPrivacyOptions,
-              ),
-          ],
-        ),
+      // Wrap (not Row) so the buttons can't overflow narrow phone widths.
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          const EfbLaunchesBadge(),
+          _FooterLinkButton(
+            icon: Icons.history,
+            label: 'VIEW CHANGELOG',
+            url: AppLinks.changelog,
+          ),
+          _FooterLinkButton(
+            icon: Icons.forum_outlined,
+            label: 'JOIN DISCORD',
+            url: AppLinks.discord,
+          ),
+          _FooterLinkButton(
+            icon: Icons.favorite_border,
+            label: 'GITHUB SPONSOR',
+            url: AppLinks.githubSponsors,
+          ),
+        ],
       ),
     );
   }
@@ -120,15 +102,9 @@ class AppFooter extends StatelessWidget {
 class _FooterLinkButton extends StatefulWidget {
   final IconData? icon;
   final String label;
-  final String? url;
-  final Future<void> Function()? onTap;
+  final String url;
 
-  const _FooterLinkButton({
-    this.icon,
-    required this.label,
-    this.url,
-    this.onTap,
-  });
+  const _FooterLinkButton({this.icon, required this.label, required this.url});
 
   @override
   State<_FooterLinkButton> createState() => _FooterLinkButtonState();
@@ -146,12 +122,8 @@ class _FooterLinkButtonState extends State<_FooterLinkButton> {
       cursor: SystemMouseCursors.click,
       child: InkWell(
         onTap: () async {
-          if (widget.onTap != null) {
-            await widget.onTap!();
-            return;
-          }
           try {
-            await launchUrl(Uri.parse(widget.url!));
+            await launchUrl(Uri.parse(widget.url));
           } catch (_) {}
         },
         borderRadius: BorderRadius.circular(6),

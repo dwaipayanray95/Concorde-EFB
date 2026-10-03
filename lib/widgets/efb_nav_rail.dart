@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/ad_consent_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -9,7 +10,6 @@ import '../core/app_version.dart';
 import '../core/sim_bridge_launcher.dart';
 import '../providers/efb_providers.dart';
 import '../features/flight_monitor/presentation/controllers/telemetry_provider.dart';
-import '../design_system/design_lab.dart';
 
 /// Authentic cockpit-style vertical navigation rail for landscape tablet EFB.
 class EfbNavRail extends ConsumerWidget {
@@ -286,54 +286,21 @@ class EfbNavRail extends ConsumerWidget {
               url: AppLinks.donate,
             ),
             const SizedBox(height: 8),
-            InkWell(
-              onTap: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const DesignLabScreen()),
-                );
-              },
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: colors.inputBg,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: colors.dividerStrong.withValues(alpha: 0.5),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.palette_outlined,
-                      size: 16,
-                      color: colors.accent,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Design Lab / Component Catalog',
-                        style: uiText(
-                          context,
-                          size: 13,
-                          color: colors.textPrimary,
-                          weight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    Icon(
-                      Icons.arrow_forward_ios,
-                      size: 12,
-                      color: colors.textDim,
-                    ),
-                  ],
-                ),
-              ),
+            _SettingButton(
+              icon: Icons.privacy_tip_outlined,
+              label: 'Privacy Policy',
+              url: AppLinks.privacy,
             ),
+            // Only where Google's consent tool requires it (EEA/UK/CH on
+            // mobile): lets the user change or withdraw ad consent.
+            if (AdConsentService.privacyOptionsRequired.value) ...[
+              const SizedBox(height: 8),
+              _SettingButton(
+                icon: Icons.tune,
+                label: 'Ad Privacy Options',
+                onTap: AdConsentService.showPrivacyOptions,
+              ),
+            ],
           ],
         ),
         actions: [
@@ -428,13 +395,15 @@ class _SettingButton extends StatelessWidget {
   final IconData? icon;
   final String? svgAsset;
   final String label;
-  final String url;
+  final String? url;
+  final Future<void> Function()? onTap;
 
   const _SettingButton({
     this.icon,
     this.svgAsset,
     required this.label,
-    required this.url,
+    this.url,
+    this.onTap,
   });
 
   @override
@@ -442,7 +411,11 @@ class _SettingButton extends StatelessWidget {
     final colors = context.colors;
     return InkWell(
       onTap: () async {
-        final uri = Uri.parse(url);
+        if (onTap != null) {
+          await onTap!();
+          return;
+        }
+        final uri = Uri.parse(url!);
         try {
           await launchUrl(uri, mode: LaunchMode.externalApplication);
         } catch (_) {

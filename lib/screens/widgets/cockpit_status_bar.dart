@@ -66,6 +66,7 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
     final registration = ref.watch(registrationProvider);
     final paxCount = ref.watch(paxCountProvider);
     final simbriefLoaded = ref.watch(simbriefLoadedProvider);
+    final mission = ref.watch(missionProfileProvider);
 
     final hasRoute = depIcao.isNotEmpty && arrIcao.isNotEmpty;
     final isFlightLoaded =
@@ -150,9 +151,9 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Flight Deck Identity: Call Sign, Reg, Pax -- only once a
-                      // flight is loaded; empty "--" pills just waste space.
-                      if (isFlightLoaded) ...[
+                      // Flight Deck Identity: Call Sign, Reg, Pax (solid amber
+                      // once a flight is loaded, quiet "--" before).
+                      ...[
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -267,6 +268,29 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
                           ),
                         ),
                       ),
+                      const SizedBox(width: 14),
+                      Container(
+                        width: 1,
+                        height: 18,
+                        color: colors.dividerStrong.withValues(alpha: 0.5),
+                      ),
+                      const SizedBox(width: 14),
+
+                      // Planned flight times (from the fuel/mission profile).
+                      for (final (i, t) in [
+                        ('TOTAL', mission.totalTimeH),
+                        ('CLB', mission.climb.timeH + mission.accel.timeH),
+                        ('CRZ', mission.cruise.timeH),
+                        ('DES', mission.descent.timeH),
+                      ].indexed) ...[
+                        if (i > 0) const SizedBox(width: 8),
+                        _buildHeaderPill(
+                          context,
+                          label: t.$1,
+                          value: hasRoute ? _hhmm(t.$2) : '--',
+                          isPopulated: false,
+                        ),
+                      ],
                       const SizedBox(width: 12),
 
                       // SimConnect Status Pill
@@ -383,6 +407,11 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
         ),
       ),
     );
+  }
+
+  static String _hhmm(double hours) {
+    final m = (hours * 60).round();
+    return '${m ~/ 60}h ${(m % 60).toString().padLeft(2, '0')}m';
   }
 
   Widget _buildHeaderPill(
