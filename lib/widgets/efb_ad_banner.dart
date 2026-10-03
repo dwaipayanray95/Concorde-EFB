@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../core/app_colors.dart';
 import '../core/ui_text.dart';
 import '../core/app_links.dart';
+import '../core/ui_scale.dart';
 
 class EfbAdBanner extends StatefulWidget {
   const EfbAdBanner({super.key});
@@ -56,7 +57,9 @@ class _EfbAdBannerState extends State<EfbAdBanner> {
 
     // Adaptive anchored banner: sized to the screen width, which AdMob fills
     // better (and pays more for) than the fixed 320x50 banner.
-    final width = MediaQuery.sizeOf(context).width.truncate();
+    // Real screen width in dp (the layout width is scaled on phones).
+    final width = (MediaQuery.sizeOf(context).width * UiScale.of(context))
+        .truncate();
     final size = await AdSize.getLargeAnchoredAdaptiveBannerAdSize(width);
     _loading = false;
     if (!mounted || size == null || _bannerAd != null) return;
@@ -393,12 +396,26 @@ class _EfbAdBannerState extends State<EfbAdBanner> {
     }
 
     if (_isLoaded && _bannerAd != null) {
+      // The app is shrunk on phones, but a native ad view can't be shrunk, so
+      // the ad is drawn at its natural size: the outer box is stretched by
+      // 1/scale and the ad is counter-scaled to cancel the app-wide scale.
+      final scale = UiScale.of(context);
+      final adW = _bannerAd!.size.width.toDouble();
+      final adH = _bannerAd!.size.height.toDouble();
       return Container(
         margin: const EdgeInsets.only(top: 24),
         alignment: Alignment.center,
-        width: _bannerAd!.size.width.toDouble(),
-        height: _bannerAd!.size.height.toDouble(),
-        child: AdWidget(ad: _bannerAd!),
+        width: adW / scale,
+        height: adH / scale,
+        child: Transform.scale(
+          scale: 1 / scale,
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: adW,
+            height: adH,
+            child: AdWidget(ad: _bannerAd!),
+          ),
+        ),
       );
     }
 

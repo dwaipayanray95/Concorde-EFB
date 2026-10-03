@@ -1,6 +1,14 @@
 [
     {
         "date": "2026-10-03",
+        "title": "v5.5.9 — Smaller, roomier layout on phones",
+        "items": [
+            "On phones the whole app is now drawn about 15% smaller, so more fits on screen and nothing feels oversized",
+            "The Settings window now scrolls on short phone screens instead of running off the bottom"
+        ]
+    },
+    {
+        "date": "2026-10-03",
         "title": "v5.5.8 — Android ads use the app's own ad account",
         "items": [
             "The Android app now shows its bottom banner from the app's own ad account, which helps fund development. Test builds still show harmless sample ads"

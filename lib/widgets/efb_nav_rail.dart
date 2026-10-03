@@ -234,6 +234,10 @@ class EfbNavRail extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        // Scrolls when the screen is too short for all rows (phones in
+        // landscape); the CLOSE button stays pinned underneath.
+        scrollable: true,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         backgroundColor: colors.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),

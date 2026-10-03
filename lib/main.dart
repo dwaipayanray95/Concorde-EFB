@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'core/ui_scale.dart';
 import 'services/ad_consent_service.dart';
 import 'features/flight_monitor/data/services/lan_link.dart';
 import 'package:flutter/services.dart';
@@ -132,7 +133,7 @@ class ConcordeEfbApp extends ConsumerWidget {
               maxScaleFactor: 1.25,
             ),
           ),
-          child: child ?? const SizedBox.shrink(),
+          child: PhoneUiScaler(child: child ?? const SizedBox.shrink()),
         );
       },
     );
