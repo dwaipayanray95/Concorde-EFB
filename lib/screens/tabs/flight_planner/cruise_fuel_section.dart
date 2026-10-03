@@ -175,7 +175,7 @@ class CruiseAndFuelSection extends ConsumerWidget {
                         label: 'COMPUTED TOW',
                         value: '${numFormat.format(weights.tow.round())} kg',
                         subtext:
-                            'LW ${numFormat.format(weights.lw.round())} kg · ZFW ${numFormat.format(weights.zfw.round())} kg',
+                            'LW ${numFormat.format(weights.lw.round())} · ZFW ${numFormat.format(weights.zfw.round())}',
                       ),
                       // One meaningful number: how much longer the fuel
                       // lasts than the flight + reserves need.
@@ -186,8 +186,8 @@ class CruiseAndFuelSection extends ConsumerWidget {
                         ),
                         valueColor: endurance.sufficient ? null : colors.error,
                         subtext:
-                            'Endurance ${_formatHoursMinutes(endurance.enduranceH)} · '
-                            'need ${_formatHoursMinutes(endurance.requiredH)}',
+                            '${_formatHoursMinutes(endurance.enduranceH)} available · '
+                            '${_formatHoursMinutes(endurance.requiredH)} needed',
                       ),
                       _StatEntry(
                         label: 'PASSENGERS',
@@ -217,6 +217,11 @@ class CruiseAndFuelSection extends ConsumerWidget {
                     'FL${mission.targetCruiseFl} • '
                     '${numFormat.format(ref.watch(plannedDistanceProvider).round())} NM • '
                     'ETE ${_formatHoursMinutes(mission.totalTimeH)}',
+                // Over tank capacity is its own state -- the plan asks for
+                // MORE fuel than fits, which is not "short".
+                fuelStatus: isOverCapacity
+                    ? 'OVER CAPACITY'
+                    : (endurance.sufficient ? 'FUEL OK' : 'FUEL SHORT'),
                 fuelOk: !isOverCapacity && endurance.sufficient,
               );
               // Phones / narrow windows: the fuel release strip goes under
@@ -445,7 +450,7 @@ class _StatColumn extends StatelessWidget {
               color: colors.textDim,
               weight: FontWeight.w500,
             ),
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
         ],
@@ -466,11 +471,13 @@ class _FuelBreakdownPanel extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool fuelOk;
+  final String fuelStatus;
 
   const _FuelBreakdownPanel({
     required this.title,
     required this.subtitle,
     required this.fuelOk,
+    required this.fuelStatus,
     required this.fuel,
     required this.extra,
     required this.totalFuel,
@@ -581,7 +588,7 @@ class _FuelBreakdownPanel extends StatelessWidget {
                         color: badgeColor.withValues(alpha: 0.08),
                       ),
                       child: Text(
-                        fuelOk ? 'FUEL OK' : 'FUEL SHORT',
+                        fuelStatus,
                         style: uiText(
                           context,
                           size: 8,

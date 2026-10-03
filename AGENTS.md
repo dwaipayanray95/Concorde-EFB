@@ -14,7 +14,7 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `4.5.0+57` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+- Current version: `5.0.0+58` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
   `public/changelog/entries.json` in sync — README no longer carries its own changelog, it just
   links to that page.
 - **Versioning rule (mandatory for every agent):** every change that alters user-visible behavior
@@ -237,6 +237,7 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 - v4.3.0: route distances everywhere -- `lib/core/route_math.dart` (polyline length, remaining-along-route), route fixes imported from SimBrief navlog (`SimBriefService.navlogFixes`) and `.pln` `<WorldPosition>` (`FlightPlanImportService.parseWorldPosition`), `plannedRouteProvider`/`routePolylineProvider`/`routeFactorProvider`, `alternateRouteDistanceProvider`; MFD strip uses remaining route distance; `predictToDestination` now takes `distToDestNm`.
 - v4.4.0: wind-aware default runway (`bestRunwayId`: no tailwind > crosswind <= 15 kt > longest; `_RunwayIdNotifier` auto-follows METAR until a manual/SimBrief pick, reset on ICAO change); `WindArrow` coloured by gust-inclusive components vs limits; phone layout (`isShort` < 560 px height in `home_screen.dart`: status bar scrolls with content / hidden on checklists; compact `EfbNavRail` < 440 px; collapsible `DispatchBanner`; checklist phase strip < 900 px wide; cruise card stacks < 900 px); compact Flight Plan card (single row + route chip with distance/ETE); ENDURANCE MARGIN stat; identity pills only when a flight is loaded; Flight Monitor: `HeroPfdRow` is now one compact data bar, fuel schematic + CG/engines/burn side column, env/G/touchdown row; `liveChecklistPhaseProvider` drives checklist auto-select + dimming. UI screenshot harness: `tool/ui_screenshots/` -- use it to verify layout changes (light/dark, desktop + phone) since `flutter run -d windows` isn't available to cloud agents.
 - v4.5.0: `CockpitStatusBar` always shows CALL SIGN/REG/PAX plus planned TOTAL/CLB (climb+transonic accel)/CRZ/DES times from `missionProfileProvider`; `DispatchBanner` is a flat solid-colour block placed above the Planner/Performance sub-tab selector; Privacy Policy + Ad Privacy Options live in the nav-rail Settings dialog (removed from the footer); Design Lab removed from Settings (`lib/design_system/design_lab.dart` kept only for its test).
+- v5.0.0 (owner-requested major): status bar compacted to one row at >= 1024 px (labels C/S, REG, PAX, ETE, CLB, CRZ, DES; SIM LIVE pill removed -- sim status is the `EfbNavRail` dot only); fuel strip stamp is `OVER CAPACITY` / `FUEL SHORT` / `FUEL OK`; stat subtexts wrap to 2 lines; route chip shows only the route; `AppFooter` is just `EfbAdBanner` (links live in Settings; `efb_launches_badge.dart` no longer shown).
 
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.

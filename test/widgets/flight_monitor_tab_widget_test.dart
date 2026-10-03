@@ -11,8 +11,8 @@ void main() {
 
       expect(tester.takeException(), isNull);
       // Shared footer, confirms the tab renders end-to-end.
-      expect(find.text('VIEW CHANGELOG'), findsOneWidget);
-      expect(find.text('JOIN DISCORD'), findsOneWidget);
+      // Footer is now just the support card.
+      expect(find.text('DONATE NOW'), findsOneWidget);
     });
 
     testWidgets('stays stable a moment after first paint', (tester) async {

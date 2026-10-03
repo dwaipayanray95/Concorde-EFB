@@ -1,6 +1,17 @@
 [
     {
         "date": "2026-10-03",
+        "title": "v5.0.0 — Cleaner cockpit layout",
+        "items": [
+            "Top status bar fits on one row on desktops and tablets: compact pills for call sign, registration, pax, route and ETE / climb / cruise / descent times; the sim status now lives only on the navigation rail dot",
+            "Fuel release stamp now reads OVER CAPACITY when the plan asks for more fuel than the tanks hold (it used to say FUEL SHORT)",
+            "Weight and endurance details under the fuel stats no longer get cut off",
+            "Route chip shows just the route — distance and time are in the top bar",
+            "Footer simplified to the support card only (changelog, Discord and support links are in Settings)"
+        ]
+    },
+    {
+        "date": "2026-10-03",
         "title": "v4.5.0 — Status bar flight times & solid dispatch banner",
         "items": [
             "Top status bar: call sign, registration and pax are always shown, plus planned TOTAL, CLIMB, CRUISE and DESCENT times",

@@ -7,7 +7,6 @@ import '../../../widgets/efb_card.dart';
 import '../../../widgets/efb_text_field.dart';
 import '../../../core/app_colors.dart';
 import '../../../core/ui_text.dart';
-import '../../../core/formatters.dart';
 import '../../../core/concorde_logic.dart';
 import '../../../services/simbrief_service.dart';
 import '../../../services/flight_plan_import_service.dart';
@@ -346,7 +345,6 @@ class FlightPlanSection extends ConsumerWidget {
     final colors = context.colors;
     final isLoading = ref.watch(simbriefLoadingProvider);
     final source = ref.watch(flightPlanSourceProvider);
-    final mission = ref.watch(missionProfileProvider);
 
     // VATSIM-chart-style route: DEP/RWY ...enroute... ARR/RWY, so it can be
     // pasted straight into the MSFS world map flight planner.
@@ -633,19 +631,6 @@ class FlightPlanSection extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  // Route distance + ETE: the two numbers that drive
-                  // the fuel plan, right next to the route they're for.
-                  Text(
-                    '${numFormat.format(ref.watch(plannedDistanceProvider).round())} NM · '
-                    '${_hhmm(mission.totalTimeH)}',
-                    style: uiText(
-                      context,
-                      color: colors.accent,
-                      size: 12,
-                      weight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
                   Icon(
                     Icons.copy_all,
                     color: msfsRoute.isEmpty
@@ -687,10 +672,6 @@ class FlightPlanSection extends ConsumerWidget {
     );
   }
 
-  static String _hhmm(double hours) {
-    final m = (hours * 60).round();
-    return '${m ~/ 60}h ${(m % 60).toString().padLeft(2, '0')}m';
-  }
 
   Widget _sourceBadge(BuildContext context, FlightPlanSource source) {
     final colors = context.colors;

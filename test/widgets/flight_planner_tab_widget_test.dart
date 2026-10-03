@@ -12,8 +12,8 @@ void main() {
       // Route & Fuel sub-tab is active by default
       expect(find.text('FLIGHT PLAN'), findsOneWidget);
       expect(find.text('CRUISE & FUEL MANAGEMENT'), findsOneWidget);
-      expect(find.text('VIEW CHANGELOG'), findsOneWidget);
-      expect(find.text('JOIN DISCORD'), findsOneWidget);
+      // Footer is now just the support card.
+      expect(find.text('DONATE NOW'), findsOneWidget);
 
       // Switch to Performance Calculator sub-tab
       await tester.tap(find.text('PERFORMANCE CALCULATOR'));

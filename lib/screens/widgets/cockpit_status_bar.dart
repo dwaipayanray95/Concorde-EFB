@@ -6,8 +6,6 @@ import '../../core/app_colors.dart';
 import '../../core/ui_text.dart';
 import '../../core/app_links.dart';
 import '../../providers/efb_providers.dart';
-import '../../features/flight_monitor/presentation/controllers/telemetry_provider.dart';
-import '../../core/sim_bridge_launcher.dart';
 
 /// Authentic cockpit-style operational status bar for landscape tablet EFB.
 /// Displays aircraft tag, active route pill, live Zulu/UTC clock, and SimConnect link.
@@ -60,8 +58,6 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
     final depIcao = ref.watch(departureIcaoProvider);
     final arrIcao = ref.watch(arrivalIcaoProvider);
     final plannedDistance = ref.watch(plannedDistanceProvider);
-    final monitorState = ref.watch(flightMonitorProvider);
-    final bridgeStatus = SimBridgeLauncher.status.value;
     final callSign = ref.watch(callSignProvider);
     final registration = ref.watch(registrationProvider);
     final paxCount = ref.watch(paxCountProvider);
@@ -133,7 +129,7 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
             ),
           ),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
             color: colors.surface,
             borderRadius: BorderRadius.circular(10),
@@ -159,12 +155,12 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
                           children: [
                             _buildHeaderPill(
                               context,
-                              label: 'CALL SIGN',
+                              label: 'C/S',
                               value: callSign,
                               isPopulated:
                                   callSign.isNotEmpty && callSign != '--',
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 5),
                             _buildHeaderPill(
                               context,
                               label: 'REG',
@@ -173,7 +169,7 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
                                   registration.isNotEmpty &&
                                   registration != '--',
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 5),
                             _buildHeaderPill(
                               context,
                               label: 'PAX',
@@ -182,13 +178,13 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
                             ),
                           ],
                         ),
-                        const SizedBox(width: 14),
+                        const SizedBox(width: 8),
                         Container(
                           width: 1,
                           height: 18,
                           color: colors.dividerStrong.withValues(alpha: 0.5),
                         ),
-                        const SizedBox(width: 14),
+                        const SizedBox(width: 8),
                       ],
 
                       // Route pill
@@ -241,7 +237,7 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
                                   ),
                                 ),
                                 if (plannedDistance > 0) ...[
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 5),
                                   Text(
                                     '• ${plannedDistance.round()} NM',
                                     style: uiText(
@@ -268,22 +264,22 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 14),
+                      const SizedBox(width: 8),
                       Container(
                         width: 1,
                         height: 18,
                         color: colors.dividerStrong.withValues(alpha: 0.5),
                       ),
-                      const SizedBox(width: 14),
+                      const SizedBox(width: 8),
 
                       // Planned flight times (from the fuel/mission profile).
                       for (final (i, t) in [
-                        ('TOTAL', mission.totalTimeH),
+                        ('ETE', mission.totalTimeH),
                         ('CLB', mission.climb.timeH + mission.accel.timeH),
                         ('CRZ', mission.cruise.timeH),
                         ('DES', mission.descent.timeH),
                       ].indexed) ...[
-                        if (i > 0) const SizedBox(width: 8),
+                        if (i > 0) const SizedBox(width: 5),
                         _buildHeaderPill(
                           context,
                           label: t.$1,
@@ -291,14 +287,6 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
                           isPopulated: false,
                         ),
                       ],
-                      const SizedBox(width: 12),
-
-                      // SimConnect Status Pill
-                      _buildSimPill(
-                        context,
-                        monitorState.isConnected,
-                        bridgeStatus,
-                      ),
                     ],
                   ),
                 ),
@@ -348,67 +336,6 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
     );
   }
 
-  Widget _buildSimPill(
-    BuildContext context,
-    bool isConnected,
-    SimBridgeStatus? bridgeStatus,
-  ) {
-    final colors = context.colors;
-    Color statusColor;
-    String statusText;
-
-    if (isConnected) {
-      statusColor = colors.arrival;
-      statusText = 'SIM LIVE';
-    } else if (bridgeStatus == SimBridgeStatus.started ||
-        bridgeStatus == SimBridgeStatus.alreadyRunning) {
-      statusColor = colors.mvfr;
-      statusText = 'WAITING SIM';
-    } else {
-      statusColor = colors.textDim;
-      statusText = 'SIM OFFLINE';
-    }
-
-    return Semantics(
-      label: 'Flight Simulator Connection Status: $statusText',
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-        decoration: BoxDecoration(
-          color: statusColor.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(
-            color: statusColor.withValues(alpha: 0.4),
-            width: 1,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 6,
-              height: 6,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: statusColor,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              statusText,
-              style: uiText(
-                context,
-                size: 10,
-                weight: FontWeight.w900,
-                color: statusColor,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   static String _hhmm(double hours) {
     final m = (hours * 60).round();
     return '${m ~/ 60}h ${(m % 60).toString().padLeft(2, '0')}m';
@@ -428,7 +355,7 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
       label: '$label: ${value.isEmpty || value == "--" ? "none" : value}',
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
         decoration: BoxDecoration(
           color: populated ? colors.accent : colors.resultsBg,
           borderRadius: BorderRadius.circular(6),
@@ -452,10 +379,10 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              '$label: ',
+              '$label ',
               style: uiText(
                 context,
-                size: 9.5,
+                size: 8.5,
                 weight: populated ? FontWeight.w800 : FontWeight.w700,
                 color: populated
                     ? activeText.withValues(alpha: 0.75)
