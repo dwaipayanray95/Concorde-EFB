@@ -235,30 +235,15 @@ jobs:
 
       - run: flutter pub get
 
-      # AdMob ids are public (they ship inside the app), so they are repository
-      # *variables*, not secrets: Settings > Secrets and variables > Actions > Variables.
-      # The app id goes into every build; the banner unit id only into release builds
-      # (debug/profile always show Google test ads).
-      - name: Check AdMob ids (release only)
-        if: inputs.mode == 'release'
-        run: |
-          if [ -z "$ADMOB_APP_ID" ] || [ -z "$ADMOB_BANNER_ID" ]; then
-            echo "::warning::ADMOB_APP_ID / ADMOB_BANNER_ID repository variables are not set: this release will show Google TEST ads (no revenue)."
-          fi
-        env:
-          ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID }}
-          ADMOB_BANNER_ID: ${{ vars.ADMOB_BANNER_ID }}
-
+      # AdMob ids are hardcoded (they are public): the app id in
+      # android/app/build.gradle.kts, the banner unit in efb_ad_banner.dart.
+      # Only release builds use the real banner unit; debug/profile get test ads.
       - name: Build APK
-        run: flutter build apk --${{ env.MODE }} --dart-define=ADMOB_BANNER_ID=${{ inputs.mode == 'release' && vars.ADMOB_BANNER_ID || '' }}
-        env:
-          ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID }}
+        run: flutter build apk --${{ env.MODE }}
 
       - name: Build AAB (release only)
         if: inputs.mode == 'release'
-        run: flutter build appbundle --release --dart-define=ADMOB_BANNER_ID=${{ vars.ADMOB_BANNER_ID }}
-        env:
-          ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID }}
+        run: flutter build appbundle --release
 
       - name: Collect
         run: |

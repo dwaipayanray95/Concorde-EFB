@@ -14,7 +14,7 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `5.5.7+70` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+- Current version: `5.5.8+71` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
   `public/changelog/entries.json` in sync — README no longer carries its own changelog, it just
   links to that page.
 - **Versioning rule (mandatory for every agent):** every change that alters user-visible behavior
@@ -275,6 +275,7 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 - v5.5.5: AdMob ids injected, not hardcoded: banner unit via `--dart-define=ADMOB_BANNER_ID` (release only; debug/profile always Google test ads), app id via `ADMOB_APP_ID` env -> manifest placeholder `admobAppId`. CI reads GitHub repo *variables* (ids are public).
 - v5.5.6: Android/Linux application id is `com.theawesomeray.concorde_efb` (matches the AdMob app + Play listing; Kotlin package moved). Windows `CompanyName` and macOS/iOS bundle ids intentionally still `com.dwaipayanray95...` -- the Windows one names the %APPDATA% settings folder, changing it would reset users' settings.
 - v5.5.7: AdMob app id now applies to ALL Android build types (UMP consent message is tied to it); only the banner unit differs (release = real, else Google test). Adaptive anchored banner. `--dart-define=UMP_TEST_DEVICE=<hash>` simulates an EEA user in non-release builds to test the consent form.
+- v5.5.8: real AdMob ids hardcoded (public): app `ca-app-pub-9702367158265323~7847975433` in `android/app/build.gradle.kts` (all build types), banner unit `.../2117136608` in `efb_ad_banner.dart` (release builds ONLY; debug/profile always Google's test unit). No repo variables needed.
 
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.
@@ -284,8 +285,8 @@ stale like the old React-era version of this file did.
 - No-reheat takeoff thresholds (155 t gate, x1.35 factor) remain estimates -- the DC Designs manual
   doesn't give them (checked v5.3.0).
 - Play Console data-safety form (declare advertising ID / device data via AdMob).
-- Create the AdMob app + banner unit and set the repo variables `ADMOB_APP_ID` /
-  `ADMOB_BANNER_ID` (code is wired up as of v5.5.5; until set, releases show test ads).
+- AdMob: publish the GDPR message (Privacy & messaging), finish the payments profile, link the app
+  to its Play listing once live, host `app-ads.txt` on the developer-site domain root.
 - Crash reporting.
 - Persist flight plan / fuel inputs / checklist progress across restarts.
 - Code signing for the installer and `msfs_bridge.exe`.

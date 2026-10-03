@@ -28,15 +28,14 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        // AdMob app id for the manifest. The app id is the same in every build
-        // type (the consent message is tied to it, so UMP can only be tested
-        // with the real one); only the banner AD UNIT differs -- release uses
-        // the real unit, debug/profile always Google's test unit (see
-        // efb_ad_banner.dart). Falls back to Google's sample app id when the
-        // ADMOB_APP_ID environment variable is not set.
+        // AdMob app id (public; it ships in every APK). The same in every
+        // build type: the UMP consent message is tied to it, so consent can
+        // only be tested with the real one. Only the banner AD UNIT differs --
+        // release uses the real unit, debug/profile always Google's test unit
+        // (see efb_ad_banner.dart). ADMOB_APP_ID env var overrides it.
         manifestPlaceholders["admobAppId"] =
             System.getenv("ADMOB_APP_ID")?.takeIf { it.isNotBlank() }
-                ?: "ca-app-pub-3940256099942544~3347511713"
+                ?: "ca-app-pub-9702367158265323~7847975433"
     }
 
     buildTypes {
