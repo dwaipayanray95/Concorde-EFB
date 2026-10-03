@@ -24,6 +24,8 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
   - MINOR (`4.0.1` -> `4.1.0`): new features or new UI, backwards-compatible calculation changes.
   - MAJOR (`4.1.0` -> `5.0.0`): only when the owner asks, or for breaking changes (e.g. removed
     features, changed saved data formats, reworked core models).
+  Do NOT put the version number in git commit messages (the version lives in `pubspec.yaml` and
+  the changelog; commit subjects just describe the change).
   Add a matching `public/changelog/entries.json` entry titled `vX.Y.Z — <summary>` in the same
   commit. Pure refactors/tests/docs with no user-visible change don't bump.
 - Theme system: unified light/dark `AppColors` (`lib/core/app_colors.dart`) resolved via
