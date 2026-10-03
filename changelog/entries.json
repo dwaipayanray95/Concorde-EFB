@@ -1,6 +1,13 @@
 [
     {
         "date": "2026-10-03",
+        "title": "v5.5.4 \u2014 Airport data cache works when installed in Program Files",
+        "items": [
+            "On Windows the airport database cache is now stored in your user profile, so it saves reliably instead of re-downloading on every launch"
+        ]
+    },
+    {
+        "date": "2026-10-03",
         "title": "v5.5.3 \u2014 Cleaner Windows installs and updates",
         "items": [
             "Updating Concorde EFB now fully replaces the previous version's files, so leftovers from old versions can no longer cause problems",
