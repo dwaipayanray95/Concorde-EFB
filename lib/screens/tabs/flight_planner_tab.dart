@@ -3,6 +3,7 @@ import '../../widgets/entrance_fader.dart';
 import '../../core/app_colors.dart';
 import '../../core/ui_text.dart';
 import '../widgets/app_footer.dart';
+import 'flight_planner/dispatch_banner.dart';
 import 'flight_planner/flight_plan_section.dart';
 import 'flight_planner/cruise_fuel_section.dart';
 import 'flight_planner/performance_calculator_section.dart';
@@ -65,6 +66,8 @@ class _FlightPlannerTabState extends State<FlightPlannerTab> {
             ],
           ),
         ),
+        const SizedBox(height: 12),
+        const DispatchBanner(),
         const SizedBox(height: 16),
 
         // Sub-tab content

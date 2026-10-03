@@ -14,7 +14,7 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `4.0.0+52` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+- Current version: `4.1.0+53` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
   `public/changelog/entries.json` in sync — README no longer carries its own changelog, it just
   links to that page.
 - **Versioning rule (mandatory for every agent):** every change that alters user-visible behavior
@@ -225,6 +225,7 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 
 - Fuel & performance model overhaul (v3.7.0): phase-based trip fuel calibrated to real sectors with a golden test, subsonic/short-sector fallback, subsonic alternate profile + alternate warnings, capacity-aware endurance, TOW excludes taxi, typed `WeightSummary`/`TakeoffSpeeds`/`LandingSpeeds`, 10 kt tailwind limit, gust/VRB handling, missing-wind flag, AUTO/DRY/WET/CONTAM runway condition, W^2 takeoff distance, recalibrated V-speeds, longest-runway departure default, route-distance estimate for file imports, METAR auto-refresh/age/weather summary, shared runway-env provider, `flutter analyze` in beta CI.
 - v4.0.0: fuel release strip header shows real flight data (call sign/route, source, FL, distance, ETE, FUEL OK/SHORT stamp); METAR strip reorganised into category row + equal-width readout row, age spelled out below the strip (`formatMetarAge`); semantic versioning rule added (section 1).
+- v4.1.0: planner `DispatchBanner` driven by `dispatchSummaryProvider` (all NO-GO/caution checks in one place); raw METAR always visible. Flight Monitor: `MfdStrip` (phase, dist to dest, TOD, ETA, fuel at dest vs reserve+alt, annunciators) using `lib/core/live_flight_math.dart` (`predictToDestination`, Mach-dependent `cgLimitsForMach` — indicative, verify vs DC Designs manual); fixed gear/droop decoding (bridge sends 0-1 fractions, see `TelemetryModel.gearLabel`/`droopLabel`); smoothed actual fuel flow (30 s EMA) + latched `TouchdownRecord` in `FlightMonitorNotifier`; removed dead `GearFlapsDroopCard`.
 
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.

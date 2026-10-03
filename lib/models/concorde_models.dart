@@ -274,3 +274,12 @@ class RunwayFeasibility {
     this.condition = RunwayCondition.dry,
   });
 }
+
+/// Every dispatch check rolled into one: [noGo] items block the flight,
+/// [cautions] should be read but don't.
+class DispatchSummary {
+  final List<String> noGo;
+  final List<String> cautions;
+  const DispatchSummary({required this.noGo, required this.cautions});
+  bool get isGo => noGo.isEmpty;
+}

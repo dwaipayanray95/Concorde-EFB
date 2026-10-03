@@ -532,6 +532,88 @@ final landingFeasibilityProvider = Provider<RunwayFeasibility?>((ref) {
   );
 });
 
+/// Rolls every planner check into a single GO / NO-GO for the banner.
+final dispatchSummaryProvider = Provider<DispatchSummary>((ref) {
+  final noGo = <String>[];
+  final cautions = <String>[];
+  final w = ref.watch(weightsProvider);
+  final limits = ConcordeConstants.weights;
+  final runway = ConcordeConstants.runway;
+
+  if (w.overCapacity) {
+    noGo.add(
+      'Fuel required exceeds tank capacity by '
+      '${(w.plannedFuel - w.fuelOnBoard).round()} kg',
+    );
+  } else if (!ref.watch(fuelEnduranceProvider).sufficient) {
+    noGo.add('Fuel endurance below ETE + reserves');
+  }
+  if (w.tow > limits.mtowKg) noGo.add('Takeoff weight above MTOW');
+  if (w.lw > limits.mlwKg) {
+    noGo.add('Landing weight above MLW (${w.lw.round()} kg)');
+  }
+
+  void runwayChecks(String leg, RunwayFeasibility? f, bool hasAirport) {
+    if (!hasAirport) {
+      noGo.add('$leg airport not found');
+      return;
+    }
+    if (f == null) {
+      noGo.add('$leg runway not selected');
+      return;
+    }
+    if (f.runwayLengthM < f.requiredLengthMEst) {
+      noGo.add(
+        '$leg runway ${(f.requiredLengthMEst - f.runwayLengthM).round()} m too short',
+      );
+    }
+    if (!f.crosswindOk) {
+      noGo.add('$leg crosswind above ${runway.maxCrosswindKt.round()} kt');
+    }
+    if (!f.tailwindOk) {
+      noGo.add('$leg tailwind above ${runway.maxTailwindKt.round()} kt');
+    }
+    if (!f.altitudeOk) noGo.add('$leg airfield outside altitude limits');
+    if (!f.widthOk) cautions.add('$leg runway narrower than 150 ft');
+    if (!f.windDataAvailable) cautions.add('$leg wind unknown (no METAR)');
+    if (f.condition != RunwayCondition.dry) {
+      cautions.add('$leg runway ${f.condition.name}');
+    }
+  }
+
+  runwayChecks(
+    'Departure',
+    ref.watch(takeoffFeasibilityProvider),
+    ref.watch(depAirportProvider) != null,
+  );
+  if (!ref.watch(useReheatTakeoffProvider) && w.tow >= 155000) {
+    noGo.add('No-reheat takeoff above 155 t');
+  }
+  runwayChecks(
+    'Arrival',
+    ref.watch(landingFeasibilityProvider),
+    ref.watch(arrAirportProvider) != null,
+  );
+
+  switch (ref.watch(alternateStatusProvider)) {
+    case AlternateStatus.ok:
+      break;
+    case AlternateStatus.missing:
+      cautions.add('No alternate');
+    case AlternateStatus.sameAsArrival:
+      cautions.add('Alternate same as arrival');
+    case AlternateStatus.unknownAirport:
+      cautions.add('Alternate airport not found');
+    case AlternateStatus.tooFar:
+      cautions.add('Alternate beyond 500 nm');
+  }
+  final mission = ref.watch(missionProfileProvider);
+  if (mission.flCappedForDistance) {
+    cautions.add('Planned at FL${mission.targetCruiseFl} (sector too short)');
+  }
+  return DispatchSummary(noGo: noGo, cautions: cautions);
+});
+
 class ChecklistNotifier extends Notifier<Map<String, bool>> {
   @override
   Map<String, bool> build() => {};

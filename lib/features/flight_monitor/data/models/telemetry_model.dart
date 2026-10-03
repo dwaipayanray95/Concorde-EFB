@@ -94,6 +94,26 @@ class TelemetryModel {
     this.onGround = false,
   });
 
+  /// Gear extension 0-100 %. The bridge sends MSFS's "percent over 100"
+  /// (a 0-1 fraction); older/dev sources may send 0-100.
+  double get gearPct => gearPosition <= 1.0 ? gearPosition * 100 : gearPosition;
+
+  String get gearLabel =>
+      gearPct <= 1 ? 'UP' : (gearPct >= 99 ? 'DOWN' : 'TRANSIT');
+
+  /// Nose/visor droop 0-100 % (same 0-1 fraction convention as gear).
+  double get droopPct => snootAngle <= 1.0 ? snootAngle * 100 : snootAngle;
+
+  /// Nearest Concorde nose detent: UP (visor up), 5° (takeoff/taxi) or
+  /// 12.5° (landing), assuming the sim's 0-100 % travel maps linearly
+  /// onto 0-12.5°.
+  String get droopLabel {
+    final deg = droopPct / 100 * 12.5;
+    if (deg < 1.5) return 'UP';
+    if (deg < 8.75) return '5°';
+    return '12.5°';
+  }
+
   factory TelemetryModel.empty() {
     return TelemetryModel(
       timestamp: 0,

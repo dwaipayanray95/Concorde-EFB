@@ -22,6 +22,12 @@ class _Speeds {
   const _Speeds();
   final double cruiseMach = 2.04;
   final double cruiseTasKt = 1164;
+
+  /// Maximum operating Mach number (BA Flying Manual: MMO 2.04).
+  final double mmo = 2.04;
+
+  /// Maximum landing-gear extended speed (kt IAS).
+  final double vleKt = 270;
 }
 
 class _Fuel {

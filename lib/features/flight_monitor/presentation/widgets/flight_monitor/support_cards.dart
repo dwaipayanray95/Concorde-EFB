@@ -1,3 +1,5 @@
+import '../../../../../core/live_flight_math.dart';
+import '../../controllers/telemetry_provider.dart';
 import 'package:flutter/material.dart';
 import '../../../../../core/app_colors.dart';
 import '../../../../../core/ui_text.dart';
@@ -14,11 +16,14 @@ class CgCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final warn = t.cgPct > t.cgAftLimit - 1.5 || t.cgPct < t.cgFwdLimit + 1.5;
+    // Limits follow Mach -- a fixed 52-59 % band hides a real problem
+    // (e.g. 53 % is fine for takeoff but far too far forward at Mach 2).
+    final limits = cgLimitsForMach(t.mach);
+    final warn = t.cgPct > limits.aft || t.cgPct < limits.fwd;
     final color = warn ? colors.error : colors.textPrimary;
-    final range = t.cgAftLimit - t.cgFwdLimit;
+    final range = limits.aft - limits.fwd;
     final markerPct = range > 0
-        ? ((t.cgPct - t.cgFwdLimit) / range * 100).clamp(0.0, 100.0)
+        ? ((t.cgPct - limits.fwd) / range * 100).clamp(0.0, 100.0)
         : 0.0;
 
     return EfbFlatCard(
@@ -78,7 +83,7 @@ class CgCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'FWD ${t.cgFwdLimit.toStringAsFixed(1)}',
+                'FWD ${limits.fwd.toStringAsFixed(1)}',
                 style: uiText(
                   context,
                   size: 9,
@@ -88,7 +93,7 @@ class CgCard extends StatelessWidget {
                 ),
               ),
               Text(
-                'AFT ${t.cgAftLimit.toStringAsFixed(1)}',
+                'AFT ${limits.aft.toStringAsFixed(1)}',
                 style: uiText(
                   context,
                   size: 9,
@@ -211,7 +216,15 @@ extension on TelemetryModel {
 class FuelBurnCard extends StatelessWidget {
   final TelemetryModel t;
   final double totalFuelKg;
-  const FuelBurnCard({super.key, required this.t, required this.totalFuelKg});
+
+  /// Smoothed actual sim fuel flow (kg/h), null before the first frame.
+  final double? fuelFlowKgH;
+  const FuelBurnCard({
+    super.key,
+    required this.t,
+    required this.totalFuelKg,
+    this.fuelFlowKgH,
+  });
 
   static const _phaseLabel = {
     FlightBurnPhase.ground: 'GROUND',
@@ -229,7 +242,12 @@ class FuelBurnCard extends StatelessWidget {
       vsFpm: t.vs,
       reheatActive: t.reheatActive,
     );
-    final flowKgH = ConcordeLogic.phaseFuelFlowKgH(phase, t.altitude / 100);
+    // Endurance uses the sim's own (smoothed) fuel flow; the phase table is
+    // only a fallback before any real flow has been seen (e.g. engines off).
+    final actual = fuelFlowKgH ?? 0;
+    final flowKgH = actual >= 500
+        ? actual
+        : ConcordeLogic.phaseFuelFlowKgH(phase, t.altitude / 100);
     final airtime = flowKgH > 0
         ? '${(totalFuelKg / flowKgH).toStringAsFixed(1)} HRS'
         : '—';
@@ -254,7 +272,7 @@ class FuelBurnCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            t.fuelBurnTotal.round().toString(),
+            (fuelFlowKgH ?? t.fuelBurnTotal).round().toString(),
             style: uiText(
               context,
               size: 24,
@@ -303,19 +321,20 @@ class FuelBurnCard extends StatelessWidget {
 
 /// LANDING TOUCHDOWN compact card.
 class TouchdownCard extends StatelessWidget {
-  final TelemetryModel t;
-  const TouchdownCard({super.key, required this.t});
+  final TouchdownRecord? touchdown;
+  const TouchdownCard({super.key, required this.touchdown});
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final hasTouchdown = t.isLanding;
-    final vs = hasTouchdown ? t.touchdownVS.round() : null;
+    final td = touchdown;
+    final hasTouchdown = td != null;
+    final vs = td?.vsFpm.round();
     final color = vs == null
         ? colors.textPrimary
         : (vs < -600
-            ? colors.error
-            : (vs < -400 ? colors.mvfr : colors.arrival));
+              ? colors.error
+              : (vs < -400 ? colors.mvfr : colors.arrival));
 
     return EfbFlatCard(
       padding: const EdgeInsets.all(16),
@@ -357,7 +376,7 @@ class TouchdownCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             hasTouchdown
-                ? 'PITCH ${t.touchdownPitch.toStringAsFixed(1)}° · ${t.touchdownGForce.toStringAsFixed(2)}G'
+                ? 'PITCH ${td.pitchDeg.toStringAsFixed(1)}° · ${td.gForce.toStringAsFixed(2)}G · ${td.zulu}Z'
                 : '—',
             style: uiText(
               context,
@@ -452,8 +471,8 @@ class EnginesReheatCard extends StatelessWidget {
               final boxBorder = reheatOn
                   ? colors.mvfr.withValues(alpha: 0.5)
                   : (running
-                      ? colors.accent.withValues(alpha: 0.4)
-                      : colors.dividerStrong);
+                        ? colors.accent.withValues(alpha: 0.4)
+                        : colors.dividerStrong);
               final valueColor = reheatOn
                   ? colors.mvfr
                   : (running ? colors.accent : colors.textDim);
@@ -526,89 +545,3 @@ class EnginesReheatCard extends StatelessWidget {
 }
 
 /// GEAR · FLAPS · DROOP NOSE · VISOR card (spans 2 columns).
-class GearFlapsDroopCard extends StatelessWidget {
-  final TelemetryModel t;
-  const GearFlapsDroopCard({super.key, required this.t});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final gearLabel = t.gearPosition <= 0.5
-        ? 'UP'
-        : (t.gearPosition >= 99.5 ? 'DOWN' : 'TRANSIT');
-    final gearColor = gearLabel == 'DOWN'
-        ? colors.arrival
-        : (gearLabel == 'UP' ? colors.textPrimary : colors.mvfr);
-    final flapsLabel = t.flapsPosition == 0 ? 'UP' : t.flapsPosition.toString();
-
-    return EfbFlatCard(
-      padding: const EdgeInsets.all(22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'GEAR · FLAPS · DROOP NOSE · VISOR',
-            style: uiText(
-              context,
-              size: 11,
-              weight: FontWeight.w800,
-              color: colors.textDim,
-              letterSpacing: 1.6,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(child: _stat(context, 'GEAR', gearLabel, gearColor)),
-              Expanded(child: _stat(context, 'FLAPS', flapsLabel, colors.textPrimary)),
-              Expanded(
-                child: _stat(
-                  context,
-                  'DROOP',
-                  '${t.snootAngle.round()}°',
-                  colors.textPrimary,
-                ),
-              ),
-              Expanded(
-                child: _stat(
-                  context,
-                  'VISOR/SNOOT',
-                  '${t.snootAngle.round()}°',
-                  colors.textPrimary,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _stat(BuildContext context, String label, String value, Color color) {
-    final colors = context.colors;
-    return Column(
-      children: [
-        Text(
-          label,
-          style: uiText(
-            context,
-            size: 10,
-            weight: FontWeight.w800,
-            color: colors.textDim,
-            letterSpacing: 0,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          value,
-          style: uiText(
-            context,
-            size: 14,
-            weight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-      ],
-    );
-  }
-}

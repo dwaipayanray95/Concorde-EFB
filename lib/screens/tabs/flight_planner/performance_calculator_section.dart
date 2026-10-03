@@ -23,8 +23,6 @@ class PerformanceCalculatorSection extends ConsumerStatefulWidget {
 
 class _PerformanceCalculatorSectionState
     extends ConsumerState<PerformanceCalculatorSection> {
-  bool showDepRaw = false;
-  bool showArrRaw = false;
 
   @override
   Widget build(BuildContext context) {
@@ -47,8 +45,6 @@ class _PerformanceCalculatorSectionState
           runway: ref.watch(departureRunwayProvider),
           metarAsync: ref.watch(departureMetarFutureProvider),
           onRefreshMetar: () => ref.invalidate(departureMetarFutureProvider),
-          showRaw: showDepRaw,
-          onToggleRaw: () => setState(() => showDepRaw = !showDepRaw),
           weightKg: ref.watch(weightsProvider).tow,
           weightLabel: 'TOW',
           speeds: {
@@ -78,8 +74,6 @@ class _PerformanceCalculatorSectionState
           runway: ref.watch(arrivalRunwayProvider),
           metarAsync: ref.watch(arrivalMetarFutureProvider),
           onRefreshMetar: () => ref.invalidate(arrivalMetarFutureProvider),
-          showRaw: showArrRaw,
-          onToggleRaw: () => setState(() => showArrRaw = !showArrRaw),
           weightKg: ref.watch(weightsProvider).lw,
           weightLabel: 'LW',
           speeds: {
@@ -128,8 +122,6 @@ class _LegCard extends ConsumerWidget {
   final Runway? runway;
   final AsyncValue<String> metarAsync;
   final VoidCallback onRefreshMetar;
-  final bool showRaw;
-  final VoidCallback onToggleRaw;
   final double weightKg;
   final String weightLabel;
   final Map<String, double> speeds;
@@ -152,8 +144,6 @@ class _LegCard extends ConsumerWidget {
     required this.runway,
     required this.metarAsync,
     required this.onRefreshMetar,
-    required this.showRaw,
-    required this.onToggleRaw,
     required this.weightKg,
     required this.weightLabel,
     required this.speeds,
@@ -348,11 +338,9 @@ class _LegCard extends ConsumerWidget {
                 _WeatherStrip(
                   metarStr: metarAsync.value ?? '',
                   runway: runway,
-                  showRaw: showRaw,
                   isLoading: metarAsync.isLoading,
                   isError: metarAsync.hasError,
                   errorMessage: metarAsync.error?.toString(),
-                  onToggleRaw: onToggleRaw,
                   onRefresh: onRefreshMetar,
                 ),
                 const SizedBox(height: 14),
@@ -661,21 +649,17 @@ class _RunwaySelect extends StatelessWidget {
 class _WeatherStrip extends StatelessWidget {
   final String metarStr;
   final Runway? runway;
-  final bool showRaw;
   final bool isLoading;
   final bool isError;
   final String? errorMessage;
-  final VoidCallback onToggleRaw;
   final VoidCallback onRefresh;
 
   const _WeatherStrip({
     required this.metarStr,
     required this.runway,
-    required this.showRaw,
     this.isLoading = false,
     this.isError = false,
     this.errorMessage,
-    required this.onToggleRaw,
     required this.onRefresh,
   });
 
@@ -723,163 +707,151 @@ class _WeatherStrip extends StatelessWidget {
               '${parsed.windSpeedKt!.round()}${gust != null ? 'G${gust.round()}' : ''}KT';
     final stale = ageMin != null && ageMin > 90;
 
-    return InkWell(
-      onTap: metarStr.isNotEmpty ? onToggleRaw : null,
-      borderRadius: BorderRadius.circular(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 10, 8, 12),
-            decoration: BoxDecoration(
-              color: catBg,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Row 1: flight category + plain-language conditions.
-                Row(
-                  children: [
-                    Text(
-                      headline,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.fromLTRB(16, 10, 8, 12),
+          decoration: BoxDecoration(
+            color: catBg,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Row 1: flight category + plain-language conditions.
+              Row(
+                children: [
+                  Text(
+                    headline,
+                    style: uiText(
+                      context,
+                      size: 14,
+                      weight: FontWeight.w900,
+                      color: catColor,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Container(width: 1, height: 16, color: dimOnCat),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      conditions,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: uiText(
                         context,
-                        size: 14,
-                        weight: FontWeight.w900,
+                        size: 12,
+                        weight: FontWeight.w700,
                         color: catColor,
-                        letterSpacing: 0.8,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Container(width: 1, height: 16, color: dimOnCat),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        conditions,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: uiText(
-                          context,
-                          size: 12,
-                          weight: FontWeight.w700,
-                          color: catColor,
-                        ),
-                      ),
+                  ),
+                  _AnimatedRefreshButton(
+                    isLoading: isLoading,
+                    color: catColor,
+                    onPressed: onRefresh,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Container(height: 1, color: dimOnCat.withValues(alpha: 0.35)),
+              const SizedBox(height: 10),
+              // Row 2: equal-width readouts so the strip never wraps
+              // into ragged rows.
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Row(
+                  children: [
+                    _WeatherCell(
+                      label: 'WIND',
+                      value: windText,
+                      labelColor: dimOnCat,
+                      valueColor: catColor,
                     ),
-                    _AnimatedRefreshButton(
-                      isLoading: isLoading,
-                      color: catColor,
-                      onPressed: onRefresh,
+                    _WeatherCell(
+                      label: 'VIS',
+                      value: vis != null
+                          ? (vis >= 10
+                                ? '10+ KM'
+                                : '${vis.toStringAsFixed(1)} KM')
+                          : '--',
+                      labelColor: dimOnCat,
+                      valueColor: catColor,
+                    ),
+                    _WeatherCell(
+                      label: 'TEMP',
+                      value: tempC != null ? '${tempC.round()}°C' : '--',
+                      labelColor: dimOnCat,
+                      valueColor: catColor,
+                    ),
+                    _WeatherCell(
+                      label: 'QNH',
+                      value: qnh == null
+                          ? '--'
+                          : (qnh.unit == 'hPa'
+                                ? '${qnh.value.round()}'
+                                : qnh.value.toStringAsFixed(2)),
+                      labelColor: dimOnCat,
+                      valueColor: catColor,
+                    ),
+                    _WeatherCell(
+                      label: 'ELEV',
+                      value: '${runway?.elevationFt?.round() ?? '--'} FT',
+                      labelColor: dimOnCat,
+                      valueColor: catColor,
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
-                Container(height: 1, color: dimOnCat.withValues(alpha: 0.35)),
-                const SizedBox(height: 10),
-                // Row 2: equal-width readouts so the strip never wraps
-                // into ragged rows.
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: Row(
-                    children: [
-                      _WeatherCell(
-                        label: 'WIND',
-                        value: windText,
-                        labelColor: dimOnCat,
-                        valueColor: catColor,
-                      ),
-                      _WeatherCell(
-                        label: 'VIS',
-                        value: vis != null
-                            ? (vis >= 10
-                                  ? '10+ KM'
-                                  : '${vis.toStringAsFixed(1)} KM')
-                            : '--',
-                        labelColor: dimOnCat,
-                        valueColor: catColor,
-                      ),
-                      _WeatherCell(
-                        label: 'TEMP',
-                        value: tempC != null ? '${tempC.round()}°C' : '--',
-                        labelColor: dimOnCat,
-                        valueColor: catColor,
-                      ),
-                      _WeatherCell(
-                        label: 'QNH',
-                        value: qnh == null
-                            ? '--'
-                            : (qnh.unit == 'hPa'
-                                  ? '${qnh.value.round()}'
-                                  : qnh.value.toStringAsFixed(2)),
-                        labelColor: dimOnCat,
-                        valueColor: catColor,
-                      ),
-                      _WeatherCell(
-                        label: 'ELEV',
-                        value: '${runway?.elevationFt?.round() ?? '--'} FT',
-                        labelColor: dimOnCat,
-                        valueColor: catColor,
-                      ),
-                    ],
+              ),
+            ],
+          ),
+        ),
+        if (metarStr.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: SelectableText(
+                  metarStr,
+                  style: uiText(
+                    context,
+                    size: 11,
+                    weight: FontWeight.w500,
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ),
+              if (ageMin != null) ...[
+                const SizedBox(width: 12),
+                Text(
+                  'OBSERVED ${formatMetarAge(ageMin)} AGO${stale ? ' · OUTDATED' : ''}',
+                  style: uiText(
+                    context,
+                    size: 9,
+                    weight: FontWeight.w800,
+                    color: stale ? colors.error : colors.textDim,
+                    letterSpacing: 1,
                   ),
                 ),
               ],
+            ],
+          ),
+        ] else if (isError) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Failed to retrieve weather. Tap refresh to retry.',
+            style: uiText(
+              context,
+              size: 10,
+              weight: FontWeight.w600,
+              color: colors.error,
             ),
           ),
-          if (metarStr.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Text(
-                    showRaw ? metarStr : 'TAP TO SHOW RAW METAR',
-                    style: showRaw
-                        ? uiText(
-                            context,
-                            size: 12,
-                            weight: FontWeight.w500,
-                            color: colors.textSecondary,
-                          )
-                        : uiText(
-                            context,
-                            size: 9,
-                            weight: FontWeight.w700,
-                            color: colors.textDim,
-                            letterSpacing: 1,
-                          ),
-                  ),
-                ),
-                if (ageMin != null) ...[
-                  const SizedBox(width: 12),
-                  Text(
-                    'OBSERVED ${formatMetarAge(ageMin)} AGO${stale ? ' · OUTDATED' : ''}',
-                    style: uiText(
-                      context,
-                      size: 9,
-                      weight: FontWeight.w800,
-                      color: stale ? colors.error : colors.textDim,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ] else if (isError) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Failed to retrieve weather. Tap refresh to retry.',
-              style: uiText(
-                context,
-                size: 10,
-                weight: FontWeight.w600,
-                color: colors.error,
-              ),
-            ),
-          ],
         ],
-      ),
+      ],
     );
   }
 }

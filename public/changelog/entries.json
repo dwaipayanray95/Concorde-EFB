@@ -1,6 +1,19 @@
 [
     {
         "date": "2026-10-03",
+        "title": "v4.1.0 — Dispatch banner & Flight Monitor MFD",
+        "items": [
+            "Planner: new DISPATCH banner (GO / GO · CAUTION / NO-GO) listing every fuel, weight, runway, wind and alternate issue in one place",
+            "Planner: raw METAR is always shown (selectable) under the weather strip — no more tap to reveal",
+            "Flight Monitor: new MFD strip with flight phase, distance to destination, top of descent, ETA, predicted fuel at destination vs reserves, and warning annunciators (CG limit, MMO, gear speed, low fuel at destination, descend now)",
+            "Flight Monitor: fixed gear always showing TRANSIT when down, and droop/visor showing 0°/1° — now shows UP / 5° / 12.5°",
+            "Flight Monitor: CG limits now follow Mach (the corridor moves aft going supersonic) instead of a fixed 52–59 % band",
+            "Flight Monitor: estimated airtime uses the sim's actual (smoothed) fuel flow; burn-rate readout no longer flickers",
+            "Flight Monitor: last touchdown stays on screen (with time) instead of disappearing after 5 seconds"
+        ]
+    },
+    {
+        "date": "2026-10-03",
         "title": "v4.0.0 — Planner polish",
         "items": [
             "Fuel release strip header now shows your actual flight: call sign / route, plan source, cruise FL, distance and ETE, with a FUEL OK / FUEL SHORT stamp",

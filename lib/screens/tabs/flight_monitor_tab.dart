@@ -5,6 +5,7 @@ import '../../features/flight_monitor/presentation/controllers/telemetry_provide
 import '../../features/flight_monitor/data/models/telemetry_model.dart';
 import '../../features/flight_monitor/presentation/widgets/flight_monitor/fm_toolbar.dart';
 import '../../features/flight_monitor/presentation/widgets/flight_monitor/hero_pfd_row.dart';
+import '../../features/flight_monitor/presentation/widgets/flight_monitor/mfd_strip.dart';
 import '../../features/flight_monitor/presentation/widgets/flight_monitor/fuel_schematic_card.dart';
 import '../../features/flight_monitor/presentation/widgets/flight_monitor/support_cards.dart';
 import '../../widgets/entrance_fader.dart';
@@ -68,12 +69,21 @@ class _FlightMonitorSection extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                MfdStrip(
+                  t: telemetry,
+                  totalFuelKg: totalFuelKg,
+                  fuelFlowKgH: monitorState.smoothedFuelFlowKgH,
+                  isLive: isLive,
+                ),
+                const SizedBox(height: 16),
                 HeroPfdRow(t: telemetry, isConnected: isLive),
                 const SizedBox(height: 16),
                 _SupportGrid(
                   t: telemetry,
                   chips: chips,
                   totalFuelKg: totalFuelKg,
+                  fuelFlowKgH: monitorState.smoothedFuelFlowKgH,
+                  touchdown: monitorState.lastTouchdown,
                 ),
               ],
             ),
@@ -88,10 +98,14 @@ class _SupportGrid extends StatelessWidget {
   final TelemetryModel t;
   final List<FuelTankChip> chips;
   final double totalFuelKg;
+  final double? fuelFlowKgH;
+  final TouchdownRecord? touchdown;
   const _SupportGrid({
     required this.t,
     required this.chips,
     required this.totalFuelKg,
+    this.fuelFlowKgH,
+    this.touchdown,
   });
 
   @override
@@ -116,11 +130,15 @@ class _SupportGrid extends StatelessWidget {
                     const SizedBox(height: 16),
                     EnvironmentalCard(t: t),
                     const SizedBox(height: 16),
-                    FuelBurnCard(t: t, totalFuelKg: totalFuelKg),
+                    FuelBurnCard(
+                      t: t,
+                      totalFuelKg: totalFuelKg,
+                      fuelFlowKgH: fuelFlowKgH,
+                    ),
                     const SizedBox(height: 16),
                     GForceCard(t: t),
                     const SizedBox(height: 16),
-                    TouchdownCard(t: t),
+                    TouchdownCard(touchdown: touchdown),
                   ],
                 ),
               ),

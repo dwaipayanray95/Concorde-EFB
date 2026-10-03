@@ -213,4 +213,25 @@ void main() {
       expect(container.read(checklistProvider), isEmpty);
     });
   });
+
+  group('dispatchSummaryProvider', () {
+    test('an over-capacity plan is NO-GO', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      container.read(extraFuelProvider.notifier).set(200000);
+      final d = container.read(dispatchSummaryProvider);
+      expect(d.isGo, isFalse);
+      expect(d.noGo.any((s) => s.contains('tank capacity')), isTrue);
+    });
+
+    test('no alternate is a caution, not a NO-GO reason', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      container.read(alternateIcaoProvider.notifier).set('');
+      final d = container.read(dispatchSummaryProvider);
+      expect(d.cautions, contains('No alternate'));
+      expect(d.noGo.any((s) => s.contains('lternate')), isFalse);
+    });
+  });
 }
+

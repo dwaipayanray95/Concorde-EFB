@@ -17,9 +17,7 @@ class HeroPfdRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final gearLabel = t.gearPosition <= 0.5
-        ? 'UP'
-        : (t.gearPosition >= 99.5 ? 'DOWN' : 'TRANSIT');
+    final gearLabel = t.gearLabel;
     final gearColor = gearLabel == 'DOWN'
         ? colors.arrival
         : (gearLabel == 'UP' ? colors.textPrimary : colors.mvfr);
@@ -43,10 +41,7 @@ class HeroPfdRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
-                child: _StatCard(
-                  label: 'HDG',
-                  value: '${t.heading.round()}°',
-                ),
+                child: _StatCard(label: 'HDG', value: '${t.heading.round()}°'),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -72,10 +67,7 @@ class HeroPfdRow extends StatelessWidget {
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: _StatCard(
-                  label: 'DROOP/VISOR',
-                  value: '${t.snootAngle.round()}°',
-                ),
+                child: _StatCard(label: 'DROOP/VISOR', value: t.droopLabel),
               ),
               const SizedBox(width: 16),
               Expanded(flex: 2, child: EnginesReheatCard(t: t)),
@@ -217,7 +209,9 @@ class _AltitudeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final vs = t.vs.round();
-    final vsColor = vs > 100 ? colors.arrival : (vs < -100 ? colors.error : colors.textSecondary);
+    final vsColor = vs > 100
+        ? colors.arrival
+        : (vs < -100 ? colors.error : colors.textSecondary);
     final vsDisplay = (vs > 0 ? '+' : '') + vs.toString();
 
     return EfbFlatCard(
@@ -292,4 +286,3 @@ class _AltitudeCard extends StatelessWidget {
     );
   }
 }
-

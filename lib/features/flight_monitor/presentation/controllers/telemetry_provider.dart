@@ -4,8 +4,30 @@ import '../../data/models/telemetry_model.dart';
 import '../../data/services/websocket_client.dart';
 import '../../../../core/sim_bridge_launcher.dart';
 
+/// The last landing, latched in the app -- the bridge only flags a
+/// touchdown for ~5 s, which is far too short to read it.
+class TouchdownRecord {
+  final double vsFpm;
+  final double pitchDeg;
+  final double gForce;
+  final String zulu;
+  const TouchdownRecord({
+    required this.vsFpm,
+    required this.pitchDeg,
+    required this.gForce,
+    required this.zulu,
+  });
+}
+
 class FlightMonitorState {
   final TelemetryModel? currentTelemetry;
+
+  /// Total fuel flow (kg/h) smoothed over ~30 s -- the raw sim value jumps
+  /// with every throttle/reheat change, which makes endurance/landing-fuel
+  /// predictions flicker. Null until the first frame.
+  final double? smoothedFuelFlowKgH;
+
+  final TouchdownRecord? lastTouchdown;
 
   /// True only while live telemetry is actually flowing from MSFS.
   final bool isConnected;
@@ -15,17 +37,23 @@ class FlightMonitorState {
 
   FlightMonitorState({
     this.currentTelemetry,
+    this.smoothedFuelFlowKgH,
+    this.lastTouchdown,
     this.isConnected = false,
     this.bridge = BridgeStatus.offline,
   });
 
   FlightMonitorState copyWith({
     TelemetryModel? currentTelemetry,
+    double? smoothedFuelFlowKgH,
+    TouchdownRecord? lastTouchdown,
     bool? isConnected,
     BridgeStatus? bridge,
   }) {
     return FlightMonitorState(
       currentTelemetry: currentTelemetry ?? this.currentTelemetry,
+      smoothedFuelFlowKgH: smoothedFuelFlowKgH ?? this.smoothedFuelFlowKgH,
+      lastTouchdown: lastTouchdown ?? this.lastTouchdown,
       isConnected: isConnected ?? this.isConnected,
       bridge: bridge ?? this.bridge,
     );
@@ -85,17 +113,47 @@ class FlightMonitorNotifier extends Notifier<FlightMonitorState> {
     state = FlightMonitorState(
       // Drop stale frames once data stops so the UI doesn't show frozen values.
       currentTelemetry: live ? state.currentTelemetry : null,
+      smoothedFuelFlowKgH: live ? state.smoothedFuelFlowKgH : null,
+      lastTouchdown: state.lastTouchdown,
       isConnected: live,
       bridge: s,
     );
   }
 
+  /// Time constant of the fuel-flow smoothing.
+  static const _flowSmoothingS = 30.0;
+
   void _handleLiveTelemetry(TelemetryModel telemetry) {
     final now = DateTime.now();
-    if (now.difference(_lastUiUpdate) < _uiUpdateInterval) return;
+    final touchdown =
+        telemetry.isLanding &&
+            (state.lastTouchdown == null ||
+                state.currentTelemetry?.isLanding != true)
+        ? TouchdownRecord(
+            vsFpm: telemetry.touchdownVS,
+            pitchDeg: telemetry.touchdownPitch,
+            gForce: telemetry.touchdownGForce,
+            zulu: telemetry.zuluTime,
+          )
+        : null;
+    if (touchdown == null &&
+        now.difference(_lastUiUpdate) < _uiUpdateInterval) {
+      return;
+    }
+    final dtS = now.difference(_lastUiUpdate).inMilliseconds / 1000.0;
     _lastUiUpdate = now;
 
-    state = state.copyWith(currentTelemetry: telemetry, isConnected: true);
+    final raw = telemetry.fuelBurnTotal;
+    final prev = state.smoothedFuelFlowKgH;
+    final alpha = (dtS / _flowSmoothingS).clamp(0.0, 1.0);
+    final smoothed = prev == null ? raw : prev + (raw - prev) * alpha;
+
+    state = state.copyWith(
+      currentTelemetry: telemetry,
+      smoothedFuelFlowKgH: smoothed,
+      lastTouchdown: touchdown,
+      isConnected: true,
+    );
   }
 }
 
