@@ -377,7 +377,7 @@ class TelemetryBuilder:
             "timestamp": int(time.time()),
             "basic": {
                 "altitude": g("alt"), "ias": g("ias"), "tas": g("tas"), "gs": g("gs"),
-                "heading": g("hdg") % 360.0, "vs": vs, "pitch": pitch, "roll": g("bank"),
+                "heading": g("hdg") % 360.0, "vs": vs, "pitch": pitch, "roll": -g("bank"),  # sim bank is positive LEFT; app uses + = right
                 "latitude": g("lat"), "longitude": g("lon"), "gForce": g_force,
                 "gearPosition": g("gear"), "flapsPosition": g("flaps"), "zuluTime": zulu_str,
             },

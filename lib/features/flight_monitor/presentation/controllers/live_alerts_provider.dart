@@ -41,9 +41,16 @@ final liveAlertsProvider = Provider<List<LiveAlert>>((ref) {
 
   final alerts = <LiveAlert>[];
   final cg = cgLimitsForMach(t.mach);
-  // CG limits are armed once all four engines are running (or airborne) --
-  // before that the crew is still fuelling/transferring at the gate.
-  final moving = !t.onGround || t.allEnginesRunning;
+  // CG limits are armed above 10,000 ft above the departure field: on the
+  // ground and through takeoff/initial climb the CG sits at its takeoff
+  // setting and the crew is still transferring fuel, so the Mach corridor
+  // doesn't apply yet (owner decision).
+  final moving =
+      !t.onGround &&
+      t.heightAboveGround(
+            fieldElevationFt: ref.watch(depAirportProvider)?.elevationFt,
+          ) >
+          10000;
   if (moving && t.cgPct > cg.aft) {
     alerts.add(
       const LiveAlert('CG AFT LIMIT', critical: true, repeatEvery: _urgent),
@@ -86,7 +93,11 @@ final liveAlertsProvider = Provider<List<LiveAlert>>((ref) {
       ),
     );
   }
-  if (pred != null && phase != FlightBurnPhase.ground) {
+  // Fuel-at-destination warnings only from cruise on: the high climb /
+  // reheat burn is planned and would otherwise trip them on every takeoff.
+  final cruising =
+      phase == FlightBurnPhase.cruise || phase == FlightBurnPhase.descent;
+  if (pred != null && cruising) {
     if (pred.fuelAtDestKg < finalReserve) {
       alerts.add(
         const LiveAlert('FUEL BELOW FINAL RESERVE AT DEST', critical: true),

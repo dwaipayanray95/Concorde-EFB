@@ -65,6 +65,19 @@ final liveNavProvider = Provider<LiveNav?>((ref) {
   final flow = smoothed >= 500
       ? smoothed
       : ConcordeLogic.phaseFuelFlowKgH(phase, t.altitude / 100);
+  // Fuel-at-destination uses the burn rate for the rest of the trip. During
+  // takeoff/climb/reheat acceleration the actual flow (up to ~60 t/h) is
+  // far above the cruise burn, so extrapolating it over the whole remaining
+  // distance falsely predicts running dry -- use the planned cruise flow
+  // until the aircraft is actually cruising.
+  final cruising =
+      phase == FlightBurnPhase.cruise || phase == FlightBurnPhase.descent;
+  final predictionFlow = cruising
+      ? flow
+      : ConcordeLogic.phaseFuelFlowKgH(
+          FlightBurnPhase.cruise,
+          ref.watch(cruiseFLProvider),
+        );
   final fob = ConcordeFuelSchematic.totalFuelKg(
     ConcordeFuelSchematic.computeTankFills(t),
   );
@@ -90,7 +103,7 @@ final liveNavProvider = Provider<LiveNav?>((ref) {
       // airport, not to sea level.
       altitudeFt: t.heightAboveGround(fieldElevationFt: dest.elevationFt),
       groundSpeedKt: t.gs,
-      fuelFlowKgH: flow,
+      fuelFlowKgH: predictionFlow,
       fuelOnBoardKg: fob,
     );
   }

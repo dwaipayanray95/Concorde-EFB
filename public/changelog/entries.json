@@ -1,6 +1,15 @@
 [
     {
         "date": "2026-10-03",
+        "title": "v5.6.1 — Attitude indicator and climb alert fixes",
+        "items": [
+            "The Flight Monitor attitude indicator now banks the right way (it was mirrored)",
+            "CG AFT / FWD LIMIT warnings only arm above 10,000 ft, so takeoff and initial climb with the takeoff CG stay quiet",
+            "No more false FUEL BELOW FINAL RESERVE during takeoff and climb: fuel at destination now uses the planned cruise burn until you're actually cruising, and fuel warnings arm from cruise onwards"
+        ]
+    },
+    {
+        "date": "2026-10-03",
         "title": "v5.6.0 — No alarms in the MSFS menu, tap to silence",
         "items": [
             "No alerts or chimes while MSFS is in its menu or loading screen — the Flight Monitor waits until a flight is actually loaded (no more 8,000 NM to destination or negative fuel)",
