@@ -1,6 +1,15 @@
 [
     {
         "date": "2026-10-03",
+        "title": "v4.2.0 — Privacy policy & ad consent",
+        "items": [
+            "New privacy policy page, linked from the app footer (PRIVACY)",
+            "Android: Google's consent form is shown to users in the EEA, UK and Switzerland before ads load; AD PRIVACY OPTIONS in the footer lets you change your choice at any time",
+            "Android: ads now only load after the consent check; desktop remains ad-free"
+        ]
+    },
+    {
+        "date": "2026-10-03",
         "title": "v4.1.0 — Dispatch banner & Flight Monitor MFD",
         "items": [
             "Planner: new DISPATCH banner (GO / GO · CAUTION / NO-GO) listing every fuel, weight, runway, wind and alternate issue in one place",

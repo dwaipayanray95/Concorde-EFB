@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/ad_consent_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_colors.dart';
 import '../../core/ui_text.dart';
@@ -69,29 +70,46 @@ class AppFooter extends StatelessWidget {
           width: 1.2,
         ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const EfbLaunchesBadge(),
-          const SizedBox(width: 10),
-          _FooterLinkButton(
-            icon: Icons.history,
-            label: 'VIEW CHANGELOG',
-            url: AppLinks.changelog,
-          ),
-          const SizedBox(width: 8),
-          _FooterLinkButton(
-            icon: Icons.forum_outlined,
-            label: 'JOIN DISCORD',
-            url: AppLinks.discord,
-          ),
-          const SizedBox(width: 8),
-          _FooterLinkButton(
-            icon: Icons.favorite_border,
-            label: 'GITHUB SPONSOR',
-            url: AppLinks.githubSponsors,
-          ),
-        ],
+      // Wrap (not Row) so the extra privacy buttons can't overflow narrow
+      // phone widths.
+      child: ValueListenableBuilder<bool>(
+        valueListenable: AdConsentService.privacyOptionsRequired,
+        builder: (context, showAdPrivacy, _) => Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            const EfbLaunchesBadge(),
+            _FooterLinkButton(
+              icon: Icons.history,
+              label: 'VIEW CHANGELOG',
+              url: AppLinks.changelog,
+            ),
+            _FooterLinkButton(
+              icon: Icons.forum_outlined,
+              label: 'JOIN DISCORD',
+              url: AppLinks.discord,
+            ),
+            _FooterLinkButton(
+              icon: Icons.favorite_border,
+              label: 'GITHUB SPONSOR',
+              url: AppLinks.githubSponsors,
+            ),
+            _FooterLinkButton(
+              icon: Icons.privacy_tip_outlined,
+              label: 'PRIVACY',
+              url: AppLinks.privacy,
+            ),
+            // Only shown where UMP requires it (EEA/UK/CH users on mobile):
+            // lets the user change or withdraw ad consent at any time.
+            if (showAdPrivacy)
+              _FooterLinkButton(
+                icon: Icons.tune,
+                label: 'AD PRIVACY OPTIONS',
+                onTap: AdConsentService.showPrivacyOptions,
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -102,12 +120,14 @@ class AppFooter extends StatelessWidget {
 class _FooterLinkButton extends StatefulWidget {
   final IconData? icon;
   final String label;
-  final String url;
+  final String? url;
+  final Future<void> Function()? onTap;
 
   const _FooterLinkButton({
     this.icon,
     required this.label,
-    required this.url,
+    this.url,
+    this.onTap,
   });
 
   @override
@@ -126,9 +146,12 @@ class _FooterLinkButtonState extends State<_FooterLinkButton> {
       cursor: SystemMouseCursors.click,
       child: InkWell(
         onTap: () async {
-          final uri = Uri.parse(widget.url);
+          if (widget.onTap != null) {
+            await widget.onTap!();
+            return;
+          }
           try {
-            await launchUrl(uri);
+            await launchUrl(Uri.parse(widget.url!));
           } catch (_) {}
         },
         borderRadius: BorderRadius.circular(6),

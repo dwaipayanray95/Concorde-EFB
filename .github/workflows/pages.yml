@@ -47,6 +47,15 @@ jobs:
           destination_dir: donate
           keep_files: true
 
+      - name: Deploy privacy policy page
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./public/privacy
+          destination_dir: privacy
+          keep_files: true
+
       - name: Deploy downloads page
         uses: peaceiris/actions-gh-pages@v4
         with:

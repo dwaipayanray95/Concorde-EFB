@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../services/ad_consent_service.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -25,14 +26,15 @@ class _EfbAdBannerState extends State<EfbAdBanner> {
   @override
   void initState() {
     super.initState();
+    // Ads only load once the UMP consent flow allows them.
+    AdConsentService.adsReady.addListener(_loadAd);
     _loadAd();
   }
 
   void _loadAd() {
-    if (kIsWeb ||
-        defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.macOS ||
-        defaultTargetPlatform == TargetPlatform.linux) {
+    if (!AdConsentService.isSupported ||
+        !AdConsentService.adsReady.value ||
+        _bannerAd != null) {
       return;
     }
 
@@ -42,6 +44,7 @@ class _EfbAdBannerState extends State<EfbAdBanner> {
       size: AdSize.banner,
       listener: BannerAdListener(
         onAdLoaded: (ad) {
+          if (!mounted) return;
           setState(() {
             _isLoaded = true;
           });
@@ -55,6 +58,7 @@ class _EfbAdBannerState extends State<EfbAdBanner> {
 
   @override
   void dispose() {
+    AdConsentService.adsReady.removeListener(_loadAd);
     _bannerAd?.dispose();
     super.dispose();
   }

@@ -11,6 +11,7 @@ class AppLinks {
       'https://dwaipayanray95.github.io/Concorde-EFB/';
   static const String changelog = '${siteRoot}changelog/';
   static const String donate = '${siteRoot}donate/';
+  static const String privacy = '${siteRoot}privacy/';
 
   static const String githubReleasesLatestApi =
       'https://api.github.com/repos/dwaipayanray95/Concorde-EFB/releases/latest';

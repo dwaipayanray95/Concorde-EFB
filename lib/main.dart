@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'services/ad_consent_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,12 +24,8 @@ void main() async {
       DeviceOrientation.landscapeRight,
     ]);
   }
-  // Initialize AdMob for Mobile platforms
-  if (!kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.android ||
-          defaultTargetPlatform == TargetPlatform.iOS)) {
-    await MobileAds.instance.initialize();
-  }
+  // AdMob is NOT started here: it waits for the UMP consent flow, which
+  // runs after the first frame (see AdConsentService).
 
   // Launch the bundled SimConnect telemetry bridge so Flight Monitor works
   // without the user installing Python or running anything manually, and
@@ -72,6 +68,9 @@ void main() async {
   }
 
   runApp(const ProviderScope(child: ConcordeEfbApp()));
+  WidgetsBinding.instance.addPostFrameCallback(
+    (_) => unawaited(AdConsentService.gatherConsentAndStartAds()),
+  );
 }
 
 class ConcordeEfbApp extends ConsumerWidget {
