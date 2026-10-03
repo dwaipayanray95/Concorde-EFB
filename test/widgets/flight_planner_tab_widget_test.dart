@@ -1,19 +1,23 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:concorde_efb/screens/tabs/flight_planner_tab.dart';
 import 'package:concorde_efb/screens/tabs/flight_planner/performance_calculator_section.dart';
+import 'package:concorde_efb/screens/widgets/app_footer.dart';
 import 'test_harness.dart';
 
 void main() {
   group('FlightPlannerTab', () {
-    testWidgets('renders cards across sub-tabs without throwing', (tester) async {
+    testWidgets('renders cards across sub-tabs without throwing', (
+      tester,
+    ) async {
       await pumpScrollableScreen(tester, const FlightPlannerTab());
 
       expect(tester.takeException(), isNull);
       // Route & Fuel sub-tab is active by default
       expect(find.text('FLIGHT PLAN'), findsOneWidget);
       expect(find.text('CRUISE & FUEL MANAGEMENT'), findsOneWidget);
-      // Footer is now just the support card.
-      expect(find.text('DONATE NOW'), findsOneWidget);
+      // Footer is now just the support card (desktop) / ad banner (mobile;
+      // flutter_test runs as Android, where no ad loads without consent).
+      expect(find.byType(AppFooter), findsOneWidget);
 
       // Switch to Performance Calculator sub-tab
       await tester.tap(find.text('PERFORMANCE CALCULATOR'));
