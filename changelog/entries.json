@@ -1,5 +1,217 @@
 [
     {
+        "date": "2026-10-03",
+        "title": "v5.5.1 \u2014 Altitude fixes for high-elevation airports",
+        "items": [
+            "GEAR UP \u2014 BELOW 250 KT now triggers below 5,000 ft above the arrival airport (was 5,000 ft above sea level, which never fired at airports like Denver or Mexico City)",
+            "Top of descent and ETA now account for the destination airport's elevation",
+            "Flight Monitor no longer reads a parked aircraft at a high airport as airborne"
+        ]
+    },
+    {
+        "date": "2026-10-03",
+        "title": "v5.5.0 \u2014 Repeating chimes for urgent warnings",
+        "items": [
+            "Urgent warnings (Mach overspeed, gear overspeed, CG limits, gear up below 250 kt on approach) now re-chime every 2 seconds until corrected",
+            "DESCEND NOW re-chimes every 12 seconds until you start down",
+            "Other alerts still chime once",
+            "Warning chime is louder (same sound)"
+        ]
+    },
+    {
+        "date": "2026-10-03",
+        "title": "v5.4.0 \u2014 Alert chimes",
+        "items": [
+            "Flight Monitor alerts now chime once when they appear: a two-tone chime for red warnings, a single soft chime for amber cautions \u2014 never a repeating master-caution loop",
+            "Alerts are checked on every tab, so you hear them even while on the Planner or Checklists",
+            "Mute with the speaker button on the alert row, or in Settings \u2192 Alert chimes (with test buttons for each chime)"
+        ]
+    },
+    {
+        "date": "2026-10-03",
+        "title": "v5.3.0 \u2014 Numbers from the DC Designs Concorde manual",
+        "items": [
+            "CG limits and ideal CG now follow the manual's CG-vs-Mach chart (about 53.5\u201354% MAC for takeoff and landing, 59% at Mach 2); the Flight Monitor's TRANSFER AFT / FWD advice uses it",
+            "Takeoff speeds at MTOW match the manual: V1 170 / VR 190 kt, lift-off ~210\u2013220 kt",
+            "Approach speeds match the manual's 150\u2013207 kt range by weight (VREF 195 kt at max landing weight)",
+            "Takeoff runway required at MTOW (sea level, ISA, no wind) is now the manual's 2,743 m",
+            "Fuel plan: reheat acceleration now starts at FL240 / Mach 0.95 as in the manual",
+            "Flight Monitor: GEAR UP \u2014 BELOW 250 KT warning on approach (the manual's gear-light warning)",
+            "Dispatch: ramp weight checked against the 187,000 kg max taxi weight",
+            "Checklists: reheat and fuel-transfer steps now give the manual's exact speeds, levels and tank settings"
+        ]
+    },
+    {
+        "date": "2026-10-03",
+        "title": "v5.2.0 \u2014 Flight Monitor redesign",
+        "items": [
+            "New glass-cockpit Flight Monitor: primary flight display with an artificial horizon (pitch ladder, roll scale) between speed/Mach and altitude/vertical-speed readouts, plus heading, gear, nose and G",
+            "Route progress bar: departure to arrival with your aircraft's position and the top-of-descent marker",
+            "Engine panel: four throttle bars with per-engine reheat lights and total fuel flow",
+            "CG & trim: the allowed CG range for your current Mach with a target marker, TRANSFER AFT / FWD / ON TARGET advice and forward/aft trim tank contents",
+            "Fuel schematic legend no longer overflows on tablets"
+        ]
+    },
+    {
+        "date": "2026-10-03",
+        "title": "v5.1.0 \u2014 Flight Monitor on phones & tablets over Wi-Fi",
+        "items": [
+            "Desktop: new SHARE TO PHONE / TABLET switch on the Flight Monitor tab shows this PC's address and a 6-digit pairing code",
+            "Phone/tablet: the Flight Monitor finds your sim PC on the same Wi-Fi automatically (or enter its address), pair once with the code, and get the full live Monitor \u2014 MFD strip, fuel schematic, CG, engines \u2014 plus checklists that follow your flight phase",
+            "Sharing is off by default, local-network only and protected by the pairing code; NEW CODE un-pairs every device",
+            "Privacy policy updated to describe Wi-Fi sharing (data stays on your own network)"
+        ]
+    },
+    {
+        "date": "2026-10-03",
+        "title": "v5.0.0 \u2014 Cleaner cockpit layout",
+        "items": [
+            "Top status bar fits on one row on desktops and tablets: compact pills for call sign, registration, pax, route and ETE / climb / cruise / descent times; the sim status now lives only on the navigation rail dot",
+            "Fuel release stamp now reads OVER CAPACITY when the plan asks for more fuel than the tanks hold (it used to say FUEL SHORT)",
+            "Weight and endurance details under the fuel stats no longer get cut off",
+            "Route chip shows just the route \u2014 distance and time are in the top bar",
+            "Footer simplified to the support card only (changelog, Discord and support links are in Settings)"
+        ]
+    },
+    {
+        "date": "2026-10-03",
+        "title": "v4.5.0 \u2014 Status bar flight times & solid dispatch banner",
+        "items": [
+            "Top status bar: call sign, registration and pax are always shown, plus planned TOTAL, CLIMB, CRUISE and DESCENT times",
+            "Dispatch banner moved above the Planner / Performance selector and redesigned as a solid, bold status block (green GO, amber CAUTION, red NO-GO)",
+            "Privacy Policy (and Ad Privacy Options where required) moved into the Settings menu",
+            "Removed the Design Lab entry from the Settings menu"
+        ]
+    },
+    {
+        "date": "2026-10-03",
+        "title": "v4.4.0 \u2014 Phone layout, smarter runways & Flight Monitor redesign",
+        "items": [
+            "Runways: the default runway is now the longest one without a tailwind (avoiding strong crosswinds) and follows METAR updates until you pick one yourself \u2014 no more false NO-GO from a tailwind runway",
+            "Wind arrows are coloured by what the wind does to that runway: green comfortable, amber close to limits or any tailwind, red outside limits",
+            "Phones: status bar scrolls away, compact navigation rail, one-line dispatch banner (tap to expand), fuel release strip stacks under the inputs, no overflowing layouts",
+            "Checklists: on phones, phases are a horizontal strip; with the sim connected, the current flight phase is selected automatically and other phases are greyed out",
+            "Planner: Flight Plan card condensed into one row with the route, distance and ETE together",
+            "Planner: fuel card shows a single ENDURANCE MARGIN instead of two identical times",
+            "Flight Monitor: one compact flight-data bar (IAS, Mach, TAS, GS, ALT, V/S, HDG, attitude, gear, nose) so the fuel schematic, CG and engines sit above the fold",
+            "Status bar: call sign / registration / pax only appear once a flight is loaded",
+            "Fixed gusty winds overlapping in the METAR strip"
+        ]
+    },
+    {
+        "date": "2026-10-03",
+        "title": "v4.3.0 \u2014 Route distances everywhere",
+        "items": [
+            "Fuel and time are planned on the distance actually flown along the route (SID, airways, STAR), not the straight line between airports",
+            "Imported .pln plans: distance is now the sum of every route leg, using each fix's coordinates",
+            "SimBrief: the route's fixes and the alternate's planned route distance are imported",
+            "Flight Monitor: distance to destination, top of descent, ETA and fuel at destination now follow your route's remaining legs",
+            "Alternate fuel uses the planned alternate route distance when SimBrief provides it"
+        ]
+    },
+    {
+        "date": "2026-10-03",
+        "title": "v4.2.0 \u2014 Privacy policy & ad consent",
+        "items": [
+            "New privacy policy page, linked from the app footer (PRIVACY)",
+            "Android: Google's consent form is shown to users in the EEA, UK and Switzerland before ads load; AD PRIVACY OPTIONS in the footer lets you change your choice at any time",
+            "Android: ads now only load after the consent check; desktop remains ad-free"
+        ]
+    },
+    {
+        "date": "2026-10-03",
+        "title": "v4.1.0 \u2014 Dispatch banner & Flight Monitor MFD",
+        "items": [
+            "Planner: new DISPATCH banner (GO / GO \u00b7 CAUTION / NO-GO) listing every fuel, weight, runway, wind and alternate issue in one place",
+            "Planner: raw METAR is always shown (selectable) under the weather strip \u2014 no more tap to reveal",
+            "Flight Monitor: new MFD strip with flight phase, distance to destination, top of descent, ETA, predicted fuel at destination vs reserves, and warning annunciators (CG limit, MMO, gear speed, low fuel at destination, descend now)",
+            "Flight Monitor: fixed gear always showing TRANSIT when down, and droop/visor showing 0\u00b0/1\u00b0 \u2014 now shows UP / 5\u00b0 / 12.5\u00b0",
+            "Flight Monitor: CG limits now follow Mach (the corridor moves aft going supersonic) instead of a fixed 52\u201359 % band",
+            "Flight Monitor: estimated airtime uses the sim's actual (smoothed) fuel flow; burn-rate readout no longer flickers",
+            "Flight Monitor: last touchdown stays on screen (with time) instead of disappearing after 5 seconds"
+        ]
+    },
+    {
+        "date": "2026-10-03",
+        "title": "v4.0.0 \u2014 Planner polish",
+        "items": [
+            "Fuel release strip header now shows your actual flight: call sign / route, plan source, cruise FL, distance and ETE, with a FUEL OK / FUEL SHORT stamp",
+            "Performance METAR strip reorganised into two clean rows: flight category + conditions, then equal-width WIND / VIS / TEMP / QNH / ELEV readouts",
+            "METAR age moved below the strip and spelled out (e.g. OBSERVED 36 MINS AGO), flagged OUTDATED after 90 minutes"
+        ]
+    },
+    {
+        "date": "2026-10-03",
+        "title": "Rebuilt SimConnect bridge",
+        "items": [
+            "Flight Monitor: SimConnect bridge rewritten from scratch for reliable, always-on connection to MSFS 2020/2024",
+            "Connects automatically whenever MSFS starts, and reconnects by itself after the sim quits, crashes or reloads",
+            "Bridge no longer opens a console window, restarts itself if it ever crashes, and clears hung bridges left from older versions",
+            "Status bar now explains exactly what it's waiting for (MSFS not running, in menu/paused, etc.)",
+            "Fixed ground speed being shown in m/s instead of knots"
+        ]
+    },
+    {
+        "date": "2026-10-02",
+        "title": "v3.7.0 \u2014 Fuel & performance model overhaul",
+        "items": [
+            "Fuel: rebuilt the trip-fuel model phase by phase (takeoff, subsonic climb, transonic acceleration, Mach 2 cruise-climb, descent) and calibrated it against real Concorde sectors (LHR\u2013JFK \u2248 71 t trip, 3h13 airborne)",
+            "Fuel: short sectors are automatically planned subsonic and at a lower level, instead of always climbing to Mach 2",
+            "Fuel: alternate fuel now uses a proper subsonic diversion profile, and you get a warning when no alternate is set, it's the arrival airport, or it's more than 500 nm away",
+            "Fuel: endurance check now uses the fuel that actually fits in the tanks, with reserves burned at holding fuel flow",
+            "Weights: takeoff weight no longer includes taxi fuel; ZFW and landing weight are shown",
+            "Performance: 10 kt tailwind limit, gusts now count toward crosswind/tailwind limits, and variable winds are treated as worst case",
+            "Performance: a missing METAR is flagged instead of being treated as calm wind",
+            "Performance: new runway condition selector (AUTO/DRY/WET/CONTAM) \u2014 AUTO reads rain/snow/freezing precipitation from the METAR",
+            "Performance: takeoff distance scales with weight squared; V-speeds recalibrated (V1 165 / VR 195 / V2 220 kt at MTOW, VREF 165 kt at MLW) with wet/contaminated V1 reduction and wind-adjusted VAPP",
+            "Runways: departure defaults to the longest runway; SimBrief's arrival runway is kept when it exists in the database",
+            "Route: imported plans without a SimBrief distance now add SID/STAR and airway allowance to the great-circle distance",
+            "Weather: METARs refresh every 10 minutes, show their age, and the summary now shows present weather and the actual ceiling (e.g. LIGHT RAIN \u00b7 OVERCAST 800 FT)"
+        ]
+    },
+    {
+        "date": "2026-09-23",
+        "title": "Commits",
+        "items": [
+            "5db9feb fix(android): resolve startup crashes and Gradle Java 25 incompatibilities",
+            "ac78b9f style: modernize cockpit status bar and app footer with avionics amber theme",
+            "019f5e8 style(status-bar): illuminate flight deck identity pills in solid amber when loaded",
+            "4356c84 feat(ui): harmonize nav rail highlights, modernize checklist tab, and bump version",
+            "48c9476 style(nav): upgrade navigation selection to bold solid amber aesthetic",
+            "cc8267f feat(perf): redesign performance calculator exceedances as dispatch decision",
+            "e76f35c Unpack performance calculator leg cards and rename sub-tab",
+            "2435c62 refactor(flight-planner): convert sub-tab selector to full-width solid-amber MFD bezel style",
+            "c47184a feat(ui): redesign flight planner sub-tabs into MFD segmented softkeys",
+            "2caaf78 style(ui): replace top arc border with precision avionics card bezels"
+        ]
+    },
+    {
+        "date": "2026-09-22",
+        "title": "Commits",
+        "items": [
+            "eb2b8ea feat(planner): redesign fuel breakdown as printed ACARS thermal strip",
+            "04582c3 refactor(theme): calibrate pure monochromatic palette with aviation amber lead",
+            "473000c refactor(ui): update flight planner cards and design lab styling",
+            "45a1611 redesign(theme): calibrate aviation amber lead and monochromatic cockpit UI",
+            "5c70b4c feat(design-system): add design tokens, mobile responsiveness, and design lab",
+            "588fc67 refactor(ui): convert flight plan import actions to icon buttons with hover tooltips",
+            "644e9ad refactor(ui): relocate flight phase time strip to flight plan card and polish status bar pills",
+            "3497e03 refactor(ui): polish EFB nav rail and relocate flight deck identity to status bar",
+            "58fe914 feat(ui): implement tablet EFB navigation rail, cockpit status bar, and planner sub-tabs",
+            "bae5cb4 chore(window): adjust initial desktop window resolution to 1200x700"
+        ]
+    },
+    {
+        "date": "2026-09-14",
+        "title": "Commits",
+        "items": [
+            "f92beb3 feat(performance): auto-refresh ATIS on route/runway updates and add animated refresh button",
+            "a53743d feat: parse waypoints, airways, and runways from PLN files and manual routes",
+            "10256be feat: parse PLN nested waypoints, airways, and departure/arrival runways",
+            "1be9879 feat: add PLN/XML file and manual entry import to Flight Plan card"
+        ]
+    },
+    {
         "date": "2026-09-09",
         "title": "Commits",
         "items": [
