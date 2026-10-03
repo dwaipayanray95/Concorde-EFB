@@ -94,7 +94,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
         final tagName = data['tag_name'] as String?;
         if (tagName != null) {
           final remoteVersion = tagName.replaceAll(RegExp(r'^[vV]'), '');
-          if (mounted && _isNewerVersion(remoteVersion, AppVersion.full)) {
+          final local = (await ref.read(appVersionProvider.future)).version;
+          if (mounted && _isNewerVersion(remoteVersion, local)) {
             setState(() {
               _latestVersion = remoteVersion;
               _hasUpdate = true;

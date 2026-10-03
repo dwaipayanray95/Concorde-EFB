@@ -1,10 +1,15 @@
+; AppVer is passed by CI from pubspec.yaml: ISCC /DAppVer=5.5.2
+#ifndef AppVer
+  #define AppVer "0.0.0"
+#endif
+
 [Setup]
 ; Fixed GUID identifying this app across versions -- lets Windows/Inno treat
 ; upgrades as "replace the same install" (correct Add/Remove Programs entry,
 ; no duplicate listings) instead of a fresh unrelated install each release.
 AppId={{25A23A2B-BFFC-42AF-A327-231690CD630F}
 AppName=Concorde EFB
-AppVersion=3.4.2
+AppVersion={#AppVer}
 AppPublisher=Ray
 AppPublisherURL=https://dwaipayanray95.github.io/Concorde-EFB/
 AppSupportURL=https://dwaipayanray95.github.io/Concorde-EFB/changelog/

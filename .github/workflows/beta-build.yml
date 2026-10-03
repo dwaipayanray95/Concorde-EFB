@@ -80,7 +80,7 @@ jobs:
 
       - name: Compile Windows Installer (Inno Setup)
         run: |
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" inno_setup.iss
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DAppVer=${{ steps.ver.outputs.version }}" inno_setup.iss
         shell: powershell
 
       - name: Rename installer for this beta

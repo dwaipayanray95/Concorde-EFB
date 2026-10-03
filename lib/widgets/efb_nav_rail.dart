@@ -63,7 +63,8 @@ class EfbNavRail extends ConsumerWidget {
                         if (!short) ...[
                           // Aircraft badge / App icon
                           Tooltip(
-                            message: 'Concorde EFB ${AppVersion.display}',
+                            message:
+                                'Concorde EFB ${ref.watch(appVersionProvider).value?.display ?? ''}'.trim(),
                             child: Container(
                               width: 44,
                               height: 44,
@@ -258,9 +259,11 @@ class EfbNavRail extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Version ${AppVersion.display}',
-              style: uiText(context, size: 12, color: colors.textDim),
+            Consumer(
+              builder: (context, ref, _) => Text(
+                'Version ${ref.watch(appVersionProvider).value?.display ?? '…'}',
+                style: uiText(context, size: 12, color: colors.textDim),
+              ),
             ),
             const SizedBox(height: 16),
             _SettingButton(
