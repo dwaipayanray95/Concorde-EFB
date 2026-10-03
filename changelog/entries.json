@@ -1,6 +1,13 @@
 [
     {
         "date": "2026-10-03",
+        "title": "v5.5.8 \u2014 Android ads use the app's own ad account",
+        "items": [
+            "The Android app now shows its bottom banner from the app's own ad account, which helps fund development. Test builds still show harmless sample ads"
+        ]
+    },
+    {
+        "date": "2026-10-03",
         "title": "v5.5.7 \u2014 Better-fitting Android ad banner",
         "items": [
             "The Android ad banner now sizes itself to your screen width instead of a fixed small banner"
