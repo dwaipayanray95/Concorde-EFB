@@ -256,10 +256,10 @@ void main() {
       }
     });
 
-    test('MTOW gives the published heavy-weight speeds', () {
+    test('MTOW gives the DC Designs manual speeds (V1 170 / VR 190)', () {
       final s = ConcordeLogic.computeTakeoffSpeeds(185070);
-      expect(s.v1, 165);
-      expect(s.vr, 195);
+      expect(s.v1, 170);
+      expect(s.vr, 190);
       expect(s.v2, 220);
     });
 
@@ -285,16 +285,21 @@ void main() {
       expect(wet.vr, dry.vr);
     });
 
-    test('VREF 165 kt at MLW; VAPP additive is 5..20 kt', () {
+    test('VREF 195 kt at MLW; VAPP additive is 5..20 kt', () {
       final calm = ConcordeLogic.computeLandingSpeeds(111130);
-      expect(calm.vref, 165);
-      expect(calm.vapp, 170);
+      expect(calm.vref, 195);
+      expect(calm.vapp, 200);
       final gusty = ConcordeLogic.computeLandingSpeeds(
         111130,
         headwindKt: 20,
         gustIncrementKt: 15,
       );
-      expect(gusty.vapp, 185);
+      expect(gusty.vapp, 215);
+      // Manual: approach 150-207 kt depending on weight.
+      expect(
+        ConcordeLogic.computeLandingSpeeds(66000).vref,
+        inInclusiveRange(145, 155),
+      );
     });
 
     test('landing speeds never fall below the floor', () {

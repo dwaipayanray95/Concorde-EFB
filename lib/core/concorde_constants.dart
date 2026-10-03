@@ -11,6 +11,9 @@ class _Weights {
   // 01.01.01 "Maximum Permissible Weights" -- Start of Take-off 185,070 kg,
   // Landing 111,130 kg, Zero Fuel 92,080 kg.
   final double mtowKg = 185070;
+
+  /// Maximum taxi (ramp) weight -- DC Designs manual spec: 187,000 kg.
+  final double maxTaxiKg = 187000;
   final double mlwKg = 111130;
   final double fuelCapacityKg = 95681;
   final double oewKg = 78700;
@@ -98,7 +101,12 @@ class _Fuel {
 
 class _Runway {
   const _Runway();
-  final int minTakeoffMAtMtow = 3597; // Math.round(11800 * 0.3048)
+
+  /// Required takeoff runway at MTOW, sea level, ISA, no wind, reheat:
+  /// 2,743 m per the DC Designs Concorde manual's worked example (the sim
+  /// this app is built for). The real aircraft's published "runway
+  /// requirement with maximum load" was 3,600 m (11,800 ft).
+  final int minTakeoffMAtMtow = 2743;
   final int minLandingMAtMlw = 2200;
 
   // Source: BA Concorde Flying Manual Vol II, "Operating Limitations"

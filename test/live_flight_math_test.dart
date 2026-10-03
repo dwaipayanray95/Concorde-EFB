@@ -33,7 +33,16 @@ void main() {
       final high = cgLimitsForMach(2.0);
       expect(high.fwd, greaterThan(low.fwd));
       expect(high.aft, greaterThan(low.aft));
-      expect(high.aft, closeTo(59.5, 0.01));
+      expect(high.aft, closeTo(59.2, 0.01));
+    });
+
+    test('targets match the DC Designs manual (54 % takeoff, 59 % Mach 2)', () {
+      expect(cgTargetForMach(0.3), closeTo(53.5, 0.3));
+      expect(cgTargetForMach(2.0), closeTo(59.0, 0.01));
+      for (var m = 0.0; m <= 2.2; m += 0.05) {
+        final lim = cgLimitsForMach(m);
+        expect(cgTargetForMach(m), inInclusiveRange(lim.fwd, lim.aft));
+      }
     });
 
     test(

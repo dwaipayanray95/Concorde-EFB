@@ -186,6 +186,7 @@ Map<String, List<ChecklistItem>> buildChecklistData({
         id: 'at_reheat_off',
         item: 'Reheats (Afterburners)',
         status: 'OFF',
+        note: 'At 250 kt IAS, then pitch up to hold 250 kt',
       ),
       ChecklistItem(id: 'at_visor', item: 'Nose Visor', status: 'UP'),
     ],
@@ -194,13 +195,15 @@ Map<String, List<ChecklistItem>> buildChecklistData({
         id: 'ca_reheat',
         item: 'Reheats (Afterburners)',
         status: 'ENGAGE (1 & 4, then 2 & 3)',
-        note: 'Cap at 25 min',
+        note:
+            'At FL240 / M0.95 over water; OFF at Mach 1.7 (~25 min of reheat fuel)',
       ),
       ChecklistItem(
         id: 'ca_cg',
         item: 'Fuel Transfer (CG Management)',
-        status: 'PUMP AFT (Tanks 9 & 11)',
-        note: 'Target 59% MAC at Mach 2.0',
+        status: 'PUMP AFT (Tanks 9 & 10 → 11)',
+        note:
+            'Tank 11 limit 5,000 kg, pumps 9 & 10 ON; stop at 59% MAC (Mach 2.0)',
       ),
       ChecklistItem(
         id: 'ca_ap',

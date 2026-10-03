@@ -14,7 +14,7 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `5.2.0+60` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+- Current version: `5.3.0+61` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
   `public/changelog/entries.json` in sync — README no longer carries its own changelog, it just
   links to that page.
 - **Versioning rule (mandatory for every agent):** every change that alters user-visible behavior
@@ -55,7 +55,9 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 
 ## 3) Core Behavior and Formula Summary
 
-These are heuristic/indicative models, not certified performance data. Core constants live in
+These are heuristic/indicative models, not certified performance data. Where the **DC Designs
+Concorde manual** (https://downloads.justflight.com/support/manuals/DCDESIGNSCONCORDEMANUAL.pdf --
+the sim this app targets) gives a number, it wins; the code comments cite it. Core constants live in
 `lib/core/concorde_constants.dart`; the math lives in `lib/core/concorde_logic.dart`.
 
 - MTOW `185,070 kg`, MLW `111,130 kg`, MZFW `92,080 kg`, fuel capacity `95,681 kg`, OEW `78,700 kg`.
@@ -63,7 +65,7 @@ These are heuristic/indicative models, not certified performance data. Core cons
 - Weights (`ConcordeLogic.computeWeights`): ZFW = OEW + pax; fuel on board = min(block + extra,
   capacity); ramp = ZFW + FOB; TOW = ramp - taxi; LW = TOW - trip.
 - Trip fuel (`buildCruiseMissionProfile`) = sum of phases, each fuel flow x phase time:
-  takeoff allowance 2 t + subsonic climb to FL280 (26 t/h, 2,000 fpm, 360 kt GS) -> transonic accel
+  takeoff allowance 2 t + subsonic climb to FL240 (manual: reheat on at FL240/M0.95, off at M1.7) (26 t/h, 2,000 fpm, 360 kt GS) -> transonic accel
   FL280->FL500 (16 min, 220 nm, 60 t/h) -> Mach 2.04 cruise-climb FL500->selected FL (TAS ~1,170 kt;
   21 t/h at FL500 tapering to 17.5 t/h at FL600) -> decel/descent (3 nm/1000 ft + 30 nm, 8.5 t/h).
   Below FL410 (or if the sector is too short for supersonic) the profile is subsonic M0.95 at 15 t/h,
@@ -80,12 +82,17 @@ These are heuristic/indicative models, not certified performance data. Core cons
   Alternate: SimBrief alternate `distance` if present, else the estimate.
 - Cruise FL: clamped to `[0, 590]`; above FL410 snapped to Non-RVSM sets (Eastbound `410, 450,
   490, 530, 570`; Westbound `430, 470, 510, 550, 590`), direction inferred from DEP→ARR bearing.
-- Runway: takeoff distance = 3,597 m x (TOW/MTOW)^2 (x1.35 without reheat); landing = 2,200 m x
+- Runway: takeoff distance = 2,743 m (DC manual, MTOW/SL/ISA/no wind) x (TOW/MTOW)^2 (x1.35 without reheat); landing = 2,200 m x
   (LW/MLW)^1.15; then + pressure-alt / temperature / wind / surface (wet +15%, contaminated +30%
   takeoff / +40% landing) corrections. Hard limits: 30 kt crosswind (gust-inclusive), 10 kt tailwind
   (gust-inclusive), airfield altitude; VRB wind = worst case; missing wind is flagged, not calm.
-- Speeds: V1/VR/V2 = 165/195/220 kt at MTOW scaled by sqrt(W/MTOW) (V1 -8 wet / -15 contaminated);
-  VREF 165 kt at MLW scaled by sqrt(W/MLW); VAPP = VREF + clamp(half headwind + gust, 5..20).
+- Speeds (DC manual): V1/VR/V2 = 170/190/220 kt at MTOW scaled by sqrt(W/MTOW) (V1 -8 wet / -15
+  contaminated); VREF 195 kt at MLW scaled by sqrt(W/MLW) (manual approach range 150-207 kt);
+  VAPP = VREF + clamp(half headwind + gust, 5..20).
+- CG (DC manual p.78 chart, `lib/core/live_flight_math.dart`): fwd/aft limits and ideal CG vs Mach
+  (ideal ~53.5 % subsonic, 55 % at M0.95, 59 % at M2). Max taxi weight 187,000 kg.
+- NOT in the DC manual (kept from the BA Flying Manual / estimates): 30 kt crosswind, 10 kt
+  tailwind, no-reheat 155 t gate and x1.35 factor, wet/contaminated factors, landing distance base.
 
 ## 4) External Data and Integrations
 
@@ -251,13 +258,15 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 - v5.0.0 (owner-requested major): status bar compacted to one row at >= 1024 px (labels C/S, REG, PAX, ETE, CLB, CRZ, DES; SIM LIVE pill removed -- sim status is the `EfbNavRail` dot only); fuel strip stamp is `OVER CAPACITY` / `FUEL SHORT` / `FUEL OK`; stat subtexts wrap to 2 lines; route chip shows only the route; `AppFooter` is just `EfbAdBanner` (links live in Settings; `efb_launches_badge.dart` no longer shown).
 - v5.1.0: Flight Monitor over Wi-Fi for Android/iOS phones and tablets (see section 4 "Wi-Fi link"); `WifiLinkCard` at the top of the Monitor tab (desktop: share toggle + IP + pairing code; mobile: discovery chips, IP + code, status/rejection); iOS `NSLocalNetworkUsageDescription`; privacy page updated. Screenshot harness supports `--dart-define=TARGET=windows` for desktop-only UI.
 - v5.2.0: Flight Monitor redesign -- `_CockpitLayout` in `flight_monitor_tab.dart`: MFD strip, `FlightProgressBar`, `PfdPanel` (`pfd_panel.dart`: ADI CustomPainter + speed/alt columns, HDG/gear/nose/G) beside `EnginesPanel`, fuel schematic beside `CgTrimCard` (Mach corridor, target = fwd + 60% of corridor, TRANSFER advice, trim tanks 9+10 / 11) + fuel burn, environment + touchdown row; stacks below 900 px. Shared `liveNavProvider` (`controllers/live_nav_provider.dart`) computes phase/flow/FOB/route prediction for MFD strip + progress bar. New theme tokens `adiSky`/`adiGround`. Removed `HeroPfdRow`, `CgCard`, `EnginesReheatCard`, `GForceCard`.
+- v5.3.0: numbers from the DC Designs manual -- CG corridor + ideal CG digitised from its chart (`cgTargetForMach`), V1/VR 170/190 at MTOW, VREF 195 at MLW, takeoff base 2,743 m, transonic accel from FL240, max taxi 187 t dispatch check, `GEAR UP — BELOW 250 KT` annunciator, checklist reheat/transfer steps.
 
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.
 
 ### Deferred backlog (agreed with the owner, not started)
 
-- No-reheat takeoff thresholds (155 t gate, x1.35 factor) are placeholders pending DC Designs data.
+- No-reheat takeoff thresholds (155 t gate, x1.35 factor) remain estimates -- the DC Designs manual
+  doesn't give them (checked v5.3.0).
 - Play Console data-safety form (declare advertising ID / device data via AdMob).
 - Replace Google's TEST AdMob IDs with real ones before a Play release:
   `_adUnitId` in `lib/widgets/efb_ad_banner.dart` and `APPLICATION_ID` in

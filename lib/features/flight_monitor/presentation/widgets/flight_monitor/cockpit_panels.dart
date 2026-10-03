@@ -324,9 +324,8 @@ class CgTrimCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final lim = cgLimitsForMach(t.mach);
-    // Fly the CG in the aft part of the corridor (less trim drag), but
-    // keep a margin from the aft limit.
-    final target = lim.fwd + (lim.aft - lim.fwd) * 0.6;
+    // Ideal CG for this Mach from the DC Designs manual's CG chart.
+    final target = cgTargetForMach(t.mach);
     final cg = t.cgPct;
     final outside = cg < lim.fwd || cg > lim.aft;
     final (advice, adviceColor) = outside

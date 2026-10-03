@@ -151,8 +151,9 @@ class ConcordeLogic {
   /// is too short to go supersonic.
   static const double subsonicFallbackFl = 290;
 
-  /// Level where the transonic acceleration starts.
-  static const double transonicStartFl = 280;
+  /// Level where the reheat goes on for the transonic acceleration:
+  /// FL240 at M0.95 (DC Designs manual tutorial), reheat off at M1.7.
+  static const double transonicStartFl = 240;
 
   /// Level where Mach 2 cruise-climb begins (heavy aircraft).
   static const double cruiseClimbStartFl = 500;
@@ -476,18 +477,18 @@ class ConcordeLogic {
   }
 
   /// Takeoff speeds. Stall-referenced speeds scale with sqrt(weight)
-  /// (lift = weight at a fixed CL). Reference: MTOW 185 t -> V1 165 /
-  /// VR 195 / V2 220 kt (published Concorde heavy-weight figures). Floors
-  /// keep V1 above VMCG and V2 above 1.1 VMCA. On wet/contaminated
-  /// runways V1 is reduced (standard practice -- less braking available),
-  /// never below the floor and always V1 <= VR <= V2.
+  /// (lift = weight at a fixed CL). Reference at MTOW (DC Designs manual
+  /// takeoff at 185,066 kg): V1 170 / VR 190 / lift-off ~210-220 kt, so V2
+  /// 220. Floors keep V1 above VMCG and V2 above 1.1 VMCA. On wet /
+  /// contaminated runways V1 is reduced (less braking available), never
+  /// below the floor and always V1 <= VR <= V2.
   static TakeoffSpeeds computeTakeoffSpeeds(
     double towKg, {
     RunwayCondition condition = RunwayCondition.dry,
   }) {
     final s = weightScale(towKg, ConcordeConstants.weights.mtowKg);
     final v2 = math.max(185.0, (220.0 * s).roundToDouble());
-    final vr = math.min(v2, math.max(165.0, (195.0 * s).roundToDouble()));
+    final vr = math.min(v2, math.max(165.0, (190.0 * s).roundToDouble()));
     final v1Reduction = switch (condition) {
       RunwayCondition.dry => 0.0,
       RunwayCondition.wet => 8.0,
@@ -495,13 +496,15 @@ class ConcordeLogic {
     };
     final v1 = math.min(
       vr,
-      math.max(130.0, (165.0 * s).roundToDouble() - v1Reduction),
+      math.max(130.0, (170.0 * s).roundToDouble() - v1Reduction),
     );
     return TakeoffSpeeds(v1: v1, vr: vr, v2: v2);
   }
 
-  /// Landing speeds. VREF scales with sqrt(weight): 165 kt at MLW
-  /// (~160 kt at a typical 105 t landing weight). VAPP = VREF + half the
+  /// Landing speeds. VREF scales with sqrt(weight): 195 kt at MLW. The DC
+  /// Designs manual gives approach speeds of 150-207 kt depending on
+  /// weight (final approach flown at ~200 kt), which this reproduces
+  /// (~150 kt at 66 t up to ~200-215 kt at MLW). VAPP = VREF + half the
   /// steady headwind + the full gust increment, minimum +5 kt, maximum
   /// +20 kt (standard wind additive).
   static LandingSpeeds computeLandingSpeeds(
@@ -510,7 +513,7 @@ class ConcordeLogic {
     double gustIncrementKt = 0,
   }) {
     final s = weightScale(lwKg, ConcordeConstants.weights.mlwKg);
-    final vref = math.max(145.0, (165.0 * s).roundToDouble());
+    final vref = math.max(145.0, (195.0 * s).roundToDouble());
     final additive =
         (math.max(headwindKt ?? 0.0, 0.0) / 2 + math.max(gustIncrementKt, 0))
             .clamp(5.0, 20.0);

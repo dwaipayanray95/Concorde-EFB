@@ -64,6 +64,15 @@ class MfdStrip extends ConsumerWidget {
           t.ias > ConcordeConstants.speeds.vleKt) {
         warnings.add(('GEAR SPEED', true));
       }
+      // DC Designs manual: gear lights flash red below 250 kt IAS with the
+      // gear up -- i.e. low and slow on approach without the gear down.
+      if (t.gearLabel == 'UP' &&
+          !t.onGround &&
+          t.ias < 250 &&
+          t.vs < -300 &&
+          t.altitude < 5000) {
+        warnings.add(('GEAR UP — BELOW 250 KT', true));
+      }
       if (pred != null && phase != FlightBurnPhase.ground) {
         if (pred.fuelAtDestKg < finalReserve) {
           warnings.add(('FUEL BELOW FINAL RESERVE AT DEST', true));

@@ -669,6 +669,7 @@ final dispatchSummaryProvider = Provider<DispatchSummary>((ref) {
     noGo.add('Fuel endurance below ETE + reserves');
   }
   if (w.tow > limits.mtowKg) noGo.add('Takeoff weight above MTOW');
+  if (w.ramp > limits.maxTaxiKg) noGo.add('Ramp weight above max taxi weight');
   if (w.lw > limits.mlwKg) {
     noGo.add('Landing weight above MLW (${w.lw.round()} kg)');
   }

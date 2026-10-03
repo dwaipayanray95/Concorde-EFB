@@ -2,38 +2,65 @@ import 'dart:math' as math;
 import 'concorde_constants.dart';
 import 'concorde_logic.dart';
 
-/// Indicative Concorde CG corridor (% MAC) vs Mach. The corridor moves aft
-/// as the centre of lift moves aft going supersonic -- which is why fuel is
-/// pumped to the aft trim tank during the acceleration and forward again in
-/// the deceleration. Approximation of the published envelope (~53.5 % for
-/// takeoff, ~59 % at Mach 2); verify against the DC Designs manual.
+/// Concorde CG corridor (% MAC) vs Mach, digitised from the CG chart in
+/// the DC Designs Concorde manual (p.78, "ideal CoG setting against Mach").
+/// The corridor moves aft going supersonic (centre of lift moves aft), so
+/// fuel is pumped aft to the trim tank in the acceleration and forward
+/// again in the deceleration.
 class CgLimits {
   final double fwd;
   final double aft;
   const CgLimits(this.fwd, this.aft);
 }
 
-const _cgTable = <(double, double, double)>[
-  // mach, fwd, aft
-  (0.0, 51.5, 54.5),
-  (0.9, 52.5, 55.5),
-  (1.2, 54.5, 57.5),
-  (1.6, 56.0, 58.5),
-  (2.0, 57.0, 59.5),
-  (2.2, 57.0, 59.5),
+double _interp(List<(double, double)> table, double x) {
+  if (x <= table.first.$1) return table.first.$2;
+  for (var i = 1; i < table.length; i++) {
+    final (x0, y0) = table[i - 1];
+    final (x1, y1) = table[i];
+    if (x <= x1) return y0 + (y1 - y0) * (x - x0) / (x1 - x0);
+  }
+  return table.last.$2;
+}
+
+// (mach, % MAC) -- DC Designs manual CG chart.
+const _cgFwdLimit = <(double, double)>[
+  (0.0, 51.3),
+  (0.82, 51.3),
+  (0.95, 53.0),
+  (1.13, 54.4),
+  (1.5, 55.9),
+  (2.05, 56.6),
+];
+const _cgAftLimit = <(double, double)>[
+  (0.0, 53.7),
+  (0.2, 53.7),
+  (0.5, 54.0),
+  (0.95, 56.9),
+  (1.63, 59.2),
+  (2.2, 59.2),
+];
+// Ideal CG (red line on the chart): ~53.5 % subsonic (manual text: 54 %
+// for takeoff and landing), 55 % at M0.95, 59 % at Mach 2.
+const _cgIdeal = <(double, double)>[
+  (0.0, 53.5),
+  (0.75, 53.5),
+  (0.95, 55.0),
+  (2.0, 59.0),
 ];
 
 CgLimits cgLimitsForMach(double mach) {
   final m = mach.clamp(0.0, 2.2);
-  for (var i = 1; i < _cgTable.length; i++) {
-    final (m0, f0, a0) = _cgTable[i - 1];
-    final (m1, f1, a1) = _cgTable[i];
-    if (m <= m1) {
-      final x = (m - m0) / (m1 - m0);
-      return CgLimits(f0 + (f1 - f0) * x, a0 + (a1 - a0) * x);
-    }
-  }
-  return const CgLimits(57.0, 59.5);
+  return CgLimits(_interp(_cgFwdLimit, m), _interp(_cgAftLimit, m));
+}
+
+/// The manual's ideal CG for this Mach, kept inside the corridor.
+double cgTargetForMach(double mach) {
+  final lim = cgLimitsForMach(mach);
+  return _interp(
+    _cgIdeal,
+    mach.clamp(0.0, 2.2),
+  ).clamp(lim.fwd + 0.2, lim.aft - 0.2).toDouble();
 }
 
 /// Live navigation/fuel prediction toward the destination.

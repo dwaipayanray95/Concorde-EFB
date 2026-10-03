@@ -1,6 +1,20 @@
 [
     {
         "date": "2026-10-03",
+        "title": "v5.3.0 — Numbers from the DC Designs Concorde manual",
+        "items": [
+            "CG limits and ideal CG now follow the manual's CG-vs-Mach chart (about 53.5–54% MAC for takeoff and landing, 59% at Mach 2); the Flight Monitor's TRANSFER AFT / FWD advice uses it",
+            "Takeoff speeds at MTOW match the manual: V1 170 / VR 190 kt, lift-off ~210–220 kt",
+            "Approach speeds match the manual's 150–207 kt range by weight (VREF 195 kt at max landing weight)",
+            "Takeoff runway required at MTOW (sea level, ISA, no wind) is now the manual's 2,743 m",
+            "Fuel plan: reheat acceleration now starts at FL240 / Mach 0.95 as in the manual",
+            "Flight Monitor: GEAR UP — BELOW 250 KT warning on approach (the manual's gear-light warning)",
+            "Dispatch: ramp weight checked against the 187,000 kg max taxi weight",
+            "Checklists: reheat and fuel-transfer steps now give the manual's exact speeds, levels and tank settings"
+        ]
+    },
+    {
+        "date": "2026-10-03",
         "title": "v5.2.0 — Flight Monitor redesign",
         "items": [
             "New glass-cockpit Flight Monitor: primary flight display with an artificial horizon (pitch ladder, roll scale) between speed/Mach and altitude/vertical-speed readouts, plus heading, gear, nose and G",
