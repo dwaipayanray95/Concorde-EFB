@@ -77,15 +77,17 @@ class AirportDatabaseService {
     }
   }
 
-  /// On Windows this is the install folder (next to the .exe) rather than
-  /// Documents -- Windows Defender's Controlled Folder Access protects
-  /// Documents by default and blocks writes there from unrecognized apps.
-  /// Other platforms keep using the app documents directory.
+  /// Per-user cache folder that is always writable. On Windows the app is
+  /// installed under Program Files (read-only without admin rights), so the
+  /// cache must never live next to the exe; the cache directory resolves to
+  /// %LOCALAPPDATA%, which Controlled Folder Access does not protect either.
+  /// Falls back to the temp directory if that cannot be resolved.
   Future<Directory> _appDataRoot() async {
-    if (!kIsWeb && Platform.isWindows) {
-      return Directory(File(Platform.resolvedExecutable).parent.path);
+    try {
+      return await getApplicationCacheDirectory();
+    } catch (_) {
+      return getTemporaryDirectory();
     }
-    return getApplicationDocumentsDirectory();
   }
 
   Future<File> _cacheFile() async {

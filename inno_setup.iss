@@ -51,17 +51,16 @@ Filename: "{app}\concorde_efb.exe"; Description: "Launch Concorde EFB"; Flags: n
 ; renamed/removed DLLs, assets and old bridge builds can't linger and break the
 ; new one. User settings are NOT in {app}: they live in
 ; %APPDATA%\com.dwaipayanray95\concorde_efb (SharedPreferences), so they
-; survive. Only the airport-DB cache under {app}\concorde_efb is wiped; the app
-; re-downloads it. The Check guards against the user having picked an unrelated
+; survive. The airport-DB cache is under %LOCALAPPDATA%, also untouched. The
+; app never writes into {app} (Program Files is read-only without admin). The
+; Check guards against the user having picked an unrelated
 ; non-empty folder on the directory page -- we only wipe a real prior install.
 Type: filesandordirs; Name: "{app}\*"; Check: IsExistingInstall
 
 [UninstallDelete]
-; Inno only removes files it installed, but the app also writes into the
-; install folder at runtime (airport DB cache next to the exe -- chosen on
-; Windows to avoid Controlled Folder Access on Documents). Remove the whole
-; folder on uninstall. Settings in %APPDATA% are deliberately left in place so
-; a reinstall keeps them.
+; Remove the whole install folder (Inno only removes files it installed, so
+; leftovers from older versions would survive). Settings in %APPDATA% are
+; deliberately left in place so a reinstall keeps them.
 Type: filesandordirs; Name: "{app}"
 
 [Code]
