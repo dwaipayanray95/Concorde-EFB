@@ -238,12 +238,45 @@ jobs:
       # AdMob ids are hardcoded (they are public): the app id in
       # android/app/build.gradle.kts, the banner unit in efb_ad_banner.dart.
       # Only release builds use the real banner unit; debug/profile get test ads.
+      # Release builds are signed with the Play upload key kept in GitHub
+      # secrets (see docs/ANDROID_SIGNING.md). debug/profile builds never see it.
+      - name: Prepare release signing key
+        if: inputs.mode == 'release'
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for v in KS_B64 KS_PASS KEY_ALIAS KEY_PASS; do
+            if [ -z "${!v}" ]; then
+              echo "::error::Missing GitHub secret for $v. Follow docs/ANDROID_SIGNING.md, then re-run."; exit 1
+            fi
+          done
+          echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/upload-keystore.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/upload-keystore.jks" >> "$GITHUB_ENV"
+
       - name: Build APK
         run: flutter build apk --${{ env.MODE }}
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ inputs.mode == 'release' && secrets.ANDROID_KEYSTORE_PASSWORD || '' }}
+          ANDROID_KEY_ALIAS: ${{ inputs.mode == 'release' && secrets.ANDROID_KEY_ALIAS || '' }}
+          ANDROID_KEY_PASSWORD: ${{ inputs.mode == 'release' && secrets.ANDROID_KEY_PASSWORD || '' }}
 
       - name: Build AAB (release only)
         if: inputs.mode == 'release'
         run: flutter build appbundle --release
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      - name: Show signing fingerprint (release only)
+        if: inputs.mode == 'release'
+        run: |
+          echo "### Android signing certificate" >> "$GITHUB_STEP_SUMMARY"
+          keytool -printcert -jarfile build/app/outputs/flutter-apk/app-release.apk | grep -E "Owner|SHA256" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Collect
         run: |

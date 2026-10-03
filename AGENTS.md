@@ -289,7 +289,7 @@ stale like the old React-era version of this file did.
   to its Play listing once live, host `app-ads.txt` on the developer-site domain root.
 - Crash reporting.
 - Persist flight plan / fuel inputs / checklist progress across restarts.
-- Code signing for the installer and `msfs_bridge.exe`.
+- Android release signing is wired (`android/app/build.gradle.kts`, `build.yml`; owner setup steps in `docs/ANDROID_SIGNING.md`; needs the 4 `ANDROID_*` GitHub secrets). Still open: code signing for the Windows installer + `msfs_bridge.exe` (SignPath Foundation or Azure Trusted Signing) and macOS notarization (Apple Developer ID) -- all three are separate from each other.
 - Wi-Fi link: some Android devices filter UDP broadcasts (needs a `WifiManager.MulticastLock`
   platform channel if discovery proves unreliable -- manual IP entry works regardless).
 - Feature ideas: CG / trim-tank transfer planner, live planned-vs-actual fuel, telemetry-driven
