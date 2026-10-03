@@ -1,6 +1,16 @@
 [
     {
         "date": "2026-10-03",
+        "title": "v5.6.0 \u2014 No alarms in the MSFS menu, tap to silence",
+        "items": [
+            "No alerts or chimes while MSFS is in its menu or loading screen \u2014 the Flight Monitor waits until a flight is actually loaded (no more 8,000 NM to destination or negative fuel)",
+            "CG AFT / FWD LIMIT warnings only arm once all four engines are running (or in flight), so fuelling and trim transfers at the gate stay quiet",
+            "Tap a warning on the MFD strip to silence its chime for 10 seconds; if the problem is still there afterwards it chimes again",
+            "Chimes and silencing are per device: muting on the PC doesn't mute the phone or tablet, and vice versa"
+        ]
+    },
+    {
+        "date": "2026-10-03",
         "title": "v5.5.9 \u2014 Smaller, roomier layout on phones",
         "items": [
             "On phones the whole app is now drawn about 15% smaller, so more fits on screen and nothing feels oversized",
