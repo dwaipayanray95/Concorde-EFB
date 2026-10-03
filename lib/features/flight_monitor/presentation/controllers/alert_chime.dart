@@ -30,6 +30,12 @@ class AlertChimeNotifier extends Notifier<bool> {
   List<LiveAlert> _current = const [];
   Timer? _repeatTimer;
 
+  /// Alerts silenced by tapping their pill: no chime until this time. If the
+  /// alert is still active afterwards it chimes again; if it clears, the
+  /// silence is dropped so a later recurrence chimes normally.
+  final Map<String, DateTime> _silencedUntil = {};
+  static const silenceFor = Duration(seconds: 10);
+
   /// Severity of every chime played (true = warning), for tests.
   @visibleForTesting
   final List<bool> played = [];
@@ -79,7 +85,9 @@ class AlertChimeNotifier extends Notifier<bool> {
     }
     _active = {for (final a in alerts) a.text};
     _lastChimed.removeWhere((text, _) => !_active.contains(text));
+    _silencedUntil.removeWhere((text, _) => !_active.contains(text));
     _current = alerts;
+    fresh.removeWhere((a) => _isSilenced(a.text, now));
     if (fresh.isNotEmpty) {
       for (final a in fresh) {
         _lastChimed[a.text] = now;
@@ -100,12 +108,33 @@ class AlertChimeNotifier extends Notifier<bool> {
             _lastChimed[a.text] != null &&
             now.difference(_lastChimed[a.text]!) >= a.repeatEvery!)
           a,
-    ];
+      // A silenced alert that is still active when its 10 s are up chimes
+      // again straight away (and resumes its repeat cadence).
+      for (final a in _current)
+        if (_silencedUntil[a.text] != null &&
+            !now.isBefore(_silencedUntil[a.text]!))
+          a,
+    ].where((a) => !_isSilenced(a.text, now)).toList();
+    for (final a in due) {
+      _silencedUntil.remove(a.text);
+    }
     if (due.isEmpty) return;
     for (final a in due) {
       _lastChimed[a.text] = now;
     }
     _chime(critical: due.any((a) => a.critical));
+  }
+
+  bool _isSilenced(String text, DateTime now) {
+    final until = _silencedUntil[text];
+    return until != null && now.isBefore(until);
+  }
+
+  /// Tap-to-silence: mutes [text] for [silenceFor] (this device only).
+  void silence(String text, {DateTime? now}) {
+    _silencedUntil[text] = (now ?? DateTime.now()).add(silenceFor);
+    _warningPlayer?.stop();
+    _cautionPlayer?.stop();
   }
 
   void _chime({required bool critical}) {

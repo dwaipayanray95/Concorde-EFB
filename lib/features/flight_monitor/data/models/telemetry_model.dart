@@ -97,6 +97,19 @@ class TelemetryModel {
 
   /// Gear extension 0-100 %. The bridge sends MSFS's "percent over 100"
   /// (a 0-1 fraction); older/dev sources may send 0-100.
+  /// True once MSFS has an actual flight loaded. In the sim's main menu /
+  /// loading screens SimConnect still pushes frames, but with the aircraft
+  /// at 0,0 and empty tanks -- treating those as a flight produced bogus
+  /// alerts (CG AFT LIMIT, 8,000 NM to dest, negative fuel) and chimes.
+  bool get flightLoaded {
+    final atNullIsland = latitude.abs() < 0.1 && longitude.abs() < 0.1;
+    final fuelKg = fuelTanksKg.values.fold<double>(0, (a, b) => a + b);
+    final anyFuel = fuelTanksKg.isNotEmpty
+        ? fuelKg > 500
+        : (fuelLeftTank + fuelRightTank + fuelCenterTank) > 0;
+    return !atNullIsland && anyFuel;
+  }
+
   double get gearPct => gearPosition <= 1.0 ? gearPosition * 100 : gearPosition;
 
   /// Height above an airfield (ft): altitude minus [fieldElevationFt] from

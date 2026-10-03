@@ -51,7 +51,7 @@ class LiveNav {
 final liveNavProvider = Provider<LiveNav?>((ref) {
   final monitor = ref.watch(flightMonitorProvider);
   final t = monitor.currentTelemetry;
-  if (t == null) return null;
+  if (t == null || !t.flightLoaded) return null;
 
   final phase = ConcordeLogic.classifyBurnPhase(
     altitudeFt: t.heightAboveGround(

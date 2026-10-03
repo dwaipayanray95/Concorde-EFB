@@ -117,4 +117,26 @@ void main() {
     chime.checkRepeatsAt(DateTime.now().add(const Duration(minutes: 5)));
     expect(chime.played, [true]);
   });
+
+  test(
+    'tap-to-silence mutes 10 s, then chimes again if still active',
+    () async {
+      final c = make();
+      addTearDown(c.dispose);
+      final chime = c.read(alertChimeProvider.notifier);
+      const urgent = LiveAlert(
+        'MACH > MMO',
+        critical: true,
+        repeatEvery: Duration(seconds: 2),
+      );
+      await set(c, [urgent]);
+      expect(chime.played, [true]);
+      final t0 = DateTime.now();
+      chime.silence('MACH > MMO', now: t0);
+      chime.checkRepeatsAt(t0.add(const Duration(seconds: 5)));
+      expect(chime.played, [true]); // silenced
+      chime.checkRepeatsAt(t0.add(const Duration(seconds: 10)));
+      expect(chime.played, [true, true]); // still active -> chimes again
+    },
+  );
 }

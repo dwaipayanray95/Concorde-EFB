@@ -29,7 +29,8 @@ const _descendReminder = Duration(seconds: 12);
 final liveAlertsProvider = Provider<List<LiveAlert>>((ref) {
   final monitor = ref.watch(flightMonitorProvider);
   final t = monitor.currentTelemetry;
-  if (t == null) return const [];
+  // Sim menu / loading screen: frames arrive but no flight exists yet.
+  if (t == null || !t.flightLoaded) return const [];
 
   final nav = ref.watch(liveNavProvider);
   final pred = nav?.prediction;
@@ -40,12 +41,16 @@ final liveAlertsProvider = Provider<List<LiveAlert>>((ref) {
 
   final alerts = <LiveAlert>[];
   final cg = cgLimitsForMach(t.mach);
-  if (t.cgPct > cg.aft) {
+  // CG limits only matter once rolling/airborne -- at the gate the crew is
+  // still fuelling and transferring, and the menu-to-cockpit load briefly
+  // reports a default CG.
+  final moving = !t.onGround || t.gs > 30;
+  if (moving && t.cgPct > cg.aft) {
     alerts.add(
       const LiveAlert('CG AFT LIMIT', critical: true, repeatEvery: _urgent),
     );
   }
-  if (t.cgPct < cg.fwd) {
+  if (moving && t.cgPct < cg.fwd) {
     alerts.add(
       const LiveAlert('CG FWD LIMIT', critical: true, repeatEvery: _urgent),
     );
