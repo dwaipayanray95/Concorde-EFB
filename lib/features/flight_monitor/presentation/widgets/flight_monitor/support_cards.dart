@@ -123,6 +123,7 @@ class FuelBurnCard extends StatelessWidget {
     final colors = context.colors;
     final phase = ConcordeLogic.classifyBurnPhase(
       altitudeFt: t.altitude,
+      onGround: t.onGround,
       vsFpm: t.vs,
       reheatActive: t.reheatActive,
     );

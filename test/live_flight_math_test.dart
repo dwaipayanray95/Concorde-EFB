@@ -128,4 +128,26 @@ void main() {
       );
     });
   });
+
+  group('height above ground', () {
+    test('altitude minus the airport elevation', () {
+      final t = TelemetryModel.fromJson({
+        'basic': {'altitude': 7800},
+      });
+      expect(t.heightAboveGround(fieldElevationFt: 5400), 2400);
+      expect(t.heightAboveGround(), 7800);
+    });
+
+    test('a parked aircraft at a high airport is on the ground', () {
+      expect(
+        ConcordeLogic.classifyBurnPhase(
+          altitudeFt: 5400,
+          vsFpm: 0,
+          reheatActive: const [false, false, false, false],
+          onGround: true,
+        ),
+        FlightBurnPhase.ground,
+      );
+    });
+  });
 }

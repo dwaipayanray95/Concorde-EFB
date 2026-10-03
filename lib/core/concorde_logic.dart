@@ -439,12 +439,17 @@ class ConcordeLogic {
   /// in reheat, level cruise, or descending) instead of one flat number.
   /// Reheat is read directly from the sim rather than inferred, since
   /// [TelemetryModel.reheatActive] is a genuine per-engine signal.
+  ///
+  /// [altitudeFt] is height ABOVE GROUND (not sea level), so a parked
+  /// aircraft at a high airport isn't read as airborne; [onGround] (the
+  /// sim's own flag) wins when given.
   static FlightBurnPhase classifyBurnPhase({
     required double altitudeFt,
     required double vsFpm,
     required List<bool> reheatActive,
+    bool? onGround,
   }) {
-    if (altitudeFt < 1000) return FlightBurnPhase.ground;
+    if (onGround == true || altitudeFt < 1000) return FlightBurnPhase.ground;
     if (reheatActive.any((r) => r)) return FlightBurnPhase.reheatAccel;
     if (vsFpm > 300) return FlightBurnPhase.climb;
     if (vsFpm < -300) return FlightBurnPhase.descent;

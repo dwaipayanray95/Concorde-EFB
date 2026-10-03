@@ -1,6 +1,15 @@
 [
     {
         "date": "2026-10-03",
+        "title": "v5.5.1 — Altitude fixes for high-elevation airports",
+        "items": [
+            "GEAR UP — BELOW 250 KT now triggers below 5,000 ft above the arrival airport (was 5,000 ft above sea level, which never fired at airports like Denver or Mexico City)",
+            "Top of descent and ETA now account for the destination airport's elevation",
+            "Flight Monitor no longer reads a parked aircraft at a high airport as airborne"
+        ]
+    },
+    {
+        "date": "2026-10-03",
         "title": "v5.5.0 — Repeating chimes for urgent warnings",
         "items": [
             "Urgent warnings (Mach overspeed, gear overspeed, CG limits, gear up below 250 kt on approach) now re-chime every 2 seconds until corrected",

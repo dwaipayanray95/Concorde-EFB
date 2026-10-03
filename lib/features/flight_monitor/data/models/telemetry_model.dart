@@ -2,6 +2,7 @@ class TelemetryModel {
   final int timestamp;
 
   // Basic parameters
+  /// Altitude above mean sea level (ft).
   final double altitude;
   final double ias;
   final double tas;
@@ -97,6 +98,12 @@ class TelemetryModel {
   /// Gear extension 0-100 %. The bridge sends MSFS's "percent over 100"
   /// (a 0-1 fraction); older/dev sources may send 0-100.
   double get gearPct => gearPosition <= 1.0 ? gearPosition * 100 : gearPosition;
+
+  /// Height above an airfield (ft): altitude minus [fieldElevationFt] from
+  /// the airport database (departure / arrival airport), or plain altitude
+  /// when the elevation is unknown.
+  double heightAboveGround({double? fieldElevationFt}) =>
+      altitude - (fieldElevationFt ?? 0);
 
   String get gearLabel =>
       gearPct <= 1 ? 'UP' : (gearPct >= 99 ? 'DOWN' : 'TRANSIT');

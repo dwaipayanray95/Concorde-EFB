@@ -54,9 +54,12 @@ final liveNavProvider = Provider<LiveNav?>((ref) {
   if (t == null) return null;
 
   final phase = ConcordeLogic.classifyBurnPhase(
-    altitudeFt: t.altitude,
+    altitudeFt: t.heightAboveGround(
+      fieldElevationFt: ref.watch(depAirportProvider)?.elevationFt,
+    ),
     vsFpm: t.vs,
     reheatActive: t.reheatActive,
+    onGround: t.onGround,
   );
   final smoothed = monitor.smoothedFuelFlowKgH ?? 0;
   final flow = smoothed >= 500
@@ -83,7 +86,9 @@ final liveNavProvider = Provider<LiveNav?>((ref) {
               ref.watch(routeFactorProvider);
     prediction = predictToDestination(
       distToDestNm: dist,
-      altitudeFt: t.altitude,
+      // Descent distance is from the aircraft down to the destination
+      // airport, not to sea level.
+      altitudeFt: t.heightAboveGround(fieldElevationFt: dest.elevationFt),
       groundSpeedKt: t.gs,
       fuelFlowKgH: flow,
       fuelOnBoardKg: fob,
