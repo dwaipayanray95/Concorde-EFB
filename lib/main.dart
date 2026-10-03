@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'services/ad_consent_service.dart';
+import 'features/flight_monitor/data/services/lan_link.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
@@ -32,6 +33,9 @@ void main() async {
   // start watching for MSFS's own process so the bridge gets a fresh
   // restart the moment the game actually launches -- covers opening this
   // app well before starting the sim (see SimBridgeLauncher.startWatching).
+  // Wi-Fi sharing to the phone/tablet app must be known before the first
+  // bridge launch (it changes how the bridge listens).
+  if (isWindowsDesktop) await loadLanShareIntoLauncher();
   unawaited(SimBridgeLauncher.start());
   SimBridgeLauncher.startWatching();
 

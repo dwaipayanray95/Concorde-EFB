@@ -3,6 +3,7 @@ import '../../../../../core/app_colors.dart';
 import '../../../../../core/sim_bridge_launcher.dart';
 import '../../../../../core/ui_text.dart';
 import '../../../data/models/telemetry_model.dart';
+import '../../../data/services/lan_link.dart';
 
 /// Top status/controls bar: connection dot + Zulu clock.
 class FmToolbar extends StatelessWidget {
@@ -24,7 +25,7 @@ class FmToolbar extends StatelessWidget {
     final colors = context.colors;
     final statusColor = isConnected ? colors.arrival : colors.error;
     final statusLabel = isConnected
-        ? 'SIMCONNECT BRIDGE CONNECTED'
+        ? (isMobilePlatform ? 'LIVE FROM SIM PC' : 'SIMCONNECT BRIDGE CONNECTED')
         : 'DISCONNECTED';
 
     return Row(

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/telemetry_model.dart';
 import '../../data/services/websocket_client.dart';
+import '../../data/services/lan_link.dart';
 import '../../../../core/sim_bridge_launcher.dart';
 
 /// The last landing, latched in the app -- the bridge only flags a
@@ -79,7 +80,17 @@ class FlightMonitorNotifier extends Notifier<FlightMonitorState> {
 
   @override
   FlightMonitorState build() {
-    _wsClient = WebSocketClient('ws://127.0.0.1:8082');
+    // Desktop: the bridge on this PC. Phone/tablet: the sim PC's bridge
+    // over Wi-Fi (rebuilds -- and reconnects -- when the user pairs).
+    final String? url;
+    if (isMobilePlatform) {
+      final remote = ref.watch(remoteBridgeProvider);
+      url = remote.isConfigured ? remote.url : null;
+    } else {
+      url = 'ws://127.0.0.1:$bridgePort';
+    }
+    if (url == null) return FlightMonitorState(); // not paired yet
+    _wsClient = WebSocketClient(url);
 
     _wsSubscription = _wsClient.connect().listen(_handleLiveTelemetry);
     _statusSubscription = _wsClient.statusStream.listen(_handleStatus);

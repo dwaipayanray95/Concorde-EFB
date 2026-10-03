@@ -1,6 +1,16 @@
 [
     {
         "date": "2026-10-03",
+        "title": "v5.1.0 — Flight Monitor on phones & tablets over Wi-Fi",
+        "items": [
+            "Desktop: new SHARE TO PHONE / TABLET switch on the Flight Monitor tab shows this PC's address and a 6-digit pairing code",
+            "Phone/tablet: the Flight Monitor finds your sim PC on the same Wi-Fi automatically (or enter its address), pair once with the code, and get the full live Monitor — MFD strip, fuel schematic, CG, engines — plus checklists that follow your flight phase",
+            "Sharing is off by default, local-network only and protected by the pairing code; NEW CODE un-pairs every device",
+            "Privacy policy updated to describe Wi-Fi sharing (data stays on your own network)"
+        ]
+    },
+    {
+        "date": "2026-10-03",
         "title": "v5.0.0 — Cleaner cockpit layout",
         "items": [
             "Top status bar fits on one row on desktops and tablets: compact pills for call sign, registration, pax, route and ETE / climb / cruise / descent times; the sim status now lives only on the navigation rail dot",

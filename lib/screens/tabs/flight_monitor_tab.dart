@@ -6,6 +6,7 @@ import '../../features/flight_monitor/data/models/telemetry_model.dart';
 import '../../features/flight_monitor/presentation/widgets/flight_monitor/fm_toolbar.dart';
 import '../../features/flight_monitor/presentation/widgets/flight_monitor/hero_pfd_row.dart';
 import '../../features/flight_monitor/presentation/widgets/flight_monitor/mfd_strip.dart';
+import '../../features/flight_monitor/presentation/widgets/flight_monitor/wifi_link_card.dart';
 import '../../features/flight_monitor/presentation/widgets/flight_monitor/fuel_schematic_card.dart';
 import '../../features/flight_monitor/presentation/widgets/flight_monitor/support_cards.dart';
 import '../../widgets/entrance_fader.dart';
@@ -60,7 +61,10 @@ class _FlightMonitorSection extends StatelessWidget {
               ? monitorState.bridge.message
               : null,
         ),
-        const SizedBox(height: 28),
+        const SizedBox(height: 16),
+        // Wi-Fi link: share from the sim PC / connect from a phone or tablet.
+        const WifiLinkCard(),
+        const SizedBox(height: 16),
 
         AbsorbPointer(
           absorbing: !isLive,

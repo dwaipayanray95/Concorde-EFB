@@ -12,6 +12,7 @@ flutter test --update-goldens \
   --dart-define=OUT=/abs/path/to/output \
   --dart-define=SIZES=1280x800,915x412,740x360 \
   --dart-define=TABS=plan,perf,check,monitor \
+  --dart-define=TARGET=windows   `# optional: render desktop-only UI (tests default to Android)` \
   test/zz_screens_test.dart | grep OVERFLOWS
 rm test/zz_screens_test.dart
 ```

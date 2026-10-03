@@ -13,11 +13,15 @@ class BridgeStatus {
   final bool receivingData;
   final String message;
 
+  /// The PC's bridge refused us: wrong/missing pairing code (LAN clients).
+  final bool pairingRejected;
+
   const BridgeStatus({
     this.socketConnected = false,
     this.simConnected = false,
     this.receivingData = false,
     this.message = '',
+    this.pairingRejected = false,
   });
 
   static const offline = BridgeStatus();
@@ -100,7 +104,21 @@ class WebSocketClient {
           }
         },
         onError: (_) => _scheduleReconnect(),
-        onDone: _scheduleReconnect,
+        onDone: () {
+          // 4401 = the bridge rejected our pairing code. Say so, and retry
+          // slowly (the user may be re-pairing on the PC).
+          if (_channel?.closeCode == 4401) {
+            _scheduleReconnect(
+              status: const BridgeStatus(
+                pairingRejected: true,
+                message: 'Pairing code rejected by the PC',
+              ),
+              delay: const Duration(seconds: 10),
+            );
+          } else {
+            _scheduleReconnect();
+          }
+        },
         cancelOnError: true,
       );
     } catch (_) {
@@ -108,15 +126,18 @@ class WebSocketClient {
     }
   }
 
-  void _scheduleReconnect() {
+  void _scheduleReconnect({
+    BridgeStatus status = BridgeStatus.offline,
+    Duration delay = const Duration(seconds: 2),
+  }) {
     if (_isClosed) return;
     _silenceTimer?.cancel();
     _channelSub?.cancel();
     _channel?.sink.close();
     _channel = null;
-    _setStatus(BridgeStatus.offline);
+    _setStatus(status);
     _reconnectTimer?.cancel();
-    _reconnectTimer = Timer(const Duration(seconds: 2), _startConnection);
+    _reconnectTimer = Timer(delay, _startConnection);
   }
 
   void disconnect() {

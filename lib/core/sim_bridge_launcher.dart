@@ -35,6 +35,24 @@ class SimBridgeLauncher {
   static int _crashCount = 0;
   static Timer? _respawnTimer;
 
+  /// LAN sharing for the phone/tablet app: when on, the bridge listens on
+  /// the local network (not just this PC) and requires [pairingCode] from
+  /// network clients. Set via [configureLan] before/after [start].
+  static bool lanEnabled = false;
+  static String pairingCode = '';
+
+  /// Applies new LAN settings; respawns the bridge we own so they take
+  /// effect (an external/dev bridge is never touched).
+  static Future<void> configureLan({
+    required bool enabled,
+    required String code,
+  }) async {
+    final changed = enabled != lanEnabled || code != pairingCode;
+    lanEnabled = enabled;
+    pairingCode = code;
+    if (changed && _process != null) await restart();
+  }
+
   /// Result of the most recent [start] call, and the error message (if any).
   static final ValueNotifier<SimBridgeStatus?> status = ValueNotifier(null);
   static String? lastError;
@@ -81,6 +99,10 @@ class SimBridgeLauncher {
         [],
         workingDirectory: File(exePath).parent.path,
         mode: ProcessStartMode.normal,
+        environment: {
+          'SIMBRIDGE_LAN': lanEnabled ? '1' : '0',
+          'SIMBRIDGE_CODE': pairingCode,
+        },
       );
       _process = process;
       // Drain pipes so the child can never block on a full stdout/stderr.

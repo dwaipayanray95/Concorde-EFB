@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,8 +8,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:concorde_efb/main.dart';
+import 'package:concorde_efb/core/sim_bridge_launcher.dart';
 import 'package:concorde_efb/models/airport.dart';
 import 'package:concorde_efb/providers/efb_providers.dart';
+import 'package:concorde_efb/features/flight_monitor/data/services/lan_link.dart';
 import 'package:concorde_efb/services/airport_database_service.dart';
 import 'package:concorde_efb/features/flight_monitor/presentation/controllers/telemetry_provider.dart';
 import 'package:concorde_efb/features/flight_monitor/data/models/telemetry_model.dart';
@@ -16,6 +19,7 @@ import 'package:concorde_efb/features/flight_monitor/data/services/websocket_cli
 
 const outDir = String.fromEnvironment('OUT');
 const sizes = String.fromEnvironment('SIZES', defaultValue: '1280x800,915x412');
+const target = String.fromEnvironment('TARGET');
 const tabs = String.fromEnvironment('TABS', defaultValue: 'plan,perf,check,monitor');
 
 class FakeMonitor extends FlightMonitorNotifier {
@@ -63,9 +67,11 @@ void main() {
       final wh = sz.split('x').map(double.parse).toList();
       final size = Size(wh[0], wh[1]);
       testWidgets('screens dark=$dark $sz', (tester) async {
+        if (target == 'windows') debugDefaultTargetPlatformOverride = TargetPlatform.windows;
         GoogleFonts.config.allowRuntimeFetching = false;
         await _fonts();
         SharedPreferences.setMockInitialValues({'theme_mode': dark ? 'dark' : 'light'});
+        if (target == 'windows') { SimBridgeLauncher.lanEnabled = true; SimBridgeLauncher.pairingCode = '482913'; }
         tester.view.physicalSize = size;
         tester.view.devicePixelRatio = 1.0;
         final overflows = <String>[];
@@ -92,6 +98,7 @@ void main() {
             departureMetarFutureProvider.overrideWith((ref) async => metarDep),
             arrivalMetarFutureProvider.overrideWith((ref) async => metarArr),
             flightMonitorProvider.overrideWith(FakeMonitor.new),
+            localIpv4Provider.overrideWith((ref) async => ['192.168.1.20']),
           ],
           child: const ConcordeEfbApp(),
         ));
@@ -113,6 +120,7 @@ void main() {
           if (f.evaluate().isNotEmpty) { await tester.tap(f.first); await shot(e.$3); }
         }
         FlutterError.onError = prev;
+        debugDefaultTargetPlatformOverride = null;
         // ignore: avoid_print
         print('OVERFLOWS $tag: ${overflows.toSet().join(' | ')}');
       });

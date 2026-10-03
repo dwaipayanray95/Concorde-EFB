@@ -20,6 +20,14 @@ the WebSocket server), never handled QUIT, and wasn't bundled with its
 SimConnect.dll by PyInstaller -- the root causes of the unreliability.
 
 WebSocket protocol on ws://localhost:8082 (JSON text frames):
+
+LAN sharing (opt-in, for the phone/tablet app): with SIMBRIDGE_LAN=1 the
+server listens on all interfaces. Clients that are NOT on this PC must
+connect with ws://<pc-ip>:8082/?code=<SIMBRIDGE_CODE> or they are closed
+with code 4401. While LAN sharing is on, a UDP beacon is broadcast every 2s
+on port 8083 so the app can find this PC:
+  {"app": "concorde-efb-bridge", "v": 1, "port": 8082, "host": "<pc name>"}
+
   {"type": "status", "simConnected": bool, "receivingData": bool, "message": str}
       sent on client connect, on every state change, and every 2s
   {"type": "telemetry", "timestamp": ..., "basic": {...}, "concorde": {...}, "events": {...}}
@@ -28,6 +36,7 @@ WebSocket protocol on ws://localhost:8082 (JSON text frames):
 
 import asyncio
 import ctypes
+import socket
 import json
 import logging
 import os
@@ -36,11 +45,16 @@ import sys
 import threading
 import time
 from ctypes import wintypes
+from urllib.parse import parse_qs, urlparse
 
 import websockets
 
-HOST = "127.0.0.1"
+LAN_SHARING = os.environ.get("SIMBRIDGE_LAN") == "1"
+PAIRING_CODE = os.environ.get("SIMBRIDGE_CODE", "").strip()
+HOST = "0.0.0.0" if LAN_SHARING else "127.0.0.1"
 PORT = int(os.environ.get("SIMBRIDGE_PORT", "8082"))
+BEACON_PORT = 8083
+BEACON_INTERVAL_S = 2.0
 APP_NAME = b"Concorde EFB Bridge"
 BROADCAST_HZ = 25
 HEARTBEAT_INTERVAL_S = 5.0   # how often we ping the sim with RequestSystemState
@@ -401,6 +415,18 @@ async def main():
         return json.dumps({"type": "status", "simConnected": connected, "receivingData": receiving, "message": message})
 
     async def handler(ws):
+        # Clients on this PC (the desktop app) are always allowed; anything
+        # arriving over the network must present the pairing code.
+        remote_ip = (ws.remote_address or ("",))[0] or ""
+        is_local = remote_ip.startswith("127.") or remote_ip in ("::1", "::ffff:127.0.0.1")
+        if not is_local:
+            query = parse_qs(urlparse(ws.request.path).query)
+            code = (query.get("code") or [""])[0]
+            if not PAIRING_CODE or code != PAIRING_CODE:
+                logger.warning("Rejected LAN client %s (bad pairing code)", remote_ip)
+                await ws.close(4401, "pairing code required")
+                return
+            logger.info("LAN client %s paired", remote_ip)
         clients.add(ws)
         logger.info("Client connected (%d total)", len(clients))
         try:
@@ -418,8 +444,24 @@ async def main():
         if clients:
             websockets.broadcast(clients, message)
 
+    async def beacon():
+        """Announce this PC on the local network so the app can find it."""
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        payload = json.dumps({"app": "concorde-efb-bridge", "v": 1, "port": PORT,
+                              "host": socket.gethostname()}).encode()
+        while True:
+            try:
+                sock.sendto(payload, ("255.255.255.255", BEACON_PORT))
+            except OSError:
+                pass  # no network right now -- keep trying
+            await asyncio.sleep(BEACON_INTERVAL_S)
+
+    if LAN_SHARING:
+        asyncio.get_running_loop().create_task(beacon())
+
     async with websockets.serve(handler, HOST, PORT, ping_interval=10, ping_timeout=20, max_queue=4):
-        logger.info("WebSocket server on ws://%s:%d", HOST, PORT)
+        logger.info("WebSocket server on ws://%s:%d (LAN sharing %s)", HOST, PORT, "ON" if LAN_SHARING else "off")
         last_sent_at = 0.0
         last_status = None
         last_status_at = 0.0

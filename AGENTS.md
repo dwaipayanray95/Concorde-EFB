@@ -14,7 +14,7 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `5.0.0+58` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+- Current version: `5.1.0+59` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
   `public/changelog/entries.json` in sync — README no longer carries its own changelog, it just
   links to that page.
 - **Versioning rule (mandatory for every agent):** every change that alters user-visible behavior
@@ -105,6 +105,17 @@ These are heuristic/indicative models, not certified performance data. Core cons
     the app executable) so users don't need Python installed.
   - The bridge exposes telemetry over `ws://localhost:8082`; the app connects via
     `lib/features/flight_monitor/data/services/websocket_client.dart`.
+  - **Wi-Fi link for phones/tablets (v5.1.0):** SimConnect only works on the sim PC, so mobile
+    gets data from the desktop app's bridge over the LAN. Desktop toggle (`lanShareProvider`,
+    persisted, loaded into `SimBridgeLauncher.lanEnabled/pairingCode` by
+    `loadLanShareIntoLauncher()` in `main.dart` before the first launch) restarts the bridge with
+    env `SIMBRIDGE_LAN=1` + `SIMBRIDGE_CODE=<6 digits>`: it binds `0.0.0.0:8082`, lets localhost
+    in freely, closes non-local clients without `?code=` with WS close code **4401**, and
+    broadcasts a UDP beacon on **8083** (`{"app":"concorde-efb-bridge",...}`). Mobile:
+    `discoveredBridgesProvider` listens for beacons, `remoteBridgeProvider` (persisted host+code)
+    feeds `FlightMonitorNotifier`'s URL; `BridgeStatus.pairingRejected` surfaces 4401. All in
+    `lib/features/flight_monitor/data/services/lan_link.dart`; UI in `wifi_link_card.dart`.
+    Verified end-to-end against the real bridge script (Linux, no SimConnect).
   - `SimBridgeLauncher.startWatching()` polls `tasklist` every 5s for MSFS's own process
     (`FlightSimulator*.exe`, covers 2020/2024) and force-restarts the bridge the moment it
     appears — fixes stale/stuck SimConnect connections when the app is opened before the sim. A
@@ -238,6 +249,7 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 - v4.4.0: wind-aware default runway (`bestRunwayId`: no tailwind > crosswind <= 15 kt > longest; `_RunwayIdNotifier` auto-follows METAR until a manual/SimBrief pick, reset on ICAO change); `WindArrow` coloured by gust-inclusive components vs limits; phone layout (`isShort` < 560 px height in `home_screen.dart`: status bar scrolls with content / hidden on checklists; compact `EfbNavRail` < 440 px; collapsible `DispatchBanner`; checklist phase strip < 900 px wide; cruise card stacks < 900 px); compact Flight Plan card (single row + route chip with distance/ETE); ENDURANCE MARGIN stat; identity pills only when a flight is loaded; Flight Monitor: `HeroPfdRow` is now one compact data bar, fuel schematic + CG/engines/burn side column, env/G/touchdown row; `liveChecklistPhaseProvider` drives checklist auto-select + dimming. UI screenshot harness: `tool/ui_screenshots/` -- use it to verify layout changes (light/dark, desktop + phone) since `flutter run -d windows` isn't available to cloud agents.
 - v4.5.0: `CockpitStatusBar` always shows CALL SIGN/REG/PAX plus planned TOTAL/CLB (climb+transonic accel)/CRZ/DES times from `missionProfileProvider`; `DispatchBanner` is a flat solid-colour block placed above the Planner/Performance sub-tab selector; Privacy Policy + Ad Privacy Options live in the nav-rail Settings dialog (removed from the footer); Design Lab removed from Settings (`lib/design_system/design_lab.dart` kept only for its test).
 - v5.0.0 (owner-requested major): status bar compacted to one row at >= 1024 px (labels C/S, REG, PAX, ETE, CLB, CRZ, DES; SIM LIVE pill removed -- sim status is the `EfbNavRail` dot only); fuel strip stamp is `OVER CAPACITY` / `FUEL SHORT` / `FUEL OK`; stat subtexts wrap to 2 lines; route chip shows only the route; `AppFooter` is just `EfbAdBanner` (links live in Settings; `efb_launches_badge.dart` no longer shown).
+- v5.1.0: Flight Monitor over Wi-Fi for Android/iOS phones and tablets (see section 4 "Wi-Fi link"); `WifiLinkCard` at the top of the Monitor tab (desktop: share toggle + IP + pairing code; mobile: discovery chips, IP + code, status/rejection); iOS `NSLocalNetworkUsageDescription`; privacy page updated. Screenshot harness supports `--dart-define=TARGET=windows` for desktop-only UI.
 
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.
@@ -252,6 +264,8 @@ stale like the old React-era version of this file did.
 - Crash reporting.
 - Persist flight plan / fuel inputs / checklist progress across restarts.
 - Code signing for the installer and `msfs_bridge.exe`.
+- Wi-Fi link: some Android devices filter UDP broadcasts (needs a `WifiManager.MulticastLock`
+  platform channel if discovery proves unreliable -- manual IP entry works regardless).
 - Feature ideas: CG / trim-tank transfer planner, live planned-vs-actual fuel, telemetry-driven
   checklist auto-advance, exportable takeoff/landing card, kg/lb toggle, TAF + alternate weather.
 
