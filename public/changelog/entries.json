@@ -1,6 +1,13 @@
 [
     {
         "date": "2026-10-03",
+        "title": "v5.5.7 — Better-fitting Android ad banner",
+        "items": [
+            "The Android ad banner now sizes itself to your screen width instead of a fixed small banner"
+        ]
+    },
+    {
+        "date": "2026-10-03",
         "title": "v5.5.6 — New Android app identity",
         "items": [
             "The Android app now uses its permanent package name (com.theawesomeray.concorde_efb). If you installed an earlier Android test build, uninstall it first; this installs as a separate app"

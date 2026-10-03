@@ -29,6 +29,23 @@ class AdConsentService {
 
   static bool _started = false;
 
+  /// Testing aid, ignored in release builds. Simulates an EU user so the
+  /// consent form shows anywhere:
+  ///   flutter run --dart-define=UMP_TEST_DEVICE=<hash>
+  /// The hash is printed in logcat ("Use new ConsentDebugSettings.Builder()
+  /// .addTestDeviceHashedId(...)") the first time the app requests consent.
+  static const _umpTestDevice = String.fromEnvironment('UMP_TEST_DEVICE');
+
+  static ConsentRequestParameters _requestParameters() {
+    if (kReleaseMode || _umpTestDevice.isEmpty) return ConsentRequestParameters();
+    return ConsentRequestParameters(
+      consentDebugSettings: ConsentDebugSettings(
+        debugGeography: DebugGeography.debugGeographyEea,
+        testIdentifiers: [_umpTestDevice],
+      ),
+    );
+  }
+
   /// Requests the latest consent status, shows the consent form if this
   /// user needs one, then starts AdMob if ads are allowed. Safe to call
   /// more than once; must run after the first frame (the form needs an
@@ -39,7 +56,7 @@ class AdConsentService {
 
     final updated = Completer<void>();
     ConsentInformation.instance.requestConsentInfoUpdate(
-      ConsentRequestParameters(),
+      _requestParameters(),
       () => updated.complete(),
       (FormError error) {
         debugPrint('UMP consent update failed: ${error.message}');

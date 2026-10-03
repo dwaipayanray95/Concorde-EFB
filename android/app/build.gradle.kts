@@ -28,9 +28,15 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        // AdMob app id for the manifest. Google's sample id unless a release
-        // build supplies the real one via the ADMOB_APP_ID environment variable.
-        manifestPlaceholders["admobAppId"] = "ca-app-pub-3940256099942544~3347511713"
+        // AdMob app id for the manifest. The app id is the same in every build
+        // type (the consent message is tied to it, so UMP can only be tested
+        // with the real one); only the banner AD UNIT differs -- release uses
+        // the real unit, debug/profile always Google's test unit (see
+        // efb_ad_banner.dart). Falls back to Google's sample app id when the
+        // ADMOB_APP_ID environment variable is not set.
+        manifestPlaceholders["admobAppId"] =
+            System.getenv("ADMOB_APP_ID")?.takeIf { it.isNotBlank() }
+                ?: "ca-app-pub-3940256099942544~3347511713"
     }
 
     buildTypes {
@@ -38,9 +44,6 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
-            System.getenv("ADMOB_APP_ID")?.takeIf { it.isNotBlank() }?.let {
-                manifestPlaceholders["admobAppId"] = it
-            }
         }
     }
 }

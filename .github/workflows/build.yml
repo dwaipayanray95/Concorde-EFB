@@ -237,7 +237,8 @@ jobs:
 
       # AdMob ids are public (they ship inside the app), so they are repository
       # *variables*, not secrets: Settings > Secrets and variables > Actions > Variables.
-      # Only release builds use them; debug/profile always show Google test ads.
+      # The app id goes into every build; the banner unit id only into release builds
+      # (debug/profile always show Google test ads).
       - name: Check AdMob ids (release only)
         if: inputs.mode == 'release'
         run: |
@@ -251,7 +252,7 @@ jobs:
       - name: Build APK
         run: flutter build apk --${{ env.MODE }} --dart-define=ADMOB_BANNER_ID=${{ inputs.mode == 'release' && vars.ADMOB_BANNER_ID || '' }}
         env:
-          ADMOB_APP_ID: ${{ inputs.mode == 'release' && vars.ADMOB_APP_ID || '' }}
+          ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID }}
 
       - name: Build AAB (release only)
         if: inputs.mode == 'release'

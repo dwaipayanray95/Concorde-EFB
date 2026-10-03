@@ -18,6 +18,7 @@ class EfbAdBanner extends StatefulWidget {
 class _EfbAdBannerState extends State<EfbAdBanner> {
   BannerAd? _bannerAd;
   bool _isLoaded = false;
+  bool _loading = false;
 
   // Google's sample banner unit. Debug/profile builds ALWAYS use it: clicking
   // your own live ads gets an AdMob account suspended for invalid traffic.
@@ -36,20 +37,33 @@ class _EfbAdBannerState extends State<EfbAdBanner> {
     super.initState();
     // Ads only load once the UMP consent flow allows them.
     AdConsentService.adsReady.addListener(_loadAd);
-    _loadAd();
+    // MediaQuery isn't readable in initState; wait for the first frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadAd());
   }
 
-  void _loadAd() {
-    if (!AdConsentService.isSupported ||
+  Future<void> _loadAd() async {
+    if (!mounted ||
+        !AdConsentService.isSupported ||
         !AdConsentService.adsReady.value ||
-        _bannerAd != null) {
+        _bannerAd != null ||
+        _loading) {
       return;
     }
+    _loading = true;
+
+    // Adaptive anchored banner: sized to the screen width, which AdMob fills
+    // better (and pays more for) than the fixed 320x50 banner.
+    final width = MediaQuery.sizeOf(context).width.truncate();
+    final size = await AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(
+      width,
+    );
+    _loading = false;
+    if (!mounted || size == null || _bannerAd != null) return;
 
     _bannerAd = BannerAd(
       adUnitId: _adUnitId,
       request: const AdRequest(),
-      size: AdSize.banner,
+      size: size,
       listener: BannerAdListener(
         onAdLoaded: (ad) {
           if (!mounted) return;
