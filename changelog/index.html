@@ -73,8 +73,10 @@
 
       .nav-links {
         display: flex;
-        gap: 18px;
+        flex-wrap: wrap;
+        gap: 8px 18px;
         font-size: 12px;
+        min-width: 0;
       }
 
       .nav-links a {
@@ -341,15 +343,6 @@
         transform: translateY(-1px);
       }
 
-      .ad-container {
-        display: flex;
-        justify-content: center;
-        padding: 12px;
-        border-radius: 18px;
-        background: var(--card);
-        border: 1px solid var(--stroke);
-      }
-
       .overlay-layer {
         display: none;
         position: fixed;
@@ -410,13 +403,6 @@
         margin: 0;
       }
     </style>
-    <!-- PROPELLER ADS - Verification Meta Tag (Paste verification code here) -->
-    <!-- e.g. <meta name="propeller" content="your_verification_id"> -->
-    
-    <!-- PROPELLER ADS / MONETAG - Main Script Injection Tag -->
-    <script src="https://quge5.com/88/tag.min.js" data-zone="255560" async data-cfasync="false"></script>
-
-    <script src="./ads.js"></script>
   </head>
   <body>
     <main class="shell">
@@ -430,6 +416,7 @@
           <a href="../">Home</a>
           <a href="../downloads/">Downloads</a>
           <a href="../donate/">Donate</a>
+          <a href="../privacy/">Privacy</a>
           <a href="https://github.com/dwaipayanray95/Concorde-EFB" target="_blank" rel="noreferrer">GitHub</a>
           <a href="https://github.com/sponsors/dwaipayanray95" target="_blank" rel="noreferrer">Sponsor</a>
           <a href="https://discord.gg/xe49YpczpP" target="_blank" rel="noreferrer">Discord</a>
@@ -458,7 +445,7 @@
         <div class="download-card" style="border-color: var(--accent); background: linear-gradient(135deg, rgba(56, 189, 248, 0.05), rgba(110, 231, 183, 0.05));">
           <h3 style="color: var(--accent);">Support & Donation</h3>
           <p style="margin: 0; font-size: 13px; color: var(--muted); line-height: 1.55;">
-            Concorde EFB is maintained for free in the developer's spare time. Contributions keep the servers active and fuel new feature expansions!
+            Concorde EFB is maintained for free in the developer's spare time. Contributions help keep development going and fund new features. Thank you!
           </p>
           <div class="support-actions" style="margin-top: auto;">
             <a href="https://www.patreon.com/c/theawesomeray" target="_blank" class="btn btn-patreon" style="flex: 1;">Patreon Tip</a>
@@ -467,15 +454,6 @@
           </div>
         </div>
       </div>
-
-      <!-- BEGIN AADS AD UNIT 2446475 -->
-      <section class="ad-container">
-        <div id="frame" style="width: 100%;margin: auto;position: relative; z-index: 99998;">
-          <iframe data-aa='2446475' src='//acceptable.a-ads.com/2446475/?size=Adaptive'
-                            style='border:0; padding:0; width:70%; height:auto; overflow:hidden;display: block;margin: auto'></iframe>
-        </div>
-      </section>
-      <!-- END AADS AD UNIT 2446475 -->
 
       <section class="toolbar">
         <span>Source: <code>public/changelog/entries.json</code></span>
@@ -491,21 +469,6 @@
         <h3 style="margin: 0; font-size: 16px; color: var(--accent);">Scan to Pay via UPI</h3>
         <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi%3A%2F%2Fpay%3Fpa%3Ddwaipayanray95%40ptaxis%26pn%3DRay%26tn%3DConcorde%2520EFB%2520Support%26cu%3DINR" alt="UPI QR Code" class="qr-image" />
         <p class="upi-text">dwaipayanray95@ptaxis</p>
-      </div>
-    </div>
-
-    <!-- Adblock Warning Modal -->
-    <div id="sys-notice-overlay" class="overlay-layer">
-      <div class="overlay-card" style="border-color: var(--accent-2);">
-        <span class="close-modal" onclick="closeAdblockModal()">&times;</span>
-        <h3 style="margin: 0; font-size: 16px; color: var(--accent-2);">Ad Blocker Detected</h3>
-        <p style="margin: 16px 0; font-size: 13px; color: var(--muted); line-height: 1.5; text-align: center;">
-          It looks like you're using an ad blocker. This project is maintained for free. Please consider whitelisting our site in your ad blocker, or support directly to keep this EFB updated!
-        </p>
-        <div style="display: flex; gap: 12px; justify-content: center;">
-          <button onclick="closeAdblockModal()" class="btn btn-upi" style="background: var(--accent-2); color: black; border: none;">I'll Whitelist</button>
-          <a href="https://www.patreon.com/c/theawesomeray" target="_blank" class="btn btn-patreon">Patreon Support</a>
-        </div>
       </div>
     </div>
 
@@ -601,9 +564,6 @@
         document.getElementById("qr-modal").style.display = "none";
       }
 
-      function closeAdblockModal() {
-        document.getElementById("sys-notice-overlay").style.display = "none";
-      }
 
       const fetchReleases = () => {
         const downloadsContainer = document.getElementById("downloads-list");
@@ -651,22 +611,12 @@
       window.addEventListener('load', () => {
         fetchReleases();
         loadTimeline();
-        // Check after 1 second to allow adblocker extensions to block ads.js
-        setTimeout(() => {
-          if (window.canShowAds === undefined) {
-            document.getElementById("sys-notice-overlay").style.display = "flex";
-          }
-        }, 1000);
       });
 
       window.onclick = function(event) {
         const qrModal = document.getElementById("qr-modal");
-        const abModal = document.getElementById("sys-notice-overlay");
         if (event.target == qrModal) {
           qrModal.style.display = "none";
-        }
-        if (event.target == abModal) {
-          abModal.style.display = "none";
         }
       }
     </script>
