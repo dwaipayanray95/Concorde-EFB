@@ -139,13 +139,23 @@ class MfdStrip extends ConsumerWidget {
                             .map(
                               // Tap a warning to silence its chime for
                               // 10 s on this device.
+                              // DESCEND NOW is cleared outright (ATC,
+                              // procedure or terrain may hold you level).
                               (w) => Tooltip(
-                                message: 'Tap to silence for 10 s',
+                                message: clearableAlerts.contains(w.$1)
+                                    ? 'Tap to clear until the descent'
+                                    : 'Tap to silence for 10 s',
                                 child: InkWell(
                                   borderRadius: BorderRadius.circular(4),
-                                  onTap: () => ref
-                                      .read(alertChimeProvider.notifier)
-                                      .silence(w.$1),
+                                  onTap: () => clearableAlerts.contains(w.$1)
+                                      ? ref
+                                            .read(
+                                              dismissedAlertsProvider.notifier,
+                                            )
+                                            .dismiss(w.$1)
+                                      : ref
+                                            .read(alertChimeProvider.notifier)
+                                            .silence(w.$1),
                                   child: _pill(
                                     context,
                                     w.$1,

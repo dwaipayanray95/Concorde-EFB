@@ -23,6 +23,30 @@ const _urgent = Duration(seconds: 2);
 /// DESCEND NOW re-chimes every 12 s until the descent starts.
 const _descendReminder = Duration(seconds: 12);
 
+/// Alerts the pilot cleared (tap on the MFD strip) because ATC, the
+/// charts/procedure or terrain dictate otherwise -- e.g. DESCEND NOW when
+/// told to hold level. Cleared alerts are hidden and silent until the
+/// aircraft leaves cruise (descent started, or a new flight), then re-arm.
+class DismissedAlertsNotifier extends Notifier<Set<String>> {
+  @override
+  Set<String> build() {
+    ref.listen(liveNavProvider.select((n) => n?.phase), (_, phase) {
+      if (phase != FlightBurnPhase.cruise && state.isNotEmpty) state = {};
+    });
+    return {};
+  }
+
+  void dismiss(String text) => state = {...state, text};
+}
+
+final dismissedAlertsProvider =
+    NotifierProvider<DismissedAlertsNotifier, Set<String>>(
+      DismissedAlertsNotifier.new,
+    );
+
+/// Alerts that can be cleared outright (not just silenced).
+const clearableAlerts = {'DESCEND NOW'};
+
 /// Live warnings/cautions from telemetry + the flight plan. Computed here
 /// (not in a widget) so they exist -- and chime -- whichever tab is open.
 /// Shown in the Flight Monitor's MFD strip.
@@ -107,7 +131,8 @@ final liveAlertsProvider = Provider<List<LiveAlert>>((ref) {
     }
     if (pred.distToTodNm <= 10 &&
         pred.distToTodNm > -20 &&
-        phase == FlightBurnPhase.cruise) {
+        phase == FlightBurnPhase.cruise &&
+        !ref.watch(dismissedAlertsProvider).contains('DESCEND NOW')) {
       alerts.add(
         const LiveAlert(
           'DESCEND NOW',

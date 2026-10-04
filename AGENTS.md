@@ -14,7 +14,7 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `5.10.1+83` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+- Current version: `5.11.0+84` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
   `public/changelog/entries.json` in sync — README no longer carries its own changelog, it just
   links to that page.
 - **Versioning rule (mandatory for every agent):** every change that alters user-visible behavior
@@ -288,6 +288,7 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 - v5.9.1: clean GO puts the quick figures inline in the banner row (`_figures`); with cautions they stay on a second row.
 - v5.10.0: `forceSupersonicProvider` (not persisted; switch under the FL box, toggling re-runs `autoPlan`): `plannedCruiseFl`/`buildCruiseMissionProfile(forceSupersonic:)` drop the 100 nm minimum Mach 2 cruise from `minSupersonicDistanceNm(minCruiseNm:)`. Dispatch quick figures add `CRZ M<mach> · <TAS> KT` for `mission.targetCruiseFl`; FL figure is the flown (target) level; DEP/ARR labels shortened.
 - v5.10.1: force-supersonic switch + logic removed at the owner's request (UI looked bad); CRZ speed on the dispatch strip kept.
+- v5.11.0: `dismissedAlertsProvider` (`DismissedAlertsNotifier`, in `live_alerts_provider.dart`) + `clearableAlerts = {'DESCEND NOW'}`: tapping a clearable MFD pill dismisses it (filtered out of `liveAlertsProvider`) until `liveNavProvider` phase leaves cruise; other pills keep 10 s silence.
 
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.
