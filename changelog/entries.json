@@ -1,6 +1,13 @@
 [
     {
         "date": "2026-10-04",
+        "title": "v5.8.1 \u2014 Smarter cruise level on short sectors",
+        "items": [
+            "On sectors too short for supersonic, SimBrief's level is kept when it fits; if it's lower than ideal for Concorde, the app raises it to around FL290 (FL280 westbound) when the distance allows, and lowers it if it doesn't fit"
+        ]
+    },
+    {
+        "date": "2026-10-04",
         "title": "v5.8.0 \u2014 Smart cruise level from SimBrief, clearer fuel endurance",
         "items": [
             "Loading a SimBrief flight now picks the cruise level for you: if the route is long enough to go supersonic, the highest Mach 2 level the distance allows (up to FL590); on short sectors, SimBrief's own planned level. Fuel and times follow automatically, and you can still change the level by hand",
