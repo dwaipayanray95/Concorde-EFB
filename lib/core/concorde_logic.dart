@@ -244,14 +244,35 @@ class ConcordeLogic {
             .toList()
           ..sort();
     if (supersonic.isNotEmpty) return supersonic.last.toDouble();
-    final cap = math.min(
-      maxSubsonicFlForDistance(distanceNm),
-      supersonicMinFl - 10,
+    // Subsonic sector. Highest level the distance allows, snapped down to
+    // the RVSM semicircular rule (east odd: 290/310..., west even).
+    final maxFit = _snapSubsonicDown(
+      math.min(maxSubsonicFlForDistance(distanceNm), supersonicMinFl - 10),
+      direction,
     );
+    // Concorde cruises subsonic most efficiently around FL290 (M0.95), so
+    // suggest that (or the highest level that fits, if lower).
+    final suggested = math.min(
+      maxFit,
+      _snapSubsonicDown(subsonicFallbackFl, direction),
+    );
+    // SimBrief's level is kept when it fits and is at least as good as the
+    // suggestion; a lower SimBrief level (airliner-style) is raised to the
+    // suggestion, a too-high one is lowered to what fits.
     if (simbriefFl != null && simbriefFl > 0) {
-      return math.min(simbriefFl, cap);
+      return math.max(simbriefFl, suggested).clamp(0, maxFit).toDouble();
     }
-    return cap;
+    return suggested;
+  }
+
+  /// Highest FL <= [fl] that matches the semicircular rule below FL410
+  /// (eastbound odd thousands, westbound even); unchanged if no direction.
+  static double _snapSubsonicDown(double fl, String? direction) {
+    if (direction == null) return fl;
+    var v = (fl / 10).floor();
+    final wantOdd = direction == 'E';
+    if (v.isOdd != wantOdd) v -= 1;
+    return math.max(v, 0) * 10.0;
   }
 
   /// Phase-by-phase trip fuel and time. Every phase is burn = fuel flow x

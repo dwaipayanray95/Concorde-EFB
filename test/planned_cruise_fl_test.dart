@@ -19,14 +19,32 @@ void main() {
     );
   });
 
-  test('short sector: SimBrief FL, capped to what the distance allows', () {
+  test('short sector: SimBrief FL kept when it fits and is high enough', () {
     expect(
       ConcordeLogic.plannedCruiseFl(400, direction: 'E', simbriefFl: 330),
       330,
     );
+  });
+
+  test('short sector: low SimBrief FL raised to the suggested FL290', () {
     expect(
-      ConcordeLogic.plannedCruiseFl(120, direction: 'E', simbriefFl: 330),
-      ConcordeLogic.maxSubsonicFlForDistance(120),
+      ConcordeLogic.plannedCruiseFl(400, direction: 'E', simbriefFl: 230),
+      290,
     );
+    expect(
+      ConcordeLogic.plannedCruiseFl(400, direction: 'W', simbriefFl: 220),
+      280,
+    );
+  });
+
+  test('very short sector: capped to what fits, right parity', () {
+    // 120 nm fits ~FL100 at most.
+    final fl = ConcordeLogic.plannedCruiseFl(
+      120,
+      direction: 'E',
+      simbriefFl: 330,
+    );
+    expect(fl, lessThanOrEqualTo(ConcordeLogic.maxSubsonicFlForDistance(120)));
+    expect((fl ~/ 10).isOdd, isTrue);
   });
 }
