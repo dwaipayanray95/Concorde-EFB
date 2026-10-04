@@ -1,6 +1,14 @@
 [
     {
         "date": "2026-10-04",
+        "title": "v5.10.0 \u2014 Force supersonic switch, cruise speed on the dispatch strip",
+        "items": [
+            "New FORCE SUPERSONIC switch under the cruise level: fly Mach 2 even on sectors too short for it to pay off (as long as the climb, acceleration and descent fit). The cruise level, fuel and times follow, showing the real, higher fuel cost",
+            "The dispatch strip now shows the cruise speed at the planned level (e.g. CRZ M2.04 \u00b7 1170 KT, or M0.95 when subsonic), and fits on one line"
+        ]
+    },
+    {
+        "date": "2026-10-04",
         "title": "v5.9.1 \u2014 One-line dispatch strip",
         "items": [
             "A clean DISPATCH GO is now a single strip: the V-speeds, weights, fuel, level and runways sit right next to it instead of an 'all checks passed' line"
