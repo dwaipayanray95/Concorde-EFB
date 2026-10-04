@@ -1,6 +1,14 @@
 [
     {
         "date": "2026-10-04",
+        "title": "v5.12.0 \u2014 Smarter gear-up warning",
+        "items": [
+            "The gear-up warning no longer fires on every descent. Within 30 nm of the destination, below 5,000 ft above the airport and under 250 kt with the gear up you get a single amber GEAR UP \u2014 CHECK GEAR reminder; only within 10 nm, below 2,000 ft and under 220 kt does it become the repeating red GEAR UP \u2014 TOO LOW warning",
+            "Both gear alerts can be cleared with a tap (e.g. for a hold or low-level procedure); they re-arm once the gear goes down or you climb away"
+        ]
+    },
+    {
+        "date": "2026-10-04",
         "title": "v5.11.0 \u2014 Clearable DESCEND NOW",
         "items": [
             "Tap DESCEND NOW on the Flight Monitor to clear it (no pill, no chime) when ATC, the procedure or terrain keep you level. It re-arms automatically once you leave cruise or start a new flight. Other warnings still silence for 10 seconds on tap"
