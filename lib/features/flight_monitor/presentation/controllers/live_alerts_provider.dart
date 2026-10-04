@@ -23,17 +23,33 @@ const _urgent = Duration(seconds: 2);
 /// DESCEND NOW re-chimes every 12 s until the descent starts.
 const _descendReminder = Duration(seconds: 12);
 
+const descendNowText = 'DESCEND NOW';
+const gearCheckText = 'GEAR UP — CHECK GEAR';
+const gearWarningText = 'GEAR UP — TOO LOW';
+
 /// Alerts the pilot cleared (tap on the MFD strip) because ATC, the
-/// charts/procedure or terrain dictate otherwise -- e.g. DESCEND NOW when
-/// told to hold level. Cleared alerts are hidden and silent until the
-/// aircraft leaves cruise (descent started, or a new flight), then re-arm.
+/// charts/procedure or terrain dictate otherwise. Cleared alerts are hidden
+/// and silent until they re-arm:
+///  - DESCEND NOW: once the aircraft leaves cruise (descent / new flight);
+///  - gear alerts: once the gear goes down or the aircraft climbs away.
 class DismissedAlertsNotifier extends Notifier<Set<String>> {
   @override
   Set<String> build() {
     ref.listen(liveNavProvider.select((n) => n?.phase), (_, phase) {
-      if (phase != FlightBurnPhase.cruise && state.isNotEmpty) state = {};
+      if (phase != FlightBurnPhase.cruise) _rearm({descendNowText});
+    });
+    ref.listen(flightMonitorProvider.select((m) => m.currentTelemetry), (_, t) {
+      if (t == null || t.gearLabel != 'UP' || t.vs > 500) {
+        _rearm({gearCheckText, gearWarningText});
+      }
     });
     return {};
+  }
+
+  void _rearm(Set<String> texts) {
+    if (state.any(texts.contains)) {
+      state = state.difference(texts);
+    }
   }
 
   void dismiss(String text) => state = {...state, text};
@@ -45,7 +61,7 @@ final dismissedAlertsProvider =
     );
 
 /// Alerts that can be cleared outright (not just silenced).
-const clearableAlerts = {'DESCEND NOW'};
+const clearableAlerts = {descendNowText, gearCheckText, gearWarningText};
 
 /// Live warnings/cautions from telemetry + the flight plan. Computed here
 /// (not in a widget) so they exist -- and chime -- whichever tab is open.
@@ -97,25 +113,33 @@ final liveAlertsProvider = Provider<List<LiveAlert>>((ref) {
       const LiveAlert('GEAR SPEED', critical: true, repeatEvery: _urgent),
     );
   }
-  // DC Designs manual: gear lights flash red below 250 kt IAS with the gear
-  // up -- i.e. low and slow on approach without the gear down (below 5,000
-  // ft above the ground).
-  // Height above the ground (not sea level), so it works at high airports.
+  // Gear up while descending towards the destination. Two levels so a
+  // step-down or hold far out doesn't nag:
+  //  - caution (once): within 30 nm, < 5,000 ft above the airport, < 250 kt
+  //    (DC Designs manual: gear lights flash below 250 kt with gear up);
+  //  - warning (repeating): within 10 nm, < 2,000 ft, < 220 kt.
+  // Height above the arrival airport (not sea level). Both are clearable.
   final heightAgl = t.heightAboveGround(
     fieldElevationFt: ref.watch(arrAirportProvider)?.elevationFt,
   );
-  if (t.gearLabel == 'UP' &&
-      !t.onGround &&
-      t.ias < 250 &&
-      t.vs < -300 &&
-      heightAgl < 5000) {
-    alerts.add(
-      const LiveAlert(
-        'GEAR UP — BELOW 250 KT',
-        critical: true,
-        repeatEvery: _urgent,
-      ),
-    );
+  final distNm = pred?.distToDestNm;
+  final dismissed = ref.watch(dismissedAlertsProvider);
+  if (t.gearLabel == 'UP' && !t.onGround && t.vs < -300 && distNm != null) {
+    if (distNm <= 10 && heightAgl < 2000 && t.ias < 220) {
+      if (!dismissed.contains(gearWarningText)) {
+        alerts.add(
+          const LiveAlert(
+            gearWarningText,
+            critical: true,
+            repeatEvery: _urgent,
+          ),
+        );
+      }
+    } else if (distNm <= 30 && heightAgl < 5000 && t.ias < 250) {
+      if (!dismissed.contains(gearCheckText)) {
+        alerts.add(const LiveAlert(gearCheckText, critical: false));
+      }
+    }
   }
   // Fuel-at-destination warnings only from cruise on: the high climb /
   // reheat burn is planned and would otherwise trip them on every takeoff.
@@ -132,10 +156,10 @@ final liveAlertsProvider = Provider<List<LiveAlert>>((ref) {
     if (pred.distToTodNm <= 10 &&
         pred.distToTodNm > -20 &&
         phase == FlightBurnPhase.cruise &&
-        !ref.watch(dismissedAlertsProvider).contains('DESCEND NOW')) {
+        !dismissed.contains(descendNowText)) {
       alerts.add(
         const LiveAlert(
-          'DESCEND NOW',
+          descendNowText,
           critical: false,
           repeatEvery: _descendReminder,
         ),
