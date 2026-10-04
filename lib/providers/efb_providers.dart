@@ -398,6 +398,23 @@ class CruiseFLNotifier extends Notifier<double> {
   void set(double val, String? direction) {
     state = ConcordeLogic.snapToNonRvsm(val, direction);
   }
+
+  /// Picks the cruise FL for a sector of [distanceNm] (see
+  /// [ConcordeLogic.plannedCruiseFl]): supersonic as high as the distance
+  /// allows, otherwise [sourceFl] (SimBrief / .pln level) when it fits, or
+  /// the suggested subsonic level. Used by every way a plan gets in.
+  void autoPlan(double distanceNm, {double? sourceFl, String? direction}) {
+    if (distanceNm <= 0) return;
+    final dir = direction ?? ref.read(flightDirectionProvider);
+    set(
+      ConcordeLogic.plannedCruiseFl(
+        distanceNm,
+        direction: dir,
+        simbriefFl: sourceFl,
+      ),
+      dir,
+    );
+  }
 }
 
 final cruiseFLProvider = NotifierProvider<CruiseFLNotifier, double>(

@@ -56,9 +56,13 @@ class CruiseAndFuelSection extends ConsumerWidget {
                               .watch(plannedDistanceProvider)
                               .round()
                               .toString(),
-                          onChanged: (v) => ref
-                              .read(plannedDistanceProvider.notifier)
-                              .set(double.tryParse(v) ?? 0.0),
+                          onChanged: (v) {
+                            final nm = double.tryParse(v) ?? 0.0;
+                            ref.read(plannedDistanceProvider.notifier).set(nm);
+                            // Same FL logic as imports (no source FL for a
+                            // typed distance -- the suggestion is used).
+                            ref.read(cruiseFLProvider.notifier).autoPlan(nm);
+                          },
                           keyboardType: TextInputType.number,
                         ),
                       ),

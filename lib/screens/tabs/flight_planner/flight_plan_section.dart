@@ -73,6 +73,18 @@ class FlightPlanSection extends ConsumerWidget {
               ConcordeLogic.greatCircleNM(dep.lat, dep.lon, arr.lat, arr.lon),
             );
       ref.read(plannedDistanceProvider.notifier).set(routeNm);
+      ref
+          .read(cruiseFLProvider.notifier)
+          .autoPlan(
+            routeNm,
+            sourceFl: plan.cruiseAltFt == null ? null : plan.cruiseAltFt! / 100,
+            direction: ConcordeLogic.inferDirectionEW(
+              dep.lat,
+              dep.lon,
+              arr.lat,
+              arr.lon,
+            ),
+          );
     }
   }
 
@@ -500,15 +512,10 @@ class FlightPlanSection extends ConsumerWidget {
                                   : ref.read(flightDirectionProvider);
                               ref
                                   .read(cruiseFLProvider.notifier)
-                                  .set(
-                                    ConcordeLogic.plannedCruiseFl(
-                                      routeNm,
-                                      direction: dir,
-                                      simbriefFl: sbFt == null
-                                          ? null
-                                          : sbFt / 100,
-                                    ),
-                                    dir,
+                                  .autoPlan(
+                                    routeNm,
+                                    sourceFl: sbFt == null ? null : sbFt / 100,
+                                    direction: dir,
                                   );
                             }
                             ref
