@@ -14,7 +14,7 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `5.9.0+80` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+- Current version: `5.9.1+81` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
   `public/changelog/entries.json` in sync — README no longer carries its own changelog, it just
   links to that page.
 - **Versioning rule (mandatory for every agent):** every change that alters user-visible behavior
@@ -285,6 +285,7 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 - v5.8.2: `CruiseFLNotifier.autoPlan(distanceNm, sourceFl:, direction:)` wraps `plannedCruiseFl`; called on SimBrief import, file import (`ParsedFlightPlan.cruiseAltFt`/100) and every planned-distance edit (no source FL).
 - v5.8.3: `liveNavProvider` scales remaining-along-polyline by plannedDistance / polylineNm (navlog fixes skip SID/STAR legs, so the polyline is shorter than SimBrief route_distance) -- progress is 0 at the gate.
 - v5.9.0: `DispatchBanner` GO shows a quick-figures row (V1/VR/V2, TOW, FUEL, FL, DEP RWY, LW, VAPP, ARR RWY; hidden in compact phone mode); width < 150 ft no longer a dispatch caution (perf cards still flag it); cruise FL field ignores empty/< 100 input; `LiveNav.progress` = 0 on the ground until past half the route.
+- v5.9.1: clean GO puts the quick figures inline in the banner row (`_figures`); with cautions they stay on a second row.
 
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.

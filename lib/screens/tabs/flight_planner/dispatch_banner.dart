@@ -83,66 +83,79 @@ class _DispatchBannerState extends ConsumerState<DispatchBanner> {
                 Container(width: 1, height: 16, color: dim),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    items.isEmpty
-                        ? 'All fuel, weight, runway and weather checks passed.'
-                        : [
-                            ...items.map((i) => i.$1.toUpperCase()),
-                            if (hidden > 0) '+$hidden MORE',
-                          ].join('  ·  '),
-                    maxLines: compact ? 1 : 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: uiText(
-                      context,
-                      size: 11,
-                      weight: FontWeight.w700,
-                      color: fg,
-                      letterSpacing: 0.4,
-                    ),
-                  ),
+                  // Clean GO: the quick figures sit right in this row, so
+                  // the banner is one strip.
+                  child: items.isEmpty && quick.isNotEmpty
+                      ? _figures(context, quick, fg, dim)
+                      : Text(
+                          items.isEmpty
+                              ? 'All fuel, weight, runway and weather checks passed.'
+                              : [
+                                  ...items.map((i) => i.$1.toUpperCase()),
+                                  if (hidden > 0) '+$hidden MORE',
+                                ].join('  ·  '),
+                          maxLines: compact ? 1 : 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: uiText(
+                            context,
+                            size: 11,
+                            weight: FontWeight.w700,
+                            color: fg,
+                            letterSpacing: 0.4,
+                          ),
+                        ),
                 ),
               ],
             ),
-            if (quick.isNotEmpty && !compact) ...[
+            if (quick.isNotEmpty && items.isNotEmpty && !compact) ...[
               const SizedBox(height: 8),
               Container(height: 1, color: dim.withValues(alpha: 0.35)),
               const SizedBox(height: 8),
-              Wrap(
-                spacing: 18,
-                runSpacing: 6,
-                children: [
-                  for (final (k, v) in quick)
-                    Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(
-                            text: '$k ',
-                            style: uiText(
-                              context,
-                              size: 10,
-                              weight: FontWeight.w700,
-                              color: dim,
-                              letterSpacing: 0.8,
-                            ),
-                          ),
-                          TextSpan(
-                            text: v,
-                            style: uiText(
-                              context,
-                              size: 14,
-                              weight: FontWeight.w900,
-                              color: fg,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
+              _figures(context, quick, fg, dim),
             ],
           ],
         ),
       ),
+    );
+  }
+
+  Widget _figures(
+    BuildContext context,
+    List<(String, String)> quick,
+    Color fg,
+    Color dim,
+  ) {
+    return Wrap(
+      spacing: 18,
+      runSpacing: 6,
+      children: [
+        for (final (k, v) in quick)
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: '$k ',
+                  style: uiText(
+                    context,
+                    size: 10,
+                    weight: FontWeight.w700,
+                    color: dim,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                TextSpan(
+                  text: v,
+                  style: uiText(
+                    context,
+                    size: 14,
+                    weight: FontWeight.w900,
+                    color: fg,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 

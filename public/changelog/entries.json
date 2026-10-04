@@ -1,6 +1,13 @@
 [
     {
         "date": "2026-10-04",
+        "title": "v5.9.1 — One-line dispatch strip",
+        "items": [
+            "A clean DISPATCH GO is now a single strip: the V-speeds, weights, fuel, level and runways sit right next to it instead of an 'all checks passed' line"
+        ]
+    },
+    {
+        "date": "2026-10-04",
         "title": "v5.9.0 — Quick-glance dispatch figures",
         "items": [
             "When dispatch is GO, the dispatch strip now shows V1 / VR / V2, takeoff weight, fuel, cruise level, departure runway, landing weight, VAPP and arrival runway at a glance",
