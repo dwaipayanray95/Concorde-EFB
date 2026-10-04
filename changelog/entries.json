@@ -1,6 +1,13 @@
 [
     {
         "date": "2026-10-04",
+        "title": "v5.8.2 \u2014 Smart cruise level for typed distances and .pln imports",
+        "items": [
+            "The automatic cruise level now also applies when you type a planned distance or import an MSFS .pln file: supersonic as high as the distance allows, otherwise the .pln's level when it fits (raised to around FL290 if lower), or the suggested subsonic level for a typed distance. You can still change it by hand"
+        ]
+    },
+    {
+        "date": "2026-10-04",
         "title": "v5.8.1 \u2014 Smarter cruise level on short sectors",
         "items": [
             "On sectors too short for supersonic, SimBrief's level is kept when it fits; if it's lower than ideal for Concorde, the app raises it to around FL290 (FL280 westbound) when the distance allows, and lowers it if it doesn't fit"
