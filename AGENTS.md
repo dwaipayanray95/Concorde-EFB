@@ -14,7 +14,7 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `5.7.0+75` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+- Current version: `5.8.0+76` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
   `public/changelog/entries.json` in sync — README no longer carries its own changelog, it just
   links to that page.
 - **Versioning rule (mandatory for every agent):** every change that alters user-visible behavior
@@ -280,6 +280,7 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 - v5.6.0: `TelemetryModel.flightLoaded` (not at 0,0 and fuel > 500 kg) gates `liveNavProvider` + `liveAlertsProvider` -- MSFS menu/loading frames produce no alerts/chimes; CG alerts armed by `allEnginesRunning` (bridge sends per-engine `engineFuelFlowKgH`, > 150 kg/h each; older bridges: total > 1,000 kg/h) or airborne; tap an MFD alert pill -> `AlertChimeNotifier.silence(text)` mutes it 10 s, re-chimes if still active. Chimes are local per device.
 - v5.6.1: bridge sends `roll = -PLANE BANK DEGREES` (sim is + = left; app/ADI use + = right; old recordings stay mirrored); CG alerts armed only airborne > 10,000 ft above the departure field (replaces the engines-running gate; `allEnginesRunning` kept but unused); `liveNavProvider` predicts fuel at dest with the planned cruise flow (`cruiseFLProvider`) until phase is cruise/descent, and fuel alerts arm only in cruise/descent.
 - v5.7.0: `takeoffCgTargetPct = 56` / `cgCorridorArmFt = 10000` in `live_flight_math.dart` (owner-provided takeoff CG); `CgTrimCard` (now a ConsumerWidget) shows TAKEOFF TARGET 56.0 and no limit advice on the ground / below 10,000 ft above the departure field; CG alerts use the same threshold.
+- v5.8.0: `ConcordeLogic.plannedCruiseFl(distanceNm, direction:, simbriefFl:)` (owner rule): highest Non-RVSM FL >= 410 whose `minSupersonicDistanceNm` fits, else SimBrief `general.initial_altitude`/100 capped by `maxSubsonicFlForDistance` (and < FL410); applied on SimBrief import (direction from OFP origin/destination pos). Planner stat `FUEL ENDURANCE` = endurance h, subtext ETE + reserves + margin (margin is 0 unless extra fuel, since FOB = required block).
 
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.

@@ -1,5 +1,13 @@
 [
     {
+        "date": "2026-10-04",
+        "title": "v5.8.0 — Smart cruise level from SimBrief, clearer fuel endurance",
+        "items": [
+            "Loading a SimBrief flight now picks the cruise level for you: if the route is long enough to go supersonic, the highest Mach 2 level the distance allows (up to FL590); on short sectors, SimBrief's own planned level. Fuel and times follow automatically, and you can still change the level by hand",
+            "ENDURANCE MARGIN is now FUEL ENDURANCE: how long the fuel on board lasts, with the flight time + reserves it covers and any extra margin"
+        ]
+    },
+    {
         "date": "2026-10-03",
         "title": "v5.7.0 — Takeoff CG target",
         "items": [

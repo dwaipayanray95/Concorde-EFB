@@ -462,6 +462,55 @@ class FlightPlanSection extends ConsumerWidget {
                                       ) ??
                                       0.0,
                                 );
+                            // Cruise FL: supersonic (as high as the
+                            // distance allows) when the sector permits,
+                            // otherwise SimBrief's own planned FL.
+                            final routeNm =
+                                double.tryParse(
+                                  '${ofp['general']?['route_distance'] ?? ''}',
+                                ) ??
+                                0.0;
+                            if (routeNm > 0) {
+                              final sbFt = double.tryParse(
+                                '${ofp['general']?['initial_altitude'] ?? ''}',
+                              );
+                              final oLat = double.tryParse(
+                                '${ofp['origin']?['pos_lat'] ?? ''}',
+                              );
+                              final oLon = double.tryParse(
+                                '${ofp['origin']?['pos_long'] ?? ''}',
+                              );
+                              final dLat = double.tryParse(
+                                '${ofp['destination']?['pos_lat'] ?? ''}',
+                              );
+                              final dLon = double.tryParse(
+                                '${ofp['destination']?['pos_long'] ?? ''}',
+                              );
+                              final dir =
+                                  (oLat != null &&
+                                      oLon != null &&
+                                      dLat != null &&
+                                      dLon != null)
+                                  ? ConcordeLogic.inferDirectionEW(
+                                      oLat,
+                                      oLon,
+                                      dLat,
+                                      dLon,
+                                    )
+                                  : ref.read(flightDirectionProvider);
+                              ref
+                                  .read(cruiseFLProvider.notifier)
+                                  .set(
+                                    ConcordeLogic.plannedCruiseFl(
+                                      routeNm,
+                                      direction: dir,
+                                      simbriefFl: sbFt == null
+                                          ? null
+                                          : sbFt / 100,
+                                    ),
+                                    dir,
+                                  );
+                            }
                             ref
                                 .read(paxCountProvider.notifier)
                                 .set(
@@ -672,7 +721,6 @@ class FlightPlanSection extends ConsumerWidget {
     );
   }
 
-
   Widget _sourceBadge(BuildContext context, FlightPlanSource source) {
     final colors = context.colors;
     final label = switch (source) {
@@ -762,4 +810,3 @@ class _ImportButton extends StatelessWidget {
     );
   }
 }
-

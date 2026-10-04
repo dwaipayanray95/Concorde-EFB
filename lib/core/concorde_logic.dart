@@ -221,6 +221,39 @@ class ConcordeLogic {
       minSupersonicCruiseNm +
       estimateDescent(targetFL * 100).distNm;
 
+  /// Cruise FL to plan for a sector (owner rule): if the distance allows a
+  /// supersonic profile, the HIGHEST Non-RVSM supersonic level it allows
+  /// (up to FL590) -- SimBrief's subsonic-airliner FL is ignored. Otherwise
+  /// the sector is subsonic: SimBrief's planned FL if given (capped to what
+  /// the distance allows), else the highest subsonic FL that fits.
+  static double plannedCruiseFl(
+    double distanceNm, {
+    String? direction,
+    double? simbriefFl,
+  }) {
+    final levels = direction != null
+        ? nonRvsmValidFLs(direction)
+        : [...nonRvsmValidFLs('E'), ...nonRvsmValidFLs('W')];
+    final supersonic =
+        levels
+            .where(
+              (fl) =>
+                  fl >= supersonicMinFl &&
+                  distanceNm >= minSupersonicDistanceNm(fl.toDouble()),
+            )
+            .toList()
+          ..sort();
+    if (supersonic.isNotEmpty) return supersonic.last.toDouble();
+    final cap = math.min(
+      maxSubsonicFlForDistance(distanceNm),
+      supersonicMinFl - 10,
+    );
+    if (simbriefFl != null && simbriefFl > 0) {
+      return math.min(simbriefFl, cap);
+    }
+    return cap;
+  }
+
   /// Phase-by-phase trip fuel and time. Every phase is burn = fuel flow x
   /// phase time, with times from distance / ground speed (no wind):
   ///  supersonic: climb to FL280 -> transonic accel to FL500 (or the

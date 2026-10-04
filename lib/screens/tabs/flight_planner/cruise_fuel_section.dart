@@ -177,17 +177,17 @@ class CruiseAndFuelSection extends ConsumerWidget {
                         subtext:
                             'LW ${numFormat.format(weights.lw.round())} · ZFW ${numFormat.format(weights.zfw.round())}',
                       ),
-                      // One meaningful number: how much longer the fuel
-                      // lasts than the flight + reserves need.
+                      // How long the fuel on board lasts: the flight (ETE)
+                      // plus the reserves at holding burn. Extra fuel shows
+                      // up as the margin.
                       _StatEntry(
-                        label: 'ENDURANCE MARGIN',
-                        value: _formatMargin(
-                          endurance.enduranceH - endurance.requiredH,
-                        ),
+                        label: 'FUEL ENDURANCE',
+                        value: _formatHoursMinutes(endurance.enduranceH),
                         valueColor: endurance.sufficient ? null : colors.error,
                         subtext:
-                            '${_formatHoursMinutes(endurance.enduranceH)} available · '
-                            '${_formatHoursMinutes(endurance.requiredH)} needed',
+                            'ETE ${_formatHoursMinutes(mission.totalTimeH)} + reserves '
+                            '${_formatHoursMinutes(endurance.requiredH - mission.totalTimeH)}'
+                            ' · margin ${_formatMargin(endurance.enduranceH - endurance.requiredH).toLowerCase()}',
                       ),
                       _StatEntry(
                         label: 'PASSENGERS',
