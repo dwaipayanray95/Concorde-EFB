@@ -14,7 +14,7 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `5.8.2+78` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+- Current version: `5.8.3+79` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
   `public/changelog/entries.json` in sync — README no longer carries its own changelog, it just
   links to that page.
 - **Versioning rule (mandatory for every agent):** every change that alters user-visible behavior
@@ -283,6 +283,7 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 - v5.8.0: `ConcordeLogic.plannedCruiseFl(distanceNm, direction:, simbriefFl:)` (owner rule): highest Non-RVSM FL >= 410 whose `minSupersonicDistanceNm` fits, else SimBrief `general.initial_altitude`/100 capped by `maxSubsonicFlForDistance` (and < FL410); applied on SimBrief import (direction from OFP origin/destination pos). Planner stat `FUEL ENDURANCE` = endurance h, subtext ETE + reserves + margin (margin is 0 unless extra fuel, since FOB = required block).
 - v5.8.1: subsonic branch of `plannedCruiseFl` = max(SimBrief FL, suggested) capped at maxFit; suggested = min(maxFit, FL290) with semicircular parity below FL410 (`_snapSubsonicDown`: E odd, W even).
 - v5.8.2: `CruiseFLNotifier.autoPlan(distanceNm, sourceFl:, direction:)` wraps `plannedCruiseFl`; called on SimBrief import, file import (`ParsedFlightPlan.cruiseAltFt`/100) and every planned-distance edit (no source FL).
+- v5.8.3: `liveNavProvider` scales remaining-along-polyline by plannedDistance / polylineNm (navlog fixes skip SID/STAR legs, so the polyline is shorter than SimBrief route_distance) -- progress is 0 at the gate.
 
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.

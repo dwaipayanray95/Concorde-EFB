@@ -88,8 +88,18 @@ final liveNavProvider = Provider<LiveNav?>((ref) {
     // Distance still to fly along the planned route, or the great circle
     // scaled by this plan's route/great-circle ratio when no fixes exist.
     final polyline = ref.watch(routePolylineProvider);
+    // The fix-by-fix polyline is usually shorter than the planned route
+    // distance (SimBrief's includes SID/STAR turns and the navlog skips
+    // procedure legs), so scale it to the planned distance -- otherwise the
+    // aircraft looks well en route while still at the gate.
+    final planned = ref.watch(plannedDistanceProvider);
+    final polylineNm = polyline != null ? RouteMath.polylineNm(polyline) : 0.0;
+    final polyScale = polylineNm > 1 && planned > 0
+        ? planned / polylineNm
+        : 1.0;
     final dist = polyline != null
-        ? RouteMath.remainingAlongRouteNm(t.latitude, t.longitude, polyline)
+        ? RouteMath.remainingAlongRouteNm(t.latitude, t.longitude, polyline) *
+              polyScale
         : ConcordeLogic.greatCircleNM(
                 t.latitude,
                 t.longitude,
