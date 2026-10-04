@@ -1,6 +1,13 @@
 [
     {
         "date": "2026-10-04",
+        "title": "v5.11.0 \u2014 Clearable DESCEND NOW",
+        "items": [
+            "Tap DESCEND NOW on the Flight Monitor to clear it (no pill, no chime) when ATC, the procedure or terrain keep you level. It re-arms automatically once you leave cruise or start a new flight. Other warnings still silence for 10 seconds on tap"
+        ]
+    },
+    {
+        "date": "2026-10-04",
         "title": "v5.10.1 \u2014 Removed the force supersonic switch",
         "items": [
             "Removed the FORCE SUPERSONIC switch; short sectors are planned subsonic again (the cruise speed on the dispatch strip stays)"
