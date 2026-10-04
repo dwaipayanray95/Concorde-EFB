@@ -77,9 +77,16 @@ class CruiseAndFuelSection extends ConsumerWidget {
                                   .watch(cruiseFLProvider)
                                   .round()
                                   .toString(),
-                              onChanged: (v) => ref
-                                  .read(cruiseFLProvider.notifier)
-                                  .set(double.tryParse(v) ?? 590.0, direction),
+                              // Ignore an empty/partial entry so clearing
+                              // the box to type a new level doesn't jump to
+                              // FL590; levels under FL100 are mid-typing.
+                              onChanged: (v) {
+                                final fl = double.tryParse(v);
+                                if (fl == null || fl < 100) return;
+                                ref
+                                    .read(cruiseFLProvider.notifier)
+                                    .set(fl, direction);
+                              },
                               keyboardType: TextInputType.number,
                             ),
                             const SizedBox(height: 4),

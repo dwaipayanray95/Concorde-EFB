@@ -712,7 +712,6 @@ final dispatchSummaryProvider = Provider<DispatchSummary>((ref) {
       noGo.add('$leg tailwind above ${runway.maxTailwindKt.round()} kt');
     }
     if (!f.altitudeOk) noGo.add('$leg airfield outside altitude limits');
-    if (!f.widthOk) cautions.add('$leg runway narrower than 150 ft');
     if (!f.windDataAvailable) cautions.add('$leg wind unknown (no METAR)');
     if (f.condition != RunwayCondition.dry) {
       cautions.add('$leg runway ${f.condition.name}');

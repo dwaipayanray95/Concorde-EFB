@@ -36,6 +36,11 @@ class LiveNav {
   double get progress {
     final p = prediction;
     if (p == null || routeNm <= 0) return 0;
+    // Hold at the start until airborne (taxi isn't progress); after
+    // landing the remaining distance is ~0 so it stays at the end.
+    if (phase == FlightBurnPhase.ground && p.distToDestNm > routeNm / 2) {
+      return 0;
+    }
     return (1 - p.distToDestNm / routeNm).clamp(0.0, 1.0);
   }
 
