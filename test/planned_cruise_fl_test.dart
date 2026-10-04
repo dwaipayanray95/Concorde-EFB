@@ -47,20 +47,4 @@ void main() {
     expect(fl, lessThanOrEqualTo(ConcordeLogic.maxSubsonicFlForDistance(120)));
     expect((fl ~/ 10).isOdd, isTrue);
   });
-
-  test('force supersonic: short sector goes supersonic', () {
-    final fl = ConcordeLogic.plannedCruiseFl(
-      520,
-      direction: 'E',
-      forceSupersonic: true,
-    );
-    expect(fl, greaterThanOrEqualTo(410));
-    expect(ConcordeLogic.plannedCruiseFl(520, direction: 'E'), lessThan(410));
-    final p = ConcordeLogic.buildCruiseMissionProfile(
-      520,
-      fl,
-      forceSupersonic: true,
-    );
-    expect(p.supersonic, isTrue);
-  });
 }

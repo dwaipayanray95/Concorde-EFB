@@ -102,47 +102,6 @@ class CruiseAndFuelSection extends ConsumerWidget {
                                 size: 10,
                               ),
                             ),
-                            const SizedBox(height: 6),
-                            // Fly supersonic even when the sector is too
-                            // short for it to pay off.
-                            Row(
-                              children: [
-                                SizedBox(
-                                  height: 24,
-                                  child: FittedBox(
-                                    child: Switch(
-                                      value: ref.watch(forceSupersonicProvider),
-                                      activeThumbColor: colors.accent,
-                                      onChanged: (v) {
-                                        ref
-                                            .read(
-                                              forceSupersonicProvider.notifier,
-                                            )
-                                            .set(v);
-                                        ref
-                                            .read(cruiseFLProvider.notifier)
-                                            .autoPlan(
-                                              ref.read(plannedDistanceProvider),
-                                            );
-                                      },
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Flexible(
-                                  child: Text(
-                                    'FORCE SUPERSONIC',
-                                    style: uiText(
-                                      context,
-                                      size: 10,
-                                      weight: FontWeight.w700,
-                                      color: colors.textSecondary,
-                                      letterSpacing: 0.6,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
                           ],
                         ),
                       ),

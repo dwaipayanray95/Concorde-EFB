@@ -215,15 +215,10 @@ class ConcordeLogic {
   }
 
   /// Distance needed for a supersonic profile topping out at [targetFL].
-  /// [minCruiseNm] is 0 when the pilot forces supersonic: climb, accel and
-  /// descent still have to fit, but no worthwhile Mach 2 cruise is needed.
-  static double minSupersonicDistanceNm(
-    double targetFL, {
-    double minCruiseNm = minSupersonicCruiseNm,
-  }) =>
+  static double minSupersonicDistanceNm(double targetFL) =>
       estimateClimb(transonicStartFl * 100).distNm +
       transonicAccelNm +
-      minCruiseNm +
+      minSupersonicCruiseNm +
       estimateDescent(targetFL * 100).distNm;
 
   /// Cruise FL to plan for a sector (owner rule): if the distance allows a
@@ -235,9 +230,7 @@ class ConcordeLogic {
     double distanceNm, {
     String? direction,
     double? simbriefFl,
-    bool forceSupersonic = false,
   }) {
-    final minCruise = forceSupersonic ? 0.0 : minSupersonicCruiseNm;
     final levels = direction != null
         ? nonRvsmValidFLs(direction)
         : [...nonRvsmValidFLs('E'), ...nonRvsmValidFLs('W')];
@@ -246,11 +239,7 @@ class ConcordeLogic {
             .where(
               (fl) =>
                   fl >= supersonicMinFl &&
-                  distanceNm >=
-                      minSupersonicDistanceNm(
-                        fl.toDouble(),
-                        minCruiseNm: minCruise,
-                      ),
+                  distanceNm >= minSupersonicDistanceNm(fl.toDouble()),
             )
             .toList()
           ..sort();
@@ -298,7 +287,6 @@ class ConcordeLogic {
     double plannedDistanceNM,
     double selectedCruiseFL, {
     bool includeTakeoff = true,
-    bool forceSupersonic = false,
   }) {
     final f = ConcordeConstants.fuel;
     final distanceNM = math.max(plannedDistanceNM, 0.0);
@@ -306,11 +294,7 @@ class ConcordeLogic {
 
     var supersonic =
         selectedFL >= supersonicMinFl &&
-        distanceNM >=
-            minSupersonicDistanceNm(
-              selectedFL,
-              minCruiseNm: forceSupersonic ? 0 : minSupersonicCruiseNm,
-            );
+        distanceNM >= minSupersonicDistanceNm(selectedFL);
     var capped = selectedFL >= supersonicMinFl && !supersonic;
 
     double targetFL;

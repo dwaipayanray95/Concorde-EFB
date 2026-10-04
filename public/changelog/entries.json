@@ -1,6 +1,13 @@
 [
     {
         "date": "2026-10-04",
+        "title": "v5.10.1 — Removed the force supersonic switch",
+        "items": [
+            "Removed the FORCE SUPERSONIC switch; short sectors are planned subsonic again (the cruise speed on the dispatch strip stays)"
+        ]
+    },
+    {
+        "date": "2026-10-04",
         "title": "v5.10.0 — Force supersonic switch, cruise speed on the dispatch strip",
         "items": [
             "New FORCE SUPERSONIC switch under the cruise level: fly Mach 2 even on sectors too short for it to pay off (as long as the climb, acceleration and descent fit). The cruise level, fuel and times follow, showing the real, higher fuel cost",
