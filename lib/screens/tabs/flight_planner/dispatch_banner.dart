@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/app_colors.dart';
+import '../../../core/concorde_logic.dart';
 import '../../../core/ui_text.dart';
 import '../../../providers/efb_providers.dart';
 
@@ -126,7 +127,7 @@ class _DispatchBannerState extends ConsumerState<DispatchBanner> {
     Color dim,
   ) {
     return Wrap(
-      spacing: 18,
+      spacing: 14,
       runSpacing: 6,
       children: [
         for (final (k, v) in quick)
@@ -164,7 +165,13 @@ class _DispatchBannerState extends ConsumerState<DispatchBanner> {
     final to = ref.watch(takeoffSpeedsProvider);
     final ldg = ref.watch(landingSpeedsProvider);
     final w = ref.watch(weightsProvider);
-    final fl = ref.watch(cruiseFLProvider).round();
+    final mission = ref.watch(missionProfileProvider);
+    // The level actually flown (can be below the selected one on a short
+    // sector) and its cruise speed: Mach + true airspeed.
+    final fl = mission.targetCruiseFl;
+    final tasKt = ConcordeLogic.cruiseTasKtForFL(fl.toDouble());
+    final mach = tasKt / ConcordeLogic.speedOfSoundKtAtFL(fl.toDouble());
+    final tas = tasKt.round();
     final depRwy = ref.watch(departureRunwayProvider)?.id;
     final arrRwy = ref.watch(arrivalRunwayProvider)?.id;
     String t(double kg) => '${(kg / 1000).toStringAsFixed(1)} T';
@@ -175,10 +182,11 @@ class _DispatchBannerState extends ConsumerState<DispatchBanner> {
       ('TOW', t(w.tow)),
       ('FUEL', t(w.fuelOnBoard)),
       ('FL', fl.toString().padLeft(3, '0')),
-      if (depRwy != null) ('DEP RWY', depRwy),
+      ('CRZ', 'M${mach.toStringAsFixed(2)} · $tas KT'),
+      if (depRwy != null) ('DEP', depRwy),
       ('LW', t(w.lw)),
       ('VAPP', '${ldg.vapp.round()}'),
-      if (arrRwy != null) ('ARR RWY', arrRwy),
+      if (arrRwy != null) ('ARR', arrRwy),
     ];
   }
 }

@@ -411,11 +411,24 @@ class CruiseFLNotifier extends Notifier<double> {
         distanceNm,
         direction: dir,
         simbriefFl: sourceFl,
+        forceSupersonic: ref.read(forceSupersonicProvider),
       ),
       dir,
     );
   }
 }
+
+/// Pilot switch: fly supersonic even on a sector too short for it to pay
+/// off (the fuel plan then shows the real, higher cost). Off by default.
+class ForceSupersonicNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+  void set(bool val) => state = val;
+}
+
+final forceSupersonicProvider = NotifierProvider<ForceSupersonicNotifier, bool>(
+  ForceSupersonicNotifier.new,
+);
 
 final cruiseFLProvider = NotifierProvider<CruiseFLNotifier, double>(
   CruiseFLNotifier.new,
@@ -527,7 +540,11 @@ final alternateStatusProvider = Provider<AlternateStatus>((ref) {
 final missionProfileProvider = Provider<CruiseMissionProfile>((ref) {
   final distance = ref.watch(plannedDistanceProvider);
   final cruiseFL = ref.watch(cruiseFLProvider);
-  return ConcordeLogic.buildCruiseMissionProfile(distance, cruiseFL);
+  return ConcordeLogic.buildCruiseMissionProfile(
+    distance,
+    cruiseFL,
+    forceSupersonic: ref.watch(forceSupersonicProvider),
+  );
 });
 
 final fuelBreakdownProvider = Provider<BlockFuelBreakdown>((ref) {
