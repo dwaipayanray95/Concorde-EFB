@@ -1,6 +1,16 @@
 [
     {
         "date": "2026-10-04",
+        "title": "v5.9.0 \u2014 Quick-glance dispatch figures",
+        "items": [
+            "When dispatch is GO, the dispatch strip now shows V1 / VR / V2, takeoff weight, fuel, cruise level, departure runway, landing weight, VAPP and arrival runway at a glance",
+            "Removed the 'runway narrower than 150 ft' caution from the dispatch strip (still shown on the performance cards)",
+            "Clearing the cruise flight level box to type a new level no longer snaps it back to FL590",
+            "Flight progress bar stays at the start while taxiing and starts moving once airborne"
+        ]
+    },
+    {
+        "date": "2026-10-04",
         "title": "v5.8.3 \u2014 Flight progress starts at the gate",
         "items": [
             "Distance to destination and the progress bar now match the planned route distance, so the aircraft no longer looks well en route while still parked at the gate"
