@@ -324,6 +324,10 @@ stale like the old React-era version of this file did.
 - Windows-only features (`tasklist` polling, the bridge exe path resolution) are gated behind
   `defaultTargetPlatform == TargetPlatform.windows` — don't assume they run on macOS/Android/web.
 - Runtime nav DB fetch depends on network availability; offline behavior is limited.
+- The website (`public/`) must stay ad-free and tracker-free: the privacy policy promises it and Play/AdMob
+  review the site. No ad-network scripts (Monetag/A-ADS etc. were removed). Every page links to the privacy
+  page and the privacy page links back home; keep it that way. Nav rows must wrap (`flex-wrap`) so phones
+  don't scroll sideways.
 - Never commit machine-specific paths (e.g. `org.gradle.java.home=C:/Users/...` in
   `android/gradle.properties` -- it broke macOS/CI Android builds). JDK is chosen per machine via
   `flutter config --jdk-dir <path>` or `~/.gradle/gradle.properties`.
