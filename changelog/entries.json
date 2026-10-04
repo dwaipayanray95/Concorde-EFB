@@ -1,6 +1,13 @@
 [
     {
         "date": "2026-10-04",
+        "title": "v5.12.1 \u2014 Proper app name on Android",
+        "items": [
+            "The Android app is now called \"Concorde EFB\" under its icon and in the app list, instead of the internal name"
+        ]
+    },
+    {
+        "date": "2026-10-04",
         "title": "v5.12.0 \u2014 Smarter gear-up warning",
         "items": [
             "The gear-up warning no longer fires on every descent. Within 30 nm of the destination, below 5,000 ft above the airport and under 250 kt with the gear up you get a single amber GEAR UP \u2014 CHECK GEAR reminder; only within 10 nm, below 2,000 ft and under 220 kt does it become the repeating red GEAR UP \u2014 TOO LOW warning",
