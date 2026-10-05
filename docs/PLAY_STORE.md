@@ -62,10 +62,12 @@ Concorde EFB is for flight simulation only and is not affiliated with DC Designs
 The Android app shows a banner ad. It has no accounts and does not sell your data.
 ```
 
-**Screenshots:** Play wants real phone screenshots. Take 4 to 6 on your phone, in landscape:
-planner, fuel, performance calculator, checklists, flight monitor. The desktop images in
-`public/landing/screenshots/` are 1400 px wide and also accepted (any side from 320 to 3840 px, no more
-than 2:1), but real phone screenshots look better and avoid review questions.
+**Screenshots:** ready-made sets rendered from the real app (JetBrains Mono, loaded EGLL-KJFK
+flight, dark + light), all within Play's limits:
+- Phone (1920x1080): `store/google-play/screenshots-phone/` -- upload these under Phone screenshots.
+- Tablet (2560x1600): `store/google-play/screenshots-tablet/` -- use for both 7-inch and 10-inch tablets.
+Files are numbered in the suggested upload order (planner, fuel release, performance, fuel schematic,
+cockpit panels, checklists, then light-mode extras).
 
 ## 3. App content (Policy → App content)
 | Question | Answer |
