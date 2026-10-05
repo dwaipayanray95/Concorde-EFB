@@ -166,10 +166,21 @@ jobs:
     if: inputs.windows
     needs: [prepare, verify]
     runs-on: windows-latest
+    # SignPath checks the build through the GitHub API, so it needs `actions: read`.
+    permissions:
+      contents: read
+      actions: read
     env:
       MODE: ${{ inputs.mode }}
       VERSION: ${{ needs.prepare.outputs.version }}
       STEM: ${{ needs.prepare.outputs.stem }}
+      # Code signing is OFF until you finish docs/WINDOWS_SIGNING.md: it needs the
+      # SIGNPATH_ORGANIZATION_ID variable and the SIGNPATH_API_TOKEN secret, and only
+      # release builds are signed. Without them the build works exactly as before.
+      SIGN: ${{ inputs.mode == 'release' && vars.SIGNPATH_ORGANIZATION_ID != '' && secrets.SIGNPATH_API_TOKEN != '' }}
+      SP_ORG: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+      SP_PROJECT: ${{ vars.SIGNPATH_PROJECT_SLUG || 'concorde-efb' }}
+      SP_POLICY: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -197,6 +208,56 @@ jobs:
       - name: Build Windows app
         run: flutter build windows --${{ env.MODE }}
 
+      # ---- Code signing, part 1: our two programs, BEFORE they go into the installer ----
+      - name: Stage programs to sign
+        if: env.SIGN == 'true'
+        shell: pwsh
+        run: |
+          $dir = (Get-Culture).TextInfo.ToTitleCase($env:MODE)
+          $root = "build/windows/x64/runner/$dir"
+          $bridge = "$root/simbridge/msfs_bridge/msfs_bridge.exe"
+          foreach ($f in @("$root/concorde_efb.exe", $bridge)) {
+            if (-not (Test-Path $f)) { throw "Missing $f - cannot sign" }
+          }
+          New-Item -ItemType Directory -Force to-sign | Out-Null
+          Copy-Item "$root/concorde_efb.exe" to-sign/
+          Copy-Item $bridge to-sign/
+
+      - name: Upload programs for signing
+        id: up-binaries
+        if: env.SIGN == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-binaries
+          path: to-sign/*.exe
+          if-no-files-found: error
+
+      - name: Sign programs (SignPath)
+        if: env.SIGN == 'true'
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ env.SP_ORG }}
+          project-slug: ${{ env.SP_PROJECT }}
+          signing-policy-slug: ${{ env.SP_POLICY }}
+          artifact-configuration-slug: binaries
+          github-artifact-id: ${{ steps.up-binaries.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: signed/binaries
+
+      - name: Put signed programs back
+        if: env.SIGN == 'true'
+        shell: pwsh
+        run: |
+          $dir = (Get-Culture).TextInfo.ToTitleCase($env:MODE)
+          $root = "build/windows/x64/runner/$dir"
+          foreach ($f in @("concorde_efb.exe", "msfs_bridge.exe")) {
+            if (-not (Test-Path "signed/binaries/$f")) { throw "SignPath did not return $f" }
+          }
+          Copy-Item signed/binaries/concorde_efb.exe "$root/concorde_efb.exe" -Force
+          Copy-Item signed/binaries/msfs_bridge.exe "$root/simbridge/msfs_bridge/msfs_bridge.exe" -Force
+
       - name: Build installer (Inno Setup)
         shell: pwsh
         run: |
@@ -205,10 +266,49 @@ jobs:
             "/DAppVer=$env:VERSION" "/DBuildDir=$dir" "/DOutName=${env:STEM}_windows_setup" inno_setup.iss
           if ($LASTEXITCODE -ne 0) { throw "ISCC failed" }
 
+      # ---- Code signing, part 2: the finished installer ----
+      - name: Upload installer for signing
+        id: up-installer
+        if: env.SIGN == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-installer
+          path: build/windows/${{ needs.prepare.outputs.stem }}_windows_setup.exe
+          if-no-files-found: error
+
+      - name: Sign installer (SignPath)
+        if: env.SIGN == 'true'
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ env.SP_ORG }}
+          project-slug: ${{ env.SP_PROJECT }}
+          signing-policy-slug: ${{ env.SP_POLICY }}
+          artifact-configuration-slug: installer
+          github-artifact-id: ${{ steps.up-installer.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: signed/installer
+
+      - name: Collect installer
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist-win | Out-Null
+          $name = "${env:STEM}_windows_setup.exe"
+          if ($env:SIGN -eq 'true') {
+            Copy-Item "signed/installer/$name" "dist-win/$name"
+            $sig = Get-AuthenticodeSignature "dist-win/$name"
+            "### Windows signature`n- Status: $($sig.Status)`n- Signer: $($sig.SignerCertificate.Subject)" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+            if ($sig.Status -ne 'Valid') { throw "Installer signature is $($sig.Status)" }
+          } else {
+            Copy-Item "build/windows/$name" "dist-win/$name"
+            if ($env:MODE -eq 'release') { Write-Host "::warning::Windows release is UNSIGNED (SignPath is not configured yet)." }
+          }
+
       - uses: actions/upload-artifact@v4
         with:
           name: dist-windows
-          path: build/windows/${{ needs.prepare.outputs.stem }}_windows_setup.exe
+          path: dist-win/*.exe
           if-no-files-found: error
 
   # ---------------------------------------------------------------- android
