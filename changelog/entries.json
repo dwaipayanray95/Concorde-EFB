@@ -3,6 +3,7 @@
         "date": "2026-10-05",
         "title": "Commits",
         "items": [
+            "69f8826 Website: show the tablet screenshots in the showcase",
             "53f2be9 Website: use the new phone screenshots in the showcase, device-style frame",
             "35c17b4 Compress store screenshots and feature graphic (256-colour PNG)",
             "ebdb088 Store graphics: new feature graphic, phone + tablet screenshot sets, listing guide update",
