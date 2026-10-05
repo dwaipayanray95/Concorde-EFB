@@ -3,6 +3,7 @@
         "date": "2026-10-05",
         "title": "Commits",
         "items": [
+            "51898eb Add Apache-2.0 licence (LICENSE, NOTICE, README) for open-source code signing",
             "56e696b ci: Windows code signing through SignPath (off until configured), owner guide"
         ]
     },
