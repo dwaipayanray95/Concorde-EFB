@@ -14,7 +14,7 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `5.12.0+85` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+- Current version: `5.12.1+86` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
   `public/changelog/entries.json` in sync — README no longer carries its own changelog, it just
   links to that page.
 - **Versioning rule (mandatory for every agent):** every change that alters user-visible behavior
@@ -290,6 +290,7 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 - v5.10.1: force-supersonic switch + logic removed at the owner's request (UI looked bad); CRZ speed on the dispatch strip kept.
 - v5.11.0: `dismissedAlertsProvider` (`DismissedAlertsNotifier`, in `live_alerts_provider.dart`) + `clearableAlerts = {'DESCEND NOW'}`: tapping a clearable MFD pill dismisses it (filtered out of `liveAlertsProvider`) until `liveNavProvider` phase leaves cruise; other pills keep 10 s silence.
 - v5.12.0: gear-up alert split (all need gear UP, airborne, V/S < -300, `pred.distToDestNm`, height above arrival elevation): `GEAR UP — CHECK GEAR` amber once (<= 30 nm, < 5,000 ft, < 250 kt) / `GEAR UP — TOO LOW` red every 2 s (<= 10 nm, < 2,000 ft, < 220 kt); both in `clearableAlerts`, `DismissedAlertsNotifier` re-arms per alert (DESCEND NOW when phase leaves cruise, gear alerts when gear != UP or V/S > +500).
+- v5.12.1: Android launcher label is `Concorde EFB` (was the raw `concorde_efb`). Play Store listing copy, data-safety answers and graphics live in `docs/PLAY_STORE.md` + `store/google-play/`.
 
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.
@@ -303,7 +304,7 @@ stale like the old React-era version of this file did.
   to its Play listing once live, host `app-ads.txt` on the developer-site domain root.
 - Crash reporting.
 - Persist flight plan / fuel inputs / checklist progress across restarts.
-- Android release signing is wired (`android/app/build.gradle.kts`, `build.yml`; owner setup steps in `docs/ANDROID_SIGNING.md`; needs the 4 `ANDROID_*` GitHub secrets). Still open: code signing for the Windows installer + `msfs_bridge.exe` (SignPath Foundation or Azure Trusted Signing) and macOS notarization (Apple Developer ID) -- all three are separate from each other.
+- Android release signing is wired (`android/app/build.gradle.kts`, `build.yml`; owner setup steps in `docs/ANDROID_SIGNING.md`; needs the 4 `ANDROID_*` GitHub secrets). Windows signing is wired for SignPath Foundation (`build.yml` windows job: signs `concorde_efb.exe` + `msfs_bridge.exe` before Inno, then the installer; release mode only; OFF until `SIGNPATH_API_TOKEN` secret + `SIGNPATH_ORGANIZATION_ID` variable exist; owner steps in `docs/WINDOWS_SIGNING.md`). It needs the SignPath Foundation application approved (the repo is Apache-2.0: `LICENSE` + `NOTICE`; the bundled Microsoft `SimConnect.dll` is the one non-open component SignPath may ask about). Still open: macOS notarization (Apple Developer ID) -- all three platforms' signing are separate from each other.
 - Wi-Fi link: some Android devices filter UDP broadcasts (needs a `WifiManager.MulticastLock`
   platform channel if discovery proves unreliable -- manual IP entry works regardless).
 - Feature ideas: CG / trim-tank transfer planner, live planned-vs-actual fuel, telemetry-driven
@@ -323,6 +324,10 @@ stale like the old React-era version of this file did.
 - Windows-only features (`tasklist` polling, the bridge exe path resolution) are gated behind
   `defaultTargetPlatform == TargetPlatform.windows` — don't assume they run on macOS/Android/web.
 - Runtime nav DB fetch depends on network availability; offline behavior is limited.
+- The website (`public/`) must stay ad-free and tracker-free: the privacy policy promises it and Play/AdMob
+  review the site. No ad-network scripts (Monetag/A-ADS etc. were removed). Every page links to the privacy
+  page and the privacy page links back home; keep it that way. Nav rows must wrap (`flex-wrap`) so phones
+  don't scroll sideways.
 - Never commit machine-specific paths (e.g. `org.gradle.java.home=C:/Users/...` in
   `android/gradle.properties` -- it broke macOS/CI Android builds). JDK is chosen per machine via
   `flutter config --jdk-dir <path>` or `~/.gradle/gradle.properties`.

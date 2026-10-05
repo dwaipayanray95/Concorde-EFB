@@ -4,6 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Concorde EFB — Privacy Policy</title>
+<meta name="description" content="Privacy policy for Concorde EFB, the free flight planning companion for the DC Designs Concorde in Microsoft Flight Simulator." />
+<link rel="icon" type="image/png" href="../app-icon-256.png" />
 <meta name="description" content="Privacy policy for the Concorde EFB app (Windows, macOS, Android) and website." />
 <style>
   :root {
@@ -17,7 +19,7 @@
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink);
          font: 16px/1.65 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  main { max-width: 760px; margin: 0 auto; padding: 48px 16px 80px; }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 80px; }
   .card { background: var(--surface); border: 1px solid var(--line);
           border-radius: 10px; padding: 32px clamp(16px, 4vw, 40px); }
   h1 { margin: 0 0 4px; font-size: 1.9rem; }
@@ -26,19 +28,40 @@
   p, li { color: var(--ink); }
   .muted { color: var(--muted); font-size: .92rem; }
   table { width: 100%; border-collapse: collapse; font-size: .92rem; margin: .5rem 0; }
-  th, td { text-align: left; vertical-align: top; padding: 8px 10px;
+  th, td { overflow-wrap: anywhere; text-align: left; vertical-align: top; padding: 8px 10px;
            border-bottom: 1px solid var(--line); }
   th { color: var(--muted); font-weight: 600; }
   a { color: var(--accent); }
   .tablewrap { overflow-x: auto; }
+.topbar { max-width: 760px; margin: 0 auto; padding: 20px 16px 0; display: flex;
+  align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none;
+  color: var(--ink); font-weight: 700; }
+.brand img { width: 32px; height: 32px; border-radius: 8px; }
+.topbar nav { display: flex; gap: 16px; flex-wrap: wrap; font-size: .92rem; }
+.topbar nav a { text-decoration: none; color: var(--muted); }
+.topbar nav a:hover, .topbar nav a[aria-current] { color: var(--accent); }
+@media (max-width: 480px) { th, td { padding: 6px 5px; font-size: .84rem; } .card { padding: 24px 16px; } }
+.backhome { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+
 </style>
 </head>
 <body>
+<header class="topbar">
+  <a class="brand" href="../"><img src="../app-icon-256.png" alt="" /><span>Concorde EFB</span></a>
+  <nav aria-label="Site">
+    <a href="../">Home</a>
+    <a href="../downloads/">Downloads</a>
+    <a href="../changelog/">Changelog</a>
+    <a href="../donate/">Donate</a>
+    <a href="./" aria-current="page">Privacy</a>
+  </nav>
+</header>
 <main>
 <div class="card">
   <h1>Privacy Policy</h1>
   <p class="muted">Concorde EFB — Windows, macOS and Android app, and this website.<br>
-  Effective date: 3 October 2026 (updated for Wi-Fi sharing)</p>
+  Effective date: 4 October 2026</p>
 
   <p>Concorde EFB is a free, independent flight-planning tool for the DC Designs
   Concorde in Microsoft Flight Simulator. It is for flight simulation only and is
@@ -91,7 +114,7 @@
     <li>If you are in the European Economic Area, the UK or Switzerland, the app
     asks for your consent (using Google's certified consent tool) before ads use
     your data for personalisation. You can change your choice at any time with
-    <em>AD PRIVACY OPTIONS</em> in the app's footer.</li>
+    <em>Ad Privacy Options</em> in the app's Settings.</li>
     <li>On any Android device you can reset or delete your advertising ID, or opt
     out of personalised ads, in <em>Settings → Google → Ads</em> (or
     <em>Settings → Privacy → Ads</em>).</li>
@@ -100,7 +123,7 @@
   <h2>5. This website</h2>
   <p>This site is hosted on GitHub Pages, which may log visitor IP addresses for
   security (see the <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub Privacy Statement</a>).
-  Pages load fonts from Google Fonts. The site uses no analytics and no ads.</p>
+  Pages load fonts from Google Fonts. The site uses no analytics, no tracking and no advertising.</p>
 
   <h2>6. Children</h2>
   <p>The app is not directed at children under 13 and we do not knowingly
@@ -124,6 +147,8 @@
   <p>Questions about this policy: open an issue on
   <a href="https://github.com/dwaipayanray95/Concorde-EFB/issues">GitHub</a> or
   ask on our <a href="https://discord.gg/xe49YpczpP">Discord</a>.</p>
+
+  <p class="backhome"><a href="../">&larr; Back to the Concorde EFB website</a></p>
 </div>
 </main>
 </body>
