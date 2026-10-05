@@ -1,5 +1,12 @@
 [
     {
+        "date": "2026-10-05",
+        "title": "Commits",
+        "items": [
+            "56e696b ci: Windows code signing through SignPath (off until configured), owner guide"
+        ]
+    },
+    {
         "date": "2026-10-04",
         "title": "v5.12.1 \u2014 Proper app name on Android",
         "items": [
