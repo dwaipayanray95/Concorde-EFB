@@ -530,45 +530,20 @@
         padding: 0 18px;
       }
 
-      .window-frame {
+      .device-frame {
         width: min(760px, 100%);
-        border-radius: 14px;
-        overflow: hidden;
-        background: var(--bg-2);
+        padding: 8px;
+        border-radius: 22px;
+        background: #0b0b0d;
         border: 1px solid var(--stroke);
         box-shadow: 0 30px 70px -30px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.03);
       }
 
-      .window-titlebar {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 10px 12px;
-        background: rgba(255, 255, 255, 0.03);
-        border-bottom: 1px solid var(--stroke);
-      }
-
-      .window-titlebar .dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        display: inline-block;
-      }
-
-      .dot-r {
-        background: #ff5f57;
-      }
-      .dot-y {
-        background: #febc2e;
-      }
-      .dot-g {
-        background: #28c840;
-      }
-
-      .window-frame img {
+      .device-frame img {
         display: block;
         width: 100%;
         height: auto;
+        border-radius: 14px;
       }
 
       .showcase-slide figcaption {
@@ -692,46 +667,52 @@
         <div class="showcase-viewport">
           <div class="showcase-track" id="showcaseTrack">
             <figure class="showcase-slide">
-              <div class="window-frame">
-                <div class="window-titlebar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
-                <img src="./screenshots/planner-dark.png" alt="Concorde EFB flight planner screen showing SimBrief import and route summary" loading="lazy" />
+              <div class="device-frame">
+                <img src="./screenshots/plan-dark.png" alt="Concorde EFB flight planner with SimBrief import, route summary and dispatch GO banner" loading="lazy" />
               </div>
-              <figcaption><strong>Flight Planner</strong> — SimBrief import, live fuel & time-enroute breakdown.</figcaption>
+              <figcaption><strong>Flight Planner</strong> — SimBrief import, the route, and a dispatch GO / NO-GO summary at a glance.</figcaption>
             </figure>
             <figure class="showcase-slide">
-              <div class="window-frame">
-                <div class="window-titlebar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
-                <img src="./screenshots/cruise-fuel.png" alt="Concorde EFB cruise and fuel management screen with trip fuel breakdown" loading="lazy" />
+              <div class="device-frame">
+                <img src="./screenshots/fuel-dark.png" alt="Concorde EFB cruise and fuel management with planned distance, flight level and fuel inputs" loading="lazy" />
               </div>
-              <figcaption><strong>Cruise & Fuel Management</strong> — segmented climb, cruise, and descent fuel modeling.</figcaption>
+              <figcaption><strong>Cruise &amp; Fuel</strong> — Trip, taxi, contingency and reserve fuel, with takeoff weight and endurance worked out for you.</figcaption>
             </figure>
             <figure class="showcase-slide">
-              <div class="window-frame">
-                <div class="window-titlebar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
-                <img src="./screenshots/performance-calc.png" alt="Concorde EFB performance calculator showing takeoff and landing V-speeds" loading="lazy" />
+              <div class="device-frame">
+                <img src="./screenshots/performance-dark.png" alt="Concorde EFB takeoff performance with runway wind arrow and within-limits status" loading="lazy" />
               </div>
-              <figcaption><strong>Performance Calculator</strong> — V-speeds and runway limits corrected for live METAR.</figcaption>
+              <figcaption><strong>Performance</strong> — Runway checks with live METAR wind, and V-speeds scaled to your actual weights.</figcaption>
             </figure>
             <figure class="showcase-slide">
-              <div class="window-frame">
-                <div class="window-titlebar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
-                <img src="./screenshots/checklists.png" alt="Concorde EFB interactive checklist screen for cold and dark setup" loading="lazy" />
+              <div class="device-frame">
+                <img src="./screenshots/monitor-progress.png" alt="Concorde EFB flight monitor showing flight progress, top of descent and primary flight display" loading="lazy" />
               </div>
-              <figcaption><strong>Interactive Checklists</strong> — full cold-and-dark-to-shutdown flow, synced with live V-speeds.</figcaption>
+              <figcaption><strong>Live Flight Monitor</strong> — Distance to destination, top of descent, ETA, and fuel at arrival, live from the simulator.</figcaption>
             </figure>
             <figure class="showcase-slide">
-              <div class="window-frame">
-                <div class="window-titlebar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
-                <img src="./screenshots/flight-monitor.png" alt="Concorde EFB live flight monitor with fuel tank schematic and center of gravity" loading="lazy" />
+              <div class="device-frame">
+                <img src="./screenshots/monitor-engines.png" alt="Concorde EFB flight monitor showing Mach, engine readouts and fuel flow" loading="lazy" />
               </div>
-              <figcaption><strong>Live Flight Monitor</strong> — glass-cockpit telemetry streamed from MSFS over SimConnect.</figcaption>
+              <figcaption><strong>Engines &amp; Attitude</strong> — Mach, speed, attitude and all four engines on one screen.</figcaption>
             </figure>
             <figure class="showcase-slide">
-              <div class="window-frame">
-                <div class="window-titlebar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
-                <img src="./screenshots/planner-light.png" alt="Concorde EFB flight planner screen in light theme" loading="lazy" />
+              <div class="device-frame">
+                <img src="./screenshots/checklists-dark.png" alt="Concorde EFB checklist for cruise and supersonic acceleration" loading="lazy" />
               </div>
-              <figcaption><strong>Light or Dark</strong> — built to match your cockpit, day or night.</figcaption>
+              <figcaption><strong>Interactive Checklists</strong> — From cold and dark to shutdown, including reheat and fuel transfer steps.</figcaption>
+            </figure>
+            <figure class="showcase-slide">
+              <div class="device-frame">
+                <img src="./screenshots/performance-light.png" alt="Concorde EFB takeoff performance in the light theme" loading="lazy" />
+              </div>
+              <figcaption><strong>Light Theme</strong> — Light or dark, to suit your cockpit day or night.</figcaption>
+            </figure>
+            <figure class="showcase-slide">
+              <div class="device-frame">
+                <img src="./screenshots/fuel-light.png" alt="Concorde EFB cruise and fuel management in the light theme" loading="lazy" />
+              </div>
+              <figcaption><strong>Readable in Any Light</strong> — The same planner in the light theme.</figcaption>
             </figure>
           </div>
           <button class="showcase-nav prev" id="showcasePrev" aria-label="Previous screenshot">&larr;</button>
