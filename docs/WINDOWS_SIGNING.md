@@ -20,7 +20,7 @@ Third-party files (Flutter's DLLs, the Python runtime) are left as they are.
 
 ## 1. Requirements (SignPath Foundation)
 - The code must be **public open source under an OSI-approved licence** (MIT, Apache-2.0, GPL...).
-  The repo needs a `LICENSE` file at its root.
+  The repo has a `LICENSE` file at its root (Apache-2.0).
 - The project must be real and maintained, with a public home page, a download and a way to contact you.
 - You must publish a short **code signing policy** on your website (text below) and credit SignPath.
 - Only programs built from this repository, by the GitHub build, are signed.
@@ -30,7 +30,7 @@ Go to the SignPath Foundation page (search "SignPath Foundation open source", th
 - Project name: Concorde EFB
 - Repository: https://github.com/dwaipayanray95/Concorde-EFB
 - Homepage: https://dwaipayanray95.github.io/Concorde-EFB/
-- Licence: whichever you chose
+- Licence: Apache-2.0 (the `LICENSE` file is in the repo root)
 - Where the code signing policy is published (section 5)
 - How releases are built: the GitHub **Build** workflow, on GitHub-hosted runners
 

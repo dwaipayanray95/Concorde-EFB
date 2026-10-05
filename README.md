@@ -46,6 +46,11 @@ If this helped you plan a slick supersonic hop, consider supporting:
 
 ---
 
+## 📜 License
+Concorde EFB is open source under the [Apache License 2.0](LICENSE). Copyright 2026 Dwaipayan Narayan Ray (see [NOTICE](NOTICE)).
+
+---
+
 ## ⚠️ Disclaimer
 This tool is for flight planning and educational use. Values are heuristic, indicative, and must be validated in-sim. Not affiliated with DC Designs, Microsoft, or any data provider.
 
