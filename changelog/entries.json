@@ -3,6 +3,7 @@
         "date": "2026-10-05",
         "title": "Commits",
         "items": [
+            "35c17b4 Compress store screenshots and feature graphic (256-colour PNG)",
             "ebdb088 Store graphics: new feature graphic, phone + tablet screenshot sets, listing guide update",
             "32c80e5 Merge remote-tracking branch 'refs/remotes/origin/main' into beta",
             "0bf9eae Add Play Store screenshots and feature graphic",
