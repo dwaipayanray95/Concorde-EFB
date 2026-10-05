@@ -3,6 +3,9 @@
         "date": "2026-10-05",
         "title": "Commits",
         "items": [
+            "ebdb088 Store graphics: new feature graphic, phone + tablet screenshot sets, listing guide update",
+            "32c80e5 Merge remote-tracking branch 'refs/remotes/origin/main' into beta",
+            "0bf9eae Add Play Store screenshots and feature graphic",
             "51898eb Add Apache-2.0 licence (LICENSE, NOTICE, README) for open-source code signing",
             "56e696b ci: Windows code signing through SignPath (off until configured), owner guide"
         ]
