@@ -1,5 +1,14 @@
 [
     {
+        "date": "2026-10-10",
+        "title": "v5.13.0 \u2014 Fuel inputs fixed + RESET FUEL",
+        "items": [
+            "Fixed the fuel boxes inflating values: clearing a box (e.g. FINAL RESERVE) used to slip a hidden 0 in front of the cursor, so typing 3000 became 30000. Boxes no longer change under your cursor and tidy up when you leave them",
+            "New RESET FUEL button on the Cruise & Fuel card puts taxi, contingency, final reserve and extra fuel back to their defaults (2,500 kg, 5 %, 6,000 kg, 0 kg); trip and alternate fuel always recalculate from the current plan",
+            "Importing a flight plan file or entering a route without an alternate now clears the previous flight's alternate, so its diversion fuel no longer sticks in the reserves"
+        ]
+    },
+    {
         "date": "2026-10-05",
         "title": "Commits",
         "items": [
