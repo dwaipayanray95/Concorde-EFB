@@ -462,6 +462,16 @@ final extraFuelProvider = NotifierProvider<ExtraFuelNotifier, double>(
   ExtraFuelNotifier.new,
 );
 
+/// Puts taxi, contingency, final reserve and extra fuel back to their
+/// defaults. Trip and alternate fuel are always recomputed from the
+/// current distance / FL / alternate, so nothing else needs clearing.
+void resetFuelInputs(WidgetRef ref) {
+  ref.invalidate(taxiFuelProvider);
+  ref.invalidate(contingencyPctProvider);
+  ref.invalidate(finalReserveFuelProvider);
+  ref.invalidate(extraFuelProvider);
+}
+
 class PaxCountNotifier extends Notifier<int> {
   @override
   int build() => 100;

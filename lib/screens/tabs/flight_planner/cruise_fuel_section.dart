@@ -38,6 +38,24 @@ class CruiseAndFuelSection extends ConsumerWidget {
     return EfbCard(
       title: 'CRUISE & FUEL MANAGEMENT',
       icon: Icons.local_gas_station_outlined,
+      right: Tooltip(
+        message:
+            'Reset taxi, contingency, final reserve and extra fuel to defaults',
+        child: TextButton.icon(
+          onPressed: () => resetFuelInputs(ref),
+          icon: Icon(Icons.restart_alt, size: 16, color: colors.accent),
+          label: Text(
+            'RESET FUEL',
+            style: uiText(
+              context,
+              color: colors.accent,
+              size: 11,
+              weight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

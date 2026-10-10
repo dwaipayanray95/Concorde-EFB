@@ -35,11 +35,21 @@ class EfbTextField extends StatefulWidget {
 
 class _EfbTextFieldState extends State<EfbTextField> {
   late TextEditingController _controller;
+  final FocusNode _focus = FocusNode();
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialValue);
+    _focus.addListener(_onFocusChange);
+  }
+
+  /// Once the user leaves the field, show the value the app actually
+  /// uses (e.g. a snapped FL, or 0 for a cleared box).
+  void _onFocusChange() {
+    if (!_focus.hasFocus && _controller.text != widget.initialValue) {
+      _controller.text = widget.initialValue;
+    }
   }
 
   @override
@@ -47,6 +57,10 @@ class _EfbTextFieldState extends State<EfbTextField> {
     super.didUpdateWidget(oldWidget);
     if (widget.initialValue != oldWidget.initialValue &&
         widget.initialValue != _controller.text) {
+      // Never rewrite the text under the user's cursor: clearing a number
+      // box used to inject "0" in front of the caret, so typing 3000 gave
+      // 30000. The field resyncs on blur instead.
+      if (_focus.hasFocus) return;
       if (widget.keyboardType == TextInputType.number) {
         final currentVal = double.tryParse(_controller.text);
         final newVal = double.tryParse(widget.initialValue);
@@ -69,6 +83,7 @@ class _EfbTextFieldState extends State<EfbTextField> {
 
   @override
   void dispose() {
+    _focus.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -105,6 +120,7 @@ class _EfbTextFieldState extends State<EfbTextField> {
           ),
           child: TextField(
             controller: _controller,
+            focusNode: _focus,
             onChanged: widget.onChanged,
             keyboardType: widget.keyboardType,
             textCapitalization: widget.textCapitalization,
