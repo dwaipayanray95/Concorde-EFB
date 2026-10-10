@@ -1,6 +1,13 @@
 [
     {
         "date": "2026-10-10",
+        "title": "v5.13.2 — SimBrief import error fixed",
+        "items": [
+            "Fixed the \"Circular dependency\" error when importing from SimBrief: changing the destination airport made the runway picker trip over itself, which stopped the import part-way. The runway now re-picks automatically without the loop"
+        ]
+    },
+    {
+        "date": "2026-10-10",
         "title": "v5.13.1 — SimBrief import fixed",
         "items": [
             "SimBrief import no longer stops half-way when the OFP has an empty field (e.g. no registration): previously the airports changed but the distance, cruise FL and alternate stayed from the last flight, so the fuel figures were wrong",

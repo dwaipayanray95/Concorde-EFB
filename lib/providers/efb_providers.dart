@@ -23,9 +23,10 @@ class DepartureIcaoNotifier extends Notifier<String> {
   void set(String val) {
     final v = val.trim().toUpperCase();
     if (v == state) return;
+    // The runway notifier listens to its airport and goes back to the
+    // automatic pick itself. Calling resetToAuto() from here re-entered
+    // it mid-update (CircularDependencyError on SimBrief import).
     state = v;
-    // A new airport always starts from the automatic runway pick.
-    ref.read(departureRunwayIdProvider.notifier).resetToAuto();
   }
 }
 
@@ -39,9 +40,10 @@ class ArrivalIcaoNotifier extends Notifier<String> {
   void set(String val) {
     final v = val.trim().toUpperCase();
     if (v == state) return;
+    // The runway notifier listens to its airport and goes back to the
+    // automatic pick itself. Calling resetToAuto() from here re-entered
+    // it mid-update (CircularDependencyError on SimBrief import).
     state = v;
-    // A new airport always starts from the automatic runway pick.
-    ref.read(arrivalRunwayIdProvider.notifier).resetToAuto();
   }
 }
 
