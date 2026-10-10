@@ -40,6 +40,9 @@ class FlightPlanSection extends ConsumerWidget {
         .set(plan.route.isEmpty ? '--' : plan.route);
     ref.read(flightPlanSourceProvider.notifier).set(source);
     ref.read(checklistProvider.notifier).resetAll();
+    // Extra fuel is a per-flight top-up; a new plan starts without it
+    // (taxi/contingency/reserve are preferences and stay).
+    ref.invalidate(extraFuelProvider);
 
     final db = ref.read(airportDbProvider).value;
     final dep = db?.airports[plan.departureIcao];
@@ -184,6 +187,9 @@ class FlightPlanSection extends ConsumerWidget {
     ref.read(flightPlanSourceProvider.notifier).set(FlightPlanSource.simbrief);
     ref.read(simbriefLoadedProvider.notifier).set(true);
     ref.read(checklistProvider.notifier).resetAll();
+    // Extra fuel is a per-flight top-up; a new plan starts without it
+    // (taxi/contingency/reserve are preferences and stay).
+    ref.invalidate(extraFuelProvider);
 
     // Airports last: these kick off runway/METAR re-evaluation.
     ref.read(departureIcaoProvider.notifier).set(depIcao);

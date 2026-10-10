@@ -1,6 +1,13 @@
 [
     {
         "date": "2026-10-10",
+        "title": "v5.14.1 — Extra fuel clears on a new flight",
+        "items": [
+            "Loading a new flight (SimBrief, plan file or manual route) now sets EXTRA FUEL back to 0. Taxi, contingency and final reserve keep your settings; RESET FUEL still resets everything"
+        ]
+    },
+    {
+        "date": "2026-10-10",
         "title": "v5.14.0 — vPilot .vfp import, Mac file import fixed",
         "items": [
             "Import vPilot flight plans (.vfp): departure, destination, alternate, route and cruise altitude are read from the file",
