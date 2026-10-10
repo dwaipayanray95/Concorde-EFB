@@ -32,9 +32,9 @@ class FlightPlanSection extends ConsumerWidget {
     ref.read(arrivalIcaoProvider.notifier).set(plan.arrivalIcao);
     ref.invalidate(departureMetarFutureProvider);
     ref.invalidate(arrivalMetarFutureProvider);
-    if (plan.alternateIcao != null && plan.alternateIcao!.isNotEmpty) {
-      ref.read(alternateIcaoProvider.notifier).set(plan.alternateIcao!);
-    }
+    // A plan without an alternate clears the previous flight's, so its
+    // alternate fuel doesn't linger in the reserves.
+    ref.read(alternateIcaoProvider.notifier).set(plan.alternateIcao ?? '');
     ref
         .read(simbriefRouteProvider.notifier)
         .set(plan.route.isEmpty ? '--' : plan.route);

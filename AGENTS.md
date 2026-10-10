@@ -291,7 +291,7 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 - v5.11.0: `dismissedAlertsProvider` (`DismissedAlertsNotifier`, in `live_alerts_provider.dart`) + `clearableAlerts = {'DESCEND NOW'}`: tapping a clearable MFD pill dismisses it (filtered out of `liveAlertsProvider`) until `liveNavProvider` phase leaves cruise; other pills keep 10 s silence.
 - v5.12.0: gear-up alert split (all need gear UP, airborne, V/S < -300, `pred.distToDestNm`, height above arrival elevation): `GEAR UP — CHECK GEAR` amber once (<= 30 nm, < 5,000 ft, < 250 kt) / `GEAR UP — TOO LOW` red every 2 s (<= 10 nm, < 2,000 ft, < 220 kt); both in `clearableAlerts`, `DismissedAlertsNotifier` re-arms per alert (DESCEND NOW when phase leaves cruise, gear alerts when gear != UP or V/S > +500).
 - v5.12.1: Android launcher label is `Concorde EFB` (was the raw `concorde_efb`). Play Store listing copy, data-safety answers and graphics live in `docs/PLAY_STORE.md` + `store/google-play/`.
-- v5.13.0: `EfbTextField` never rewrites text while focused (clearing a number box used to inject "0" before the caret -> 3000 typed became 30000), resyncs on blur; `resetFuelInputs(ref)` + RESET FUEL button on the Cruise & Fuel card (taxi/contingency/final reserve/extra back to defaults).
+- v5.13.0: `EfbTextField` never rewrites text while focused (clearing a number box used to inject "0" before the caret -> 3000 typed became 30000), resyncs on blur; `resetFuelInputs(ref)` + RESET FUEL button on the Cruise & Fuel card (taxi/contingency/final reserve/extra back to defaults); file/manual imports without an alternate clear the old ALT (SimBrief already did).
 
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.
