@@ -1,6 +1,14 @@
 [
     {
         "date": "2026-10-10",
+        "title": "v5.13.1 — SimBrief import fixed",
+        "items": [
+            "SimBrief import no longer stops half-way when the OFP has an empty field (e.g. no registration): previously the airports changed but the distance, cruise FL and alternate stayed from the last flight, so the fuel figures were wrong",
+            "Distance, FL and alternate are now applied first, and if anything still goes wrong the app tells you instead of silently keeping old data"
+        ]
+    },
+    {
+        "date": "2026-10-10",
         "title": "v5.13.0 — Fuel inputs fixed + RESET FUEL",
         "items": [
             "Fixed the fuel boxes inflating values: clearing a box (e.g. FINAL RESERVE) used to slip a hidden 0 in front of the cursor, so typing 3000 became 30000. Boxes no longer change under your cursor and tidy up when you leave them",

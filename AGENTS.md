@@ -14,7 +14,7 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `5.13.0+87` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+- Current version: `5.13.1+88` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
   `public/changelog/entries.json` in sync — README no longer carries its own changelog, it just
   links to that page.
 - **Versioning rule (mandatory for every agent):** every change that alters user-visible behavior
@@ -292,6 +292,7 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 - v5.12.0: gear-up alert split (all need gear UP, airborne, V/S < -300, `pred.distToDestNm`, height above arrival elevation): `GEAR UP — CHECK GEAR` amber once (<= 30 nm, < 5,000 ft, < 250 kt) / `GEAR UP — TOO LOW` red every 2 s (<= 10 nm, < 2,000 ft, < 220 kt); both in `clearableAlerts`, `DismissedAlertsNotifier` re-arms per alert (DESCEND NOW when phase leaves cruise, gear alerts when gear != UP or V/S > +500).
 - v5.12.1: Android launcher label is `Concorde EFB` (was the raw `concorde_efb`). Play Store listing copy, data-safety answers and graphics live in `docs/PLAY_STORE.md` + `store/google-play/`.
 - v5.13.0: `EfbTextField` never rewrites text while focused (clearing a number box used to inject "0" before the caret -> 3000 typed became 30000), resyncs on blur; `resetFuelInputs(ref)` + RESET FUEL button on the Cruise & Fuel card (taxi/contingency/final reserve/extra back to defaults); file/manual imports without an alternate clear the old ALT (SimBrief already did).
+- v5.13.1: SimBrief import moved to `_applySimBrief` in `flight_plan_section.dart`; every OFP field read via `_str()` (SimBrief JSON makes empty elements `{}`, which used to throw mid-import and leave stale distance/FL/ALT); distance/FL/ALT applied first, airports last; failures shown in a snackbar.
 
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.

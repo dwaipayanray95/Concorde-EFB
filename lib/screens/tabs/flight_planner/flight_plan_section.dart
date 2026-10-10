@@ -118,6 +118,85 @@ class FlightPlanSection extends ConsumerWidget {
     return null;
   }
 
+  /// SimBrief JSON turns empty XML elements into `{}`, so only accept
+  /// real strings/numbers.
+  static String _str(dynamic v) =>
+      v is String ? v.trim() : (v is num ? '$v' : '');
+
+  /// Applies a SimBrief OFP. Distance, FL and alternate go in first so a
+  /// later failure can never leave the previous flight's fuel figures.
+  void _applySimBrief(WidgetRef ref, Map<String, dynamic> ofp) {
+    Map g(String k) => ofp[k] is Map ? ofp[k] as Map : const {};
+    final general = g('general'), origin = g('origin'), dest = g('destination');
+    final depIcao = _str(origin['icao_code']).toUpperCase();
+    final arrIcao = _str(dest['icao_code']).toUpperCase();
+    // SimBrief returns a list when several alternates are planned.
+    final rawAlt = ofp['alternate'];
+    final alt = rawAlt is List
+        ? (rawAlt.isNotEmpty && rawAlt.first is Map ? rawAlt.first as Map : null)
+        : (rawAlt is Map ? rawAlt : null);
+    // route_distance is the flown route distance (SID/airways/STAR).
+    final routeNm = double.tryParse(_str(general['route_distance'])) ?? 0.0;
+
+    ref.read(plannedDistanceProvider.notifier).set(routeNm);
+    ref.read(alternateIcaoProvider.notifier).set(_str(alt?['icao_code']));
+    // Set after the ICAO, which clears it.
+    ref
+        .read(alternateRouteDistanceProvider.notifier)
+        .set(double.tryParse(_str(alt?['distance'])));
+    if (routeNm > 0) {
+      final sbFt = double.tryParse(_str(general['initial_altitude']));
+      final oLat = double.tryParse(_str(origin['pos_lat']));
+      final oLon = double.tryParse(_str(origin['pos_long']));
+      final dLat = double.tryParse(_str(dest['pos_lat']));
+      final dLon = double.tryParse(_str(dest['pos_long']));
+      final dir = (oLat != null && oLon != null && dLat != null && dLon != null)
+          ? ConcordeLogic.inferDirectionEW(oLat, oLon, dLat, dLon)
+          : ref.read(flightDirectionProvider);
+      ref
+          .read(cruiseFLProvider.notifier)
+          .autoPlan(
+            routeNm,
+            sourceFl: sbFt == null ? null : sbFt / 100,
+            direction: dir,
+          );
+    }
+    ref
+        .read(plannedRouteProvider.notifier)
+        .set(
+          PlannedRoute(
+            departureIcao: depIcao,
+            arrivalIcao: arrIcao,
+            fixes: SimBriefService.navlogFixes(ofp),
+          ),
+        );
+    final callSign = _str(general['atc_callsign']).isNotEmpty
+        ? _str(general['atc_callsign'])
+        : _str(g('atc')['callsign']);
+    ref.read(callSignProvider.notifier).set(callSign.isEmpty ? '--' : callSign);
+    final reg = _str(g('aircraft')['reg']);
+    ref.read(registrationProvider.notifier).set(reg.isEmpty ? '--' : reg);
+    ref
+        .read(paxCountProvider.notifier)
+        .set((int.tryParse(_str(g('weights')['pax_count'])) ?? 100).clamp(0, 100));
+    final route = _str(general['route']);
+    ref.read(simbriefRouteProvider.notifier).set(route.isEmpty ? '--' : route);
+    ref.read(flightPlanSourceProvider.notifier).set(FlightPlanSource.simbrief);
+    ref.read(simbriefLoadedProvider.notifier).set(true);
+    ref.read(checklistProvider.notifier).resetAll();
+
+    // Airports last: these kick off runway/METAR re-evaluation.
+    ref.read(departureIcaoProvider.notifier).set(depIcao);
+    ref.read(arrivalIcaoProvider.notifier).set(arrIcao);
+    ref.invalidate(departureMetarFutureProvider);
+    ref.invalidate(arrivalMetarFutureProvider);
+    _applyArrivalRunway(
+      ref,
+      ref.read(arrAirportProvider),
+      _str(dest['plan_rwy']),
+    );
+  }
+
   Future<void> _importFile(BuildContext context, WidgetRef ref) async {
     final colors = context.colors;
     try {
@@ -412,138 +491,17 @@ class FlightPlanSection extends ConsumerWidget {
                             user,
                           );
                           if (ofp != null) {
-                            ref
-                                .read(callSignProvider.notifier)
-                                .set(
-                                  ofp['general']?['atc_callsign'] ??
-                                      ofp['atc']?['callsign'] ??
-                                      '--',
+                            try {
+                              _applySimBrief(ref, ofp);
+                            } catch (e) {
+                              if (context.mounted) {
+                                _showSnack(
+                                  context,
+                                  'SimBrief import incomplete: $e',
+                                  colors.error,
                                 );
-                            ref
-                                .read(registrationProvider.notifier)
-                                .set(ofp['aircraft']?['reg'] ?? '--');
-                            ref
-                                .read(departureIcaoProvider.notifier)
-                                .set(ofp['origin']?['icao_code'] ?? '');
-                            ref
-                                .read(arrivalIcaoProvider.notifier)
-                                .set(ofp['destination']?['icao_code'] ?? '');
-                            // SimBrief returns a list when several
-                            // alternates are planned -- take the first.
-                            final alt = ofp['alternate'] is List
-                                ? ((ofp['alternate'] as List).isNotEmpty
-                                      ? (ofp['alternate'] as List).first
-                                      : null)
-                                : ofp['alternate'];
-                            ref
-                                .read(alternateIcaoProvider.notifier)
-                                .set(
-                                  alt is Map ? (alt['icao_code'] ?? '') : '',
-                                );
-                            // Alternate route distance as planned by
-                            // SimBrief (set after the ICAO, which clears it).
-                            ref
-                                .read(alternateRouteDistanceProvider.notifier)
-                                .set(
-                                  alt is Map
-                                      ? double.tryParse(
-                                          '${alt['distance'] ?? ''}',
-                                        )
-                                      : null,
-                                );
-                            ref
-                                .read(plannedRouteProvider.notifier)
-                                .set(
-                                  PlannedRoute(
-                                    departureIcao:
-                                        '${ofp['origin']?['icao_code'] ?? ''}'
-                                            .toUpperCase(),
-                                    arrivalIcao:
-                                        '${ofp['destination']?['icao_code'] ?? ''}'
-                                            .toUpperCase(),
-                                    fixes: SimBriefService.navlogFixes(ofp),
-                                  ),
-                                );
-                            // route_distance is the flown route distance
-                            // (SID/airways/STAR), not the great circle.
-                            ref
-                                .read(plannedDistanceProvider.notifier)
-                                .set(
-                                  double.tryParse(
-                                        '${ofp['general']?['route_distance'] ?? '0'}',
-                                      ) ??
-                                      0.0,
-                                );
-                            // Cruise FL: supersonic (as high as the
-                            // distance allows) when the sector permits,
-                            // otherwise SimBrief's own planned FL.
-                            final routeNm =
-                                double.tryParse(
-                                  '${ofp['general']?['route_distance'] ?? ''}',
-                                ) ??
-                                0.0;
-                            if (routeNm > 0) {
-                              final sbFt = double.tryParse(
-                                '${ofp['general']?['initial_altitude'] ?? ''}',
-                              );
-                              final oLat = double.tryParse(
-                                '${ofp['origin']?['pos_lat'] ?? ''}',
-                              );
-                              final oLon = double.tryParse(
-                                '${ofp['origin']?['pos_long'] ?? ''}',
-                              );
-                              final dLat = double.tryParse(
-                                '${ofp['destination']?['pos_lat'] ?? ''}',
-                              );
-                              final dLon = double.tryParse(
-                                '${ofp['destination']?['pos_long'] ?? ''}',
-                              );
-                              final dir =
-                                  (oLat != null &&
-                                      oLon != null &&
-                                      dLat != null &&
-                                      dLon != null)
-                                  ? ConcordeLogic.inferDirectionEW(
-                                      oLat,
-                                      oLon,
-                                      dLat,
-                                      dLon,
-                                    )
-                                  : ref.read(flightDirectionProvider);
-                              ref
-                                  .read(cruiseFLProvider.notifier)
-                                  .autoPlan(
-                                    routeNm,
-                                    sourceFl: sbFt == null ? null : sbFt / 100,
-                                    direction: dir,
-                                  );
+                              }
                             }
-                            ref
-                                .read(paxCountProvider.notifier)
-                                .set(
-                                  (int.tryParse(
-                                            '${ofp['weights']?['pax_count'] ?? '100'}',
-                                          ) ??
-                                          100)
-                                      .clamp(0, 100),
-                                );
-
-                            _applyArrivalRunway(
-                              ref,
-                              ref.read(arrAirportProvider),
-                              ofp['destination']?['plan_rwy']?.toString(),
-                            );
-
-                            ref
-                                .read(simbriefRouteProvider.notifier)
-                                .set(ofp['general']?['route'] ?? '--');
-                            ref.read(simbriefLoadedProvider.notifier).set(true);
-                            ref
-                                .read(flightPlanSourceProvider.notifier)
-                                .set(FlightPlanSource.simbrief);
-                            ref.invalidate(departureMetarFutureProvider);
-                            ref.invalidate(arrivalMetarFutureProvider);
-                            ref.read(checklistProvider.notifier).resetAll();
                           } else if (context.mounted) {
                             _showSnack(
                               context,
