@@ -202,12 +202,12 @@ class FlightPlanSection extends ConsumerWidget {
     try {
       final picked = await FilePicker.pickFile(
         type: FileType.custom,
-        allowedExtensions: ['pln', 'xml', 'fpl'],
+        allowedExtensions: ['pln', 'vfp', 'xml', 'fpl'],
       );
       if (picked == null) return;
 
       final bytes = await picked.readAsBytes();
-      final content = String.fromCharCodes(bytes);
+      final content = FlightPlanImportService.decodeFile(bytes);
       final plan = FlightPlanImportService.parseAnyXml(content);
 
       if (plan == null) {
@@ -517,7 +517,7 @@ class FlightPlanSection extends ConsumerWidget {
               const SizedBox(width: 8),
               _ImportButton(
                 icon: Icons.upload_file_outlined,
-                tooltip: 'File: Import PLN / XML / FPL route',
+                tooltip: 'File: Import PLN / VFP (vPilot) / XML / FPL route',
                 onPressed: () => _importFile(context, ref),
               ),
               const SizedBox(width: 8),

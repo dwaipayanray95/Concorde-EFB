@@ -1,3 +1,4 @@
+import 'dart:convert';
 import '../models/concorde_models.dart';
 
 /// Where a loaded flight plan came from — surfaced in the UI so the user
@@ -321,7 +322,55 @@ class FlightPlanImportService {
   /// import flow, which doesn't know in advance whether the user picked a
   /// `.pln` or some other planner's route XML.
   static ParsedFlightPlan? parseAnyXml(String content) {
-    return parsePln(content) ?? parseGenericRouteXml(content);
+    return parseVfp(content) ??
+        parsePln(content) ??
+        parseGenericRouteXml(content);
+  }
+
+  /// vPilot `.vfp`: a single `<FlightPlan .../>` element whose data is all
+  /// in attributes (DepartureAirport, DestinationAirport, AlternateAirport,
+  /// Route, CruiseAltitude). No fix coordinates, so distance is estimated.
+  static ParsedFlightPlan? parseVfp(String xml) {
+    final dep = _attr(xml, 'FlightPlan', 'DepartureAirport');
+    final arr = _attr(xml, 'FlightPlan', 'DestinationAirport');
+    if (dep == null || arr == null || dep.isEmpty || arr.isEmpty) return null;
+    final alt = _attr(xml, 'FlightPlan', 'AlternateAirport');
+    // CruiseAltitude is feet ("57000"); accept "FL570" too.
+    final crz = (_attr(xml, 'FlightPlan', 'CruiseAltitude') ?? '')
+        .toUpperCase();
+    double? cruiseFt;
+    if (crz.startsWith('FL')) {
+      final fl = double.tryParse(crz.substring(2));
+      cruiseFt = fl == null ? null : fl * 100;
+    } else {
+      cruiseFt = double.tryParse(crz);
+    }
+    return ParsedFlightPlan(
+      departureIcao: dep.toUpperCase(),
+      arrivalIcao: arr.toUpperCase(),
+      alternateIcao: (alt == null || alt.isEmpty) ? null : alt.toUpperCase(),
+      route: (_attr(xml, 'FlightPlan', 'Route') ?? '')
+          .replaceAll(RegExp(r'\s+'), ' ')
+          .trim(),
+      cruiseAltFt: cruiseFt != null && cruiseFt > 0 ? cruiseFt : null,
+    );
+  }
+
+  /// Decodes a picked file: UTF-16 (with BOM) or UTF-8, BOM stripped.
+  static String decodeFile(List<int> bytes) {
+    if (bytes.length >= 2) {
+      final le = bytes[0] == 0xFF && bytes[1] == 0xFE;
+      final be = bytes[0] == 0xFE && bytes[1] == 0xFF;
+      if (le || be) {
+        final units = <int>[];
+        for (var i = 2; i + 1 < bytes.length; i += 2) {
+          units.add(le ? bytes[i] | (bytes[i + 1] << 8) : (bytes[i] << 8) | bytes[i + 1]);
+        }
+        return String.fromCharCodes(units);
+      }
+    }
+    final text = utf8.decode(bytes, allowMalformed: true);
+    return text.startsWith('\uFEFF') ? text.substring(1) : text;
   }
 
   static String? _tag(String xml, String name) {

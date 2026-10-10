@@ -1,6 +1,15 @@
 [
     {
         "date": "2026-10-10",
+        "title": "v5.14.0 — vPilot .vfp import, Mac file import fixed",
+        "items": [
+            "Import vPilot flight plans (.vfp): departure, destination, alternate, route and cruise altitude are read from the file",
+            "Fixed file import on macOS failing with an ENTITLEMENT_NOT_FOUND error -- the app now has permission to open files you pick",
+            "Flight plan files saved as UTF-16 or with a byte-order mark are read correctly"
+        ]
+    },
+    {
+        "date": "2026-10-10",
         "title": "v5.13.2 — SimBrief import error fixed",
         "items": [
             "Fixed the \"Circular dependency\" error when importing from SimBrief: changing the destination airport made the runway picker trip over itself, which stopped the import part-way. The runway now re-picks automatically without the loop"
