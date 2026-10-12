@@ -1,5 +1,13 @@
 [
     {
+        "date": "2026-10-12",
+        "title": "v5.15.0 — CG alert is now a resettable caution, Android download button",
+        "items": [
+            "CG AFT / FWD LIMIT is now an amber caution (single chime) instead of a repeating red warning. Tap it to clear; if the CG is still out of limits 2 minutes later it appears and chimes again",
+            "The Share to phone / tablet card now has a Download for Android button (opens our Discord, where the beta build is shared)"
+        ]
+    },
+    {
         "date": "2026-10-10",
         "title": "v5.14.1 — Extra fuel clears on a new flight",
         "items": [

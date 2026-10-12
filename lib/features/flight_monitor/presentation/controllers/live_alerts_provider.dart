@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/concorde_constants.dart';
@@ -26,12 +28,20 @@ const _descendReminder = Duration(seconds: 12);
 const descendNowText = 'DESCEND NOW';
 const gearCheckText = 'GEAR UP — CHECK GEAR';
 const gearWarningText = 'GEAR UP — TOO LOW';
+const cgAftText = 'CG AFT LIMIT';
+const cgFwdText = 'CG FWD LIMIT';
+
+/// A cleared CG caution is re-checked after this long; if the CG is still
+/// out of the corridor the caution appears (and chimes) again.
+const cgRecheckAfter = Duration(minutes: 2);
 
 /// Alerts the pilot cleared (tap on the MFD strip) because ATC, the
 /// charts/procedure or terrain dictate otherwise. Cleared alerts are hidden
 /// and silent until they re-arm:
 ///  - DESCEND NOW: once the aircraft leaves cruise (descent / new flight);
-///  - gear alerts: once the gear goes down or the aircraft climbs away.
+///  - gear alerts: once the gear goes down or the aircraft climbs away;
+///  - CG cautions: [cgRecheckAfter] after clearing (still out of bounds ->
+///    shown and chimed again; back in bounds -> nothing to show).
 class DismissedAlertsNotifier extends Notifier<Set<String>> {
   @override
   Set<String> build() {
@@ -43,8 +53,15 @@ class DismissedAlertsNotifier extends Notifier<Set<String>> {
         _rearm({gearCheckText, gearWarningText});
       }
     });
+    ref.onDispose(() {
+      for (final t in _timers.values) {
+        t.cancel();
+      }
+    });
     return {};
   }
+
+  final Map<String, Timer> _timers = {};
 
   void _rearm(Set<String> texts) {
     if (state.any(texts.contains)) {
@@ -52,7 +69,16 @@ class DismissedAlertsNotifier extends Notifier<Set<String>> {
     }
   }
 
-  void dismiss(String text) => state = {...state, text};
+  void dismiss(String text) {
+    state = {...state, text};
+    if (text == cgAftText || text == cgFwdText) {
+      _timers[text]?.cancel();
+      _timers[text] = Timer(cgRecheckAfter, () {
+        _timers.remove(text);
+        _rearm({text});
+      });
+    }
+  }
 }
 
 final dismissedAlertsProvider =
@@ -61,7 +87,13 @@ final dismissedAlertsProvider =
     );
 
 /// Alerts that can be cleared outright (not just silenced).
-const clearableAlerts = {descendNowText, gearCheckText, gearWarningText};
+const clearableAlerts = {
+  descendNowText,
+  gearCheckText,
+  gearWarningText,
+  cgAftText,
+  cgFwdText,
+};
 
 /// Live warnings/cautions from telemetry + the flight plan. Computed here
 /// (not in a widget) so they exist -- and chime -- whichever tab is open.
@@ -91,15 +123,13 @@ final liveAlertsProvider = Provider<List<LiveAlert>>((ref) {
             fieldElevationFt: ref.watch(depAirportProvider)?.elevationFt,
           ) >
           cgCorridorArmFt;
-  if (moving && t.cgPct > cg.aft) {
-    alerts.add(
-      const LiveAlert('CG AFT LIMIT', critical: true, repeatEvery: _urgent),
-    );
+  // Caution (amber, one chime); tap to clear, re-checked after 2 minutes.
+  final dismissed = ref.watch(dismissedAlertsProvider);
+  if (moving && t.cgPct > cg.aft && !dismissed.contains(cgAftText)) {
+    alerts.add(const LiveAlert(cgAftText, critical: false));
   }
-  if (moving && t.cgPct < cg.fwd) {
-    alerts.add(
-      const LiveAlert('CG FWD LIMIT', critical: true, repeatEvery: _urgent),
-    );
+  if (moving && t.cgPct < cg.fwd && !dismissed.contains(cgFwdText)) {
+    alerts.add(const LiveAlert(cgFwdText, critical: false));
   }
   if (t.mach > ConcordeConstants.speeds.mmo) {
     alerts.add(
@@ -123,7 +153,6 @@ final liveAlertsProvider = Provider<List<LiveAlert>>((ref) {
     fieldElevationFt: ref.watch(arrAirportProvider)?.elevationFt,
   );
   final distNm = pred?.distToDestNm;
-  final dismissed = ref.watch(dismissedAlertsProvider);
   if (t.gearLabel == 'UP' && !t.onGround && t.vs < -300 && distNm != null) {
     if (distNm <= 10 && heightAgl < 2000 && t.ias < 220) {
       if (!dismissed.contains(gearWarningText)) {

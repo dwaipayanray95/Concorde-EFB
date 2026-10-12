@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../../core/app_colors.dart';
+import '../../../../../core/app_links.dart';
 import '../../../../../core/ui_text.dart';
 import '../../../../../widgets/efb_flat_card.dart';
 import '../../../../../widgets/efb_text_field.dart';
@@ -162,6 +164,33 @@ class _DesktopShare extends ConsumerWidget {
               'On the phone/tablet open MONITOR -- this PC should appear '
               'automatically; enter the pairing code. If Windows asks about '
               'msfs_bridge, allow it on Private networks.',
+            ),
+            const SizedBox(height: 12),
+            // Android app is in beta testing -- the Discord is where testers
+            // get the download.
+            Align(
+              alignment: Alignment.centerLeft,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colors.accent,
+                  foregroundColor: AppColors.dark.bg,
+                ),
+                onPressed: () => launchUrl(
+                  Uri.parse(AppLinks.discord),
+                  mode: LaunchMode.externalApplication,
+                ),
+                icon: const Icon(Icons.android, size: 16),
+                label: Text(
+                  'DOWNLOAD FOR ANDROID TABLET / PHONE',
+                  style: uiText(
+                    context,
+                    size: 10.5,
+                    weight: FontWeight.w900,
+                    color: AppColors.dark.bg,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ),
             ),
           ],
         ],

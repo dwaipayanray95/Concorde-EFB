@@ -14,7 +14,7 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `5.14.1+91` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+- Current version: `5.15.0+92` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
   `public/changelog/entries.json` in sync — README no longer carries its own changelog, it just
   links to that page.
 - **Versioning rule (mandatory for every agent):** every change that alters user-visible behavior
@@ -296,6 +296,7 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 - v5.13.2: Departure/Arrival ICAO setters no longer call `resetToAuto()` on the runway notifier (it re-entered `_RunwayIdNotifier` via its airport listener -> CircularDependencyError, the real cause of the half-finished SimBrief import); the notifier's `ref.listen(airport)` handles the reset.
 - v5.14.0: vPilot `.vfp` import (`FlightPlanImportService.parseVfp`, attributes on `<FlightPlan/>`; tried first in `parseAnyXml`); `decodeFile` handles UTF-16/BOM; macOS entitlements gained `com.apple.security.files.user-selected.read-only` (file_picker needs it under the sandbox).
 - v5.14.1: every plan import (`_applySimBrief`, `_applyParsedPlan`) invalidates `extraFuelProvider` (extra back to 0); taxi/contingency/reserve persist.
+- v5.15.0: CG AFT/FWD LIMIT are amber cautions (one chime), in `clearableAlerts`; `DismissedAlertsNotifier` re-arms them `cgRecheckAfter` (2 min) after a tap; Share card shows a Download-for-Android button (-> Discord) when sharing is on.
 
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.
