@@ -4,6 +4,11 @@ class TelemetryModel {
   // Basic parameters
   /// Altitude above mean sea level (ft).
   final double altitude;
+
+  /// Altimeter reading (ft) -- baro-corrected, matches the cockpit gauge. For
+  /// DISPLAY only; all maths uses [altitude] (true MSL, comparable with
+  /// airport elevations). Falls back to [altitude] on older bridges/recordings.
+  final double altitudeIndicated;
   final double ias;
   final double tas;
   final double gs;
@@ -63,6 +68,7 @@ class TelemetryModel {
   TelemetryModel({
     required this.timestamp,
     required this.altitude,
+    double? altitudeIndicated,
     required this.ias,
     required this.tas,
     required this.gs,
@@ -97,7 +103,7 @@ class TelemetryModel {
     required this.touchdownPitch,
     required this.touchdownGForce,
     this.onGround = false,
-  });
+  }) : altitudeIndicated = altitudeIndicated ?? altitude;
 
   /// Gear extension 0-100 %. The bridge sends MSFS's "percent over 100"
   /// (a 0-1 fraction); older/dev sources may send 0-100.
@@ -196,6 +202,7 @@ class TelemetryModel {
     return TelemetryModel(
       timestamp: json['timestamp'] ?? 0,
       altitude: (basic['altitude'] ?? 0.0).toDouble(),
+      altitudeIndicated: (basic['altitudeIndicated'] as num?)?.toDouble(),
       ias: (basic['ias'] ?? 0.0).toDouble(),
       tas: (basic['tas'] ?? 0.0).toDouble(),
       gs: (basic['gs'] ?? 0.0).toDouble(),
@@ -251,6 +258,7 @@ class TelemetryModel {
       'timestamp': timestamp,
       'basic': {
         'altitude': altitude,
+        'altitudeIndicated': altitudeIndicated,
         'ias': ias,
         'tas': tas,
         'gs': gs,

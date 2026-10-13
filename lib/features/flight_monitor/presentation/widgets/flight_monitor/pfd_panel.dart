@@ -95,7 +95,7 @@ class PfdPanel extends StatelessWidget {
                     rows: [
                       _Readout(
                         'ALT',
-                        numFormat.format(t.altitude.round()),
+                        numFormat.format(t.altitudeIndicated.round()),
                         unit: 'FT',
                         big: true,
                       ),

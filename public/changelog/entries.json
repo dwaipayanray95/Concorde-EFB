@@ -1,5 +1,12 @@
 [
     {
+        "date": "2026-10-13",
+        "title": "v5.15.1 — Flight Monitor altitude matches the cockpit altimeter",
+        "items": [
+            "The PFD altitude now shows the indicated (baro-corrected) altitude, so it agrees with the Concorde's altimeter. Distances, TOD and phase logic still use true altitude. Requires the updated bridge that ships with this version"
+        ]
+    },
+    {
         "date": "2026-10-12",
         "title": "v5.15.0 — CG alert is now a resettable caution, Android download button",
         "items": [
