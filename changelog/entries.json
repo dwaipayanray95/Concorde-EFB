@@ -1,6 +1,13 @@
 [
     {
         "date": "2026-10-13",
+        "title": "v5.16.0 \u2014 EFB launches counter is back in the footer",
+        "items": [
+            "The EFB LAUNCHES counter is shown again at the bottom of the Flight Planner and Flight Monitor tabs. It continues from the existing total"
+        ]
+    },
+    {
+        "date": "2026-10-13",
         "title": "v5.15.1 \u2014 Flight Monitor altitude matches the cockpit altimeter",
         "items": [
             "The PFD altitude now shows the indicated (baro-corrected) altitude, so it agrees with the Concorde's altimeter. Distances, TOD and phase logic still use true altitude. Requires the updated bridge that ships with this version"
