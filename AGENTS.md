@@ -14,7 +14,7 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `5.15.1+93` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+- Current version: `5.16.0+94` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
   `public/changelog/entries.json` in sync — README no longer carries its own changelog, it just
   links to that page.
 - **Versioning rule (mandatory for every agent):** every change that alters user-visible behavior
@@ -298,6 +298,7 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 - v5.14.1: every plan import (`_applySimBrief`, `_applyParsedPlan`) invalidates `extraFuelProvider` (extra back to 0); taxi/contingency/reserve persist.
 - v5.15.0: CG AFT/FWD LIMIT are amber cautions (one chime), in `clearableAlerts`; `DismissedAlertsNotifier` re-arms them `cgRecheckAfter` (2 min) after a tap; Share card shows a Download-for-Android button (-> Discord) when sharing is on.
 - v5.15.1: PFD altitude shows `TelemetryModel.altitudeIndicated` (bridge `INDICATED ALTITUDE`, matches the cockpit altimeter); `altitude` stays true MSL (`PLANE ALTITUDE`) for height-above-field / TOD / phase maths. Needs the rebuilt bridge exe; older bridges fall back to true altitude.
+- v5.16.0: `EfbLaunchesBadge` is back in `AppFooter` under the support card (same `visitorCountProvider` / visitorbadge.io path, so the total keeps counting; the GET itself bumps it, once per session). Supersedes the v5.0.0 note that it is no longer shown.
 
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.
