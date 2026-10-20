@@ -1,5 +1,13 @@
 [
     {
+        "date": "2026-10-20",
+        "title": "v5.17.0 — Concorde EFB is now on Android (internal testing)",
+        "items": [
+            "New invite on the Flight Monitor tab (desktop): join the Android internal test with three steps -- tester group, opt in, install from Google Play -- plus our Discord. Shown the first time you open the tab each launch; choose Join, Remind me later (3 days), Next launch, or Never",
+            "The Share to phone / tablet card's Android button now opens the same join steps"
+        ]
+    },
+    {
         "date": "2026-10-13",
         "title": "v5.16.0 — EFB launches counter is back in the footer",
         "items": [

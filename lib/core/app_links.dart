@@ -20,6 +20,15 @@ class AppLinks {
       'https://flightsim.to/addon/101890/concorde-efb';
   static const String patreon = 'https://www.patreon.com/c/theawesomeray';
   static const String discord = 'https://discord.gg/xe49YpczpP';
+
+  // Android internal testing (Google Play).
+  static const String androidTestersGroup =
+      'https://groups.google.com/g/concorde-efb-testers';
+  static const String androidTestOptIn =
+      'https://play.google.com/apps/testing/com.theawesomeray.concorde_efb';
+  static const String androidPlayStore =
+      'https://play.google.com/store/apps/details?id=com.theawesomeray.concorde_efb';
+
   static const String githubSponsors =
       'https://github.com/sponsors/dwaipayanray95';
 }

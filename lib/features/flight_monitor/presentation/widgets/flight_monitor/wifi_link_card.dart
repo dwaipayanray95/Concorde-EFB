@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../../core/app_colors.dart';
-import '../../../../../core/app_links.dart';
 import '../../../../../core/ui_text.dart';
 import '../../../../../widgets/efb_flat_card.dart';
 import '../../../../../widgets/efb_text_field.dart';
 import '../../../data/services/lan_link.dart';
 import '../../controllers/telemetry_provider.dart';
+import 'android_beta_prompt.dart';
 
 /// Wi-Fi link between the sim PC and a phone/tablet.
 ///  - Windows desktop: toggle sharing, show this PC's IP + pairing code.
@@ -166,8 +165,7 @@ class _DesktopShare extends ConsumerWidget {
               'msfs_bridge, allow it on Private networks.',
             ),
             const SizedBox(height: 12),
-            // Android app is in beta testing -- the Discord is where testers
-            // get the download.
+            // Android app is in internal testing -- opens the join steps.
             Align(
               alignment: Alignment.centerLeft,
               child: ElevatedButton.icon(
@@ -175,10 +173,7 @@ class _DesktopShare extends ConsumerWidget {
                   backgroundColor: colors.accent,
                   foregroundColor: AppColors.dark.bg,
                 ),
-                onPressed: () => launchUrl(
-                  Uri.parse(AppLinks.discord),
-                  mode: LaunchMode.externalApplication,
-                ),
+                onPressed: () => showAndroidBetaDialog(context),
                 icon: const Icon(Icons.android, size: 16),
                 label: Text(
                   'DOWNLOAD FOR ANDROID TABLET / PHONE',

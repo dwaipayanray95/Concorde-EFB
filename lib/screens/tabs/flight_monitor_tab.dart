@@ -7,6 +7,7 @@ import '../../features/flight_monitor/presentation/widgets/flight_monitor/fm_too
 import '../../features/flight_monitor/presentation/widgets/flight_monitor/pfd_panel.dart';
 import '../../features/flight_monitor/presentation/widgets/flight_monitor/cockpit_panels.dart';
 import '../../features/flight_monitor/presentation/widgets/flight_monitor/mfd_strip.dart';
+import '../../features/flight_monitor/presentation/widgets/flight_monitor/android_beta_prompt.dart';
 import '../../features/flight_monitor/presentation/widgets/flight_monitor/wifi_link_card.dart';
 import '../../features/flight_monitor/presentation/widgets/flight_monitor/fuel_schematic_card.dart';
 import '../../features/flight_monitor/presentation/widgets/flight_monitor/support_cards.dart';
@@ -15,11 +16,25 @@ import '../widgets/app_footer.dart';
 
 /// Flight Monitor tab: SimConnect connection status, the live avionics
 /// dashboard, and the auto-logged flight logbook.
-class FlightMonitorTab extends ConsumerWidget {
+class FlightMonitorTab extends ConsumerStatefulWidget {
   const FlightMonitorTab({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<FlightMonitorTab> createState() => _FlightMonitorTabState();
+}
+
+class _FlightMonitorTabState extends ConsumerState<FlightMonitorTab> {
+  @override
+  void initState() {
+    super.initState();
+    // "Now on Android" invite: once per launch, first time this tab opens.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) maybeShowAndroidBetaPrompt(context);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
