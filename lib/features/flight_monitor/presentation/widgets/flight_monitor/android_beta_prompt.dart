@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -30,8 +32,12 @@ class AndroidBetaPromptPolicy {
   @visibleForTesting
   static void resetSession() => _shownThisSession = false;
 
-  /// Desktop only: phones/tablets already run the Android app.
-  static bool get platformEligible => !kIsWeb && !isMobilePlatform;
+  /// Desktop only: phones/tablets already run the Android app. Never under
+  /// `flutter test` (a modal would sit over the screens being tested).
+  static bool get platformEligible =>
+      !kIsWeb &&
+      !isMobilePlatform &&
+      !Platform.environment.containsKey('FLUTTER_TEST');
 
   static bool shouldShow(SharedPreferences prefs, {DateTime? now}) {
     if (_shownThisSession) return false;
