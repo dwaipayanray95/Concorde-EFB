@@ -156,6 +156,7 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
                             _buildHeaderPill(
                               context,
                               label: 'C/S',
+                              valueOnlyWhenPopulated: true,
                               value: callSign,
                               isPopulated:
                                   callSign.isNotEmpty && callSign != '--',
@@ -164,6 +165,7 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
                             _buildHeaderPill(
                               context,
                               label: 'REG',
+                              valueOnlyWhenPopulated: true,
                               value: registration,
                               isPopulated:
                                   registration.isNotEmpty &&
@@ -346,6 +348,7 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
     required String label,
     required String value,
     bool? isPopulated,
+    bool valueOnlyWhenPopulated = false,
   }) {
     final colors = context.colors;
     final populated = isPopulated ?? (value.isNotEmpty && value != '--');
@@ -378,6 +381,7 @@ class _CockpitStatusBarState extends ConsumerState<CockpitStatusBar> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (!(valueOnlyWhenPopulated && populated))
             Text(
               '$label ',
               style: uiText(

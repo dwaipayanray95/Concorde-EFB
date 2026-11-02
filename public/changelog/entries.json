@@ -1,5 +1,14 @@
 [
     {
+        "date": "2026-11-02",
+        "title": "v5.18.0 — Bigger V-speeds, calmer caution banner",
+        "items": [
+            "Dispatch strip: V1 / VR / V2 now sit in their own large tiles so they can be read at a glance",
+            "Dispatch strip: removed the cruise Mach / speed figure",
+            "Dispatch GO with cautions is no longer amber -- it uses the neutral panel style with an amber warning icon",
+            "Status bar: once a flight is loaded, the call sign and registration show on their own without the C/S and REG labels"
+        ]
+    },    {
         "date": "2026-10-20",
         "title": "v5.17.0 — Concorde EFB is now on Android (internal testing)",
         "items": [

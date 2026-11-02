@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/app_colors.dart';
-import '../../../core/concorde_logic.dart';
 import '../../../core/ui_text.dart';
 import '../../../providers/efb_providers.dart';
 
@@ -26,7 +25,7 @@ class _DispatchBannerState extends ConsumerState<DispatchBanner> {
     final (label, color, fg) = !d.isGo
         ? ('NO-GO', colors.error, Colors.white)
         : d.cautions.isNotEmpty
-        ? ('GO · CAUTION', colors.accent, AppColors.dark.bg)
+        ? ('GO · CAUTION', colors.surface, colors.textPrimary)
         : ('GO', colors.success, Colors.white);
     final allItems = [
       ...d.noGo.map((t) => (t, true)),
@@ -38,7 +37,10 @@ class _DispatchBannerState extends ConsumerState<DispatchBanner> {
 
     // Flat, solid status block (same language as the METAR strip): the
     // whole banner is the status colour, text sits on it.
-    final dim = fg.withValues(alpha: 0.8);
+    final dim = d.isGo && d.cautions.isNotEmpty
+        ? colors.textDim
+        : fg.withValues(alpha: 0.8);
+    final neutral = d.isGo && d.cautions.isNotEmpty;
     // When dispatch is GO, the numbers the crew needs at a glance.
     final quick = d.isGo ? _quickFigures() : const <(String, String)>[];
     return GestureDetector(
@@ -53,6 +55,9 @@ class _DispatchBannerState extends ConsumerState<DispatchBanner> {
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(12),
+          border: neutral
+              ? Border.all(color: colors.dividerStrong, width: 1.2)
+              : null,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -67,7 +72,7 @@ class _DispatchBannerState extends ConsumerState<DispatchBanner> {
                             : Icons.warning_amber_rounded)
                       : Icons.block,
                   size: 16,
-                  color: fg,
+                  color: neutral ? colors.accent : fg,
                 ),
                 const SizedBox(width: 8),
                 Text(
@@ -86,7 +91,7 @@ class _DispatchBannerState extends ConsumerState<DispatchBanner> {
                 Expanded(
                   // Clean GO: the quick figures sit right in this row, so
                   // the banner is one strip.
-                  child: items.isEmpty && quick.isNotEmpty
+                  child: items.isEmpty && quick.isNotEmpty && compact
                       ? _figures(context, quick, fg, dim)
                       : Text(
                           items.isEmpty
@@ -108,15 +113,78 @@ class _DispatchBannerState extends ConsumerState<DispatchBanner> {
                 ),
               ],
             ),
-            if (quick.isNotEmpty && items.isNotEmpty && !compact) ...[
+            if (quick.isNotEmpty && !compact) ...[
               const SizedBox(height: 8),
               Container(height: 1, color: dim.withValues(alpha: 0.35)),
-              const SizedBox(height: 8),
-              _figures(context, quick, fg, dim),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 16,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  _vSpeedTiles(context, quick),
+                  _figures(
+                    context,
+                    quick.where((e) => !_vKeys.contains(e.$1)).toList(),
+                    fg,
+                    dim,
+                  ),
+                ],
+              ),
             ],
           ],
         ),
       ),
+    );
+  }
+
+  static const _vKeys = {'V1', 'VR', 'V2'};
+
+  /// V1 / VR / V2 as big standalone tiles so the crew can read them from
+  /// across the flight deck.
+  Widget _vSpeedTiles(BuildContext context, List<(String, String)> quick) {
+    final colors = context.colors;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final (k, v) in quick.where((e) => _vKeys.contains(e.$1)))
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.dark.bg,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: colors.accent, width: 1.5),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  k,
+                  style: uiText(
+                    context,
+                    size: 11,
+                    weight: FontWeight.w800,
+                    color: colors.accent,
+                    letterSpacing: 1,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  v,
+                  style: uiText(
+                    context,
+                    size: 28,
+                    weight: FontWeight.w900,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 
@@ -167,11 +235,8 @@ class _DispatchBannerState extends ConsumerState<DispatchBanner> {
     final w = ref.watch(weightsProvider);
     final mission = ref.watch(missionProfileProvider);
     // The level actually flown (can be below the selected one on a short
-    // sector) and its cruise speed: Mach + true airspeed.
+    // sector).
     final fl = mission.targetCruiseFl;
-    final tasKt = ConcordeLogic.cruiseTasKtForFL(fl.toDouble());
-    final mach = tasKt / ConcordeLogic.speedOfSoundKtAtFL(fl.toDouble());
-    final tas = tasKt.round();
     final depRwy = ref.watch(departureRunwayProvider)?.id;
     final arrRwy = ref.watch(arrivalRunwayProvider)?.id;
     String t(double kg) => '${(kg / 1000).toStringAsFixed(1)} T';
@@ -182,7 +247,6 @@ class _DispatchBannerState extends ConsumerState<DispatchBanner> {
       ('TOW', t(w.tow)),
       ('FUEL', t(w.fuelOnBoard)),
       ('FL', fl.toString().padLeft(3, '0')),
-      ('CRZ', 'M${mach.toStringAsFixed(2)} · $tas KT'),
       if (depRwy != null) ('DEP', depRwy),
       ('LW', t(w.lw)),
       ('VAPP', '${ldg.vapp.round()}'),

@@ -14,7 +14,7 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `5.17.0+95` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+- Current version: `5.18.0+96` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
   `public/changelog/entries.json` in sync — README no longer carries its own changelog, it just
   links to that page.
 - **Versioning rule (mandatory for every agent):** every change that alters user-visible behavior
@@ -300,6 +300,7 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 - v5.15.1: PFD altitude shows `TelemetryModel.altitudeIndicated` (bridge `INDICATED ALTITUDE`, matches the cockpit altimeter); `altitude` stays true MSL (`PLANE ALTITUDE`) for height-above-field / TOD / phase maths. Needs the rebuilt bridge exe; older bridges fall back to true altitude.
 - v5.16.0: `EfbLaunchesBadge` is back in `AppFooter` under the support card (same `visitorCountProvider` / visitorbadge.io path, so the total keeps counting; the GET itself bumps it, once per session). Supersedes the v5.0.0 note that it is no longer shown.
 - v5.17.0: "Now on Android" internal-test invite (`android_beta_prompt.dart`): desktop only, shown the first time the Monitor tab opens each launch (`FlightMonitorTab.initState`); choices NEXT LAUNCH (just closes) / REMIND ME LATER (3-day snooze, pref `android_beta_prompt_snooze_until`) / NEVER (`android_beta_prompt_never`) / JOIN THE TEST (shows the 3 Play links + Discord, counts as never). The Share card's Android button opens the same dialog on the links. Links in `AppLinks.android*`.
+- v5.18.0: dispatch banner V1/VR/V2 in big standalone tiles (`_vSpeedTiles`), CRZ Mach figure removed, GO·CAUTION uses neutral `colors.surface` (not amber); status-bar C/S + REG pills drop their labels once populated (`valueOnlyWhenPopulated`).
 
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.
