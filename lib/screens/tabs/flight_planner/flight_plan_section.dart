@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/efb_providers.dart';
 import '../../../widgets/efb_card.dart';
+import '../../../widgets/efb_dialog_backdrop.dart';
 import '../../../widgets/efb_text_field.dart';
 import '../../../core/app_colors.dart';
 import '../../../core/ui_text.dart';
@@ -267,9 +268,21 @@ class FlightPlanSection extends ConsumerWidget {
           : ref.read(simbriefRouteProvider),
     );
 
+    String idOrEmpty(String v) => v == '--' ? '' : v;
+    final csCtl = TextEditingController(
+      text: idOrEmpty(ref.read(callSignProvider)),
+    );
+    final regCtl = TextEditingController(
+      text: idOrEmpty(ref.read(registrationProvider)),
+    );
+    final paxCtl = TextEditingController(
+      text: '${ref.read(paxCountProvider)}',
+    );
+
     final applied = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      barrierColor: efbDialogBarrier(),
+      builder: (dialogContext) => efbBlurredDialog(AlertDialog(
         backgroundColor: colors.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
@@ -319,6 +332,40 @@ class FlightPlanSection extends ConsumerWidget {
                   initialValue: altCtl.text,
                   textCapitalization: TextCapitalization.characters,
                   onChanged: (v) => altCtl.text = v,
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 5,
+                      child: EfbTextField(
+                        label: 'CALL SIGN',
+                        initialValue: csCtl.text,
+                        textCapitalization: TextCapitalization.characters,
+                        onChanged: (v) => csCtl.text = v,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 5,
+                      child: EfbTextField(
+                        label: 'REGISTRATION',
+                        initialValue: regCtl.text,
+                        textCapitalization: TextCapitalization.characters,
+                        onChanged: (v) => regCtl.text = v,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 3,
+                      child: EfbTextField(
+                        label: 'PAX',
+                        initialValue: paxCtl.text,
+                        keyboardType: TextInputType.number,
+                        onChanged: (v) => paxCtl.text = v,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 14),
                 Text(
@@ -420,7 +467,7 @@ class FlightPlanSection extends ConsumerWidget {
             ),
           ),
         ],
-      ),
+      )),
     );
 
     if (applied == true) {
@@ -431,6 +478,14 @@ class FlightPlanSection extends ConsumerWidget {
         defaultAlt: altCtl.text,
       );
       _applyParsedPlan(ref, parsed, FlightPlanSource.manual);
+      // Flight identity typed in the dialog (blank clears a previous one).
+      final cs = csCtl.text.trim().toUpperCase();
+      final reg = regCtl.text.trim().toUpperCase();
+      ref.read(callSignProvider.notifier).set(cs.isEmpty ? '--' : cs);
+      ref.read(registrationProvider.notifier).set(reg.isEmpty ? '--' : reg);
+      ref
+          .read(paxCountProvider.notifier)
+          .set((int.tryParse(paxCtl.text.trim()) ?? 100).clamp(0, 100));
       if (context.mounted) {
         _showSnack(context, 'Route applied manually.', colors.success);
       }

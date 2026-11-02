@@ -1,4 +1,3 @@
-import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import '../services/ad_consent_service.dart';
 import '../features/flight_monitor/presentation/controllers/alert_chime.dart';
@@ -6,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../core/app_colors.dart';
+import 'efb_dialog_backdrop.dart';
 import '../core/ui_text.dart';
 import '../core/app_links.dart';
 import '../core/app_version.dart';
@@ -246,10 +246,9 @@ class EfbNavRail extends ConsumerWidget {
     showDialog(
       context: context,
       // Dim + blur the app behind so the dialog stands out.
-      barrierColor: Colors.black.withValues(alpha: 0.55),
-      builder: (context) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-        child: AlertDialog(
+      barrierColor: efbDialogBarrier(),
+      builder: (context) => efbBlurredDialog(
+        AlertDialog(
         // Scrolls when the screen is too short for all rows (phones in
         // landscape); the CLOSE button stays pinned underneath.
         scrollable: true,

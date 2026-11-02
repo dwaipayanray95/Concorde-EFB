@@ -14,7 +14,7 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `5.21.2+101` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+- Current version: `5.22.0+102` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
   `public/changelog/entries.json` in sync — README no longer carries its own changelog, it just
   links to that page.
 - **Versioning rule (mandatory for every agent):** every change that alters user-visible behavior
@@ -306,6 +306,7 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 - v5.21.0: Settings dialog (`efb_nav_rail.dart`) has a desktop-only "Join Android Beta Testing" button -> `showAndroidBetaDialog` (links view).
 - v5.21.1: Settings dialog dims (barrier 55%) and blurs the app behind it (`BackdropFilter` in `_showSettingsDialog`).
 - v5.21.2: Settings dialog puts Alert chimes first, then a divider, then the link buttons.
+- v5.22.0: manual route entry dialog blurs the background (shared `efb_dialog_backdrop.dart`, also used by Settings) and takes call sign / registration / pax, applied after `_applyParsedPlan` (blank clears to `--`).
 
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.
