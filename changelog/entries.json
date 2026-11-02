@@ -1,6 +1,14 @@
 [
     {
         "date": "2026-11-02",
+        "title": "v5.22.0 \u2014 Call sign, registration and pax in manual route entry",
+        "items": [
+            "Manual route entry now also takes call sign, aircraft registration and passenger count, which load into the status bar and calculator",
+            "The background is dimmed and blurred while the manual route dialog is open, like Settings"
+        ]
+    },
+    {
+        "date": "2026-11-02",
         "title": "v5.21.2 \u2014 Alert chimes first in Settings",
         "items": [
             "Settings now lists Alert chimes at the top, then a separator, then the rest of the options"
