@@ -1,6 +1,13 @@
 [
     {
         "date": "2026-11-02",
+        "title": "v5.21.1 — Settings dialog stands out",
+        "items": [
+            "The app behind the Settings dialog is now dimmed and blurred so the dialog is easier to read"
+        ]
+    },
+    {
+        "date": "2026-11-02",
         "title": "v5.21.0 — Join the Android beta from Settings",
         "items": [
             "New JOIN ANDROID BETA TESTING button in Settings (desktop) opens the beta join steps and links, so you can still find them after dismissing the Monitor-tab invite"

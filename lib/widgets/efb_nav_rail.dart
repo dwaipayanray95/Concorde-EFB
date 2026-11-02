@@ -1,3 +1,4 @@
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import '../services/ad_consent_service.dart';
 import '../features/flight_monitor/presentation/controllers/alert_chime.dart';
@@ -244,7 +245,11 @@ class EfbNavRail extends ConsumerWidget {
     final colors = context.colors;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      // Dim + blur the app behind so the dialog stands out.
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+      builder: (context) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+        child: AlertDialog(
         // Scrolls when the screen is too short for all rows (phones in
         // landscape); the CLOSE button stays pinned underneath.
         scrollable: true,
@@ -404,6 +409,7 @@ class EfbNavRail extends ConsumerWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }
