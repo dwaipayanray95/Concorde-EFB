@@ -285,31 +285,7 @@ class EfbNavRail extends ConsumerWidget {
                 style: uiText(context, size: 12, color: colors.textDim),
               ),
             ),
-            const SizedBox(height: 16),
-            _SettingButton(
-              icon: Icons.history,
-              label: 'View Changelog',
-              url: AppLinks.changelog,
-            ),
-            const SizedBox(height: 8),
-            _SettingButton(
-              svgAsset: 'assets/discord_icon.svg',
-              label: 'Join Discord Community',
-              url: AppLinks.discord,
-            ),
-            const SizedBox(height: 8),
-            _SettingButton(
-              icon: Icons.star_border,
-              label: 'Rate on Flightsim.to',
-              url: AppLinks.flightsimTo,
-            ),
-            const SizedBox(height: 8),
-            _SettingButton(
-              icon: Icons.favorite_border,
-              label: 'Support Development',
-              url: AppLinks.donate,
-            ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             // Flight Monitor alert chimes: one chime per new alert.
             Consumer(
               builder: (context, ref, _) {
@@ -368,6 +344,32 @@ class EfbNavRail extends ConsumerWidget {
                   ),
                 );
               },
+            ),
+            const SizedBox(height: 14),
+            Divider(height: 1, color: colors.dividerStrong.withValues(alpha: 0.6)),
+            const SizedBox(height: 14),
+            _SettingButton(
+              icon: Icons.history,
+              label: 'View Changelog',
+              url: AppLinks.changelog,
+            ),
+            const SizedBox(height: 8),
+            _SettingButton(
+              svgAsset: 'assets/discord_icon.svg',
+              label: 'Join Discord Community',
+              url: AppLinks.discord,
+            ),
+            const SizedBox(height: 8),
+            _SettingButton(
+              icon: Icons.star_border,
+              label: 'Rate on Flightsim.to',
+              url: AppLinks.flightsimTo,
+            ),
+            const SizedBox(height: 8),
+            _SettingButton(
+              icon: Icons.favorite_border,
+              label: 'Support Development',
+              url: AppLinks.donate,
             ),
             // Desktop only (same rule as the Monitor-tab invite).
             if (AndroidBetaPromptPolicy.platformEligible) ...[

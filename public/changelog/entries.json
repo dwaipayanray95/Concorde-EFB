@@ -1,6 +1,13 @@
 [
     {
         "date": "2026-11-02",
+        "title": "v5.21.2 — Alert chimes first in Settings",
+        "items": [
+            "Settings now lists Alert chimes at the top, then a separator, then the rest of the options"
+        ]
+    },
+    {
+        "date": "2026-11-02",
         "title": "v5.21.1 — Settings dialog stands out",
         "items": [
             "The app behind the Settings dialog is now dimmed and blurred so the dialog is easier to read"
