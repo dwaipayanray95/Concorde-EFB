@@ -29,6 +29,10 @@ class AppLinks {
   static const String androidPlayStore =
       'https://play.google.com/store/apps/details?id=com.theawesomeray.concorde_efb';
 
+  // Shared Concorde airframe: opens SimBrief Dispatch's add-airframe page.
+  static const String simbriefAirframe =
+      'https://dispatch.simbrief.com/airframes/share/292732_1754661115277';
+
   static const String githubSponsors =
       'https://github.com/sponsors/dwaipayanray95';
 }

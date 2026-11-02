@@ -14,7 +14,7 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `5.22.1+103` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+- Current version: `5.23.0+104` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
   `public/changelog/entries.json` in sync — README no longer carries its own changelog, it just
   links to that page.
 - **Versioning rule (mandatory for every agent):** every change that alters user-visible behavior
@@ -308,6 +308,7 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 - v5.21.2: Settings dialog puts Alert chimes first, then a divider, then the link buttons.
 - v5.22.0: manual route entry dialog blurs the background (shared `efb_dialog_backdrop.dart`, also used by Settings) and takes call sign / registration / pax, applied after `_applyParsedPlan` (blank clears to `--`).
 - v5.22.1: manual route entry fields use controllers directly (`_manualField`) -- `EfbTextField` resets to its initial value on blur, which reverted every edit in a non-rebuilding dialog. Don't use `EfbTextField` with a static `initialValue` in dialogs.
+- v5.23.0: .pln/.vfp/XML imports read call sign / registration / pax when present (FlightPlanImportService._identity: attributes/tags Callsign, Registration, Pax or REG/ PAX/ in Remarks; fields on ParsedFlightPlan, applied in _applyParsedPlan only when non-null); Settings has an Add Concorde Airframe to SimBrief button (AppLinks.simbriefAirframe).
 
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.

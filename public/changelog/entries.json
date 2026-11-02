@@ -1,6 +1,14 @@
 [
     {
         "date": "2026-11-02",
+        "title": "v5.23.0 — Airframe link and identity from imported plans",
+        "items": [
+            "Settings: new Add Concorde Airframe to SimBrief button opens the shared airframe so you can save it to your SimBrief account",
+            "PLN / VFP / XML imports now also load call sign, registration and passenger count when the file contains them"
+        ]
+    },
+    {
+        "date": "2026-11-02",
         "title": "v5.22.1 — Fix manual route entry fields reverting",
         "items": [
             "Text typed into the manual route entry boxes (ICAOs, call sign, registration, pax) now sticks instead of reverting when you click away"

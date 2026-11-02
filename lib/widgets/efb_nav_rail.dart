@@ -348,6 +348,12 @@ class EfbNavRail extends ConsumerWidget {
             Divider(height: 1, color: colors.dividerStrong.withValues(alpha: 0.6)),
             const SizedBox(height: 14),
             _SettingButton(
+              icon: Icons.flight,
+              label: 'Add Concorde Airframe to SimBrief',
+              url: AppLinks.simbriefAirframe,
+            ),
+            const SizedBox(height: 8),
+            _SettingButton(
               icon: Icons.history,
               label: 'View Changelog',
               url: AppLinks.changelog,
