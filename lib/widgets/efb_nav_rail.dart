@@ -11,6 +11,7 @@ import '../core/app_version.dart';
 import '../core/sim_bridge_launcher.dart';
 import '../providers/efb_providers.dart';
 import '../features/flight_monitor/presentation/controllers/telemetry_provider.dart';
+import '../features/flight_monitor/presentation/widgets/flight_monitor/android_beta_prompt.dart';
 
 /// Authentic cockpit-style vertical navigation rail for landscape tablet EFB.
 class EfbNavRail extends ConsumerWidget {
@@ -363,6 +364,15 @@ class EfbNavRail extends ConsumerWidget {
                 );
               },
             ),
+            // Desktop only (same rule as the Monitor-tab invite).
+            if (AndroidBetaPromptPolicy.platformEligible) ...[
+              const SizedBox(height: 8),
+              _SettingButton(
+                icon: Icons.android,
+                label: 'Join Android Beta Testing',
+                onTap: () async => showAndroidBetaDialog(context),
+              ),
+            ],
             const SizedBox(height: 8),
             _SettingButton(
               icon: Icons.privacy_tip_outlined,
