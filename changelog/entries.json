@@ -1,6 +1,13 @@
 [
     {
         "date": "2026-11-02",
+        "title": "v5.19.0 \u2014 Join the Android beta from Settings",
+        "items": [
+            "New JOIN ANDROID BETA TESTING button in Settings (desktop) opens the beta join steps and links, so you can still find them after dismissing the Monitor-tab invite"
+        ]
+    },
+    {
+        "date": "2026-11-02",
         "title": "v5.20.0 \u2014 Logbook sync to phone and tablet",
         "items": [
             "Phones and tablets now get the desktop app's flight logbook whenever they connect over Wi-Fi, and re-check every minute while connected",
