@@ -14,7 +14,7 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `5.18.0+96` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+- Current version: `5.19.0+97` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
   `public/changelog/entries.json` in sync — README no longer carries its own changelog, it just
   links to that page.
 - **Versioning rule (mandatory for every agent):** every change that alters user-visible behavior
@@ -301,6 +301,7 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 - v5.16.0: `EfbLaunchesBadge` is back in `AppFooter` under the support card (same `visitorCountProvider` / visitorbadge.io path, so the total keeps counting; the GET itself bumps it, once per session). Supersedes the v5.0.0 note that it is no longer shown.
 - v5.17.0: "Now on Android" internal-test invite (`android_beta_prompt.dart`): desktop only, shown the first time the Monitor tab opens each launch (`FlightMonitorTab.initState`); choices NEXT LAUNCH (just closes) / REMIND ME LATER (3-day snooze, pref `android_beta_prompt_snooze_until`) / NEVER (`android_beta_prompt_never`) / JOIN THE TEST (shows the 3 Play links + Discord, counts as never). The Share card's Android button opens the same dialog on the links. Links in `AppLinks.android*`.
 - v5.18.0: dispatch banner V1/VR/V2 in big standalone tiles (`_vSpeedTiles`), CRZ Mach figure removed, GO·CAUTION uses neutral `colors.surface` (not amber); status-bar C/S + REG pills drop their labels once populated (`valueOnlyWhenPopulated`).
+- v5.19.0: flight logbook (`lib/features/logbook/`): pure `FlightTracker` state machine (block out = any engine running on ground, takeoff = onGround->air with IAS > 80, touchdown = air->ground using the bridge-latched touchdown VS/G/pitch, bounces within 5 s, go-around after 15 s airborne clears the touchdown, block in = all engines stopped on ground 3 s; re-arms for the next flight) -> `FlightLog` (JSON `v:1`, id `<callsign>-<yyyymmddTHHMMZ>`, 5 s track `[epoch, lat, lon, alt, gs]`) saved per milestone by `flightTrackerProvider` (desktop only via `loggingEnabledProvider`, watched in `HomeScreen`) through `LogbookRepository` (`getApplicationSupportDirectory()/logbook/<id>.json`, atomic writes, CSV/JSON export). `rateLanding`: <120 butter, <240 smooth, <400 firm, <600 hard, >=600 fpm or >=2.6 G inspection. UI: LOG tab (`logbook_tab.dart`, nav rail + mobile bar index 3), `LogDetailScreen`, touchdown pill on `MfdStrip`. Privacy page updated. Phone sync (via the bridge) is the next step.
 
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.

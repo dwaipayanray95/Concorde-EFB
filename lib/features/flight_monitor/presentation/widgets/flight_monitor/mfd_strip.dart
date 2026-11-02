@@ -10,6 +10,8 @@ import '../../../../../models/concorde_models.dart';
 import '../../../../../providers/efb_providers.dart';
 import '../../../../../widgets/efb_flat_card.dart';
 import '../../../data/models/telemetry_model.dart';
+import '../../../../logbook/presentation/logbook_format.dart';
+import '../../../../logbook/presentation/logbook_providers.dart';
 
 /// A cockpit-style MFD status strip: flight phase, distance to the planned
 /// destination, top-of-descent, ETA, predicted landing fuel vs reserves,
@@ -53,6 +55,9 @@ class MfdStrip extends ConsumerWidget {
     final warnings = [
       for (final a in ref.watch(liveAlertsProvider)) (a.text, a.critical),
     ];
+
+    final landed = ref.watch(flightTrackerProvider);
+    final landedRating = landed?.landingRating;
 
     final todText = pred == null
         ? '--'
@@ -117,55 +122,65 @@ class MfdStrip extends ConsumerWidget {
                 child: Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: !isLive
-                      ? [
-                          _pill(
-                            context,
-                            'NO LIVE DATA',
-                            colors.dividerStrong,
-                            colors.textSecondary,
-                          ),
-                        ]
-                      : warnings.isEmpty
-                      ? [
-                          _pill(
-                            context,
-                            'ALL SYSTEMS NORMAL',
-                            colors.success,
-                            AppColors.dark.bg,
-                          ),
-                        ]
-                      : warnings
-                            .map(
-                              // Tap a warning to silence its chime for
-                              // 10 s on this device.
-                              // DESCEND NOW / gear alerts clear outright (ATC,
-                              // procedure or terrain may hold you level).
-                              (w) => Tooltip(
-                                message: clearableAlerts.contains(w.$1)
-                                    ? 'Tap to clear (re-arms automatically)'
-                                    : 'Tap to silence for 10 s',
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(4),
-                                  onTap: () => clearableAlerts.contains(w.$1)
-                                      ? ref
-                                            .read(
-                                              dismissedAlertsProvider.notifier,
-                                            )
-                                            .dismiss(w.$1)
-                                      : ref
-                                            .read(alertChimeProvider.notifier)
-                                            .silence(w.$1),
-                                  child: _pill(
-                                    context,
-                                    w.$1,
-                                    w.$2 ? colors.error : colors.accent,
-                                    w.$2 ? Colors.white : AppColors.dark.bg,
+                  children: [
+                    if (landed != null && landedRating != null)
+                      _pill(
+                        context,
+                        touchdownPillText(landed),
+                        ratingColor(colors, landedRating),
+                        onRatingColor(colors, landedRating),
+                      ),
+                    ...(!isLive
+                        ? [
+                            _pill(
+                              context,
+                              'NO LIVE DATA',
+                              colors.dividerStrong,
+                              colors.textSecondary,
+                            ),
+                          ]
+                        : warnings.isEmpty
+                        ? [
+                            _pill(
+                              context,
+                              'ALL SYSTEMS NORMAL',
+                              colors.success,
+                              AppColors.dark.bg,
+                            ),
+                          ]
+                        : warnings
+                              .map(
+                                // Tap a warning to silence its chime for
+                                // 10 s on this device.
+                                // DESCEND NOW / gear alerts clear outright (ATC,
+                                // procedure or terrain may hold you level).
+                                (w) => Tooltip(
+                                  message: clearableAlerts.contains(w.$1)
+                                      ? 'Tap to clear (re-arms automatically)'
+                                      : 'Tap to silence for 10 s',
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(4),
+                                    onTap: () => clearableAlerts.contains(w.$1)
+                                        ? ref
+                                              .read(
+                                                dismissedAlertsProvider
+                                                    .notifier,
+                                              )
+                                              .dismiss(w.$1)
+                                        : ref
+                                              .read(alertChimeProvider.notifier)
+                                              .silence(w.$1),
+                                    child: _pill(
+                                      context,
+                                      w.$1,
+                                      w.$2 ? colors.error : colors.accent,
+                                      w.$2 ? Colors.white : AppColors.dark.bg,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            )
-                            .toList(),
+                              )
+                              .toList()),
+                  ],
                 ),
               ),
               // Alert chime on/off (one chime per new alert, never a loop).

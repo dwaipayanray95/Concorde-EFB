@@ -64,7 +64,8 @@ class EfbNavRail extends ConsumerWidget {
                           // Aircraft badge / App icon
                           Tooltip(
                             message:
-                                'Concorde EFB ${ref.watch(appVersionProvider).value?.display ?? ''}'.trim(),
+                                'Concorde EFB ${ref.watch(appVersionProvider).value?.display ?? ''}'
+                                    .trim(),
                             child: Container(
                               width: 44,
                               height: 44,
@@ -123,6 +124,15 @@ class EfbNavRail extends ConsumerWidget {
                           label: 'MONITOR',
                           isSelected: selectedIndex == 2,
                           onTap: () => onDestinationSelected(2),
+                        ),
+                        SizedBox(height: gap),
+                        _NavRailItem(
+                          icon: selectedIndex == 3
+                              ? Icons.menu_book
+                              : Icons.menu_book_outlined,
+                          label: 'LOG',
+                          isSelected: selectedIndex == 3,
+                          onTap: () => onDestinationSelected(3),
                         ),
 
                         const Spacer(),

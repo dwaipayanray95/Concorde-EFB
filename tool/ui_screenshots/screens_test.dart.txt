@@ -16,6 +16,8 @@ import 'package:concorde_efb/services/airport_database_service.dart';
 import 'package:concorde_efb/features/flight_monitor/presentation/controllers/telemetry_provider.dart';
 import 'package:concorde_efb/features/flight_monitor/data/models/telemetry_model.dart';
 import 'package:concorde_efb/features/flight_monitor/data/services/websocket_client.dart';
+import 'package:concorde_efb/features/logbook/data/flight_log.dart';
+import 'package:concorde_efb/features/logbook/presentation/logbook_providers.dart';
 
 const outDir = String.fromEnvironment('OUT');
 const sizes = String.fromEnvironment('SIZES', defaultValue: '1280x800,915x412');
@@ -40,6 +42,25 @@ class FakeMonitor extends FlightMonitorNotifier {
       'events': {'onGround': false},
     }),
   );
+}
+
+class FakeLogbook extends LogbookNotifier {
+  @override
+  Future<List<FlightLog>> build() async {
+    FlightLog mk(String id, int d, double fpm, {bool done = true}) => FlightLog(
+      id: id, updatedAt: DateTime.utc(2026, 5, d), callSign: 'BAW$d', registration: 'G-BOAC',
+      plannedDep: 'EGLL', plannedArr: 'KJFK', blockOut: DateTime.utc(2026, 5, d, 10),
+      takeoff: DateTime.utc(2026, 5, d, 10, 15),
+      touchdown: done ? DateTime.utc(2026, 5, d, 13, 30) : null,
+      blockIn: done ? DateTime.utc(2026, 5, d, 13, 40) : null,
+      touchdownFpm: done ? fpm : null, touchdownG: done ? 1.2 : null, touchdownPitch: 11.5, touchdownIas: 162,
+      plannedTripKg: 71000, cruiseFl: 580, finalReserveKg: 3700, zfwKg: 92000, maxMach: 2.04, maxAltFt: 58000,
+      supersonicSec: 7200, reheatSec: 900, distanceNm: 3150,
+      fuelBlockOutKg: 95000, fuelTakeoffKg: 93000, fuelLandingKg: 20000, fuelBlockInKg: 19800,
+      alerts: {'CG AFT LIMIT': 2}, bounces: fpm > 500 ? 1 : 0,
+    );
+    return [mk('c', 3, 0, done: false), mk('b', 2, 310), mk('a', 1, 95)];
+  }
 }
 
 Future<void> _fonts() async {
@@ -98,6 +119,7 @@ void main() {
             departureMetarFutureProvider.overrideWith((ref) async => metarDep),
             arrivalMetarFutureProvider.overrideWith((ref) async => metarArr),
             flightMonitorProvider.overrideWith(FakeMonitor.new),
+            logbookProvider.overrideWith(FakeLogbook.new),
             localIpv4Provider.overrideWith((ref) async => ['192.168.1.20']),
           ],
           child: const ConcordeEfbApp(),
@@ -118,6 +140,15 @@ void main() {
           if (!t.contains(e.$2)) continue;
           final f = find.text(e.$1);
           if (f.evaluate().isNotEmpty) { await tester.tap(f.first); await shot(e.$3); }
+        }
+        if (t.contains('log')) {
+          final f = find.text('LOG');
+          if (f.evaluate().isNotEmpty) {
+            await tester.tap(f.first);
+            await shot('5_log');
+            final row = find.text('BAW2');
+            if (row.evaluate().isNotEmpty) { await tester.tap(row.first); await shot('6_log_detail'); }
+          }
         }
         FlutterError.onError = prev;
         debugDefaultTargetPlatformOverride = null;

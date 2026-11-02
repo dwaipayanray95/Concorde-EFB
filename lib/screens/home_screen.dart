@@ -21,6 +21,7 @@ import 'widgets/cockpit_status_bar.dart';
 import 'tabs/flight_planner_tab.dart';
 import 'tabs/checklists_tab.dart';
 import 'tabs/flight_monitor_tab.dart';
+import '../features/logbook/presentation/logbook_tab.dart';
 
 /// App shell: Left EFB Navigation Rail + Top Cockpit Status Bar + Responsive Viewport.
 class HomeScreen extends ConsumerStatefulWidget {
@@ -328,6 +329,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                                 ),
                                 child: const ChecklistsTab(),
                               )
+                            : selectedTab == 3
+                            ? Padding(
+                                key: const ValueKey('padding-tab-3'),
+                                padding: EdgeInsets.fromLTRB(
+                                  isCompact ? 12 : 20,
+                                  4,
+                                  isCompact ? 12 : 20,
+                                  24,
+                                ),
+                                child: const LogbookTab(),
+                              )
                             : SmoothScrollWrapper(
                                 controller: _tab2Controller,
                                 child: SingleChildScrollView(
@@ -418,6 +430,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
                                 size: 20,
                               ),
                               label: 'MONITOR',
+                            ),
+                            NavigationDestination(
+                              icon: Icon(
+                                Icons.menu_book_outlined,
+                                color: colors.textSecondary,
+                                size: 20,
+                              ),
+                              selectedIcon: const Icon(
+                                Icons.menu_book,
+                                color: Color(0xFF101012),
+                                size: 20,
+                              ),
+                              label: 'LOG',
                             ),
                           ],
                         ),
