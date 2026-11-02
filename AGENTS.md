@@ -382,5 +382,6 @@ stale like the old React-era version of this file did.
 - Theme system: `lib/core/app_colors.dart`
 - Changelog history: `public/changelog/entries.json`
 - Human-readable overview: `README.md`
+- Plain-English data sources and calculation assumptions: `docs/HOW_IT_WORKS.md` (keep in sync with constants and formulas)
 - Web deployment pipeline: `.github/workflows/pages.yml`
 - Desktop/mobile build + release pipeline: `.github/workflows/build.yml`
