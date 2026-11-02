@@ -1,6 +1,17 @@
 [
     {
         "date": "2026-11-02",
+        "title": "v5.19.0 \u2014 Flight logbook",
+        "items": [
+            "New LOG tab: every flight is logged automatically on the desktop app, from engine start to engine shutdown at the gate",
+            "Each flight records block and flight times, departure and arrival (actual airports, so diversions show), fuel at each stage vs plan, weights, max Mach and FL, supersonic and reheat time, distance flown, alerts and a position track for a future map",
+            "Landing rating on touchdown: BUTTER (<120 fpm), SMOOTH (<240), FIRM (<400), HARD (<600), INSPECTION (600+ fpm or 2.6 G, the real-world hard-landing inspection threshold), with bounce count \u2014 shown live on the Flight Monitor as LANDED \u2212142 FPM \u00b7 1.18 G \u00b7 SMOOTH",
+            "Totals (flights, block hours, supersonic hours, average and best landing), per-flight detail with notes, delete, and CSV / JSON export",
+            "Saved only on your computer (AppData), never uploaded. Phone/tablet sync is coming next"
+        ]
+    },
+    {
+        "date": "2026-11-02",
         "title": "v5.18.0 \u2014 Bigger V-speeds, calmer caution banner",
         "items": [
             "Dispatch strip: V1 / VR / V2 now sit in their own large tiles so they can be read at a glance",
