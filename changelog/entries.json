@@ -1,6 +1,13 @@
 [
     {
         "date": "2026-11-02",
+        "title": "v5.22.1 \u2014 Fix manual route entry fields reverting",
+        "items": [
+            "Text typed into the manual route entry boxes (ICAOs, call sign, registration, pax) now sticks instead of reverting when you click away"
+        ]
+    },
+    {
+        "date": "2026-11-02",
         "title": "v5.22.0 \u2014 Call sign, registration and pax in manual route entry",
         "items": [
             "Manual route entry now also takes call sign, aircraft registration and passenger count, which load into the status bar and calculator",
