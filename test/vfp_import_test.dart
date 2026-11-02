@@ -22,4 +22,30 @@ void main() {
     expect(FlightPlanImportService.decodeFile(le), 'AB');
     expect(FlightPlanImportService.decodeFile([0xEF, 0xBB, 0xBF, 0x41]), 'A');
   });
+
+  test('reads call sign / registration / pax when present', () {
+    final p = FlightPlanImportService.parseAnyXml(
+      '<FlightPlan Callsign="baw1" DepartureAirport="EGLL" '
+      'DestinationAirport="KJFK" Remarks="REG/G-BOAD PAX/96" />',
+    )!;
+    expect(p.callSign, 'BAW1');
+    expect(p.registration, 'G-BOAD');
+    expect(p.paxCount, 96);
+  });
+
+  test('identity is null when the file has none', () {
+    final p = FlightPlanImportService.parseAnyXml(vfp)!;
+    expect(p.callSign, isNull);
+    expect(p.registration, isNull);
+    expect(p.paxCount, isNull);
+  });
+
+  test('.pln identity tags', () {
+    final p = FlightPlanImportService.parsePln(
+      '<FlightPlan.FlightPlan><ATCCallsign>AIC2</ATCCallsign>'
+      '<DepartureID>EGLL</DepartureID><DestinationID>KJFK</DestinationID>'
+      '</FlightPlan.FlightPlan>',
+    )!;
+    expect(p.callSign, 'AIC2');
+  });
 }

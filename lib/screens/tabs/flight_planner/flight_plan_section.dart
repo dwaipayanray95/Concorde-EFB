@@ -44,6 +44,16 @@ class FlightPlanSection extends ConsumerWidget {
     // Extra fuel is a per-flight top-up; a new plan starts without it
     // (taxi/contingency/reserve are preferences and stay).
     ref.invalidate(extraFuelProvider);
+    // Flight identity, only when the file carries it.
+    if (plan.callSign != null) {
+      ref.read(callSignProvider.notifier).set(plan.callSign!);
+    }
+    if (plan.registration != null) {
+      ref.read(registrationProvider.notifier).set(plan.registration!);
+    }
+    if (plan.paxCount != null) {
+      ref.read(paxCountProvider.notifier).set(plan.paxCount!);
+    }
 
     final db = ref.read(airportDbProvider).value;
     final dep = db?.airports[plan.departureIcao];

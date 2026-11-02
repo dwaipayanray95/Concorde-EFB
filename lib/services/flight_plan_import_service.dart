@@ -16,6 +16,11 @@ class ParsedFlightPlan {
   final String route;
   final double? cruiseAltFt;
 
+  /// Flight identity, when the file carries it (otherwise null).
+  final String? callSign;
+  final String? registration;
+  final int? paxCount;
+
   /// Route fixes with coordinates (excluding the airports), when the
   /// source carries them (.pln WorldPosition). Empty for a hand-typed route.
   final List<RoutePoint> fixes;
@@ -29,6 +34,9 @@ class ParsedFlightPlan {
     this.arrivalRunway,
     this.route = '',
     this.cruiseAltFt,
+    this.callSign,
+    this.registration,
+    this.paxCount,
   });
 }
 
@@ -126,6 +134,7 @@ class FlightPlanImportService {
         ? enroute.map((w) => w.ident).join(' ')
         : routeTokens.join(' ');
 
+    final id = _identity(xml);
     return ParsedFlightPlan(
       departureIcao: dep.toUpperCase(),
       arrivalIcao: dest.toUpperCase(),
@@ -133,6 +142,9 @@ class FlightPlanImportService {
       arrivalRunway: arrRwy,
       route: routeString,
       cruiseAltFt: cruiseAlt,
+      callSign: id.$1,
+      registration: id.$2,
+      paxCount: id.$3,
       fixes: [
         for (final w in enroute)
           if (w.position != null)
@@ -195,6 +207,7 @@ class FlightPlanImportService {
     final depRwy = _tag(xml, 'DepartureRunway') ?? _attr(xml, 'Origin', 'runway');
     final arrRwy = _tag(xml, 'ArrivalRunway') ?? _attr(xml, 'Destination', 'runway');
 
+    final id = _identity(xml);
     return ParsedFlightPlan(
       departureIcao: dep.toUpperCase(),
       arrivalIcao: dest.toUpperCase(),
@@ -202,6 +215,9 @@ class FlightPlanImportService {
       departureRunway: depRwy?.toUpperCase(),
       arrivalRunway: arrRwy?.toUpperCase(),
       route: route.trim(),
+      callSign: id.$1,
+      registration: id.$2,
+      paxCount: id.$3,
     );
   }
 
@@ -345,7 +361,11 @@ class FlightPlanImportService {
     } else {
       cruiseFt = double.tryParse(crz);
     }
+    final id = _identity(xml);
     return ParsedFlightPlan(
+      callSign: id.$1,
+      registration: id.$2,
+      paxCount: id.$3,
       departureIcao: dep.toUpperCase(),
       arrivalIcao: arr.toUpperCase(),
       alternateIcao: (alt == null || alt.isEmpty) ? null : alt.toUpperCase(),
@@ -371,6 +391,46 @@ class FlightPlanImportService {
     }
     final text = utf8.decode(bytes, allowMalformed: true);
     return text.startsWith('\uFEFF') ? text.substring(1) : text;
+  }
+
+  /// Call sign, registration and passenger count when the file has them:
+  /// as attributes / tags (Callsign, Registration, Pax ...) or as ICAO
+  /// field-18 style `REG/G-BOAD` / `PAX/100` in the remarks.
+  static (String?, String?, int?) _identity(String xml) {
+    String? find(List<String> names) {
+      for (final n in names) {
+        final a = RegExp(
+          '\\b$n\\s*=\\s*"([^"]*)"',
+          caseSensitive: false,
+        ).firstMatch(xml);
+        final t = RegExp(
+          '<$n>([^<]*)</$n>',
+          caseSensitive: false,
+        ).firstMatch(xml);
+        final v = (a?.group(1) ?? t?.group(1))?.trim();
+        if (v != null && v.isNotEmpty) return v;
+      }
+      return null;
+    }
+
+    final remarks = find(['Remarks']) ?? '';
+    String? remark(String key) =>
+        RegExp('\\b$key/([A-Za-z0-9-]+)').firstMatch(remarks)?.group(1);
+
+    final cs = (find(['Callsign', 'ATCCallsign', 'ATCID']) ?? remark('CS'))
+        ?.toUpperCase();
+    final reg = (find([
+              'Registration',
+              'AircraftRegistration',
+              'ATCRegistration',
+              'Reg',
+            ]) ??
+            remark('REG'))
+        ?.toUpperCase();
+    final paxRaw = find(['PaxCount', 'PassengerCount', 'Passengers', 'Pax']) ??
+        remark('PAX');
+    final pax = int.tryParse(paxRaw ?? '')?.clamp(0, 100);
+    return (cs, reg, pax);
   }
 
   static String? _tag(String xml, String name) {
