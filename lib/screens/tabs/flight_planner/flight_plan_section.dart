@@ -257,6 +257,65 @@ class FlightPlanSection extends ConsumerWidget {
     );
   }
 
+  /// Labelled text box bound directly to [ctl]. (EfbTextField resets itself
+  /// to its initial value on blur, which would discard edits in a dialog
+  /// that never rebuilds.)
+  static Widget _manualField(
+    BuildContext context,
+    AppColors colors,
+    String label,
+    TextEditingController ctl, {
+    bool caps = false,
+    TextInputType? keyboardType,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: uiText(
+            context,
+            color: colors.textSecondary,
+            size: 11,
+            weight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          decoration: BoxDecoration(
+            color: colors.inputBg,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: colors.dividerStrong.withValues(alpha: 0.8),
+              width: 1.2,
+            ),
+          ),
+          child: TextField(
+            controller: ctl,
+            keyboardType: keyboardType,
+            textCapitalization: caps
+                ? TextCapitalization.characters
+                : TextCapitalization.none,
+            cursorColor: colors.accent,
+            style: uiText(
+              context,
+              color: colors.textPrimary,
+              weight: FontWeight.bold,
+              size: 15,
+            ),
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Future<void> _openManualEntry(BuildContext context, WidgetRef ref) async {
     final colors = context.colors;
     final depCtl = TextEditingController(text: ref.read(departureIcaoProvider));
@@ -308,62 +367,32 @@ class FlightPlanSection extends ConsumerWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: EfbTextField(
-                        label: 'DEPARTURE ICAO',
-                        initialValue: depCtl.text,
-                        textCapitalization: TextCapitalization.characters,
-                        onChanged: (v) => depCtl.text = v,
-                      ),
+                      child: _manualField(dialogContext, colors, 'DEPARTURE ICAO', depCtl, caps: true,),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: EfbTextField(
-                        label: 'ARRIVAL ICAO',
-                        initialValue: arrCtl.text,
-                        textCapitalization: TextCapitalization.characters,
-                        onChanged: (v) => arrCtl.text = v,
-                      ),
+                      child: _manualField(dialogContext, colors, 'ARRIVAL ICAO', arrCtl, caps: true,),
                     ),
                   ],
                 ),
                 const SizedBox(height: 14),
-                EfbTextField(
-                  label: 'ALTERNATE ICAO (OPTIONAL)',
-                  initialValue: altCtl.text,
-                  textCapitalization: TextCapitalization.characters,
-                  onChanged: (v) => altCtl.text = v,
-                ),
+                _manualField(dialogContext, colors, 'ALTERNATE ICAO (OPTIONAL)', altCtl, caps: true,),
                 const SizedBox(height: 14),
                 Row(
                   children: [
                     Expanded(
                       flex: 5,
-                      child: EfbTextField(
-                        label: 'CALL SIGN',
-                        initialValue: csCtl.text,
-                        textCapitalization: TextCapitalization.characters,
-                        onChanged: (v) => csCtl.text = v,
-                      ),
+                      child: _manualField(dialogContext, colors, 'CALL SIGN', csCtl, caps: true,),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       flex: 5,
-                      child: EfbTextField(
-                        label: 'REGISTRATION',
-                        initialValue: regCtl.text,
-                        textCapitalization: TextCapitalization.characters,
-                        onChanged: (v) => regCtl.text = v,
-                      ),
+                      child: _manualField(dialogContext, colors, 'REGISTRATION', regCtl, caps: true,),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       flex: 3,
-                      child: EfbTextField(
-                        label: 'PAX',
-                        initialValue: paxCtl.text,
-                        keyboardType: TextInputType.number,
-                        onChanged: (v) => paxCtl.text = v,
-                      ),
+                      child: _manualField(dialogContext, colors, 'PAX', paxCtl, keyboardType: TextInputType.number,),
                     ),
                   ],
                 ),
