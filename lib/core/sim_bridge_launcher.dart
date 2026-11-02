@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 
+import '../features/logbook/data/logbook_repository.dart';
+
 /// Outcome of the last [SimBridgeLauncher.start] attempt. Distinguishes
 /// "the bridge process itself never launched" (exe missing/blocked, most
 /// commonly an antivirus/SmartScreen quarantine of the unsigned PyInstaller
@@ -93,6 +95,12 @@ class SimBridgeLauncher {
       return status.value = SimBridgeStatus.exeNotFound;
     }
 
+    // Lets the bridge serve the logbook to the phone app (desktop = master).
+    var logbookDir = '';
+    try {
+      logbookDir = (await LogbookRepository.defaultDir()).path;
+    } catch (_) {}
+
     try {
       final process = await Process.start(
         exePath,
@@ -102,6 +110,7 @@ class SimBridgeLauncher {
         environment: {
           'SIMBRIDGE_LAN': lanEnabled ? '1' : '0',
           'SIMBRIDGE_CODE': pairingCode,
+          if (logbookDir.isNotEmpty) 'SIMBRIDGE_LOGBOOK_DIR': logbookDir,
         },
       );
       _process = process;

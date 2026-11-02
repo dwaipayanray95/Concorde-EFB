@@ -72,6 +72,7 @@ class FlightMonitorNotifier extends Notifier<FlightMonitorState> {
   static const _watchdogTimeout = Duration(seconds: 20);
 
   late WebSocketClient _wsClient;
+  WebSocketClient? _client; // null while not paired (phone)
   StreamSubscription<TelemetryModel>? _wsSubscription;
   StreamSubscription<BridgeStatus>? _statusSubscription;
   Timer? _watchdogTimer;
@@ -91,6 +92,7 @@ class FlightMonitorNotifier extends Notifier<FlightMonitorState> {
     }
     if (url == null) return FlightMonitorState(); // not paired yet
     _wsClient = WebSocketClient(url);
+    _client = _wsClient;
 
     _wsSubscription = _wsClient.connect().listen(_handleLiveTelemetry);
     _statusSubscription = _wsClient.statusStream.listen(_handleStatus);
@@ -118,6 +120,13 @@ class FlightMonitorNotifier extends Notifier<FlightMonitorState> {
 
     return FlightMonitorState();
   }
+
+  /// Logbook sync channel (see logbook_sync.dart): `logbook_*` frames in,
+  /// JSON out. Empty / false while there is no socket.
+  Stream<Map<String, dynamic>> get logbookMessages =>
+      _client?.logbookStream ?? const Stream.empty();
+  bool sendJson(Map<String, dynamic> message) =>
+      _client?.send(message) ?? false;
 
   void _handleStatus(BridgeStatus s) {
     final live = s.socketConnected && s.receivingData;

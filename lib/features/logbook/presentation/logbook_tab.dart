@@ -15,6 +15,8 @@ import '../../../widgets/efb_flat_card.dart';
 import '../../../widgets/efb_text_field.dart';
 import '../data/flight_log.dart';
 import '../data/logbook_repository.dart';
+import '../data/logbook_sync.dart';
+import '../../flight_monitor/data/services/lan_link.dart';
 import 'logbook_format.dart';
 import 'logbook_providers.dart';
 
@@ -42,6 +44,7 @@ class LogbookTab extends ConsumerWidget {
     return ListView(
       physics: const BouncingScrollPhysics(),
       children: [
+        if (_isPhone) ...[const _SyncLine(), const SizedBox(height: 8)],
         _Totals(logs: logs),
         const SizedBox(height: 12),
         _Toolbar(logs: logs),
@@ -77,6 +80,29 @@ class LogbookTab extends ConsumerWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Phone only: whether the list mirrors the desktop right now.
+class _SyncLine extends ConsumerWidget {
+  const _SyncLine();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sync = ref.watch(logbookSyncProvider);
+    final host = ref.watch(remoteBridgeProvider).host;
+    final t = sync.lastSync?.toLocal();
+    final time = t == null
+        ? ''
+        : '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+    return Text(
+      sync.connected && t != null
+          ? 'Synced with $host · $time'
+          : sync.connected
+          ? 'Syncing with $host…'
+          : 'Not connected to the desktop app — showing last synced copy',
+      style: uiText(context, size: 11, color: context.colors.textSecondary),
     );
   }
 }

@@ -38,6 +38,7 @@ class WebSocketClient {
   StreamSubscription? _channelSub;
   StreamController<TelemetryModel>? _controller;
   final _statusController = StreamController<BridgeStatus>.broadcast();
+  final _logbookController = StreamController<Map<String, dynamic>>.broadcast();
   Timer? _reconnectTimer;
   Timer? _silenceTimer;
   bool _isClosed = false;
@@ -48,6 +49,21 @@ class WebSocketClient {
   BridgeStatus get status => _status;
   bool get isConnected => _status.socketConnected;
   Stream<BridgeStatus> get statusStream => _statusController.stream;
+
+  /// `logbook_*` frames from the bridge (kept apart from telemetry/status).
+  Stream<Map<String, dynamic>> get logbookStream => _logbookController.stream;
+
+  /// Sends a JSON message to the bridge; false if the socket isn't open.
+  bool send(Map<String, dynamic> message) {
+    final ch = _channel;
+    if (ch == null || !_status.socketConnected) return false;
+    try {
+      ch.sink.add(jsonEncode(message));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 
   Stream<TelemetryModel> connect() {
     _isClosed = false;
@@ -80,23 +96,32 @@ class WebSocketClient {
           _armSilenceTimer();
           try {
             final Map<String, dynamic> decoded = jsonDecode(data);
+            final type = decoded['type'];
+            if (type is String && type.startsWith('logbook_')) {
+              if (!_logbookController.isClosed) _logbookController.add(decoded);
+              return;
+            }
             if (decoded['type'] == 'status') {
-              _setStatus(BridgeStatus(
-                socketConnected: true,
-                simConnected: decoded['simConnected'] == true,
-                receivingData: decoded['receivingData'] == true,
-                message: (decoded['message'] ?? '').toString(),
-              ));
+              _setStatus(
+                BridgeStatus(
+                  socketConnected: true,
+                  simConnected: decoded['simConnected'] == true,
+                  receivingData: decoded['receivingData'] == true,
+                  message: (decoded['message'] ?? '').toString(),
+                ),
+              );
               return;
             }
             // Telemetry (also accepts legacy untyped frames from older bridges).
             if (!_status.receivingData) {
-              _setStatus(BridgeStatus(
-                socketConnected: true,
-                simConnected: true,
-                receivingData: true,
-                message: _status.message,
-              ));
+              _setStatus(
+                BridgeStatus(
+                  socketConnected: true,
+                  simConnected: true,
+                  receivingData: true,
+                  message: _status.message,
+                ),
+              );
             }
             _controller?.add(TelemetryModel.fromJson(decoded));
           } catch (_) {
@@ -149,5 +174,6 @@ class WebSocketClient {
     _setStatus(BridgeStatus.offline);
     _controller?.close();
     _statusController.close();
+    _logbookController.close();
   }
 }

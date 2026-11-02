@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/flight_monitor/presentation/controllers/alert_chime.dart';
 import '../features/logbook/presentation/logbook_providers.dart';
+import '../features/logbook/data/logbook_sync.dart';
 import 'package:http/http.dart' as http;
 import 'package:window_manager/window_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -224,6 +225,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WindowListener {
     // Keeps the alert chimes listening on every tab.
     ref.watch(alertChimeProvider);
     ref.watch(flightTrackerProvider);
+    ref.watch(logbookSyncProvider);
 
     return airportDbAsync.when(
       loading: () => Scaffold(

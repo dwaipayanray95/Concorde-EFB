@@ -32,6 +32,13 @@ on port 8083 so the app can find this PC:
       sent on client connect, on every state change, and every 2s
   {"type": "telemetry", "timestamp": ..., "basic": {...}, "concorde": {...}, "events": {...}}
       ~25 Hz while the sim is delivering data
+
+Logbook sync (client -> bridge; only when SIMBRIDGE_LOGBOOK_DIR is set, and
+only for clients already allowed in). The desktop copy is the master:
+  {"type": "logbook_index"}                 -> {"type": "logbook_index", "items": [{"id","updatedAt"}]}
+  {"type": "logbook_get", "ids": [...]}     -> one {"type": "logbook_entry", "log": {...}} per id
+  {"type": "logbook_put", "log": {...}}     -> written only if new or newer; {"type": "logbook_ack", "id"}
+  {"type": "logbook_delete", "id": "..."}   -> {"type": "logbook_ack", "id"}
 """
 
 import asyncio
@@ -40,6 +47,7 @@ import socket
 import json
 import logging
 import os
+import re
 import struct
 import sys
 import threading
@@ -53,6 +61,9 @@ LAN_SHARING = os.environ.get("SIMBRIDGE_LAN") == "1"
 PAIRING_CODE = os.environ.get("SIMBRIDGE_CODE", "").strip()
 HOST = "0.0.0.0" if LAN_SHARING else "127.0.0.1"
 PORT = int(os.environ.get("SIMBRIDGE_PORT", "8082"))
+# Desktop flight logbook (set by the app). Clients sync it over the socket.
+LOGBOOK_DIR = os.environ.get("SIMBRIDGE_LOGBOOK_DIR", "").strip()
+_LOG_ID_RE = re.compile(r"^[A-Za-z0-9_.-]{1,128}$")
 BEACON_PORT = 8083
 BEACON_INTERVAL_S = 2.0
 APP_NAME = b"Concorde EFB Bridge"
@@ -403,6 +414,87 @@ class TelemetryBuilder:
         }
 
 
+# --- Logbook sync -----------------------------------------------------------
+def _log_path(log_id):
+    """<LOGBOOK_DIR>/<id>.json, or None for an unsafe id. Ids are limited to
+    [A-Za-z0-9_.-] without '..' (same names LogbookRepository writes), so
+    nothing outside the dir is reachable."""
+    if not LOGBOOK_DIR or not isinstance(log_id, str):
+        return None
+    if not _LOG_ID_RE.match(log_id) or ".." in log_id:
+        return None
+    return os.path.join(LOGBOOK_DIR, log_id + ".json")
+
+
+def _read_log(path):
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    if not isinstance(data, dict):
+        raise ValueError("not an object")
+    return data
+
+
+def handle_logbook(msg):
+    """Returns a list of reply dicts for a logbook_* message ([] if none)."""
+    if not LOGBOOK_DIR or not os.path.isdir(LOGBOOK_DIR):
+        return []
+    kind = msg.get("type")
+    out = []
+    if kind == "logbook_index":
+        items = []
+        for name in os.listdir(LOGBOOK_DIR):
+            if not name.endswith(".json"):
+                continue
+            try:
+                d = _read_log(os.path.join(LOGBOOK_DIR, name))
+                if _log_path(d.get("id")) and isinstance(d.get("updatedAt"), str):
+                    items.append({"id": d["id"], "updatedAt": d["updatedAt"]})
+            except Exception:
+                continue  # corrupt file
+        out.append({"type": "logbook_index", "items": items})
+    elif kind == "logbook_get":
+        ids = msg.get("ids")
+        for log_id in ids[:200] if isinstance(ids, list) else []:
+            path = _log_path(log_id)
+            if not path or not os.path.isfile(path):
+                continue
+            try:
+                out.append({"type": "logbook_entry", "log": _read_log(path)})
+            except Exception:
+                continue
+    elif kind == "logbook_put":
+        log = msg.get("log")
+        log_id = log.get("id") if isinstance(log, dict) else None
+        path = _log_path(log_id)
+        updated = log.get("updatedAt") if isinstance(log, dict) else None
+        if path and isinstance(updated, str):
+            write = True
+            if os.path.isfile(path):
+                try:
+                    write = str(_read_log(path).get("updatedAt", "")) < updated
+                except Exception:
+                    write = True  # corrupt existing file: replace it
+            if write:
+                tmp = path + ".tmp"
+                with open(tmp, "w", encoding="utf-8") as f:
+                    json.dump(log, f)
+                    f.flush()
+                    os.fsync(f.fileno())
+                os.replace(tmp, path)
+                logger.info("Logbook: stored %s from client", log_id)
+            out.append({"type": "logbook_ack", "id": log_id})
+    elif kind == "logbook_delete":
+        log_id = msg.get("id")
+        path = _log_path(log_id)
+        if path:
+            try:
+                os.remove(path)
+            except FileNotFoundError:
+                pass
+            out.append({"type": "logbook_ack", "id": log_id})
+    return out
+
+
 async def main():
     worker = SimConnectWorker()
     worker.start()
@@ -433,8 +525,17 @@ async def main():
         logger.info("Client connected (%d total)", len(clients))
         try:
             await ws.send(status_message())
-            async for _ in ws:
-                pass  # clients only receive
+            async for raw in ws:
+                # Telemetry is push-only; the only client messages are
+                # logbook sync requests.
+                try:
+                    msg = json.loads(raw)
+                    if not isinstance(msg, dict) or not str(msg.get("type", "")).startswith("logbook_"):
+                        continue
+                    for reply in handle_logbook(msg):
+                        await ws.send(json.dumps(reply))
+                except Exception:
+                    logger.exception("Bad client message")
         except websockets.exceptions.ConnectionClosed:
             pass
         finally:
@@ -462,7 +563,8 @@ async def main():
     if LAN_SHARING:
         asyncio.get_running_loop().create_task(beacon())
 
-    async with websockets.serve(handler, HOST, PORT, ping_interval=10, ping_timeout=20, max_queue=4):
+    async with websockets.serve(handler, HOST, PORT, ping_interval=10, ping_timeout=20, max_queue=4,
+                                max_size=8 * 1024 * 1024):
         logger.info("WebSocket server on ws://%s:%d (LAN sharing %s)", HOST, PORT, "ON" if LAN_SHARING else "off")
         last_sent_at = 0.0
         last_status = None

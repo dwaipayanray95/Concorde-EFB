@@ -1,6 +1,16 @@
 [
     {
         "date": "2026-11-02",
+        "title": "v5.20.0 — Logbook sync to phone and tablet",
+        "items": [
+            "Phones and tablets now get the desktop app's flight logbook whenever they connect over Wi-Fi, and re-check every minute while connected",
+            "Notes written on the phone are sent back to the PC; deleting a flight on either side removes it on both",
+            "The desktop copy is the master. The phone's LOG tab shows when it last synced, or that it's showing the last synced copy when not connected",
+            "Needs the updated sim bridge included in this build"
+        ]
+    },
+    {
+        "date": "2026-11-02",
         "title": "v5.19.0 — Flight logbook",
         "items": [
             "New LOG tab: every flight is logged automatically on the desktop app, from engine start to engine shutdown at the gate",

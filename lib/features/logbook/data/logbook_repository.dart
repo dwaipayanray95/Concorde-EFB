@@ -11,12 +11,17 @@ class LogbookRepository {
   final Directory? _dir;
   LogbookRepository([this._dir]);
 
+  /// The default logbook folder (also handed to the bridge so phones can
+  /// sync it).
+  static Future<Directory> defaultDir() async => Directory(
+    '${(await getApplicationSupportDirectory()).path}${Platform.pathSeparator}logbook',
+  );
+
+  /// The (created) folder this repository reads and writes.
+  Future<Directory> directory() => _root();
+
   Future<Directory> _root() async {
-    final d =
-        _dir ??
-        Directory(
-          '${(await getApplicationSupportDirectory()).path}${Platform.pathSeparator}logbook',
-        );
+    final d = _dir ?? await defaultDir();
     if (!await d.exists()) await d.create(recursive: true);
     return d;
   }

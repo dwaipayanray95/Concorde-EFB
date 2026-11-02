@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,7 +29,34 @@ class LogbookNotifier extends AsyncNotifier<List<FlightLog>> {
   LogbookRepository get _repo => ref.read(logbookRepositoryProvider);
 
   @override
-  Future<List<FlightLog>> build() => _repo.list();
+  Future<List<FlightLog>> build() {
+    if (ref.watch(loggingEnabledProvider)) _watchDir();
+    return _repo.list();
+  }
+
+  /// Desktop: the bridge writes logs the phone edited straight into the
+  /// folder, so pick those up (debounced). Best effort -- watch() can throw
+  /// or be unsupported on some filesystems.
+  void _watchDir() {
+    StreamSubscription<FileSystemEvent>? sub;
+    Timer? debounce;
+    ref.onDispose(() {
+      debounce?.cancel();
+      sub?.cancel();
+    });
+    () async {
+      try {
+        final dir = await _repo.directory();
+        if (!ref.mounted) return;
+        sub = dir.watch().listen((_) {
+          debounce?.cancel();
+          debounce = Timer(const Duration(milliseconds: 500), () {
+            if (ref.mounted) unawaited(refresh());
+          });
+        }, onError: (_) {});
+      } catch (_) {}
+    }();
+  }
 
   Future<void> refresh() async => state = AsyncData(await _repo.list());
 
