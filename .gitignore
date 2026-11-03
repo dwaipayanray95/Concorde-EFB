@@ -66,3 +66,8 @@ app.*.map.json
 # Dependencies and Build Cache
 node_modules/
 
+# Ignore keys if generated in the future
+*.jks
+*.keystore
+key.properties
+
