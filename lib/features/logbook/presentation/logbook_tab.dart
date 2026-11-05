@@ -195,36 +195,45 @@ class _Totals extends StatelessWidget {
   }
 }
 
+/// Desktop: save dialog. Phone: copy to clipboard.
+Future<void> _exportText(
+  BuildContext context,
+  String ext,
+  String content, {
+  String fileName = 'concorde-efb-logbook',
+}) async {
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  try {
+    if (_isPhone) {
+      await Clipboard.setData(ClipboardData(text: content));
+      messenger?.showSnackBar(
+        const SnackBar(content: Text('Copied to clipboard')),
+      );
+      return;
+    }
+    final saved = await FilePicker.saveFile(
+      fileName: '$fileName.$ext',
+      bytes: Uint8List.fromList(utf8.encode(content)),
+      dialogTitle: 'Export logbook',
+      type: FileType.custom,
+      allowedExtensions: [ext],
+    );
+    if (saved != null) {
+      messenger?.showSnackBar(
+        SnackBar(content: Text('Exported (${ext.toUpperCase()})')),
+      );
+    }
+  } catch (e) {
+    messenger?.showSnackBar(SnackBar(content: Text('Export failed: $e')));
+  }
+}
+
 class _Toolbar extends StatelessWidget {
   final List<FlightLog> logs;
   const _Toolbar({required this.logs});
 
-  Future<void> _export(BuildContext context, String ext, String content) async {
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    try {
-      if (_isPhone) {
-        await Clipboard.setData(ClipboardData(text: content));
-        messenger?.showSnackBar(
-          const SnackBar(content: Text('Copied to clipboard')),
-        );
-        return;
-      }
-      final saved = await FilePicker.saveFile(
-        fileName: 'concorde-efb-logbook.$ext',
-        bytes: Uint8List.fromList(utf8.encode(content)),
-        dialogTitle: 'Export logbook',
-        type: FileType.custom,
-        allowedExtensions: [ext],
-      );
-      if (saved != null) {
-        messenger?.showSnackBar(
-          SnackBar(content: Text('Logbook exported (${ext.toUpperCase()})')),
-        );
-      }
-    } catch (e) {
-      messenger?.showSnackBar(SnackBar(content: Text('Export failed: $e')));
-    }
-  }
+  Future<void> _export(BuildContext context, String ext, String content) =>
+      _exportText(context, ext, content);
 
   @override
   Widget build(BuildContext context) {
@@ -492,6 +501,7 @@ class _LogDetailScreenState extends ConsumerState<LogDetailScreen> {
     final cards = <Widget>[
       _oooi(context, log),
       _landing(context, log),
+      if (log.perf.isNotEmpty) _performance(context, log),
       _fuel(context, log),
       _weights(context, log),
       _flight(context, log),
@@ -552,13 +562,26 @@ class _LogDetailScreenState extends ConsumerState<LogDetailScreen> {
                       onChanged: _onNotes,
                     ),
                   );
-                  final delete = Align(
-                    alignment: Alignment.centerLeft,
-                    child: _ToolButton(
-                      icon: Icons.delete_outline,
-                      label: 'DELETE',
-                      onTap: _confirmDelete,
-                    ),
+                  final delete = Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _ToolButton(
+                        icon: Icons.data_object,
+                        label: 'EXPORT FLIGHT DATA',
+                        onTap: () => _exportText(
+                          context,
+                          'json',
+                          LogbookRepository.exportJson([log]),
+                          fileName: 'concorde-efb-${log.id}',
+                        ),
+                      ),
+                      _ToolButton(
+                        icon: Icons.delete_outline,
+                        label: 'DELETE',
+                        onTap: _confirmDelete,
+                      ),
+                    ],
                   );
                   Widget col(List<Widget> w) => Column(
                     children: [
@@ -786,6 +809,76 @@ class _LogDetailScreenState extends ConsumerState<LogDetailScreen> {
             l.touchdownIas == null ? '--' : '${l.touchdownIas!.round()} KT',
           ),
           _kv(context, 'BOUNCES', '${l.bounces}'),
+        ],
+      ),
+    );
+  }
+
+  /// Measured takeoff / landing roll vs the planner's prediction.
+  Widget _performance(BuildContext context, FlightLog l) {
+    final colors = context.colors;
+    String m(Object? v) => v is num ? '${numFormat.format(v.round())} M' : '--';
+    double? n(Object? v) => (v as num?)?.toDouble();
+
+    List<Widget> leg(String label, Map<String, dynamic>? p, String rollKey) {
+      if (p == null) return const [];
+      final plan = (p['plan'] as Map?)?.cast<String, dynamic>() ?? const {};
+      final actual = n(p[rollKey]);
+      final predicted = n(plan['requiredM']);
+      final diff = (actual != null && predicted != null && predicted > 0)
+          ? (actual - predicted) / predicted * 100
+          : null;
+      final rwy = plan['runway'] == null
+          ? ''
+          : ' · ${plan['icao'] ?? ''} ${plan['runway']}';
+      return [
+        Padding(
+          padding: const EdgeInsets.only(top: 4, bottom: 2),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              '$label$rwy',
+              style: uiText(
+                context,
+                size: 11,
+                weight: FontWeight.w900,
+                color: colors.accent,
+                letterSpacing: 0.8,
+              ),
+            ),
+          ),
+        ),
+        _kv(context, 'PREDICTED', m(predicted)),
+        _kv(context, 'MEASURED', m(actual)),
+        _kv(
+          context,
+          'DIFFERENCE',
+          diff == null ? '--' : '${diff >= 0 ? '+' : ''}${diff.round()}%',
+          color: diff == null
+              ? null
+              : (diff > 0 ? colors.mvfr : colors.success),
+        ),
+        _kv(context, 'RUNWAY', m(plan['runwayLengthM'])),
+      ];
+    }
+
+    final to = l.takeoffPerf;
+    final ld = l.landingPerf;
+    return EfbCard(
+      title: 'PERFORMANCE',
+      child: Column(
+        children: [
+          ...leg('TAKEOFF ROLL', to, 'rollM'),
+          if (to != null)
+            _kv(
+              context,
+              'LIFT-OFF',
+              n(to['liftoffIas']) == null
+                  ? '--'
+                  : '${n(to['liftoffIas'])!.round()} KT IAS · '
+                        '${(n(to['liftoffGs']) ?? 0).round()} KT GS',
+            ),
+          ...leg('LANDING ROLL (TO 30 KT)', ld, 'rollToExitM'),
         ],
       ),
     );

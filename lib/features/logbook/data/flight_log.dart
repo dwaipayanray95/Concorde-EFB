@@ -32,8 +32,14 @@ class FlightLog {
   /// Alert text -> times it newly appeared during the flight.
   final Map<String, int> alerts;
 
-  /// `[epochSec, lat, lon, altFt, gsKt]` points.
+  /// `[epochSec, lat, lon, altFt, gsKt, iasKt, vsFpm, mach, fuelKg, cgPct]`
+  /// every 5 s (older logs only have the first five).
   final List<List<num>> track;
+
+  /// Measured performance vs what the planner predicted, for validating
+  /// the runway / fuel models from real sim flights. Free-form JSON:
+  /// `takeoff` / `landing` blocks (see `FlightTracker`). Empty on old logs.
+  final Map<String, dynamic> perf;
 
   const FlightLog({
     required this.id,
@@ -72,7 +78,13 @@ class FlightLog {
     this.bounces = 0,
     this.alerts = const {},
     this.track = const [],
+    this.perf = const {},
   });
+
+  Map<String, dynamic>? get takeoffPerf =>
+      (perf['takeoff'] as Map?)?.cast<String, dynamic>();
+  Map<String, dynamic>? get landingPerf =>
+      (perf['landing'] as Map?)?.cast<String, dynamic>();
 
   Duration? get blockTime => blockIn?.difference(blockOut);
   Duration? get flightTime => (takeoff != null && touchdown != null)
@@ -138,6 +150,7 @@ class FlightLog {
     'bounces': bounces,
     'alerts': alerts,
     'track': track,
+    'perf': perf,
   };
 
   factory FlightLog.fromJson(Map<String, dynamic> j) => FlightLog(
@@ -185,5 +198,6 @@ class FlightLog {
       for (final p in (j['track'] as List? ?? const []))
         [for (final n in (p as List)) n as num],
     ],
+    perf: ((j['perf'] as Map?) ?? const {}).cast<String, dynamic>(),
   );
 }

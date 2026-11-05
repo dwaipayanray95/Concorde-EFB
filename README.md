@@ -57,7 +57,7 @@ For where every number comes from and which assumptions it relies on, read **[do
 ## Limitations (read this)
 
 - **Indicative numbers.** Fuel burn, climb, descent and runway figures come from simple models calibrated to published Concorde figures and the DC Designs manual. They're not certified data and don't account for every sim setting, weather or ATC routing.
-- **Some limits are estimates.** The 155 t no-reheat gate, the no-reheat runway factor (x1.35), the wet and contaminated runway factors and the 30 kt crosswind limit are not in the DC Designs manual. They're marked as estimates in [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md).
+- **Some limits are estimates.** The thrust-lapse exponent in the runway density correction, the wet and contaminated runway factors and the 30 kt crosswind limit are not in the DC Designs manual. They're marked as estimates in [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md).
 - **No wind in the trip fuel.** Trip fuel and time assume still air. Use your SimBrief figures for real-world wind.
 - **Flight Monitor needs the sim PC.** Phones can't talk to MSFS directly; they get data from the desktop bridge.
 - **Internet needed for some features.** Airport data is downloaded once and cached; METARs and SimBrief import always need internet.

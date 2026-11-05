@@ -716,6 +716,10 @@ final dispatchSummaryProvider = Provider<DispatchSummary>((ref) {
       noGo.add(
         '$leg runway ${(f.requiredLengthMEst - f.runwayLengthM).round()} m too short',
       );
+    } else if (f.marginal) {
+      cautions.add(
+        '$leg runway marginal (${(f.runwayLengthM - f.requiredLengthMEst).round()} m spare)',
+      );
     }
     if (!f.crosswindOk) {
       noGo.add('$leg crosswind above ${runway.maxCrosswindKt.round()} kt');
@@ -735,8 +739,8 @@ final dispatchSummaryProvider = Provider<DispatchSummary>((ref) {
     ref.watch(takeoffFeasibilityProvider),
     ref.watch(depAirportProvider) != null,
   );
-  if (!ref.watch(useReheatTakeoffProvider) && w.tow >= 155000) {
-    noGo.add('No-reheat takeoff above 155 t');
+  if (!ref.watch(useReheatTakeoffProvider)) {
+    cautions.add('No-reheat takeoff (Concorde always used reheat)');
   }
   runwayChecks(
     'Arrival',

@@ -109,6 +109,33 @@ class _Runway {
   final int minTakeoffMAtMtow = 2743;
   final int minLandingMAtMlw = 2200;
 
+  /// Thrust lapse with air density, T ~ sigma^n. Ground roll ~ W^2 /
+  /// (rho * T) (Anderson, "Aircraft Performance and Design", eq. 6.95;
+  /// Raymer, "Aircraft Design" 17.8), so takeoff distance scales with
+  /// (1/sigma)^(1+n). n = 1.0 is the conservative end of the 0.7-1.0
+  /// turbojet range and reproduces an owner-flown sim takeoff at HAAB
+  /// (166.4 t, 7,617 ft, 21 C, Q1028, ~7 kt headwind: lift-off at the end of
+  /// the 3,800 m runway; model says ~3,800 m). Tune with logged takeoffs.
+  final double thrustLapseExponent = 1.0;
+
+  /// Olympus 593 Mk 610 static thrust per engine: 38,050 lbf with reheat,
+  /// 32,000 lbf dry (Rolls-Royce figures via Grace's Guide / Heritage
+  /// Concorde). Ground roll ~ 1/thrust, so a dry takeoff needs ~1.19x the
+  /// runway. Real Concorde always took off with reheat.
+  final double reheatThrustLbf = 38050;
+  final double dryThrustLbf = 32000;
+
+  /// Reported wind credit, CS-25.105(d)(1) / FAR 25.105(d)(1): no more than
+  /// 50% of a headwind and no less than 150% of a tailwind.
+  final double headwindCredit = 0.5;
+  final double tailwindPenalty = 1.5;
+
+  /// Required distance may come within this fraction of the runway before
+  /// it is flagged MARGINAL: the 115% all-engines factor of CS-25.113(a)(2)
+  /// (and the same 15% wet-landing factor), since this model has no
+  /// engine-failure / accelerate-stop or 35 ft screen allowance.
+  final double marginalMarginFrac = 0.15;
+
   // Source: BA Concorde Flying Manual Vol II, "Operating Limitations"
   // 01.01.02 "Airplane General / Performance".
   final double minRunwayWidthFt = 150;

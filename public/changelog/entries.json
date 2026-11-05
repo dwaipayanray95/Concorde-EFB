@@ -1,5 +1,18 @@
 [
     {
+        "date": "2026-11-05",
+        "title": "v5.24.0 — Physics-based runway distances and takeoff/landing measurement",
+        "items": [
+            "Runway required now uses air density (field elevation, QNH and temperature) instead of flat percentages: hot and high airports such as Addis Ababa, Denver or Mexico City now need realistically more runway",
+            "Wind is counted the certified way: 50% of a headwind, 150% of a tailwind",
+            "New MARGINAL caution when the runway has less than 15% to spare",
+            "No-reheat takeoff uses the real reheat/dry thrust ratio and is decided by runway length (with a caution: Concorde always used reheat)",
+            "Runway required now shows how it was corrected (density, pressure altitude, wind, surface)",
+            "Logbook: every flight now measures the actual takeoff roll and landing roll and shows them against the prediction on a new Performance card",
+            "Logbook: richer flight track (IAS, vertical speed, Mach, fuel, CG) and an Export Flight Data button to send a flight for analysis"
+        ]
+    },
+    {
         "date": "2026-11-02",
         "title": "v5.23.0 — Airframe link and identity from imported plans",
         "items": [

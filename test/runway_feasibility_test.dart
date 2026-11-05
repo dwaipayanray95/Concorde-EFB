@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:concorde_efb/core/concorde_logic.dart';
 import 'package:concorde_efb/core/concorde_constants.dart';
@@ -93,17 +95,55 @@ void main() {
       );
     });
 
-    test(
-      'no reheat above 155,000 kg is never feasible, regardless of runway length',
-      () {
-        final result = ConcordeLogic.takeoffFeasibleM(
-          10000, // absurdly long runway
-          160000,
-          useReheat: false,
-        );
-        expect(result.feasible, isFalse);
-      },
-    );
+    test('no reheat costs reheat/dry thrust, decided by runway length', () {
+      final wet = ConcordeLogic.takeoffFeasibleM(10000, 160000);
+      final dry = ConcordeLogic.takeoffFeasibleM(
+        10000,
+        160000,
+        useReheat: false,
+      );
+      expect(dry.feasible, isTrue);
+      expect(
+        dry.requiredLengthMEst / wet.requiredLengthMEst,
+        closeTo(38050 / 32000, 0.001),
+      );
+    });
+
+    test('HAAB calibration flight: 166.4 t, 7,617 ft, 21 C, Q1028', () {
+      final env = ConcordeLogic.runwayEnvFromMetar(
+        metar: 'HAAB 050800Z 09007KT CAVOK 21/05 Q1028 NOSIG',
+        runwayHeadingDeg: 74,
+        runwayElevFt: 7617,
+      );
+      final f = ConcordeLogic.takeoffFeasibleM(3800, 166414, env: env);
+      // Owner lifted off near the end of 3,800 m in the sim.
+      expect(f.requiredLengthMEst, inInclusiveRange(3650, 3950));
+    });
+
+    test('sea level ISA calm is the base distance', () {
+      final f = ConcordeLogic.takeoffFeasibleM(
+        4000,
+        185070,
+        env: const RunwayEnvironmentInputs(runwayElevFt: 0, oatC: 15),
+      );
+      expect(f.requiredLengthMEst, closeTo(2743, 1));
+    });
+
+    test('marginal when less than 15% spare', () {
+      expect(ConcordeLogic.takeoffFeasibleM(3000, 185070).marginal, isTrue);
+      expect(ConcordeLogic.takeoffFeasibleM(3000, 185070).feasible, isTrue);
+      expect(ConcordeLogic.takeoffFeasibleM(3200, 185070).marginal, isFalse);
+    });
+
+    test('headwind gets 50% credit, tailwind 150%', () {
+      double req(double hw) => ConcordeLogic.takeoffFeasibleM(
+        4000,
+        185070,
+        env: RunwayEnvironmentInputs(runwayElevFt: 0, oatC: 15, headwindKt: hw),
+      ).requiredLengthMEst;
+      expect(req(20), closeTo(2743 * math.pow((220 - 10) / 220, 2), 1));
+      expect(req(-10), closeTo(2743 * math.pow((220 + 15) / 220, 2), 1));
+    });
 
     test('a headwind reduces the required takeoff distance', () {
       final calm = ConcordeLogic.takeoffFeasibleM(
@@ -349,9 +389,9 @@ void main() {
       expect(wet.condition, RunwayCondition.wet);
       final fd = ConcordeLogic.landingFeasibleM(3000, 100000, env: dry);
       final fw = ConcordeLogic.landingFeasibleM(3000, 100000, env: wet);
-      expect(fw.correctionBreakdownPct['surface'], 0.15);
+      expect(fw.correctionBreakdownPct['surface'], closeTo(0.15, 1e-9));
       expect(fd.correctionBreakdownPct['surface'], 0.0);
-      expect(fw.correctionFactor - fd.correctionFactor, closeTo(0.15, 0.001));
+      expect(fw.correctionFactor / fd.correctionFactor, closeTo(1.15, 0.001));
     });
 
     test('takeoff distance scales with weight squared', () {

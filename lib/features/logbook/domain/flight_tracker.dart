@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import '../../../core/concorde_fuel_schematic.dart';
 import '../../flight_monitor/data/models/telemetry_model.dart';
 import '../data/flight_log.dart';
@@ -16,6 +18,11 @@ class TrackerContext {
   final double plannedTimeH, plannedTripKg, cruiseFl, finalReserveKg, zfwKg;
   final List<String> alertTexts;
 
+  /// What the planner predicted for the departure / arrival runway at this
+  /// moment (runway, METAR, weights, required distance, factors). Stored
+  /// next to the measured roll so the model can be checked against the sim.
+  final Map<String, dynamic> takeoffPlan, landingPlan;
+
   /// ICAO of the airport within 10 nm of the point, else null.
   final String? Function(double lat, double lon) nearestAirport;
 
@@ -32,6 +39,8 @@ class TrackerContext {
     this.finalReserveKg = 0,
     this.zfwKg = 0,
     this.alertTexts = const [],
+    this.takeoffPlan = const {},
+    this.landingPlan = const {},
     this.nearestAirport = _noAirport,
   });
   static String? _noAirport(double a, double b) => null;
@@ -60,6 +69,17 @@ class FlightTracker {
   Set<String> _prevAlerts = {};
   // Last airborne frame, for touchdown figures when the bridge didn't latch.
   TelemetryModel? _lastAir;
+
+  // Takeoff roll in progress: starts when takeoff thrust is set on the
+  // ground, distance integrated from ground speed (and cross-checked
+  // against the straight-line distance); trace sampled every second.
+  Map<String, dynamic>? _roll;
+  double _rollM = 0, _rollSec = 0;
+  List<List<num>> _rollTrace = [];
+  DateTime? _lastTraceAt;
+  // Landing roll: touchdown until ground speed drops below 30 kt.
+  double? _ldgRollM;
+  double _ldgRollSec = 0;
 
   FlightLog? get current {
     final b = _base;
@@ -115,6 +135,107 @@ class FlightTracker {
     _lastSample = _airborneSince = _stoppedSince = _touchdownNow = null;
     _lastAir = null;
     _prevAlerts = {};
+    _roll = null;
+    _ldgRollM = null;
+  }
+
+  static const _ktToMs = 0.514444;
+  static const exitSpeedKt = 30.0;
+
+  /// Takeoff thrust set: any reheat lit or mean throttle >= 60%.
+  static bool takeoffThrust(TelemetryModel t) {
+    if (t.reheatActive.any((r) => r)) return true;
+    if (t.throttlePct.isEmpty) return false;
+    final mean = t.throttlePct.reduce((a, b) => a + b) / t.throttlePct.length;
+    return mean >= 60;
+  }
+
+  /// Straight-line distance in metres (haversine).
+  static double metresBetween(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
+    const r = 6371000.0;
+    double rad(double d) => d * math.pi / 180;
+    final dLat = rad(lat2 - lat1), dLon = rad(lon2 - lon1);
+    final a =
+        math.pow(math.sin(dLat / 2), 2) +
+        math.cos(rad(lat1)) *
+            math.cos(rad(lat2)) *
+            math.pow(math.sin(dLon / 2), 2);
+    return 2 * r * math.asin(math.sqrt(a.toDouble()));
+  }
+
+  static double _r(double v, [int dp = 1]) =>
+      double.parse(v.toStringAsFixed(dp));
+
+  void _trackRoll(TelemetryModel t, DateTime z, DateTime nowUtc, double dt) {
+    if (!t.onGround || !takeoffThrust(t)) {
+      // Taxiing or a rejected takeoff: forget any roll in progress.
+      if (t.onGround) _roll = null;
+      return;
+    }
+    if (_roll == null) {
+      _roll = {
+        'startZ': z.toIso8601String(),
+        'startLat': t.latitude,
+        'startLon': t.longitude,
+        'startGs': _r(t.gs),
+        'startHeading': _r(t.heading),
+      };
+      _rollM = _rollSec = 0;
+      _rollTrace = [];
+      _lastTraceAt = null;
+    }
+    _rollM += t.gs * _ktToMs * dt;
+    _rollSec += dt;
+    if (_lastTraceAt == null ||
+        nowUtc.difference(_lastTraceAt!) >= const Duration(seconds: 1)) {
+      _rollTrace.add([_r(_rollSec), _r(_rollM, 0), _r(t.ias), _r(t.gs)]);
+      _lastTraceAt = nowUtc;
+    }
+  }
+
+  Map<String, dynamic> _takeoffPerf(
+    TelemetryModel t,
+    DateTime z,
+    TrackerContext ctx,
+  ) {
+    final fuel = fuelKg(t);
+    final r = _roll;
+    return {
+      ...?r,
+      'liftoffZ': z.toIso8601String(),
+      'liftoffLat': t.latitude,
+      'liftoffLon': t.longitude,
+      'rollM': r == null ? null : _r(_rollM, 0),
+      'rollStraightM': r == null
+          ? null
+          : _r(
+              metresBetween(
+                r['startLat'] as double,
+                r['startLon'] as double,
+                t.latitude,
+                t.longitude,
+              ),
+              0,
+            ),
+      'rollSec': r == null ? null : _r(_rollSec),
+      'liftoffIas': _r(t.ias),
+      'liftoffGs': _r(t.gs),
+      'liftoffTas': _r(t.tas),
+      'liftoffPitch': _r(t.pitch),
+      'reheat': t.reheatActive.where((x) => x).length,
+      'throttlePct': [for (final x in t.throttlePct) _r(x, 0)],
+      'fuelKg': _r(fuel, 0),
+      'towKg': _r(ctx.zfwKg + fuel, 0),
+      'tatC': _r(t.tat),
+      'altFt': _r(t.altitude, 0),
+      'trace': _rollTrace,
+      'plan': ctx.takeoffPlan,
+    };
   }
 
   void _patch(Map<String, Object?> m) {
@@ -133,6 +254,11 @@ class FlightTracker {
     double.parse(t.longitude.toStringAsFixed(5)),
     t.altitude.round(),
     t.gs.round(),
+    t.ias.round(),
+    t.vs.round(),
+    _r(t.mach, 3),
+    fuelKg(t).round(),
+    _r(t.cgPct),
   ];
 
   static String _stamp(DateTime z) {
@@ -198,6 +324,8 @@ class FlightTracker {
       _lastSample = nowUtc;
     }
 
+    if (phase == TrackerPhase.taxiOut) _trackRoll(t, z, nowUtc, dt);
+
     switch (phase) {
       case TrackerPhase.taxiOut:
         if (!running && t.onGround) {
@@ -210,7 +338,9 @@ class FlightTracker {
             'takeoff': z,
             'fuelTakeoffKg': fuelKg(t),
             'actualDep': ctx.nearestAirport(t.latitude, t.longitude),
+            'perf': {..._base!.perf, 'takeoff': _takeoffPerf(t, z, ctx)},
           });
+          _roll = null;
           _track.add(_point(t, z));
           return TrackerEvent.takeoff;
         }
@@ -232,7 +362,24 @@ class FlightTracker {
           'touchdownPitch': t.isLanding ? t.touchdownPitch : a.pitch,
           'touchdownIas': a.ias,
           'bounces': 0,
+          'perf': {
+            ..._base!.perf,
+            'landing': {
+              'touchdownZ': z.toIso8601String(),
+              'touchdownLat': t.latitude,
+              'touchdownLon': t.longitude,
+              'touchdownIas': _r(a.ias),
+              'touchdownGs': _r(t.gs),
+              'touchdownTas': _r(a.tas),
+              'lwKg': _r(ctx.zfwKg + fuelKg(t), 0),
+              'tatC': _r(t.tat),
+              'altFt': _r(t.altitude, 0),
+              'plan': ctx.landingPlan,
+            },
+          },
         });
+        _ldgRollM = 0;
+        _ldgRollSec = 0;
         _track.add(_point(t, z));
         return TrackerEvent.touchdown;
       case TrackerPhase.landed:
@@ -254,7 +401,12 @@ class FlightTracker {
               ])
                 k: null,
               'bounces': 0,
+              'perf': {
+                for (final e in _base!.perf.entries)
+                  if (e.key != 'landing') e.key: e.value,
+              },
             });
+            _ldgRollM = null;
             return TrackerEvent.goAround;
           }
           break;
@@ -265,6 +417,39 @@ class FlightTracker {
           _patch({'bounces': _base!.bounces + 1});
         }
         _airborneSince = null;
+        if (_ldgRollM != null) {
+          if (t.gs > exitSpeedKt) {
+            _ldgRollM = _ldgRollM! + t.gs * _ktToMs * dt;
+            _ldgRollSec += dt;
+          } else {
+            final l = _base!.landingPerf ?? const <String, dynamic>{};
+            _patch({
+              'perf': {
+                ..._base!.perf,
+                'landing': {
+                  ...l,
+                  'rollToExitM': _r(_ldgRollM!, 0),
+                  'rollToExitSec': _r(_ldgRollSec),
+                  'exitSpeedKt': exitSpeedKt,
+                  'exitLat': t.latitude,
+                  'exitLon': t.longitude,
+                  'rollStraightM': l['touchdownLat'] == null
+                      ? null
+                      : _r(
+                          metresBetween(
+                            (l['touchdownLat'] as num).toDouble(),
+                            (l['touchdownLon'] as num).toDouble(),
+                            t.latitude,
+                            t.longitude,
+                          ),
+                          0,
+                        ),
+                },
+              },
+            });
+            _ldgRollM = null;
+          }
+        }
         if (running) {
           _stoppedSince = null;
         } else {

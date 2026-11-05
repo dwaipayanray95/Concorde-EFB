@@ -1175,6 +1175,7 @@ class _RunwayMarginText extends StatelessWidget {
     }
 
     // FEASIBLE (WITHIN LIMITS) presentation
+    final marginal = f?.marginal ?? false;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -1190,13 +1191,33 @@ class _RunwayMarginText extends StatelessWidget {
                   context,
                   size: 12,
                   weight: FontWeight.w800,
-                  color: colors.success,
+                  color: marginal ? colors.mvfr : colors.success,
                 ),
               ),
               TextSpan(text: ' vs $availRunway m avail ($marginText)'),
             ],
           ),
         ),
+        if (marginal) ...[
+          const SizedBox(height: 4),
+          Text(
+            'CAUTION: MARGINAL -- LESS THAN '
+            '${(ConcordeConstants.runway.marginalMarginFrac * 100).round()}% SPARE',
+            style: uiText(
+              context,
+              size: 11,
+              weight: FontWeight.w800,
+              color: colors.mvfr,
+            ),
+          ),
+        ],
+        if (f != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            _factorSummary(f),
+            style: uiText(context, size: 10, color: colors.textSecondary),
+          ),
+        ],
         if (f != null && !f.widthOk) ...[
           const SizedBox(height: 4),
           Text(
@@ -1224,6 +1245,28 @@ class _RunwayMarginText extends StatelessWidget {
       ],
     );
   }
+}
+
+/// "x1.32 · DENSITY 0.75 · PA 7,175 FT · WIND -3%" -- how the base
+/// distance was corrected, so the number can be sanity-checked.
+String _factorSummary(RunwayFeasibility f) {
+  final i = f.correctionInputs;
+  final b = f.correctionBreakdownPct;
+  String pct(double? v) {
+    final p = ((v ?? 0) * 100).round();
+    return p >= 0 ? '+$p%' : '$p%';
+  }
+
+  final sigma = (i['density_ratio'] as num?)?.toDouble();
+  final pa = (i['pressure_alt_ft'] as num?)?.toDouble();
+  return [
+    'x${f.correctionFactor.toStringAsFixed(2)}',
+    if (sigma != null) 'DENSITY ${sigma.toStringAsFixed(2)}',
+    if (pa != null) 'PA ${numFormat.format(pa.round())} FT',
+    'ALT/TEMP ${pct((1 + (b['pressure'] ?? 0)) * (1 + (b['temperature'] ?? 0)) - 1)}',
+    'WIND ${pct(b['wind'])}',
+    if ((b['surface'] ?? 0) != 0) 'SURFACE ${pct(b['surface'])}',
+  ].join(' · ');
 }
 
 /// AUTO / DRY / WET / CONTAM selector. AUTO derives the surface state from

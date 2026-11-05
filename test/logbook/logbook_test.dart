@@ -222,4 +222,40 @@ void main() {
     await repo.delete(log.id);
     expect(await repo.list(), isEmpty);
   });
+
+  test('measures takeoff and landing roll', () {
+    final tr = FlightTracker();
+    feed(tr, frame(0), 0); // block out
+    feed(tr, frame(1, gs: 10), 1); // taxi, no takeoff thrust
+    // Reheat lit at 2 s, ground speed 0 -> 200 kt over 40 s (5 kt/s).
+    for (var s = 2; s <= 42; s++) {
+      feed(
+        tr,
+        frame(s, reheat: true, gs: (s - 2) * 5.0, ias: (s - 2) * 5.0),
+        s,
+      );
+    }
+    expect(
+      feed(tr, frame(43, ground: false, ias: 205, gs: 205, alt: 300), 43),
+      TrackerEvent.takeoff,
+    );
+    final to = tr.current!.takeoffPerf!;
+    // Sum of 5..200 kt at 1 s steps = 4,100 kt*s = ~2,109 m.
+    expect(to['rollM'] as num, closeTo(2109, 5));
+    expect(to['liftoffIas'], 205);
+    expect((to['trace'] as List).length, greaterThan(30));
+
+    feed(tr, frame(100, ground: false, ias: 180, gs: 180, alt: 200), 100);
+    expect(
+      feed(tr, frame(101, ias: 170, gs: 170, landing: true), 101),
+      TrackerEvent.touchdown,
+    );
+    // Decelerate 170 -> 30 kt at 10 kt/s.
+    for (var s = 102; s <= 116; s++) {
+      feed(tr, frame(s, gs: 170 - (s - 101) * 10.0), s);
+    }
+    final ld = tr.current!.landingPerf!;
+    expect(ld['rollToExitM'] as num, greaterThan(500));
+    expect(ld['touchdownIas'], 180);
+  });
 }

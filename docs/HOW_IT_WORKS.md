@@ -149,24 +149,30 @@ These are **indicative**. Always use the manual's speed tables and your own chec
 ## 8. Runway performance
 
 ### Take-off
-- **Base distance:** 2,743 m x (TOW / MTOW)², which means distance grows with the square of weight.
-- **Without reheat:** base x 1.35. Above 155 t the app shows a NO-GO for a no-reheat take-off. (The 155 t gate and the 1.35 factor are **estimates**; the DC Designs manual doesn't give them.)
+- **Base distance:** 2,743 m x (TOW / MTOW)², at sea level, ISA, calm, dry, with reheat. 2,743 m is the DC Designs manual figure, so it matches the sim. The real aircraft's 3,410-3,600 m was measured to a 35 ft screen height, which is a different distance. Distance grows with the square of weight (Anderson, *Aircraft Performance and Design*, eq. 6.95: ground roll ~ W² / (air density x thrust)).
+- **Without reheat:** base x (reheat thrust / dry thrust) = 38,050 / 32,000 lbf ≈ x1.19 (Olympus 593 Mk 610 figures). There is no weight gate: the runway-length check decides. The planner shows a caution, because the real Concorde always took off with reheat.
 
 ### Landing
 - **Base distance:** 2,200 m x (LW / MLW)^1.15.
 
-### Corrections (applied to the base distance)
+### Corrections (multiplied onto the base distance)
 
-| Factor | Take-off | Landing |
-|---|---|---|
-| Pressure altitude | +1.2 % per 1,000 ft (limited to -8 % to +35 %) | +0.7 % per 1,000 ft |
-| Temperature above or below ISA | +1 % per °C above ISA, -0.4 % per °C below | +0.5 % per °C above, -0.2 % per °C below |
-| Headwind | -1 % per kt, max -20 % | -1 % per kt, max -15 % |
-| Tailwind | +3 % per kt, max +50 % | +4 % per kt, max +65 % |
-| Wet runway | +15 % | +15 % |
-| Contaminated runway | +30 % | +40 % |
+| Factor | Take-off | Landing | Basis |
+|---|---|---|---|
+| Air density (pressure altitude from field elevation + QNH, and actual temperature) | x (1/σ)² | x 1/σ | Ground roll ~ W²/(ρ·T), with thrust T ~ σ (conservative end of the 0.7-1.0 turbojet lapse); landing roll ~ V_TAS² ~ 1/ρ |
+| Wind | x ((V − w)/V)² | same | Roll ~ ground speed². V = lift-off (V2) or VREF true airspeed. w = 50 % of the headwind or 150 % of the tailwind (gusts included), per CS-25.105(d) / FAR 25.105(d) |
+| Wet runway | x1.15 | x1.15 | Estimate (EASA wet-landing factor) |
+| Contaminated runway | x1.30 | x1.40 | Estimate |
 
-The total factor is never below 0.7. Wet and contaminated surfaces use estimated factors, not manual data.
+σ is the density ratio (ρ / ρ₀). Pressure altitude = elevation + (1013.25 − QNH) x 30 ft. With no METAR, ISA temperature is assumed.
+
+**Calibration point:** an owner-flown sim takeoff at HAAB (166.4 t, 7,617 ft, 21 °C, Q1028, ~7 kt headwind) lifted off near the end of the 3,800 m runway. The model gives about 3,800 m. The old percentage model gave 2,727 m.
+
+### Margin
+- **MARGINAL** (amber caution): the runway is long enough, but has less than 15 % to spare. 15 % is the CS-25.113(a)(2) all-engines factor. This model has no engine-failure, accelerate-stop or 35 ft allowance, so treat MARGINAL as a no-go in practice.
+
+### Measuring it (logbook)
+Every logged flight records the **measured** takeoff roll (from takeoff thrust to lift-off, integrated from ground speed, plus a 1 s IAS/GS trace) and landing roll (touchdown to 30 kt), next to the planner's prediction (runway, METAR, weights, factors). The Performance card shows predicted vs measured. EXPORT FLIGHT DATA (per flight) or EXPORT JSON / CSV (whole logbook) produce files to send for checking the model.
 
 ### Hard limits (NO-GO)
 - Crosswind above 30 kt, gusts included
@@ -194,7 +200,7 @@ The app picks the departure runway in this order: no tailwind; then crosswind 15
 
 The banner combines every check into one state:
 
-- **NO-GO** (red): fuel over capacity, endurance below required, TOW above MTOW, ramp above max taxi, LW above MLW, runway too short, crosswind or tailwind too strong, airfield outside limits, no-reheat take-off above 155 t.
+- **NO-GO** (red): fuel over capacity, endurance below required, TOW above MTOW, ramp above max taxi, LW above MLW, runway too short, crosswind or tailwind too strong, airfield outside limits. Caution (amber): runway MARGINAL (under 15 % spare), no-reheat take-off.
 - **CAUTION** (amber): wind unknown, wet or contaminated runway, no alternate, alternate the same as arrival, alternate not found, alternate beyond 500 NM, cruise level capped because the sector is short.
 - **GO**: none of the above.
 
@@ -275,10 +281,9 @@ The full policy is at `public/privacy/index.html`. If a new network call is adde
 
 ## 15. Known limitations and open questions
 
-- **Estimates:** the 155 t no-reheat gate, the 1.35 no-reheat factor, the wet and contaminated factors, the 30 kt crosswind and 10 kt tailwind limits, and the landing runway base are not in the DC Designs manual.
+- **Estimates:** the thrust-lapse exponent (1.0, fitted to one flight so far), the wet and contaminated factors, the 30 kt crosswind and 10 kt tailwind limits, and the landing runway base are not in the DC Designs manual.
 - **No wind** in trip time or fuel.
 - **Single-engine and abnormal cases** are not modelled.
-- **Code comment mismatch (for developers):** the comment on `takeoffFeasibleM` in `lib/core/concorde_logic.dart` still says the base was "anchored at 3,597 m", but the constant used is 2,743 m. The number used is the one in this document. The comment should be fixed.
 
 ---
 

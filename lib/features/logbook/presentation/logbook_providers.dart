@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/concorde_logic.dart';
+import '../../../models/concorde_models.dart';
 import '../../../models/airport.dart';
 import '../../../providers/efb_providers.dart';
 import '../../flight_monitor/presentation/controllers/live_alerts_provider.dart';
@@ -132,6 +133,33 @@ class FlightTrackerNotifier extends Notifier<FlightLog?> {
       finalReserveKg: ref.read(fuelBreakdownProvider).finalReserveKg,
       zfwKg: ref.read(weightsProvider).zfw,
       alertTexts: [for (final a in ref.read(liveAlertsProvider)) a.text],
+      takeoffPlan: _plan(
+        icao: ref.read(departureIcaoProvider),
+        runway: ref.read(departureRunwayProvider),
+        metar: ref.read(departureMetarFutureProvider).value,
+        f: ref.read(takeoffFeasibilityProvider),
+        weightKg: ref.read(weightsProvider).tow,
+        extra: () {
+          final s = ref.read(takeoffSpeedsProvider);
+          return {
+            'reheat': ref.read(useReheatTakeoffProvider),
+            'v1': s.v1,
+            'vr': s.vr,
+            'v2': s.v2,
+          };
+        }(),
+      ),
+      landingPlan: _plan(
+        icao: ref.read(arrivalIcaoProvider),
+        runway: ref.read(arrivalRunwayProvider),
+        metar: ref.read(arrivalMetarFutureProvider).value,
+        f: ref.read(landingFeasibilityProvider),
+        weightKg: ref.read(weightsProvider).lw,
+        extra: () {
+          final s = ref.read(landingSpeedsProvider);
+          return {'vref': s.vref, 'vapp': s.vapp};
+        }(),
+      ),
       nearestAirport: (lat, lon) {
         String? best;
         var bestNm = 10.0;
@@ -148,6 +176,33 @@ class FlightTrackerNotifier extends Notifier<FlightLog?> {
     );
   }
 }
+
+/// Planner snapshot stored with the measured takeoff / landing roll.
+Map<String, dynamic> _plan({
+  required String icao,
+  required Runway? runway,
+  required String? metar,
+  required RunwayFeasibility? f,
+  required double weightKg,
+  Map<String, dynamic> extra = const {},
+}) => {
+  'icao': icao,
+  'runway': runway?.id,
+  'runwayLengthM': runway?.lengthM,
+  'runwayHeading': runway?.heading,
+  'elevationFt': runway?.elevationFt,
+  'metar': metar,
+  'plannedWeightKg': weightKg.round(),
+  'baseRequiredM': f?.baseRequiredLengthMEst.round(),
+  'requiredM': f?.requiredLengthMEst.round(),
+  'correctionFactor': f?.correctionFactor,
+  'breakdown': f?.correctionBreakdownPct,
+  'inputs': f?.correctionInputs,
+  'condition': f?.condition.name,
+  'feasible': f?.feasible,
+  'marginal': f?.marginal,
+  ...extra,
+};
 
 final flightTrackerProvider =
     NotifierProvider<FlightTrackerNotifier, FlightLog?>(

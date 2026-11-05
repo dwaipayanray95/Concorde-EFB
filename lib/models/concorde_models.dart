@@ -238,6 +238,9 @@ class RunwayFeasibility {
   final double requiredLengthMEst;
   final double runwayLengthM;
   final bool feasible;
+
+  /// Feasible, but with less than the CS-25.113 15% margin to spare.
+  final bool marginal;
   final double correctionFactor;
   final Map<String, double> correctionBreakdownPct;
   final Map<String, dynamic> correctionInputs;
@@ -263,6 +266,7 @@ class RunwayFeasibility {
     required this.requiredLengthMEst,
     required this.runwayLengthM,
     required this.feasible,
+    this.marginal = false,
     required this.correctionFactor,
     required this.correctionBreakdownPct,
     required this.correctionInputs,

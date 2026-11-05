@@ -589,75 +589,89 @@ class ConcordeLogic {
     return 15 - 1.98 * (elevationFt / 1000);
   }
 
+  /// Pressure altitude (ft): field elevation corrected by QNH at the
+  /// standard ~30 ft per hPa (field elevation alone without a QNH).
+  static double pressureAltitudeFt(double elevationFt, double? qnhHpa) =>
+      qnhHpa == null ? elevationFt : elevationFt + (1013.25 - qnhHpa) * 30;
+
+  /// ISA pressure ratio delta = p/p0 at a pressure altitude (troposphere).
+  static double pressureRatio(double pressureAltFt) =>
+      math.pow(1 - 6.8756e-6 * pressureAltFt, 5.2559).toDouble();
+
+  /// Air density ratio sigma = rho/rho0 = delta / theta from pressure
+  /// altitude and outside air temperature (ISA temperature when unknown).
+  static double densityRatio(double pressureAltFt, double? oatC) {
+    final oat = oatC ?? isaTempCAtElevationFt(pressureAltFt);
+    return pressureRatio(pressureAltFt) * 288.15 / (oat + 273.15);
+  }
+
+  /// Multiplier on the sea-level / ISA / calm / dry base distance.
+  ///
+  /// Physics, not rule-of-thumb percentages (see `docs/HOW_IT_WORKS.md`):
+  ///  - density: takeoff ground roll ~ W^2/(rho*T) with T ~ sigma^n, so
+  ///    x (1/sigma)^(1+n); landing roll ~ V_TAS^2 ~ W/rho, so x 1/sigma.
+  ///    Split into a pressure part (1/delta) and a temperature part
+  ///    (theta) whose product is the density effect.
+  ///  - wind: roll ~ ground speed^2, so x ((V - w)/V)^2 with V the
+  ///    lift-off / VREF true airspeed and w the CS-25.105 factored wind
+  ///    (50% of a headwind, 150% of a tailwind, gust-inclusive tailwind).
+  ///  - surface: wet x1.15, contaminated x1.30 takeoff / x1.40 landing.
   static Map<String, dynamic> runwayLengthCorrectionFactor(
     String phase,
-    RunwayEnvironmentInputs? env,
-  ) {
+    RunwayEnvironmentInputs? env, {
+    double referenceIasKt = 200,
+  }) {
+    final r = ConcordeConstants.runway;
+    final takeoff = phase == "takeoff";
     final runwayElevFt = env?.runwayElevFt ?? 0.0;
     final qnhHpa = qnhToHpa(env?.qnh);
-    final pressureAltFt = qnhHpa == null
-        ? runwayElevFt
-        : runwayElevFt + (1013.25 - qnhHpa) * 30;
-    final isaTempC = isaTempCAtElevationFt(runwayElevFt);
+    final pressureAltFt = pressureAltitudeFt(runwayElevFt, qnhHpa);
+    final isaTempC = isaTempCAtElevationFt(pressureAltFt);
     final oatC = env?.oatC;
     final headwindKt = env?.headwindKt;
 
-    var pressurePctRaw = 0.0;
-    pressurePctRaw = phase == "takeoff"
-        ? (pressureAltFt / 1000) * 0.012
-        : (pressureAltFt / 1000) * 0.007;
-    final pressurePct = pressurePctRaw.clamp(-0.08, 0.35);
+    final exponent = takeoff ? 1 + r.thrustLapseExponent : 1.0;
+    final delta = pressureRatio(pressureAltFt);
+    final theta = ((oatC ?? isaTempC) + 273.15) / 288.15;
+    final thetaIsa = (isaTempC + 273.15) / 288.15;
+    final sigma = delta / theta;
+    // Pressure part at ISA temperature; temperature part = deviation from
+    // ISA. Product = (1/sigma)^exponent.
+    final pressureMul = math.pow(thetaIsa / delta, exponent).toDouble();
+    final temperatureMul = math.pow(theta / thetaIsa, exponent).toDouble();
 
-    final tempDelta = oatC == null ? null : oatC - isaTempC;
-    var temperaturePct = 0.0;
-    if (tempDelta != null) {
-      if (phase == "takeoff") {
-        temperaturePct = tempDelta >= 0 ? tempDelta * 0.01 : tempDelta * 0.004;
-      } else {
-        temperaturePct = tempDelta >= 0 ? tempDelta * 0.005 : tempDelta * 0.002;
-      }
-    }
-    temperaturePct = temperaturePct.clamp(-0.1, 0.35);
-
-    var windPct = 0.0;
+    // Factored wind along the runway (+ = helps).
     final tailwindKt = env?.tailwindKt;
+    double windKt = 0;
     if (tailwindKt != null && tailwindKt > 0) {
-      windPct = phase == "takeoff"
-          ? math.min(tailwindKt * 0.03, 0.5)
-          : math.min(tailwindKt * 0.04, 0.65);
+      windKt = -r.tailwindPenalty * tailwindKt;
     } else if (headwindKt != null) {
-      if (headwindKt >= 0) {
-        windPct = phase == "takeoff"
-            ? -math.min(headwindKt * 0.01, 0.2)
-            : -math.min(headwindKt * 0.01, 0.15);
-      } else {
-        final tailwind = headwindKt.abs();
-        windPct = phase == "takeoff"
-            ? math.min(tailwind * 0.03, 0.5)
-            : math.min(tailwind * 0.04, 0.65);
-      }
+      windKt = headwindKt >= 0
+          ? r.headwindCredit * headwindKt
+          : r.tailwindPenalty * headwindKt;
     }
+    final tasKt = referenceIasKt / math.sqrt(sigma);
+    final windMul = math
+        .pow(((tasKt - windKt) / tasKt).clamp(0.5, 2.0), 2)
+        .toDouble();
 
-    // Wet / contaminated surface: EASA-style factors (wet landing x1.15,
-    // CAT.POL.A.235; contaminated distances substantially longer).
     final condition = env?.condition ?? RunwayCondition.dry;
-    final surfacePct = switch (condition) {
-      RunwayCondition.dry => 0.0,
-      RunwayCondition.wet => 0.15,
-      RunwayCondition.contaminated => phase == "takeoff" ? 0.30 : 0.40,
+    final surfaceMul = switch (condition) {
+      RunwayCondition.dry => 1.0,
+      RunwayCondition.wet => 1.15,
+      RunwayCondition.contaminated => takeoff ? 1.30 : 1.40,
     };
 
-    final totalPct = pressurePct + temperaturePct + windPct + surfacePct;
-    final factor = math.max(0.7, 1 + totalPct);
+    final factor = pressureMul * temperatureMul * windMul * surfaceMul;
 
     return {
       "factor": factor,
       "breakdownPct": {
-        "pressure": pressurePct,
-        "temperature": temperaturePct,
-        "wind": windPct,
-        "surface": surfacePct,
-        "total": totalPct,
+        "pressure": pressureMul - 1,
+        "temperature": temperatureMul - 1,
+        "wind": windMul - 1,
+        "surface": surfaceMul - 1,
+        "total": factor - 1,
       },
       "inputs": {
         "runway_elev_ft": runwayElevFt,
@@ -665,6 +679,9 @@ class ConcordeLogic {
         "isa_temp_c": isaTempC,
         "oat_c": oatC,
         "headwind_kt": headwindKt,
+        "density_ratio": sigma,
+        "factored_wind_kt": windKt,
+        "reference_tas_kt": tasKt,
       },
     };
   }
@@ -701,9 +718,13 @@ class ConcordeLogic {
     required double baseRequired,
     required RunwayEnvironmentInputs? env,
     required double? runwayWidthFt,
-    bool extraOk = true,
+    required double referenceIasKt,
   }) {
-    final correction = runwayLengthCorrectionFactor(phase, env);
+    final correction = runwayLengthCorrectionFactor(
+      phase,
+      env,
+      referenceIasKt: referenceIasKt,
+    );
     final factor = correction["factor"] as double;
     final required = baseRequired * factor;
     final limits = _checkHardLimits(runwayWidthFt, env);
@@ -713,9 +734,12 @@ class ConcordeLogic {
       baseRequiredLengthMEst: baseRequired,
       requiredLengthMEst: required,
       runwayLengthM: runwayLengthM,
+      marginal:
+          runwayLengthM >= required &&
+          runwayLengthM <
+              required * (1 + ConcordeConstants.runway.marginalMarginFrac),
       feasible:
           runwayLengthM >= required &&
-          extraOk &&
           limits.altitudeOk &&
           limits.crosswindOk &&
           limits.tailwindOk,
@@ -735,8 +759,11 @@ class ConcordeLogic {
 
   /// Takeoff distance scales with weight squared: lift-off speed^2 is
   /// proportional to weight and the available acceleration (thrust/weight)
-  /// is inversely proportional to it, so ground roll ~ W^2. Anchored at
-  /// 3,597 m (11,800 ft) at MTOW with reheat.
+  /// is inversely proportional to it, so ground roll ~ W^2 (Anderson eq.
+  /// 6.95). Anchored at 2,743 m at MTOW, sea level, ISA, calm, reheat (DC
+  /// Designs manual -- matches the sim; the real aircraft's 3,410-3,600 m is
+  /// to the 35 ft screen). Without reheat, x reheat/dry thrust (~1.19);
+  /// whether that fits is left to the runway-length comparison.
   static RunwayFeasibility takeoffFeasibleM(
     double runwayLengthM,
     double takeoffWeightKg, {
@@ -744,26 +771,21 @@ class ConcordeLogic {
     bool useReheat = true,
     double? runwayWidthFt,
   }) {
+    final r = ConcordeConstants.runway;
     final ratio = (takeoffWeightKg / ConcordeConstants.weights.mtowKg).clamp(
       0.5,
       1.2,
     );
-    // Without reheat the takeoff needs ~35% more runway, and above
-    // ~155 t a dry-thrust takeoff isn't planned at all (indicative values
-    // pending DC Designs data).
-    final reheatFactor = useReheat ? 1.0 : 1.35;
-    final baseRequired =
-        ConcordeConstants.runway.minTakeoffMAtMtow *
-        ratio *
-        ratio *
-        reheatFactor;
+    final thrustFactor = useReheat ? 1.0 : r.reheatThrustLbf / r.dryThrustLbf;
+    final baseRequired = r.minTakeoffMAtMtow * ratio * ratio * thrustFactor;
     return _feasibility(
       phase: "takeoff",
       runwayLengthM: runwayLengthM,
       baseRequired: baseRequired,
       env: env,
       runwayWidthFt: runwayWidthFt,
-      extraOk: useReheat || takeoffWeightKg < 155000,
+      // Lift-off is around V2 (DC manual: 210-220 kt at MTOW).
+      referenceIasKt: computeTakeoffSpeeds(takeoffWeightKg).v2,
     );
   }
 
@@ -789,6 +811,7 @@ class ConcordeLogic {
       baseRequired: baseRequired.toDouble(),
       env: env,
       runwayWidthFt: runwayWidthFt,
+      referenceIasKt: computeLandingSpeeds(landingWeightKg).vref,
     );
   }
 

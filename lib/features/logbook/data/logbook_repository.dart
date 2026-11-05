@@ -78,9 +78,27 @@ class LogbookRepository {
         ? ''
         : '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
 
+    List<Object?> perfCols(
+      Map<String, dynamic>? p,
+      String weightKey,
+      String rollKey,
+      String? iasKey,
+    ) {
+      final plan = (p?['plan'] as Map?) ?? const {};
+      return [
+        plan['runway'] == null ? null : '${plan['icao']} ${plan['runway']}',
+        p?[weightKey],
+        plan['requiredM'],
+        p?[rollKey],
+        iasKey == null ? null : p?[iasKey],
+      ];
+    }
+
     final rows = [
       'date,callsign,registration,dep,arr,block_out_z,block_in_z,block_time,'
-          'flight_time,fuel_burned_kg,landing_fpm,landing_g,rating,notes',
+          'flight_time,fuel_burned_kg,landing_fpm,landing_g,rating,'
+          'to_runway,to_tow_kg,to_predicted_m,to_measured_m,to_liftoff_ias,'
+          'ldg_runway,ldg_lw_kg,ldg_predicted_m,ldg_measured_m,notes',
       for (final l in logs)
         [
           l.blockOut.toIso8601String().substring(0, 10),
@@ -96,6 +114,8 @@ class LogbookRepository {
           l.touchdownFpm?.round(),
           l.touchdownG?.toStringAsFixed(2),
           l.landingRating?.label,
+          ...perfCols(l.takeoffPerf, 'towKg', 'rollM', 'liftoffIas'),
+          ...perfCols(l.landingPerf, 'lwKg', 'rollToExitM', null).take(4),
           l.notes,
         ].map(q).join(','),
     ];

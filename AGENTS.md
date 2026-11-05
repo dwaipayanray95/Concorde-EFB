@@ -14,7 +14,7 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `5.23.0+104` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+- Current version: `5.24.0+105` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
   `public/changelog/entries.json` in sync — README no longer carries its own changelog, it just
   links to that page.
 - **Versioning rule (mandatory for every agent):** every change that alters user-visible behavior
@@ -84,9 +84,11 @@ the sim this app targets) gives a number, it wins; the code comments cite it. Co
   Alternate: SimBrief alternate `distance` if present, else the estimate.
 - Cruise FL: clamped to `[0, 590]`; above FL410 snapped to Non-RVSM sets (Eastbound `410, 450,
   490, 530, 570`; Westbound `430, 470, 510, 550, 590`), direction inferred from DEP→ARR bearing.
-- Runway: takeoff distance = 2,743 m (DC manual, MTOW/SL/ISA/no wind) x (TOW/MTOW)^2 (x1.35 without reheat); landing = 2,200 m x
-  (LW/MLW)^1.15; then + pressure-alt / temperature / wind / surface (wet +15%, contaminated +30%
-  takeoff / +40% landing) corrections. Hard limits: 30 kt crosswind (gust-inclusive), 10 kt tailwind
+- Runway: takeoff distance = 2,743 m (DC manual, MTOW/SL/ISA/no wind) x (TOW/MTOW)^2 (x38,050/32,000
+  thrust ratio without reheat, no weight gate); landing = 2,200 m x (LW/MLW)^1.15; then MULTIPLIED by
+  density (1/sigma)^(1+n) takeoff (n = `thrustLapseExponent` 1.0, HAAB-calibrated) / 1/sigma landing,
+  wind ((V-w)/V)^2 with w = 50% headwind / 150% tailwind (CS-25.105), surface (wet x1.15, contaminated
+  x1.30 takeoff / x1.40 landing). MARGINAL caution when < 15% spare (CS-25.113). Hard limits: 30 kt crosswind (gust-inclusive), 10 kt tailwind
   (gust-inclusive), airfield altitude; VRB wind = worst case; missing wind is flagged, not calm.
 - Speeds (DC manual): V1/VR/V2 = 170/190/220 kt at MTOW scaled by sqrt(W/MTOW) (V1 -8 wet / -15
   contaminated); VREF 195 kt at MLW scaled by sqrt(W/MLW) (manual approach range 150-207 kt);
@@ -94,7 +96,7 @@ the sim this app targets) gives a number, it wins; the code comments cite it. Co
 - CG (DC manual p.78 chart, `lib/core/live_flight_math.dart`): fwd/aft limits and ideal CG vs Mach
   (ideal ~53.5 % subsonic, 55 % at M0.95, 59 % at M2). Max taxi weight 187,000 kg.
 - NOT in the DC manual (kept from the BA Flying Manual / estimates): 30 kt crosswind, 10 kt
-  tailwind, no-reheat 155 t gate and x1.35 factor, wet/contaminated factors, landing distance base.
+  tailwind, thrust-lapse exponent, wet/contaminated factors, landing distance base.
 
 ## 4) External Data and Integrations
 
@@ -310,13 +312,14 @@ pipeline (APK/DMG/Windows EXE via Inno Setup).
 - v5.22.1: manual route entry fields use controllers directly (`_manualField`) -- `EfbTextField` resets to its initial value on blur, which reverted every edit in a non-rebuilding dialog. Don't use `EfbTextField` with a static `initialValue` in dialogs.
 - v5.23.0: .pln/.vfp/XML imports read call sign / registration / pax when present (FlightPlanImportService._identity: attributes/tags Callsign, Registration, Pax or REG/ PAX/ in Remarks; fields on ParsedFlightPlan, applied in _applyParsedPlan only when non-null); Settings has an Add Concorde Airframe to SimBrief button (AppLinks.simbriefAirframe).
 
+- v5.24.0: physics runway model (`runwayLengthCorrectionFactor`: density ratio from pressure altitude + OAT, CS-25.105 factored wind on lift-off/VREF TAS, multiplicative; constants + sources in `ConcordeConstants.runway`), `RunwayFeasibility.marginal` (< 15% spare -> dispatch caution + amber text), 155 t no-reheat gate removed (caution instead). Logbook `FlightLog.perf` (`takeoff`/`landing`: measured roll from takeoff thrust -- reheat or mean throttle >= 60% -- to lift-off with 1 s trace, landing roll touchdown -> 30 kt, plus the planner snapshot from `TrackerContext.takeoffPlan/landingPlan`); track points gained ias/vs/mach/fuel/cg; Performance card + per-flight EXPORT FLIGHT DATA. Use exported logs to refit `thrustLapseExponent` / bases.
+
 Keep this list rolling forward — append new notable changes here as they land, don't let it go
 stale like the old React-era version of this file did.
 
 ### Deferred backlog (agreed with the owner, not started)
 
-- No-reheat takeoff thresholds (155 t gate, x1.35 factor) remain estimates -- the DC Designs manual
-  doesn't give them (checked v5.3.0).
+- Refit runway constants (thrust lapse, bases, surface factors) from exported logbook `perf` data.
 - Play Console data-safety form (declare advertising ID / device data via AdMob).
 - AdMob: publish the GDPR message (Privacy & messaging), finish the payments profile, link the app
   to its Play listing once live, host `app-ads.txt` on the developer-site domain root.
