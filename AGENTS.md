@@ -187,7 +187,7 @@ the sim this app targets) gives a number, it wins; the code comments cite it. Co
   fresh PyInstaller `msfs_bridge.exe`. Notes: `actions/ai-release-notes` (Gemini, offline fallback).
   `.github/workflows/pr-checks.yml` — PR size label/secret scan/licence check.
   `.github/workflows/discord.yml` — one master Discord webhook (`DISCORD_WEBHOOK_URL`, skipped if
-  unset): posts pushed commits to `main`, beta pre-release announcements and full release
+  unset): posts pushed commits to `main` (one slim card, layout in `.github/discord/commits.jq`, no author), beta pre-release announcements and full release
   announcements (on `release: published`, so drafts post when published).
 
 ## 6) Build, Run, and Deploy Commands

@@ -3,7 +3,8 @@ name: Discord
 # One master Discord webhook (DISCORD_WEBHOOK_URL secret) for everything
 # that happens on GitHub. Runs automatically; nothing to trigger by hand.
 #
-#  - push to main ............ the new commits (short SHA, subject, author)
+#  - push to main ............ one slim card: subject + one-line excerpt per
+#                              commit, footer with app version / branch
 #  - release published ....... beta pre-release  -> "New beta build" + downloads page
 #                              full release      -> "Concorde EFB vX released" + notes
 #
@@ -23,12 +24,18 @@ jobs:
     if: github.event_name == 'push' && github.event.deleted == false
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout card template and version
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            pubspec.yaml
+            .github/discord
+          sparse-checkout-cone-mode: false
+
       - name: Post commits
         env:
           WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          REPO: ${{ github.repository }}
           BRANCH: ${{ github.ref_name }}
-          PUSHER: ${{ github.event.pusher.name }}
           COMPARE_URL: ${{ github.event.compare }}
           COMMITS: ${{ toJSON(github.event.commits) }}
         run: |
@@ -36,48 +43,18 @@ jobs:
             echo "DISCORD_WEBHOOK_URL is not set; skipping."
             exit 0
           fi
-
-          total=$(jq 'length' <<<"$COMMITS")
-          if [ "$total" -eq 0 ]; then
+          if [ "$(jq 'length' <<<"$COMMITS")" -eq 0 ]; then
             echo "No commits in this push; nothing to post."
             exit 0
           fi
-
-          # One embed per commit (Discord allows up to 10 per message):
-          # author with GitHub avatar, full subject as the title, the body
-          # text (without bot trailers), short SHA and branch in the footer.
-          more=$(( total > 10 ? total - 10 : 0 ))
-          header="⬆️ **$total new commit$([ "$total" -eq 1 ] || echo s)** pushed to \`$BRANCH\` by **$PUSHER** · [Compare changes]($COMPARE_URL)"
-          if [ "$more" -gt 0 ]; then
-            header="$header"$'\n'"…and $more more not shown, see the compare link."
-          fi
-
+          # Card layout lives in .github/discord/commits.jq.
+          version=$(sed -n 's/^version:[[:space:]]*\([^+[:space:]]*\).*/\1/p' pubspec.yaml)
           payload=$(jq -n \
-            --arg header "$header" \
-            --arg branch "$BRANCH" \
             --argjson commits "$COMMITS" \
-            '{
-              content: $header,
-              embeds: [ $commits[:10][] |
-                (.message | split("\n")) as $lines
-                | ($lines[1:]
-                    | map(select(test("^(Co-Authored-By|Claude-Session|Signed-off-by):\\s") | not))
-                    | join("\n") | gsub("^\\s+|\\s+$"; "")) as $body
-                | ({
-                    author: ({ name: (.author.name // "unknown") }
-                      + (if (.author.username // "") != ""
-                         then { url: ("https://github.com/" + .author.username),
-                                icon_url: ("https://github.com/" + .author.username + ".png") }
-                         else {} end)),
-                    title: (($lines[0] // "(no message)") | .[0:256]),
-                    url: .url,
-                    color: 16096779,
-                    footer: { text: ("`" + .id[0:7] + "` · " + $branch) },
-                    timestamp: .timestamp
-                  } + (if $body == "" then {} else { description: ($body | .[0:400]) } end))
-              ]
-            }')
-
+            --arg branch "$BRANCH" \
+            --arg compare "$COMPARE_URL" \
+            --arg version "$version" \
+            -f .github/discord/commits.jq)
           curl -sS -f -X POST "$WEBHOOK" \
             -H "Content-Type: application/json" \
             -d "$payload"
