@@ -5,8 +5,11 @@ name: Discord
 #
 #  - push to main ............ one slim card: subject + one-line excerpt per
 #                              commit, footer with app version / branch
-#  - release published ....... beta pre-release  -> "New beta build" + downloads page
-#                              full release      -> "Concorde EFB vX released" + notes
+#  - release published ....... full release -> big amber card (changelog bullets,
+#                              downloads, screenshot); beta -> blue card
+#
+# Commits and betas are sent with Discord's @silent flag (4096): they appear
+# in the channel but don't ping anyone. Full releases notify normally.
 #
 # Full releases from build.yml are created as drafts when "draft" is ticked;
 # they only post once someone clicks Publish on GitHub.
@@ -64,60 +67,29 @@ jobs:
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout card template and changelog
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            public/changelog/entries.json
+            .github/discord
+          sparse-checkout-cone-mode: false
+
       - name: Post release announcement
         env:
           WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          IS_PRERELEASE: ${{ github.event.release.prerelease }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-          RELEASE_NAME: ${{ github.event.release.name }}
-          RELEASE_URL: ${{ github.event.release.html_url }}
-          RELEASE_BODY: ${{ github.event.release.body }}
+          RELEASE: ${{ toJSON(github.event.release) }}
         run: |
           if [ -z "$WEBHOOK" ]; then
             echo "DISCORD_WEBHOOK_URL is not set; skipping."
             exit 0
           fi
-
-          # Keep the announcement short: first ~900 characters of the notes.
-          notes=$(jq -rn --arg b "$RELEASE_BODY" '$b | .[0:900]')
-          ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-
-          if [ "$IS_PRERELEASE" = "true" ]; then
-            payload=$(jq -n \
-              --arg title "🧪 New Concorde EFB Beta Build: ${RELEASE_NAME:-$RELEASE_TAG}" \
-              --arg desc "A new pre-release build is available for testing." \
-              --arg url "https://dwaipayanray95.github.io/Concorde-EFB/downloads/" \
-              --arg ts "$ts" \
-              '{
-                embeds: [{
-                  title: $title,
-                  description: $desc,
-                  url: $url,
-                  color: 5793266,
-                  fields: [{ name: "Download", value: $url }],
-                  footer: { text: "Concorde EFB" },
-                  timestamp: $ts
-                }]
-              }')
-          else
-            payload=$(jq -n \
-              --arg title "🚀 ${RELEASE_NAME:-$RELEASE_TAG} is out" \
-              --arg notes "$notes" \
-              --arg url "$RELEASE_URL" \
-              --arg ts "$ts" \
-              '{
-                embeds: [{
-                  title: $title,
-                  description: (if $notes == "" then "New release published." else $notes end),
-                  url: $url,
-                  color: 16096779,
-                  fields: [{ name: "Release notes", value: $url }],
-                  footer: { text: "Concorde EFB" },
-                  timestamp: $ts
-                }]
-              }')
-          fi
-
+          # Card layout lives in .github/discord/release.jq.
+          payload=$(jq -n \
+            --argjson rel "$RELEASE" \
+            --argjson entries "$(cat public/changelog/entries.json)" \
+            --arg site "https://dwaipayanray95.github.io/Concorde-EFB" \
+            -f .github/discord/release.jq)
           curl -sS -f -X POST "$WEBHOOK" \
             -H "Content-Type: application/json" \
             -d "$payload"
