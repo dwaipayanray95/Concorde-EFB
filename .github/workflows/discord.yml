@@ -43,34 +43,39 @@ jobs:
             exit 0
           fi
 
-          # Up to 10 commits, one line each: [short sha](link) subject — author
-          lines=$(jq -r '.[:10][] | "[`\(.id[0:7])`](\(.url)) \((.message | split("\n")[0]) | .[0:120]) — \(.author.name)"' <<<"$COMMITS")
+          # One embed per commit (Discord allows up to 10 per message):
+          # author with GitHub avatar, full subject as the title, the body
+          # text (without bot trailers), short SHA and branch in the footer.
           more=$(( total > 10 ? total - 10 : 0 ))
+          header="⬆️ **$total new commit$([ "$total" -eq 1 ] || echo s)** pushed to \`$BRANCH\` by **$PUSHER** · [Compare changes]($COMPARE_URL)"
           if [ "$more" -gt 0 ]; then
-            lines="$lines"$'\n'"…and $more more"
+            header="$header"$'\n'"…and $more more not shown, see the compare link."
           fi
 
           payload=$(jq -n \
-            --arg repo "$REPO" \
+            --arg header "$header" \
             --arg branch "$BRANCH" \
-            --arg pusher "$PUSHER" \
-            --arg url "$COMPARE_URL" \
-            --arg lines "$lines" \
-            --argjson total "$total" \
-            --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --argjson commits "$COMMITS" \
             '{
-              embeds: [{
-                title: "\($total) new commit\(if $total == 1 then "" else "s" end) on \($branch)",
-                url: $url,
-                description: $lines,
-                color: 16096779,
-                fields: [
-                  { name: "Repository", value: $repo, inline: true },
-                  { name: "Pushed by", value: $pusher, inline: true }
-                ],
-                footer: { text: "Concorde EFB" },
-                timestamp: $ts
-              }]
+              content: $header,
+              embeds: [ $commits[:10][] |
+                (.message | split("\n")) as $lines
+                | ($lines[1:]
+                    | map(select(test("^(Co-Authored-By|Claude-Session|Signed-off-by):\\s") | not))
+                    | join("\n") | gsub("^\\s+|\\s+$"; "")) as $body
+                | ({
+                    author: ({ name: (.author.name // "unknown") }
+                      + (if (.author.username // "") != ""
+                         then { url: ("https://github.com/" + .author.username),
+                                icon_url: ("https://github.com/" + .author.username + ".png") }
+                         else {} end)),
+                    title: (($lines[0] // "(no message)") | .[0:256]),
+                    url: .url,
+                    color: 16096779,
+                    footer: { text: ("`" + .id[0:7] + "` · " + $branch) },
+                    timestamp: .timestamp
+                  } + (if $body == "" then {} else { description: ($body | .[0:400]) } end))
+              ]
             }')
 
           curl -sS -f -X POST "$WEBHOOK" \
