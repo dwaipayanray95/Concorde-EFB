@@ -79,6 +79,7 @@ jobs:
 
   release:
     name: Announce release
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     steps:
       - name: Post release announcement
