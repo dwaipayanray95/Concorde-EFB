@@ -1,59 +1,31 @@
 name: Discord
 
-# Shared home for Discord community automation. Each job reacts to a
-# different GitHub event and posts to a channel via a Discord webhook.
+# One master Discord webhook (DISCORD_WEBHOOK_URL secret) for everything
+# that happens on GitHub. Runs automatically; nothing to trigger by hand.
 #
-# notify-prerelease: fires when a GitHub Release is published as a
-# pre-release (this is what beta-build.yml's `gh release create --prerelease`
-# triggers) and posts an announcement linking to the static downloads page,
-# not the GitHub release page. Uses the DISCORD_WEBHOOK_URL secret
-# (currently pointed at #beta-releases).
+#  - push to main ............ the new commits (short SHA, subject, author)
+#  - release published ....... beta pre-release  -> "New beta build" + downloads page
+#                              full release      -> "Concorde EFB vX released" + notes
 #
-# notify-push: fires on every push to main and posts the new commits (short
-# SHA, first line of message, author) to the channel behind
-# DISCORD_COMMITS_WEBHOOK_URL. If that secret isn't set, the job does nothing.
+# Full releases from build.yml are created as drafts when "draft" is ticked;
+# they only post once someone clicks Publish on GitHub.
+#
+# If the secret isn't set, every job skips quietly.
 on:
   push:
     branches: [main]
   release:
-    types: [prereleased]
+    types: [published]
 
 jobs:
-  notify-prerelease:
-    name: Notify Discord of Beta Pre-release
-    if: github.event_name == 'release'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Post to Discord
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-          RELEASE_NAME: ${{ github.event.release.name }}
-        run: |
-          curl -sS -X POST "$DISCORD_WEBHOOK_URL" \
-            -H "Content-Type: application/json" \
-            -d "$(jq -n \
-              --arg title "🧪 New Concorde EFB Beta Build: ${RELEASE_NAME:-$RELEASE_TAG}" \
-              --arg desc "A new pre-release build is available for testing." \
-              --arg url "https://dwaipayanray95.github.io/Concorde-EFB/downloads/" \
-              '{
-                embeds: [{
-                  title: $title,
-                  description: $desc,
-                  url: $url,
-                  color: 5793266,
-                  fields: [{ name: "Download", value: $url }]
-                }]
-              }')"
-
-  notify-push:
-    name: Post pushed commits to Discord
+  commits:
+    name: Post pushed commits
     if: github.event_name == 'push' && github.event.deleted == false
     runs-on: ubuntu-latest
     steps:
-      - name: Post commits to Discord
+      - name: Post commits
         env:
-          WEBHOOK: ${{ secrets.DISCORD_COMMITS_WEBHOOK_URL }}
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
           REPO: ${{ github.repository }}
           BRANCH: ${{ github.ref_name }}
           PUSHER: ${{ github.event.pusher.name }}
@@ -61,7 +33,7 @@ jobs:
           COMMITS: ${{ toJSON(github.event.commits) }}
         run: |
           if [ -z "$WEBHOOK" ]; then
-            echo "DISCORD_COMMITS_WEBHOOK_URL is not set; skipping."
+            echo "DISCORD_WEBHOOK_URL is not set; skipping."
             exit 0
           fi
 
@@ -100,6 +72,68 @@ jobs:
                 timestamp: $ts
               }]
             }')
+
+          curl -sS -f -X POST "$WEBHOOK" \
+            -H "Content-Type: application/json" \
+            -d "$payload"
+
+  release:
+    name: Announce release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post release announcement
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          IS_PRERELEASE: ${{ github.event.release.prerelease }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_NAME: ${{ github.event.release.name }}
+          RELEASE_URL: ${{ github.event.release.html_url }}
+          RELEASE_BODY: ${{ github.event.release.body }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo "DISCORD_WEBHOOK_URL is not set; skipping."
+            exit 0
+          fi
+
+          # Keep the announcement short: first ~900 characters of the notes.
+          notes=$(jq -rn --arg b "$RELEASE_BODY" '$b | .[0:900]')
+          ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            payload=$(jq -n \
+              --arg title "🧪 New Concorde EFB Beta Build: ${RELEASE_NAME:-$RELEASE_TAG}" \
+              --arg desc "A new pre-release build is available for testing." \
+              --arg url "https://dwaipayanray95.github.io/Concorde-EFB/downloads/" \
+              --arg ts "$ts" \
+              '{
+                embeds: [{
+                  title: $title,
+                  description: $desc,
+                  url: $url,
+                  color: 5793266,
+                  fields: [{ name: "Download", value: $url }],
+                  footer: { text: "Concorde EFB" },
+                  timestamp: $ts
+                }]
+              }')
+          else
+            payload=$(jq -n \
+              --arg title "🚀 ${RELEASE_NAME:-$RELEASE_TAG} is out" \
+              --arg notes "$notes" \
+              --arg url "$RELEASE_URL" \
+              --arg ts "$ts" \
+              '{
+                embeds: [{
+                  title: $title,
+                  description: (if $notes == "" then "New release published." else $notes end),
+                  url: $url,
+                  color: 16096779,
+                  fields: [{ name: "Release notes", value: $url }],
+                  footer: { text: "Concorde EFB" },
+                  timestamp: $ts
+                }]
+              }')
+          fi
 
           curl -sS -f -X POST "$WEBHOOK" \
             -H "Content-Type: application/json" \
