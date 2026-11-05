@@ -1,20 +1,27 @@
 name: Discord
 
 # Shared home for Discord community automation. Each job reacts to a
-# different GitHub event and posts to a channel via a Discord webhook
-# (DISCORD_WEBHOOK_URL secret, currently pointed at #beta-releases).
+# different GitHub event and posts to a channel via a Discord webhook.
 #
 # notify-prerelease: fires when a GitHub Release is published as a
 # pre-release (this is what beta-build.yml's `gh release create --prerelease`
 # triggers) and posts an announcement linking to the static downloads page,
-# not the GitHub release page.
+# not the GitHub release page. Uses the DISCORD_WEBHOOK_URL secret
+# (currently pointed at #beta-releases).
+#
+# notify-push: fires on every push to main and posts the new commits (short
+# SHA, first line of message, author) to the channel behind
+# DISCORD_COMMITS_WEBHOOK_URL. If that secret isn't set, the job does nothing.
 on:
+  push:
+    branches: [main]
   release:
     types: [prereleased]
 
 jobs:
   notify-prerelease:
     name: Notify Discord of Beta Pre-release
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     steps:
       - name: Post to Discord
@@ -38,3 +45,62 @@ jobs:
                   fields: [{ name: "Download", value: $url }]
                 }]
               }')"
+
+  notify-push:
+    name: Post pushed commits to Discord
+    if: github.event_name == 'push' && github.event.deleted == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post commits to Discord
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_COMMITS_WEBHOOK_URL }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          PUSHER: ${{ github.event.pusher.name }}
+          COMPARE_URL: ${{ github.event.compare }}
+          COMMITS: ${{ toJSON(github.event.commits) }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo "DISCORD_COMMITS_WEBHOOK_URL is not set; skipping."
+            exit 0
+          fi
+
+          total=$(jq 'length' <<<"$COMMITS")
+          if [ "$total" -eq 0 ]; then
+            echo "No commits in this push; nothing to post."
+            exit 0
+          fi
+
+          # Up to 10 commits, one line each: [short sha](link) subject — author
+          lines=$(jq -r '.[:10][] | "[`\(.id[0:7])`](\(.url)) \((.message | split("\n")[0]) | .[0:120]) — \(.author.name)"' <<<"$COMMITS")
+          more=$(( total > 10 ? total - 10 : 0 ))
+          if [ "$more" -gt 0 ]; then
+            lines="$lines"$'\n'"…and $more more"
+          fi
+
+          payload=$(jq -n \
+            --arg repo "$REPO" \
+            --arg branch "$BRANCH" \
+            --arg pusher "$PUSHER" \
+            --arg url "$COMPARE_URL" \
+            --arg lines "$lines" \
+            --argjson total "$total" \
+            --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{
+              embeds: [{
+                title: "\($total) new commit\(if $total == 1 then "" else "s" end) on \($branch)",
+                url: $url,
+                description: $lines,
+                color: 16096779,
+                fields: [
+                  { name: "Repository", value: $repo, inline: true },
+                  { name: "Pushed by", value: $pusher, inline: true }
+                ],
+                footer: { text: "Concorde EFB" },
+                timestamp: $ts
+              }]
+            }')
+
+          curl -sS -f -X POST "$WEBHOOK" \
+            -H "Content-Type: application/json" \
+            -d "$payload"
