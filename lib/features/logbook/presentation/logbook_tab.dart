@@ -1447,7 +1447,7 @@ class _LogDetailScreenState extends ConsumerState<LogDetailScreen> {
                   return ListView(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                     children: [
-                      // 1. Hero Mission Summary & OOOI Header
+                      // 1. Hero Mission Summary & Integrated OOOI Header
                       _heroHeader(context, log),
                       const SizedBox(height: 12),
 
@@ -1455,55 +1455,47 @@ class _LogDetailScreenState extends ConsumerState<LogDetailScreen> {
                       FlightProfileChart(log: log),
                       const SizedBox(height: 12),
 
-                      // 3. Secondary Telemetry Grid: CG Corridor & Runway Rollout
+                      // 3. Telemetry Deep Dive Grid: CG Corridor & ACARS Fuel Audit Side-by-Side
                       if (wide)
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(child: CgCorridorChart(log: log)),
                             const SizedBox(width: 12),
-                            Expanded(child: RunwayPerformanceCard(log: log)),
+                            Expanded(child: AcarsFuelReleaseStrip(log: log)),
                           ],
                         )
                       else ...[
                         CgCorridorChart(log: log),
                         const SizedBox(height: 12),
-                        RunwayPerformanceCard(log: log),
+                        AcarsFuelReleaseStrip(log: log),
                       ],
                       const SizedBox(height: 12),
 
-                      // 4. Fuel & Dispatch Grid
+                      // 4. Measured Runway Performance (if recorded)
+                      if (log.takeoffPerf != null || log.landingPerf != null) ...[
+                        RunwayPerformanceCard(log: log),
+                        const SizedBox(height: 12),
+                      ],
+
+                      // 5. Weights & Flight Enroute Metrics
                       if (wide)
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(child: AcarsFuelReleaseStrip(log: log)),
+                            Expanded(child: _weights(context, log)),
                             const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  _weights(context, log),
-                                  const SizedBox(height: 12),
-                                  _flight(context, log),
-                                ],
-                              ),
-                            ),
+                            Expanded(child: _flight(context, log)),
                           ],
                         )
                       else ...[
-                        AcarsFuelReleaseStrip(log: log),
-                        const SizedBox(height: 12),
                         _weights(context, log),
                         const SizedBox(height: 12),
                         _flight(context, log),
                       ],
                       const SizedBox(height: 12),
 
-                      // 5. Alerts, Notes & Delete Actions
-                      if (log.alerts.isNotEmpty) ...[
-                        _alerts(context, log),
-                        const SizedBox(height: 12),
-                      ],
+                      // 6. Pilot Debrief Notes & Actions
                       notes,
                       const SizedBox(height: 12),
                       delete,
@@ -1533,7 +1525,9 @@ class _LogDetailScreenState extends ConsumerState<LogDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 1. Flight Deck Identity & Landing Rating
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
@@ -1546,7 +1540,7 @@ class _LogDetailScreenState extends ConsumerState<LogDetailScreen> {
                           log.callSign.isEmpty ? 'SPEEDBIRD' : log.callSign,
                           style: uiText(
                             context,
-                            size: 18,
+                            size: 20,
                             weight: FontWeight.w900,
                             color: colors.textPrimary,
                             letterSpacing: 0.8,
@@ -1579,34 +1573,102 @@ class _LogDetailScreenState extends ConsumerState<LogDetailScreen> {
                         ],
                         if (log.registration.isNotEmpty) ...[
                           const SizedBox(width: 8),
-                          Text(
-                            'REG: ${log.registration}',
-                            style: uiText(
-                              context,
-                              size: 11,
-                              weight: FontWeight.w700,
-                              color: colors.textDim,
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.resultsBg,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: colors.dividerStrong.withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Text(
+                              'REG: ${log.registration}',
+                              style: uiText(
+                                context,
+                                size: 9,
+                                weight: FontWeight.w700,
+                                color: colors.textDim,
+                              ),
                             ),
                           ),
                         ],
                       ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _route(log),
-                      style: uiText(
-                        context,
-                        size: 12,
-                        weight: FontWeight.w700,
-                        color: colors.textSecondary,
-                      ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Text(
+                          _route(log),
+                          style: uiText(
+                            context,
+                            size: 13,
+                            weight: FontWeight.w800,
+                            color: colors.textSecondary,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        if (log.goArounds > 0) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 5,
+                              vertical: 1.5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.accent.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: colors.accent.withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Text(
+                              '${log.goArounds}× GO-AROUND',
+                              style: uiText(
+                                context,
+                                size: 8,
+                                weight: FontWeight.w900,
+                                color: colors.accent,
+                              ),
+                            ),
+                          ),
+                        ],
+                        if (log.bounces > 0) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 5,
+                              vertical: 1.5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.error.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: colors.error.withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Text(
+                              '${log.bounces}× BOUNCE',
+                              style: uiText(
+                                context,
+                                size: 8,
+                                weight: FontWeight.w900,
+                                color: colors.error,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
               ),
               if (r != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: ratingColor(colors, r).withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
@@ -1621,7 +1683,7 @@ class _LogDetailScreenState extends ConsumerState<LogDetailScreen> {
                         r.label,
                         style: uiText(
                           context,
-                          size: 13,
+                          size: 14,
                           weight: FontWeight.w900,
                           color: ratingColor(colors, r),
                           letterSpacing: 0.8,
@@ -1643,7 +1705,189 @@ class _LogDetailScreenState extends ConsumerState<LogDetailScreen> {
             ],
           ),
           const SizedBox(height: 14),
-          _oooi(context, log),
+
+          // 2. Integrated Avionics OOOI Sequence Bar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: colors.resultsBg,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: colors.dividerStrong.withValues(alpha: 0.5),
+              ),
+            ),
+            child: LayoutBuilder(
+              builder: (context, c) {
+                final wide = c.maxWidth >= 540;
+
+                Widget oooiNode(String code, String desc, DateTime? t) =>
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            code,
+                            style: uiText(
+                              context,
+                              size: 10,
+                              weight: FontWeight.w900,
+                              color: colors.accent,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                          const SizedBox(height: 1),
+                          Text(
+                            desc,
+                            style: uiText(
+                              context,
+                              size: 7,
+                              weight: FontWeight.w800,
+                              color: colors.textDim,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            zulu(t),
+                            style: uiText(
+                              context,
+                              size: 15,
+                              weight: FontWeight.w900,
+                              color: colors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+
+                Widget arrow() => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Icon(
+                    Icons.arrow_forward,
+                    size: 14,
+                    color: colors.textDim.withValues(alpha: 0.4),
+                  ),
+                );
+
+                if (wide) {
+                  return Row(
+                    children: [
+                      oooiNode('OUT', 'BLOCK OUT', log.blockOut),
+                      arrow(),
+                      oooiNode('OFF', 'TAKEOFF', log.takeoff),
+                      arrow(),
+                      oooiNode('ON', 'TOUCHDOWN', log.touchdown),
+                      arrow(),
+                      oooiNode('IN', 'BLOCK IN', log.blockIn),
+                    ],
+                  );
+                } else {
+                  return Column(
+                    children: [
+                      Row(
+                        children: [
+                          oooiNode('OUT', 'BLOCK OUT', log.blockOut),
+                          arrow(),
+                          oooiNode('OFF', 'TAKEOFF', log.takeoff),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          oooiNode('ON', 'TOUCHDOWN', log.touchdown),
+                          arrow(),
+                          oooiNode('IN', 'BLOCK IN', log.blockIn),
+                        ],
+                      ),
+                    ],
+                  );
+                }
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // 3. Mission Duration & Telemetry Capsules
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _metricPill(context, 'BLOCK TIME', hm(log.blockTime)),
+              _metricPill(context, 'FLIGHT TIME', hm(log.flightTime)),
+              if (log.supersonicSec > 0)
+                _metricPill(
+                  context,
+                  'SUPERSONIC',
+                  hm(Duration(seconds: log.supersonicSec.round())),
+                  accent: true,
+                ),
+              if (log.distanceNm > 0)
+                _metricPill(
+                  context,
+                  'DISTANCE',
+                  '${numFormat.format(log.distanceNm.round())} NM',
+                ),
+              if (log.maxMach > 0)
+                _metricPill(
+                  context,
+                  'MAX SPEED',
+                  'M${log.maxMach.toStringAsFixed(2)}',
+                  accent: log.maxMach >= 1.0,
+                ),
+              if (log.maxAltFt > 0)
+                _metricPill(
+                  context,
+                  'MAX FL',
+                  'FL${(log.maxAltFt / 100).round()}',
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _metricPill(
+    BuildContext context,
+    String label,
+    String value, {
+    bool accent = false,
+  }) {
+    final colors = context.colors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: colors.resultsBg,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: accent
+              ? colors.accent.withValues(alpha: 0.5)
+              : colors.dividerStrong.withValues(alpha: 0.4),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: uiText(
+              context,
+              size: 8,
+              weight: FontWeight.w800,
+              color: colors.textDim,
+              letterSpacing: 0.6,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            value,
+            style: uiText(
+              context,
+              size: 11,
+              weight: FontWeight.w900,
+              color: accent ? colors.accent : colors.textPrimary,
+            ),
+          ),
         ],
       ),
     );
@@ -1690,54 +1934,6 @@ class _LogDetailScreenState extends ConsumerState<LogDetailScreen> {
   String _kg(double? v) =>
       v == null ? '--' : '${numFormat.format(v.round())} KG';
 
-  Widget _oooi(BuildContext context, FlightLog l) {
-    final colors = context.colors;
-    Widget cell(String label, DateTime? t) => Expanded(
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: uiText(
-              context,
-              size: 9,
-              weight: FontWeight.w800,
-              color: colors.textDim,
-              letterSpacing: 1,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            zulu(t),
-            style: uiText(
-              context,
-              size: 16,
-              weight: FontWeight.w800,
-              color: colors.textPrimary,
-            ),
-          ),
-        ],
-      ),
-    );
-    return EfbCard(
-      title: 'OOOI (ZULU)',
-      child: Column(
-        children: [
-          Row(
-            children: [
-              cell('OUT', l.blockOut),
-              cell('OFF', l.takeoff),
-              cell('ON', l.touchdown),
-              cell('IN', l.blockIn),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _kv(context, 'BLOCK TIME', hm(l.blockTime)),
-          _kv(context, 'FLIGHT TIME', hm(l.flightTime)),
-        ],
-      ),
-    );
-  }
-
   Widget _weights(BuildContext context, FlightLog l) => EfbCard(
     title: 'WEIGHTS',
     child: Column(
@@ -1775,15 +1971,6 @@ class _LogDetailScreenState extends ConsumerState<LogDetailScreen> {
           'CRUISE FL PLANNED',
           l.cruiseFl > 0 ? 'FL${l.cruiseFl.round()}' : '--',
         ),
-      ],
-    ),
-  );
-
-  Widget _alerts(BuildContext context, FlightLog l) => EfbCard(
-    title: 'ALERTS',
-    child: Column(
-      children: [
-        for (final e in l.alerts.entries) _kv(context, e.key, '×${e.value}'),
       ],
     ),
   );

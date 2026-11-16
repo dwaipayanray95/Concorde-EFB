@@ -6,10 +6,10 @@ import '../../../../core/formatters.dart';
 import '../../../../core/ui_text.dart';
 import '../../data/flight_log.dart';
 
-enum ProfileMode { altMach, speeds, fuel }
+enum ProfileMode { altMach, speeds, fuel, cg }
 
 /// Interactive dual-axis flight profile telemetry canvas with scrub cursor,
-/// altitude gradient fill, Mach curve, milestone flags, and live readout bar.
+/// altitude gradient fill, Mach/Speed/Fuel/CG curve, milestone flags, and live readout bar.
 class FlightProfileChart extends StatefulWidget {
   final FlightLog log;
 
@@ -22,6 +22,43 @@ class FlightProfileChart extends StatefulWidget {
 class _FlightProfileChartState extends State<FlightProfileChart> {
   ProfileMode _mode = ProfileMode.altMach;
   double? _scrubFrac;
+
+  double _getFuel(int idx) {
+    final track = widget.log.track;
+    if (idx < 0 || idx >= track.length) return 0.0;
+    final p = track[idx];
+    final f = p.length > 8 ? p[8].toDouble() : 0.0;
+    if (f > 0) return f;
+
+    // Fallback: interpolate from flight block/takeoff/landing fuel
+    final startF = widget.log.fuelTakeoffKg ?? widget.log.fuelBlockOutKg ?? 0.0;
+    final endF = widget.log.fuelLandingKg ??
+        widget.log.fuelBlockInKg ??
+        (startF > 0 ? startF * 0.25 : 0.0);
+    if (startF > 0 && track.length > 1) {
+      final t = idx / (track.length - 1);
+      return startF - (startF - endF) * t;
+    }
+    return 0.0;
+  }
+
+  double _getCg(int idx) {
+    final track = widget.log.track;
+    if (idx < 0 || idx >= track.length) return 0.0;
+    final p = track[idx];
+    final cg = p.length > 9 ? p[9].toDouble() : 0.0;
+    if (cg > 0) return cg;
+
+    // Fallback: estimate Concorde standard aerodynamic CG from Mach
+    final m = p.length > 7 ? p[7].toDouble() : 0.0;
+    final vs = p.length > 6 ? p[6].toDouble() : 0.0;
+    final isDescent = idx > track.length * 0.7 || vs < -1000;
+
+    if (m <= 0.93) return 53.5;
+    if (m >= 1.70 && !isDescent) return 59.0;
+    final frac = ((m - 0.93) / (1.70 - 0.93)).clamp(0.0, 1.0);
+    return 53.5 + 5.5 * frac;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,8 +94,8 @@ class _FlightProfileChartState extends State<FlightProfileChart> {
     final iasKt = p.length > 5 ? p[5].toDouble() : 0.0;
     final vsFpm = p.length > 6 ? p[6].toDouble() : 0.0;
     final mach = p.length > 7 ? p[7].toDouble() : 0.0;
-    final fuelKg = p.length > 8 ? p[8].toDouble() : 0.0;
-    final cgPct = p.length > 9 ? p[9].toDouble() : 0.0;
+    final fuelKg = _getFuel(selectedIdx);
+    final cgPct = _getCg(selectedIdx);
 
     // Elapsed time calculation
     final firstEpoch = track.first[0].toInt();
@@ -104,7 +141,7 @@ class _FlightProfileChartState extends State<FlightProfileChart> {
           // Header & Layer Switcher
           LayoutBuilder(
             builder: (context, c) {
-              final wide = c.maxWidth >= 600;
+              final wide = c.maxWidth >= 750;
 
               final titleBlock = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -140,23 +177,40 @@ class _FlightProfileChartState extends State<FlightProfileChart> {
                 ],
               );
 
-              final modeButtons = Container(
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  color: colors.resultsBg,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: colors.dividerStrong.withValues(alpha: 0.4),
+              final modeButtons = Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'SECONDARY OVERLAY:',
+                    style: uiText(
+                      context,
+                      size: 9,
+                      weight: FontWeight.w800,
+                      color: colors.textDim,
+                      letterSpacing: 0.8,
+                    ),
                   ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _modeBtn('ALT + MACH', ProfileMode.altMach, colors),
-                    _modeBtn('IAS / TAS', ProfileMode.speeds, colors),
-                    _modeBtn('FUEL BURN', ProfileMode.fuel, colors),
-                  ],
-                ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: colors.resultsBg,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: colors.dividerStrong.withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _modeBtn('MACH', ProfileMode.altMach, colors),
+                        _modeBtn('AIRSPEED', ProfileMode.speeds, colors),
+                        _modeBtn('FUEL ON BOARD', ProfileMode.fuel, colors),
+                        _modeBtn('CG % MAC', ProfileMode.cg, colors),
+                      ],
+                    ),
+                  ),
+                ],
               );
 
               if (wide) {
@@ -174,7 +228,10 @@ class _FlightProfileChartState extends State<FlightProfileChart> {
                   children: [
                     titleBlock,
                     const SizedBox(height: 10),
-                    modeButtons,
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: modeButtons,
+                    ),
                   ],
                 );
               }
@@ -184,10 +241,10 @@ class _FlightProfileChartState extends State<FlightProfileChart> {
 
           // Synchronized Live Telemetry Readout Bar
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               color: colors.resultsBg,
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: colors.dividerStrong.withValues(alpha: 0.5),
               ),
@@ -195,7 +252,6 @@ class _FlightProfileChartState extends State<FlightProfileChart> {
             child: LayoutBuilder(
               builder: (context, c) {
                 final wide = c.maxWidth >= 720;
-                final mid = c.maxWidth >= 480;
 
                 Widget cell(String label, String value, [Color? valColor]) =>
                     Column(
@@ -212,117 +268,161 @@ class _FlightProfileChartState extends State<FlightProfileChart> {
                           ),
                         ),
                         const SizedBox(height: 2),
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            value,
-                            style: uiText(
-                              context,
-                              size: 12,
-                              weight: FontWeight.w900,
-                              color: valColor ?? colors.textPrimary,
-                            ),
+                        Text(
+                          value,
+                          style: uiText(
+                            context,
+                            size: 13,
+                            weight: FontWeight.w900,
+                            color: valColor ?? colors.textPrimary,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     );
 
-                final cells = [
-                  cell('TIME (ZULU / ETE)', '$zuluStr ($elapsedStr)'),
-                  cell(
-                    'ALTITUDE',
-                    'FL${(altFt / 100).round()} (${numFormat.format(altFt.round())} FT)',
-                    colors.accent,
-                  ),
-                  cell(
-                    'MACH NUMBER',
-                    'M${mach.toStringAsFixed(2)}',
-                    mach >= 1.0 ? colors.accent : const Color(0xFF06B6D4),
-                  ),
-                  cell(
-                    'AIRSPEED',
-                    '${iasKt.round()} IAS · ${gsKt.round()} GS',
-                  ),
-                  cell(
-                    'VERTICAL SPEED',
-                    '${vsFpm >= 0 ? '+' : ''}${vsFpm.round()} FPM ($phase)',
-                    vsFpm > 500
-                        ? colors.success
-                        : (vsFpm < -500 ? colors.mvfr : colors.textPrimary),
-                  ),
-                  cell(
-                    'FUEL ON BOARD',
-                    fuelKg > 0 ? '${numFormat.format(fuelKg.round())} KG' : '--',
-                  ),
-                  cell(
-                    'CG POSITION',
-                    cgPct > 0 ? '${cgPct.toStringAsFixed(1)}% MAC' : '--',
-                    cgPct >= 52.0 && cgPct <= 59.0 ? colors.success : colors.error,
-                  ),
-                  cell(
-                    'STATE',
-                    isReheat ? 'REHEAT (4×)' : 'DRY THRUST',
-                    isReheat ? colors.error : colors.textDim,
-                  ),
-                ];
+                final phaseBadge = Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'FLIGHT PHASE',
+                      style: uiText(
+                        context,
+                        size: 8,
+                        weight: FontWeight.w800,
+                        color: colors.textDim,
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: (mach >= 1.0 ? colors.accent : colors.surface)
+                            .withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: (mach >= 1.0 ? colors.accent : colors.dividerStrong)
+                              .withValues(alpha: 0.5),
+                        ),
+                      ),
+                      child: Text(
+                        phase,
+                        style: uiText(
+                          context,
+                          size: 10,
+                          weight: FontWeight.w900,
+                          color: mach >= 1.0 ? colors.accent : colors.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                );
 
                 if (wide) {
-                  return Row(
-                    children: [
-                      for (var i = 0; i < cells.length; i++) ...[
-                        if (i > 0) const SizedBox(width: 8),
-                        Expanded(child: cells[i]),
-                      ],
-                    ],
-                  );
-                } else if (mid) {
                   return Column(
                     children: [
+                      // Row 1: Kinematics & Nav
                       Row(
                         children: [
-                          for (var i = 0; i < 4; i++) ...[
-                            if (i > 0) const SizedBox(width: 8),
-                            Expanded(child: cells[i]),
-                          ],
+                          Expanded(
+                            child: cell('TIME (ZULU / ETE)', '$zuluStr ($elapsedStr)'),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: cell(
+                              'ALTITUDE',
+                              'FL${(altFt / 100).round()} (${numFormat.format(altFt.round())} FT)',
+                              colors.accent,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: cell(
+                              'MACH NUMBER',
+                              'M${mach.toStringAsFixed(2)}',
+                              mach >= 1.0 ? colors.accent : const Color(0xFF06B6D4),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: cell(
+                              'AIRSPEED',
+                              '${iasKt.round()} KT IAS · ${gsKt.round()} KT GS',
+                            ),
+                          ),
                         ],
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 10),
+                      Container(
+                        height: 1,
+                        color: colors.dividerStrong.withValues(alpha: 0.3),
+                      ),
+                      const SizedBox(height: 10),
+                      // Row 2: Aerodynamics & Systems
                       Row(
                         children: [
-                          for (var i = 4; i < 8; i++) ...[
-                            if (i > 4) const SizedBox(width: 8),
-                            Expanded(child: cells[i]),
-                          ],
+                          Expanded(
+                            child: cell(
+                              'VERTICAL SPEED',
+                              '${vsFpm >= 0 ? '+' : ''}${vsFpm.round()} FPM',
+                              vsFpm > 500
+                                  ? colors.success
+                                  : (vsFpm < -500 ? colors.mvfr : colors.textPrimary),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(child: phaseBadge),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: cell(
+                              'FUEL ON BOARD',
+                              fuelKg > 0 ? '${numFormat.format(fuelKg.round())} KG' : '--',
+                              const Color(0xFFF59E0B),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: cell(
+                              'CG POSITION',
+                              cgPct > 0 ? '${cgPct.toStringAsFixed(1)}% MAC' : '--',
+                              cgPct >= 52.0 && cgPct <= 59.3 ? colors.success : colors.error,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: cell(
+                              'PROPULSION',
+                              isReheat ? 'REHEAT (4×)' : 'DRY THRUST',
+                              isReheat ? colors.error : colors.textDim,
+                            ),
+                          ),
                         ],
                       ),
                     ],
                   );
                 } else {
-                  return Column(
+                  return Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
                     children: [
-                      Row(
-                        children: [
-                          Expanded(child: cells[0]),
-                          const SizedBox(width: 6),
-                          Expanded(child: cells[1]),
-                        ],
+                      cell('TIME', '$zuluStr ($elapsedStr)'),
+                      cell('ALTITUDE', 'FL${(altFt / 100).round()}', colors.accent),
+                      cell('MACH', 'M${mach.toStringAsFixed(2)}', colors.accent),
+                      cell('IAS / GS', '${iasKt.round()} / ${gsKt.round()} KT'),
+                      cell('VS', '${vsFpm.round()} FPM'),
+                      cell(
+                        'FUEL',
+                        fuelKg > 0 ? '${numFormat.format(fuelKg.round())} KG' : '--',
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Expanded(child: cells[2]),
-                          const SizedBox(width: 6),
-                          Expanded(child: cells[3]),
-                        ],
+                      cell(
+                        'CG',
+                        cgPct > 0 ? '${cgPct.toStringAsFixed(1)}%' : '--',
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Expanded(child: cells[4]),
-                          const SizedBox(width: 6),
-                          Expanded(child: cells[5]),
-                        ],
-                      ),
+                      phaseBadge,
                     ],
                   );
                 }
@@ -331,33 +431,42 @@ class _FlightProfileChartState extends State<FlightProfileChart> {
           ),
           const SizedBox(height: 12),
 
-          // The Interactive Dual-Axis Canvas
+          // Flight Profile Canvas
           LayoutBuilder(
             builder: (context, c) {
-              return SizedBox(
-                width: c.maxWidth,
-                height: 240,
+              final chartWidth = c.maxWidth;
+              return RepaintBoundary(
                 child: GestureDetector(
-                  onHorizontalDragDown: (details) =>
-                      _handleScrub(details.localPosition.dx, c.maxWidth),
-                  onHorizontalDragUpdate: (details) =>
-                      _handleScrub(details.localPosition.dx, c.maxWidth),
-                  child: CustomPaint(
-                    size: Size(c.maxWidth, 240),
-                    painter: _ProfileChartPainter(
-                      track: track,
-                      colors: colors,
-                      mode: _mode,
-                      scrubFrac: _scrubFrac ?? (selectedIdx / (pointCount - 1)),
+                  onHorizontalDragStart: (d) =>
+                      _handleScrub(d.localPosition.dx, chartWidth),
+                  onHorizontalDragUpdate: (d) =>
+                      _handleScrub(d.localPosition.dx, chartWidth),
+                  onTapDown: (d) => _handleScrub(d.localPosition.dx, chartWidth),
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.resizeLeftRight,
+                    onHover: (e) => _handleScrub(e.localPosition.dx, chartWidth),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 250,
+                      child: CustomPaint(
+                        painter: _ProfileChartPainter(
+                          track: track,
+                          colors: colors,
+                          mode: _mode,
+                          scrubFrac: _scrubFrac ?? 0.45,
+                          fuelFn: _getFuel,
+                          cgFn: _getCg,
+                        ),
+                      ),
                     ),
                   ),
                 ),
               );
             },
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
 
-          // Legend & Hints
+          // Chart Legends
           Wrap(
             alignment: WrapAlignment.spaceBetween,
             crossAxisAlignment: WrapCrossAlignment.center,
@@ -368,20 +477,31 @@ class _FlightProfileChartState extends State<FlightProfileChart> {
                 spacing: 12,
                 runSpacing: 4,
                 children: [
-                  _legendItem('ALTITUDE (FL600)', colors.accent),
+                  _legendItem('ALTITUDE (FL0–600)', colors.accent),
                   if (_mode == ProfileMode.altMach)
-                    _legendItem('MACH NUMBER (2.2)', const Color(0xFF06B6D4)),
-                  if (_mode == ProfileMode.speeds) ...[
-                    _legendItem('IAS (KT)', const Color(0xFF06B6D4)),
-                    _legendItem('GS (KT)', colors.departure),
-                  ],
+                    _legendItem('MACH (M0.0–2.2)', const Color(0xFF06B6D4)),
+                  if (_mode == ProfileMode.speeds)
+                    _legendItem('AIRSPEED (0–1200 KT)', const Color(0xFF06B6D4)),
                   if (_mode == ProfileMode.fuel)
-                    _legendItem('FUEL REMAINING', const Color(0xFF06B6D4)),
+                    _legendItem('FUEL ON BOARD (0–96T)', const Color(0xFF06B6D4)),
+                  if (_mode == ProfileMode.cg) ...[
+                    _legendItem('CG % MAC (52–60%)', const Color(0xFF10B981)),
+                    _legendItem(
+                      'ENVELOPE CORRIDOR (52.5–59.1%)',
+                      colors.success.withValues(alpha: 0.6),
+                      isDot: true,
+                    ),
+                  ],
+                  _legendItem(
+                    'SUPERCRUISE CORRIDOR (FL500–600)',
+                    colors.accent.withValues(alpha: 0.6),
+                    isDot: true,
+                  ),
                   _legendItem('REHEAT ACTIVE', colors.error, isDot: true),
                 ],
               ),
               Text(
-                '* Scrub across chart to inspect synchronized parameters',
+                '* Scrub across chart to inspect live flight parameters',
                 style: uiText(context, size: 9, color: colors.textDim),
               ),
             ],
@@ -460,12 +580,16 @@ class _ProfileChartPainter extends CustomPainter {
   final AppColors colors;
   final ProfileMode mode;
   final double scrubFrac;
+  final double Function(int idx) fuelFn;
+  final double Function(int idx) cgFn;
 
   _ProfileChartPainter({
     required this.track,
     required this.colors,
     required this.mode,
     required this.scrubFrac,
+    required this.fuelFn,
+    required this.cgFn,
   });
 
   @override
@@ -505,7 +629,7 @@ class _ProfileChartPainter extends CustomPainter {
       )..layout();
       tpL.paint(canvas, Offset(padL - tpL.width - 6, y - tpL.height / 2));
 
-      // Right labels: Mach or Speeds or Fuel
+      // Right labels: Mach or Speeds or Fuel or CG
       String rText;
       Color rColor = const Color(0xFF06B6D4);
       switch (mode) {
@@ -518,6 +642,10 @@ class _ProfileChartPainter extends CustomPainter {
         case ProfileMode.fuel:
           final fVal = (96 - i * 24).round();
           rText = '${fVal}T';
+        case ProfileMode.cg:
+          final cgVal = (60.0 - i * 2.0).toStringAsFixed(1);
+          rText = '$cgVal%';
+          rColor = const Color(0xFF10B981);
       }
 
       final tpR = TextPainter(
@@ -541,6 +669,16 @@ class _ProfileChartPainter extends CustomPainter {
       supercruiseRect,
       Paint()..color = colors.accent.withValues(alpha: 0.04),
     );
+
+    // If CG mode: draw CG certified envelope limits background
+    if (mode == ProfileMode.cg) {
+      final y591 = padT + plotH * (1.0 - ((59.1 - 52.0) / 8.0).clamp(0.0, 1.0));
+      final y525 = padT + plotH * (1.0 - ((52.5 - 52.0) / 8.0).clamp(0.0, 1.0));
+      canvas.drawRect(
+        Rect.fromLTRB(padL, y591, padL + plotW, y525),
+        Paint()..color = const Color(0xFF10B981).withValues(alpha: 0.06),
+      );
+    }
 
     double getX(int idx) => padL + (idx / (track.length - 1)) * plotW;
 
@@ -612,7 +750,7 @@ class _ProfileChartPainter extends CustomPainter {
       ..strokeJoin = StrokeJoin.round;
     canvas.drawPath(altPath, altPaint);
 
-    // Curve 2: Secondary Data (Mach or Speeds or Fuel)
+    // Curve 2: Secondary Data (Mach or Speeds or Fuel or CG)
     final secPath = Path();
     first = true;
 
@@ -626,11 +764,14 @@ class _ProfileChartPainter extends CustomPainter {
           final m = p.length > 7 ? p[7].toDouble() : 0.0;
           normVal = (m / 2.2).clamp(0.0, 1.0);
         case ProfileMode.speeds:
-          final tas = (p.length > 7 ? p[7].toDouble() : 0.0) * 580; // or GS
+          final tas = (p.length > 7 ? p[7].toDouble() : 0.0) * 580;
           normVal = (tas / 1200).clamp(0.0, 1.0);
         case ProfileMode.fuel:
-          final f = p.length > 8 ? p[8].toDouble() : 0.0;
+          final f = fuelFn(i);
           normVal = (f / 96000).clamp(0.0, 1.0);
+        case ProfileMode.cg:
+          final cg = cgFn(i);
+          normVal = ((cg - 52.0) / 8.0).clamp(0.0, 1.0);
       }
 
       final y = padT + plotH * (1.0 - normVal);
@@ -643,7 +784,9 @@ class _ProfileChartPainter extends CustomPainter {
     }
 
     final secPaint = Paint()
-      ..color = const Color(0xFF06B6D4)
+      ..color = mode == ProfileMode.cg
+          ? const Color(0xFF10B981)
+          : const Color(0xFF06B6D4)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.8
       ..strokeCap = StrokeCap.round
@@ -661,8 +804,10 @@ class _ProfileChartPainter extends CustomPainter {
       ..strokeWidth = 1.2;
     canvas.drawLine(Offset(scrubX, padT), Offset(scrubX, padT + plotH), scrubPaint);
 
-    final curIdx = (scrubFrac * (track.length - 1)).round().clamp(0, track.length - 1);
-    final curAlt = track[curIdx].length > 3 ? track[curIdx][3].toDouble() : 0.0;
+    final curIdx =
+        (scrubFrac * (track.length - 1)).round().clamp(0, track.length - 1);
+    final curAlt =
+        track[curIdx].length > 3 ? track[curIdx][3].toDouble() : 0.0;
     final dotY = padT + plotH * (1.0 - (curAlt / 60000).clamp(0.0, 1.0));
 
     canvas.drawCircle(Offset(scrubX, dotY), 4.5, Paint()..color = colors.textPrimary);
@@ -676,7 +821,6 @@ class _ProfileChartPainter extends CustomPainter {
     double padT,
     double plotH,
   ) {
-    // Find key milestone indices along the track
     int? takeoffIdx;
     int? m1Idx;
     int? tocIdx;

@@ -99,12 +99,13 @@ void main() {
     final log = _dummyLog();
     await tester.pumpWidget(wrap(FlightProfileChart(log: log)));
     expect(find.text('MISSION PROFILE & TELEMETRY RECORDER'), findsOneWidget);
-    expect(find.text('ALT + MACH'), findsOneWidget);
-    expect(find.text('IAS / TAS'), findsOneWidget);
-    expect(find.text('FUEL BURN'), findsOneWidget);
+    expect(find.text('SECONDARY OVERLAY:'), findsOneWidget);
+    expect(find.text('MACH'), findsOneWidget);
+    expect(find.text('FUEL ON BOARD'), findsNWidgets(2)); // button + cell label
+    expect(find.text('CG % MAC'), findsOneWidget);
 
     // Switch mode
-    await tester.tap(find.text('IAS / TAS'));
+    await tester.tap(find.text('CG % MAC'));
     await tester.pumpAndSettle();
     expect(find.byType(FlightProfileChart), findsOneWidget);
   });

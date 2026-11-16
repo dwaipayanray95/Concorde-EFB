@@ -69,7 +69,7 @@ void main() {
     await tester.tap(find.text('BAW2'));
     await tester.pumpAndSettle();
     expect(find.text('BAW2 · EGLL → KJFK'), findsOneWidget);
-    expect(find.text('OOOI (ZULU)'), findsOneWidget);
+    expect(find.text('BLOCK OUT'), findsOneWidget);
     expect(find.text('BUTTER'), findsOneWidget);
   });
 
