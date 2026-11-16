@@ -560,23 +560,33 @@ class ConcordeLogic {
     return TakeoffSpeeds(v1: v1, vr: vr, v2: v2);
   }
 
-  /// Landing speeds. VREF scales with sqrt(weight): 195 kt at MLW. The DC
-  /// Designs manual gives approach speeds of 150-207 kt depending on
-  /// weight (final approach flown at ~200 kt), which this reproduces
-  /// (~150 kt at 66 t up to ~200-215 kt at MLW). VAPP = VREF + half the
-  /// steady headwind + the full gust increment, minimum +5 kt, maximum
-  /// +20 kt (standard wind additive).
+  /// Landing speeds.
+  ///
+  /// - VREF: Datum threshold speed at zero wind. Scales with sqrt(weight):
+  ///   162 kt at MLW (111,130 kg) down to ~150 kt at 96 t per Concorde Flying Manual
+  ///   performance tables.
+  /// - VTT (Target Threshold Speed): Target crossing speed over the threshold (50 ft).
+  ///   Standard Concorde procedure is VREF + 7 kt, plus half the headwind and gust increment
+  ///   clamped to max +10 kt.
+  /// - VAPP (Approach Speed): Standard fixed intermediate approach speed on the
+  ///   glideslope down to 800 ft RA (fixed at 190 kt IAS per Concorde Flying Manual).
   static LandingSpeeds computeLandingSpeeds(
     double lwKg, {
     double? headwindKt,
     double gustIncrementKt = 0,
   }) {
     final s = weightScale(lwKg, ConcordeConstants.weights.mlwKg);
-    final vref = math.max(145.0, (195.0 * s).roundToDouble());
-    final additive =
-        (math.max(headwindKt ?? 0.0, 0.0) / 2 + math.max(gustIncrementKt, 0))
-            .clamp(5.0, 20.0);
-    return LandingSpeeds(vref: vref, vapp: (vref + additive).roundToDouble());
+    final vref = math.max(
+      140.0,
+      (ConcordeConstants.speeds.vrefAtMlwKt * s).roundToDouble(),
+    );
+    final windAdditive = (math.max(headwindKt ?? 0.0, 0.0) / 2 +
+            math.max(gustIncrementKt, 0.0))
+        .clamp(0.0, 10.0);
+    final vtt = (vref + ConcordeConstants.speeds.vttAdditiveKt + windAdditive)
+        .roundToDouble();
+    final vapp = ConcordeConstants.speeds.fixedVappKt;
+    return LandingSpeeds(vref: vref, vtt: vtt, vapp: vapp);
   }
 
   static double? qnhToHpa(MetarQnh? qnh) {

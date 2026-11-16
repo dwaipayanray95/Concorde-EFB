@@ -153,7 +153,7 @@ class FlightTrackerNotifier extends Notifier<FlightLog?> {
         weightKg: ref.read(weightsProvider).lw,
         extra: () {
           final s = ref.read(landingSpeedsProvider);
-          return {'vref': s.vref, 'vapp': s.vapp};
+          return {'vref': s.vref, 'vtt': s.vtt, 'vapp': s.vapp};
         }(),
       ),
       nearestAirport: (lat, lon) {

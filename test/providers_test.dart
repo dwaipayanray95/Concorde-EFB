@@ -99,7 +99,7 @@ void main() {
   });
 
   group('takeoffSpeedsProvider / landingSpeedsProvider', () {
-    test('ordering V1 <= VR < V2 and VAPP above VREF', () {
+    test('ordering V1 <= VR < V2 and VREF <= VTT <= VAPP', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -108,7 +108,10 @@ void main() {
 
       expect(takeoff.v1, lessThanOrEqualTo(takeoff.vr));
       expect(takeoff.vr, lessThan(takeoff.v2));
-      expect(landing.vapp - landing.vref, inInclusiveRange(5, 20));
+      expect(landing.vref, lessThanOrEqualTo(landing.vtt));
+      expect(landing.vtt, lessThanOrEqualTo(landing.vapp));
+      expect(landing.vapp, 190);
+      expect(landing.vtt - landing.vref, inInclusiveRange(7, 17));
     });
 
     test('a heavier aircraft needs faster takeoff speeds', () {

@@ -325,26 +325,32 @@ void main() {
       expect(wet.vr, dry.vr);
     });
 
-    test('VREF 195 kt at MLW; VAPP additive is 5..20 kt', () {
-      final calm = ConcordeLogic.computeLandingSpeeds(111130);
-      expect(calm.vref, 195);
-      expect(calm.vapp, 200);
-      final gusty = ConcordeLogic.computeLandingSpeeds(
-        111130,
-        headwindKt: 20,
-        gustIncrementKt: 15,
-      );
-      expect(gusty.vapp, 215);
-      // Manual: approach 150-207 kt depending on weight.
-      expect(
-        ConcordeLogic.computeLandingSpeeds(66000).vref,
-        inInclusiveRange(145, 155),
-      );
-    });
+    test(
+      'VREF 162 kt at MLW; VTT includes 7 kt + wind; fixed VAPP is 190 kt',
+      () {
+        final calm = ConcordeLogic.computeLandingSpeeds(111130);
+        expect(calm.vref, 162);
+        expect(calm.vtt, 169);
+        expect(calm.vapp, 190);
+        final gusty = ConcordeLogic.computeLandingSpeeds(
+          111130,
+          headwindKt: 20,
+          gustIncrementKt: 15,
+        );
+        expect(gusty.vref, 162);
+        expect(gusty.vtt, 179);
+        expect(gusty.vapp, 190);
+        // Concorde Flying Manual tables: ~150 kt at 96 t.
+        expect(
+          ConcordeLogic.computeLandingSpeeds(96000).vref,
+          inInclusiveRange(149, 152),
+        );
+      },
+    );
 
     test('landing speeds never fall below the floor', () {
       final s = ConcordeLogic.computeLandingSpeeds(1.0);
-      expect(s.vref, greaterThanOrEqualTo(145));
+      expect(s.vref, greaterThanOrEqualTo(140));
     });
   });
 

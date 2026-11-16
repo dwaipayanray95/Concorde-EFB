@@ -250,6 +250,7 @@ class _DispatchBannerState extends ConsumerState<DispatchBanner> {
       if (depRwy != null) ('DEP', depRwy),
       ('LW', t(w.lw)),
       ('VAPP', '${ldg.vapp.round()}'),
+      ('VTT', '${ldg.vtt.round()}'),
       if (arrRwy != null) ('ARR', arrRwy),
     ];
   }

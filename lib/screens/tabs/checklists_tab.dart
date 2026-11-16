@@ -52,6 +52,9 @@ class _ChecklistsTabState extends ConsumerState<ChecklistsTab> {
     final vappStr = simbriefLoaded
         ? '${landingSpeeds.vapp.round()} KT'
         : 'VAPP';
+    final vttStr = simbriefLoaded
+        ? '${landingSpeeds.vtt.round()} KT'
+        : 'VTT';
     final vSpeedsStr = simbriefLoaded
         ? 'V1:${takeoffSpeeds.v1.round()} VR:${takeoffSpeeds.vr.round()} '
               'V2:${takeoffSpeeds.v2.round()}'
@@ -60,6 +63,7 @@ class _ChecklistsTabState extends ConsumerState<ChecklistsTab> {
     final checklistData = buildChecklistData(
       vSpeedsStr: vSpeedsStr,
       vappStr: vappStr,
+      vttStr: vttStr,
     );
     final currentItems = checklistData[selectedChecklistPhase] ?? [];
 

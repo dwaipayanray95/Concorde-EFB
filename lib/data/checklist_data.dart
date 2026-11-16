@@ -17,12 +17,13 @@ const List<ChecklistPhase> checklistPhases = [
   ChecklistPhase(id: 'landing', name: 'Landing'),
 ];
 
-/// Builds the per-phase checklist item lists. [vSpeedsStr] and [vappStr] are
-/// derived from live SimBrief/performance data, so this can't be a plain
-/// const map — the FMC steps need to show the actual V-speeds once known.
+/// Builds the per-phase checklist item lists. [vSpeedsStr], [vappStr], and
+/// [vttStr] are derived from live SimBrief/performance data, so this can't be
+/// a plain const map — the FMC steps need to show the actual V-speeds once known.
 Map<String, List<ChecklistItem>> buildChecklistData({
   required String vSpeedsStr,
   required String vappStr,
+  String vttStr = 'VTT',
 }) {
   return {
     'cold_dark': [
@@ -250,6 +251,7 @@ Map<String, List<ChecklistItem>> buildChecklistData({
         id: 'ap_speed',
         item: 'Approach Speed',
         status: 'SET $vappStr',
+        note: 'Hold $vappStr to 800 FT, then decelerate to VTT ($vttStr)',
       ),
       ChecklistItem(
         id: 'ap_visor',

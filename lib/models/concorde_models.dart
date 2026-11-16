@@ -202,12 +202,20 @@ class TakeoffSpeeds {
 }
 
 class LandingSpeeds {
-  /// Reference landing speed at the threshold.
+  /// Reference landing speed at the threshold (zero-wind datum).
   final double vref;
 
-  /// Approach speed: VREF + wind/gust additive.
+  /// Target Threshold Speed over the numbers (50 ft RA): VREF + 7 kt + wind/gust additive.
+  final double vtt;
+
+  /// Fixed intermediate approach speed down to 800 ft RA (190 kt IAS).
   final double vapp;
-  const LandingSpeeds({required this.vref, required this.vapp});
+
+  const LandingSpeeds({
+    required this.vref,
+    required this.vtt,
+    required this.vapp,
+  });
 }
 
 /// Fuel endurance vs requirement, both burned at realistic rates: trip

@@ -31,6 +31,18 @@ class _Speeds {
 
   /// Maximum landing-gear extended speed (kt IAS).
   final double vleKt = 270;
+
+  /// Concorde datum landing reference speed at MLW (111,130 kg) with zero wind.
+  /// Source: BAC/Aérospatiale Concorde Flight Operations Manual / BA Flying Manual
+  /// (~162 kt at MLW down to ~150 kt at 96 t).
+  final double vrefAtMlwKt = 162.0;
+
+  /// Standard fixed glideslope / intermediate approach speed down to 800 ft RA.
+  /// Source: Concorde Flying Manual normal RNA approach procedures (190 KIAS).
+  final double fixedVappKt = 190.0;
+
+  /// Standard target threshold speed increment above VREF (VTT = VREF + 7 kt + wind).
+  final double vttAdditiveKt = 7.0;
 }
 
 class _Fuel {

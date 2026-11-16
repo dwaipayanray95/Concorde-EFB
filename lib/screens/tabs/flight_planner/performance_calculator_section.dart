@@ -76,8 +76,9 @@ class _PerformanceCalculatorSectionState
           weightKg: ref.watch(weightsProvider).lw,
           weightLabel: 'LW',
           speeds: {
-            'VREF': ref.watch(landingSpeedsProvider).vref,
             'VAPP': ref.watch(landingSpeedsProvider).vapp,
+            'VTT': ref.watch(landingSpeedsProvider).vtt,
+            'VREF': ref.watch(landingSpeedsProvider).vref,
           },
           conditionMode: ref.watch(arrivalRunwayConditionProvider),
           onConditionChanged: (m) =>

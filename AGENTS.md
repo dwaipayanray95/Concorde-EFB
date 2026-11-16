@@ -14,7 +14,7 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `5.27.0+108` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+- Current version: `5.28.0+109` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
   `public/changelog/entries.json` in sync — README no longer carries its own changelog, it just
   links to that page.
 - **Versioning rule (mandatory for every agent):** every change that alters user-visible behavior
@@ -90,9 +90,11 @@ the sim this app targets) gives a number, it wins; the code comments cite it. Co
   wind ((V-w)/V)^2 with w = 50% headwind / 150% tailwind (CS-25.105), surface (wet x1.15, contaminated
   x1.30 takeoff / x1.40 landing). MARGINAL caution when < 15% spare (CS-25.113). Hard limits: 30 kt crosswind (gust-inclusive), 10 kt tailwind
   (gust-inclusive), airfield altitude; VRB wind = worst case; missing wind is flagged, not calm.
-- Speeds (DC manual): V1/VR/V2 = 170/190/220 kt at MTOW scaled by sqrt(W/MTOW) (V1 -8 wet / -15
-  contaminated); VREF 195 kt at MLW scaled by sqrt(W/MLW) (manual approach range 150-207 kt);
-  VAPP = VREF + clamp(half headwind + gust, 5..20).
+- Speeds: V1/VR/V2 = 170/190/220 kt at MTOW scaled by sqrt(W/MTOW) (V1 -8 wet / -15
+  contaminated); VREF 162 kt at MLW scaled by sqrt(W/MLW) (Concorde Flying Manual datum
+  tables: ~150 kt at 96 t up to 162 kt at MLW); VTT = VREF + 7 kt + clamp(half headwind + gust, 0..10)
+  (Target Threshold Speed across the numbers); VAPP = fixed 190 kt (standard intermediate
+  approach speed down to 800 ft RA).
 - CG (DC manual p.78 chart, `lib/core/live_flight_math.dart`): fwd/aft limits and ideal CG vs Mach
   (ideal ~53.5 % subsonic, 55 % at M0.95, 59 % at M2). Max taxi weight 187,000 kg.
 - NOT in the DC manual (kept from the BA Flying Manual / estimates): 30 kt crosswind, 10 kt
