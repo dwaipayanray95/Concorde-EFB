@@ -85,6 +85,13 @@ void main() {
         expect(find.text('PC ADDRESS'), findsOneWidget);
         expect(find.text('PAIRING CODE'), findsOneWidget);
         expect(find.text('CONNECT'), findsOneWidget);
+
+        final helpIcon = find.byIcon(Icons.help_outline_rounded);
+        expect(helpIcon, findsOneWidget);
+        final tooltip = tester.widget<Tooltip>(
+          find.ancestor(of: helpIcon, matching: find.byType(Tooltip)),
+        );
+        expect(tooltip.message, contains('STEPS TO CONNECT'));
       } finally {
         debugDefaultTargetPlatformOverride = null;
       }

@@ -23,11 +23,17 @@ class WifiLinkCard extends ConsumerWidget {
   }
 }
 
-Widget _title(BuildContext context, String text, IconData icon) {
+Widget _title(
+  BuildContext context,
+  String text,
+  IconData icon, {
+  String? helpTooltip,
+  Widget? trailing,
+}) {
   final colors = context.colors;
   return Row(
     children: [
-      Icon(icon, size: 15, color: colors.accent),
+      Icon(icon, size: 14, color: colors.accent),
       const SizedBox(width: 8),
       Text(
         text,
@@ -39,6 +45,47 @@ Widget _title(BuildContext context, String text, IconData icon) {
           letterSpacing: 1.2,
         ),
       ),
+      if (helpTooltip != null) ...[
+        const SizedBox(width: 6),
+        Tooltip(
+          message: helpTooltip,
+          triggerMode: TooltipTriggerMode.tap,
+          preferBelow: true,
+          waitDuration: const Duration(milliseconds: 100),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          textStyle: uiText(
+            context,
+            size: 10.5,
+            weight: FontWeight.w600,
+            color: colors.textPrimary,
+            height: 1.4,
+          ),
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: colors.dividerStrong, width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.4),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: MouseRegion(
+            cursor: SystemMouseCursors.help,
+            child: Icon(
+              Icons.help_outline_rounded,
+              size: 14,
+              color: colors.accent,
+            ),
+          ),
+        ),
+      ],
+      if (trailing != null) ...[
+        const Spacer(),
+        trailing,
+      ],
     ],
   );
 }
@@ -100,9 +147,10 @@ class _DesktopShare extends ConsumerWidget {
         : '------';
 
     return EfbFlatCard(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
@@ -111,6 +159,12 @@ class _DesktopShare extends ConsumerWidget {
                   context,
                   'SHARE TO PHONE / TABLET / MAC',
                   Icons.wifi_tethering,
+                  helpTooltip:
+                      'HOW TO SHARE:\n'
+                      '1. Turn on sharing to broadcast live sim data over Wi-Fi.\n'
+                      '2. On your phone, tablet, or Mac, open Concorde EFB > MONITOR.\n'
+                      '3. Enter this PC address and pairing code.\n'
+                      '4. Allow msfs_bridge on Private networks if prompted.',
                 ),
               ),
               Switch(
@@ -124,8 +178,7 @@ class _DesktopShare extends ConsumerWidget {
           if (!share.enabled)
             _note(
               context,
-              'Turn on to show this Flight Monitor live on the Concorde EFB '
-              'app on your phone, tablet, or Mac (same Wi-Fi network).',
+              'Turn on to stream live Flight Monitor data to your phone, tablet, or Mac (same Wi-Fi).',
             )
           else ...[
             const SizedBox(height: 6),
@@ -156,14 +209,12 @@ class _DesktopShare extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             _note(
               context,
-              'On the other device (phone, tablet, or Mac) open MONITOR -- '
-              'this PC should appear automatically; enter the pairing code. '
-              'If Windows asks about msfs_bridge, allow it on Private networks.',
+              'Open MONITOR on your other device and enter the pairing code above.',
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             // Android app is in internal testing -- opens the join steps.
             Align(
               alignment: Alignment.centerLeft,
@@ -232,7 +283,7 @@ class _RemoteLinkState extends ConsumerState<_RemoteLink> {
               colors.accent,
             );
       return EfbFlatCard(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         child: Row(
           children: [
             Icon(Icons.wifi, size: 16, color: color),
@@ -275,36 +326,71 @@ class _RemoteLinkState extends ConsumerState<_RemoteLink> {
         _host.trim().isNotEmpty && RegExp(r'^\d{6}$').hasMatch(_code.trim());
 
     return EfbFlatCard(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          _title(context, 'CONNECT TO YOUR SIM PC', Icons.wifi_find),
-          const SizedBox(height: 6),
-          _note(
+          _title(
             context,
-            'Live sim data comes from the Concorde EFB app on the PC '
-            'running MSFS. On the PC open MONITOR, turn on "Share to phone / '
-            'tablet / Mac", then enter its pairing code here. Both devices '
-            'must be on the same Wi-Fi.',
+            'CONNECT TO YOUR SIM PC',
+            Icons.wifi_find,
+            helpTooltip:
+                'STEPS TO CONNECT:\n'
+                '1. On your Windows PC running MSFS, open Concorde EFB.\n'
+                '2. Go to MONITOR tab and turn on "Share".\n'
+                '3. Both devices must be on the same Wi-Fi network.\n'
+                '4. Enter the PC address and 6-digit pairing code here.',
+            trailing: found.isEmpty
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 9,
+                        height: 9,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.5,
+                          color: colors.accent,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'SEARCHING LAN…',
+                        style: uiText(
+                          context,
+                          size: 9.5,
+                          weight: FontWeight.w700,
+                          color: colors.textDim,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ],
+                  )
+                : null,
           ),
-          const SizedBox(height: 12),
-          if (found.isEmpty)
-            _note(context, 'Searching for PCs on this network...')
-          else
+          if (found.isNotEmpty) ...[
+            const SizedBox(height: 8),
             Wrap(
               spacing: 8,
-              runSpacing: 8,
+              runSpacing: 6,
               children: [
                 for (final b in found)
                   ChoiceChip(
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     label: Text(
                       '${b.name}  ${b.ip}',
                       style: uiText(
                         context,
-                        size: 11,
+                        size: 10.5,
                         weight: FontWeight.w800,
-                        color: colors.textPrimary,
+                        color: _host == b.ip
+                            ? AppColors.dark.bg
+                            : colors.textPrimary,
                       ),
                     ),
                     selected: _host == b.ip,
@@ -313,7 +399,8 @@ class _RemoteLinkState extends ConsumerState<_RemoteLink> {
                   ),
               ],
             ),
-          const SizedBox(height: 12),
+          ],
+          const SizedBox(height: 8),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -328,10 +415,11 @@ class _RemoteLinkState extends ConsumerState<_RemoteLink> {
                   onChanged: (v) => _host = v,
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
                 flex: 2,
                 child: EfbTextField(
+                  key: ValueKey('code-$_code'),
                   label: 'PAIRING CODE',
                   initialValue: _code,
                   placeholder: '6 digits',
@@ -340,7 +428,7 @@ class _RemoteLinkState extends ConsumerState<_RemoteLink> {
                       setState(() => _code = v.replaceAll(RegExp(r'\D'), '')),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               SizedBox(
                 height: 48,
                 child: ElevatedButton(
@@ -348,6 +436,7 @@ class _RemoteLinkState extends ConsumerState<_RemoteLink> {
                     backgroundColor: colors.accent,
                     foregroundColor: AppColors.dark.bg,
                     disabledBackgroundColor: colors.dividerStrong,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                   ),
                   onPressed: canConnect
                       ? () async {
@@ -368,29 +457,29 @@ class _RemoteLinkState extends ConsumerState<_RemoteLink> {
                   ),
                 ),
               ),
-            ],
-          ),
-          if (_editing && remote.isConfigured) ...[
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton(
-                onPressed: () async {
-                  await ref.read(remoteBridgeProvider.notifier).forget();
-                  if (mounted) setState(() => _editing = false);
-                },
-                child: Text(
-                  'FORGET THIS PC',
-                  style: uiText(
-                    context,
-                    size: 10,
-                    weight: FontWeight.w800,
-                    color: colors.error,
+              if (_editing && remote.isConfigured) ...[
+                const SizedBox(width: 8),
+                SizedBox(
+                  height: 48,
+                  child: TextButton(
+                    onPressed: () async {
+                      await ref.read(remoteBridgeProvider.notifier).forget();
+                      if (mounted) setState(() => _editing = false);
+                    },
+                    child: Text(
+                      'FORGET',
+                      style: uiText(
+                        context,
+                        size: 10,
+                        weight: FontWeight.w800,
+                        color: colors.error,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-          ],
+              ],
+            ],
+          ),
         ],
       ),
     );
