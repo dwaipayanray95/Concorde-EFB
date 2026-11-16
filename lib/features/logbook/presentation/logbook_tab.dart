@@ -20,6 +20,10 @@ import '../../flight_monitor/data/services/lan_link.dart';
 import 'logbook_format.dart';
 import 'logbook_providers.dart';
 import 'widgets/flight_sparkline.dart';
+import 'widgets/flight_profile_chart.dart';
+import 'widgets/cg_corridor_chart.dart';
+import 'widgets/runway_performance_card.dart';
+import 'widgets/acars_fuel_release.dart';
 
 bool get _isRemoteClient => isRemoteClientPlatform;
 bool get _isPhone => isMobilePlatform;
@@ -1362,16 +1366,6 @@ class _LogDetailScreenState extends ConsumerState<LogDetailScreen> {
         '${log.callSign.isEmpty ? 'FLIGHT' : log.callSign} · '
         '${_route(log)}';
 
-    final cards = <Widget>[
-      _oooi(context, log),
-      _landing(context, log),
-      if (log.perf.isNotEmpty) _performance(context, log),
-      _fuel(context, log),
-      _weights(context, log),
-      _flight(context, log),
-      if (log.alerts.isNotEmpty) _alerts(context, log),
-    ];
-
     return Scaffold(
       backgroundColor: colors.bg,
       body: SafeArea(
@@ -1414,25 +1408,27 @@ class _LogDetailScreenState extends ConsumerState<LogDetailScreen> {
             Expanded(
               child: LayoutBuilder(
                 builder: (context, c) {
-                  final wide = c.maxWidth >= 900;
+                  final wide = c.maxWidth >= 850;
+
                   final notes = EfbCard(
-                    title: 'NOTES',
+                    title: 'PILOT DEBRIEF & NOTES',
                     child: EfbTextField(
                       label: 'Notes',
                       showLabel: false,
-                      placeholder: 'Notes',
+                      placeholder: 'Enter debrief, VATSIM ATC remarks, or flight notes...',
                       initialValue: log.notes,
                       keyboardType: TextInputType.multiline,
                       onChanged: _onNotes,
                     ),
                   );
+
                   final delete = Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: [
                       _ToolButton(
                         icon: Icons.data_object,
-                        label: 'EXPORT FLIGHT DATA',
+                        label: 'EXPORT FLIGHT DATA (JSON)',
                         onTap: () => _exportText(
                           context,
                           'json',
@@ -1442,41 +1438,74 @@ class _LogDetailScreenState extends ConsumerState<LogDetailScreen> {
                       ),
                       _ToolButton(
                         icon: Icons.delete_outline,
-                        label: 'DELETE',
+                        label: 'DELETE FLIGHT',
                         onTap: _confirmDelete,
                       ),
                     ],
                   );
-                  Widget col(List<Widget> w) => Column(
-                    children: [
-                      for (final x in w) ...[x, const SizedBox(height: 12)],
-                    ],
-                  );
+
                   return ListView(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                     children: [
+                      // 1. Hero Mission Summary & OOOI Header
+                      _heroHeader(context, log),
+                      const SizedBox(height: 12),
+
+                      // 2. Interactive Dual-Axis Flight Profile Canvas
+                      FlightProfileChart(log: log),
+                      const SizedBox(height: 12),
+
+                      // 3. Secondary Telemetry Grid: CG Corridor & Runway Rollout
                       if (wide)
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: col([
-                                for (var i = 0; i < cards.length; i += 2)
-                                  cards[i],
-                              ]),
-                            ),
+                            Expanded(child: CgCorridorChart(log: log)),
+                            const SizedBox(width: 12),
+                            Expanded(child: RunwayPerformanceCard(log: log)),
+                          ],
+                        )
+                      else ...[
+                        CgCorridorChart(log: log),
+                        const SizedBox(height: 12),
+                        RunwayPerformanceCard(log: log),
+                      ],
+                      const SizedBox(height: 12),
+
+                      // 4. Fuel & Dispatch Grid
+                      if (wide)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: AcarsFuelReleaseStrip(log: log)),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: col([
-                                for (var i = 1; i < cards.length; i += 2)
-                                  cards[i],
-                                notes,
-                              ]),
+                              child: Column(
+                                children: [
+                                  _weights(context, log),
+                                  const SizedBox(height: 12),
+                                  _flight(context, log),
+                                ],
+                              ),
                             ),
                           ],
                         )
-                      else
-                        col([...cards, notes]),
+                      else ...[
+                        AcarsFuelReleaseStrip(log: log),
+                        const SizedBox(height: 12),
+                        _weights(context, log),
+                        const SizedBox(height: 12),
+                        _flight(context, log),
+                      ],
+                      const SizedBox(height: 12),
+
+                      // 5. Alerts, Notes & Delete Actions
+                      if (log.alerts.isNotEmpty) ...[
+                        _alerts(context, log),
+                        const SizedBox(height: 12),
+                      ],
+                      notes,
+                      const SizedBox(height: 12),
                       delete,
                     ],
                   );
@@ -1485,6 +1514,137 @@ class _LogDetailScreenState extends ConsumerState<LogDetailScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _heroHeader(BuildContext context, FlightLog log) {
+    final colors = context.colors;
+    final r = log.landingRating;
+    final isSupersonic = log.maxMach >= 1.0 || log.supersonicSec > 0;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.dividerStrong.withValues(alpha: 0.5)),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          log.callSign.isEmpty ? 'SPEEDBIRD' : log.callSign,
+                          style: uiText(
+                            context,
+                            size: 18,
+                            weight: FontWeight.w900,
+                            color: colors.textPrimary,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                        if (isSupersonic) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.accent.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: colors.accent.withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Text(
+                              'SUPERSONIC',
+                              style: uiText(
+                                context,
+                                size: 9,
+                                weight: FontWeight.w900,
+                                color: colors.accent,
+                              ),
+                            ),
+                          ),
+                        ],
+                        if (log.registration.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            'REG: ${log.registration}',
+                            style: uiText(
+                              context,
+                              size: 11,
+                              weight: FontWeight.w700,
+                              color: colors.textDim,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _route(log),
+                      style: uiText(
+                        context,
+                        size: 12,
+                        weight: FontWeight.w700,
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (r != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: ratingColor(colors, r).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: ratingColor(colors, r).withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        r.label,
+                        style: uiText(
+                          context,
+                          size: 13,
+                          weight: FontWeight.w900,
+                          color: ratingColor(colors, r),
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                      if (log.touchdownFpm != null)
+                        Text(
+                          '${fpmText(log.touchdownFpm!)}${log.touchdownG != null ? ' · ${log.touchdownG!.toStringAsFixed(2)}G' : ''}',
+                          style: uiText(
+                            context,
+                            size: 9,
+                            weight: FontWeight.w700,
+                            color: ratingColor(colors, r),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          _oooi(context, log),
+        ],
       ),
     );
   }
@@ -1578,41 +1738,6 @@ class _LogDetailScreenState extends ConsumerState<LogDetailScreen> {
     );
   }
 
-  Widget _fuel(BuildContext context, FlightLog l) {
-    final colors = context.colors;
-    final actualTrip = (l.fuelTakeoffKg != null && l.fuelLandingKg != null)
-        ? l.fuelTakeoffKg! - l.fuelLandingKg!
-        : null;
-    final margin = l.fuelLandingKg == null
-        ? null
-        : l.fuelLandingKg! - l.finalReserveKg;
-    return EfbCard(
-      title: 'FUEL',
-      child: Column(
-        children: [
-          _kv(context, 'BLOCK OUT', _kg(l.fuelBlockOutKg)),
-          _kv(context, 'TAKEOFF', _kg(l.fuelTakeoffKg)),
-          _kv(context, 'LANDING', _kg(l.fuelLandingKg)),
-          _kv(context, 'BLOCK IN', _kg(l.fuelBlockInKg)),
-          _kv(context, 'BURNED', _kg(l.fuelBurnedKg)),
-          _kv(context, 'TRIP PLANNED', _kg(l.plannedTripKg)),
-          _kv(context, 'TRIP ACTUAL', _kg(actualTrip)),
-          _kv(
-            context,
-            'LANDING VS FINAL RESERVE',
-            margin == null
-                ? '--'
-                : '${margin >= 0 ? '+' : '−'}'
-                      '${numFormat.format(margin.abs().round())} KG',
-            color: margin == null
-                ? null
-                : (margin >= 0 ? colors.success : colors.error),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _weights(BuildContext context, FlightLog l) => EfbCard(
     title: 'WEIGHTS',
     child: Column(
@@ -1623,131 +1748,6 @@ class _LogDetailScreenState extends ConsumerState<LogDetailScreen> {
       ],
     ),
   );
-
-  Widget _landing(BuildContext context, FlightLog l) {
-    final colors = context.colors;
-    final r = l.landingRating;
-    return EfbCard(
-      title: 'LANDING',
-      child: Column(
-        children: [
-          if (r != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  r.label,
-                  style: uiText(
-                    context,
-                    size: 26,
-                    weight: FontWeight.w900,
-                    color: ratingColor(colors, r),
-                    letterSpacing: 1,
-                  ),
-                ),
-              ),
-            ),
-          _kv(
-            context,
-            'RATE OF DESCENT',
-            l.touchdownFpm == null ? '--' : fpmText(l.touchdownFpm!),
-          ),
-          _kv(
-            context,
-            'VERTICAL G',
-            l.touchdownG == null
-                ? '--'
-                : '${l.touchdownG!.toStringAsFixed(2)} G',
-          ),
-          _kv(
-            context,
-            'PITCH',
-            l.touchdownPitch == null
-                ? '--'
-                : '${l.touchdownPitch!.toStringAsFixed(1)}°',
-          ),
-          _kv(
-            context,
-            'IAS',
-            l.touchdownIas == null ? '--' : '${l.touchdownIas!.round()} KT',
-          ),
-          _kv(context, 'BOUNCES', '${l.bounces}'),
-          if (l.goArounds > 0) _kv(context, 'GO-AROUNDS', '${l.goArounds}'),
-        ],
-      ),
-    );
-  }
-
-  /// Measured takeoff / landing roll vs the planner's prediction.
-  Widget _performance(BuildContext context, FlightLog l) {
-    final colors = context.colors;
-    String m(Object? v) => v is num ? '${numFormat.format(v.round())} M' : '--';
-    double? n(Object? v) => (v as num?)?.toDouble();
-
-    List<Widget> leg(String label, Map<String, dynamic>? p, String rollKey) {
-      if (p == null) return const [];
-      final plan = (p['plan'] as Map?)?.cast<String, dynamic>() ?? const {};
-      final actual = n(p[rollKey]);
-      final predicted = n(plan['requiredM']);
-      final diff = (actual != null && predicted != null && predicted > 0)
-          ? (actual - predicted) / predicted * 100
-          : null;
-      final rwy = plan['runway'] == null
-          ? ''
-          : ' · ${plan['icao'] ?? ''} ${plan['runway']}';
-      return [
-        Padding(
-          padding: const EdgeInsets.only(top: 4, bottom: 2),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              '$label$rwy',
-              style: uiText(
-                context,
-                size: 11,
-                weight: FontWeight.w900,
-                color: colors.accent,
-                letterSpacing: 0.8,
-              ),
-            ),
-          ),
-        ),
-        _kv(context, 'PREDICTED', m(predicted)),
-        _kv(context, 'MEASURED', m(actual)),
-        _kv(
-          context,
-          'DIFFERENCE',
-          diff == null ? '--' : '${diff >= 0 ? '+' : ''}${diff.round()}%',
-          color: diff == null
-              ? null
-              : (diff > 0 ? colors.mvfr : colors.success),
-        ),
-        _kv(context, 'RUNWAY', m(plan['runwayLengthM'])),
-      ];
-    }
-
-    final to = l.takeoffPerf;
-    final ld = l.landingPerf;
-    return EfbCard(
-      title: 'PERFORMANCE',
-      child: Column(
-        children: [
-          ...leg('TAKEOFF ROLL', to, 'rollM'),
-          if (to != null)
-            _kv(
-              context,
-              'LIFT-OFF',
-              n(to['liftoffIas']) == null
-                  ? '--'
-                  : '${n(to['liftoffIas'])!.round()} KT IAS · '
-                        '${(n(to['liftoffGs']) ?? 0).round()} KT GS',
-            ),
-          ...leg('LANDING ROLL (TO 30 KT)', ld, 'rollToExitM'),
-        ],
-      ),
-    );
-  }
 
   Widget _flight(BuildContext context, FlightLog l) => EfbCard(
     title: 'FLIGHT',
