@@ -1,5 +1,14 @@
 [
     {
+        "date": "2026-11-16",
+        "title": "v5.25.0 \u2014 Wi-Fi telemetry and logbook sync for Mac devices",
+        "items": [
+            "Flight Monitor: Mac devices can now connect to your Windows sim PC over Wi-Fi, entering the 6-digit pairing code or picking up auto-discovered PCs on the local network",
+            "Live telemetry streams in real time to Concorde EFB on macOS (PFD, engine readouts, fuel tanks, CG, and landing ratings)",
+            "Logbook: Mac devices automatically mirror flight logs from the sim PC over the local bridge connection and sync edits back"
+        ]
+    },
+    {
         "date": "2026-11-05",
         "title": "v5.24.0 \u2014 Physics-based runway distances and takeoff/landing measurement",
         "items": [
