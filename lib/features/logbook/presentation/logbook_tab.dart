@@ -15,9 +15,11 @@ import '../../../widgets/efb_text_field.dart';
 import '../data/flight_log.dart';
 import '../data/logbook_repository.dart';
 import '../data/logbook_sync.dart';
+import '../domain/landing_rating.dart';
 import '../../flight_monitor/data/services/lan_link.dart';
 import 'logbook_format.dart';
 import 'logbook_providers.dart';
+import 'widgets/flight_sparkline.dart';
 
 bool get _isRemoteClient => isRemoteClientPlatform;
 bool get _isPhone => isMobilePlatform;
@@ -28,33 +30,88 @@ String _route(FlightLog l) {
   return '${dep.isEmpty ? '----' : dep} → ${arr.isEmpty ? '----' : arr}';
 }
 
-/// LOG tab: totals, export, flight list.
-class LogbookTab extends ConsumerWidget {
+enum _FilterMode { all, supersonic, butterSmooth, firm }
+
+/// LOG tab: Pilot career dossier, butter landing distribution, search/filters,
+/// and avionics flight cards with embedded vector profile sparklines.
+class LogbookTab extends ConsumerStatefulWidget {
   const LogbookTab({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LogbookTab> createState() => _LogbookTabState();
+}
+
+class _LogbookTabState extends ConsumerState<LogbookTab> {
+  String _searchQuery = '';
+  _FilterMode _filterMode = _FilterMode.all;
+  final TextEditingController _searchCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final colors = context.colors;
     final async = ref.watch(logbookProvider);
-    final logs = [...?async.value]
+    final allLogs = [...?async.value]
       ..sort((a, b) => b.blockOut.compareTo(a.blockOut));
+
+    // Filter by search query & category
+    final filteredLogs = allLogs.where((l) {
+      if (_searchQuery.isNotEmpty) {
+        final q = _searchQuery.toLowerCase();
+        final dep = (l.actualDep ?? l.plannedDep).toLowerCase();
+        final arr = (l.actualArr ?? l.plannedArr).toLowerCase();
+        final cs = l.callSign.toLowerCase();
+        final reg = l.registration.toLowerCase();
+        final notes = l.notes.toLowerCase();
+        if (!dep.contains(q) &&
+            !arr.contains(q) &&
+            !cs.contains(q) &&
+            !reg.contains(q) &&
+            !notes.contains(q)) {
+          return false;
+        }
+      }
+      switch (_filterMode) {
+        case _FilterMode.all:
+          return true;
+        case _FilterMode.supersonic:
+          return l.maxMach >= 1.0 || l.supersonicSec > 0;
+        case _FilterMode.butterSmooth:
+          final r = l.landingRating;
+          return r == LandingRating.butter || r == LandingRating.smooth;
+        case _FilterMode.firm:
+          return l.landingRating == LandingRating.firm;
+      }
+    }).toList();
 
     return ListView(
       physics: const BouncingScrollPhysics(),
       children: [
         if (_isRemoteClient) ...[const _SyncLine(), const SizedBox(height: 8)],
-        _Totals(logs: logs),
+        _CareerDossier(logs: allLogs),
         const SizedBox(height: 12),
-        _Toolbar(logs: logs),
+        _LogbookToolbar(
+          logs: allLogs,
+          filteredCount: filteredLogs.length,
+          searchCtrl: _searchCtrl,
+          activeFilter: _filterMode,
+          onSearchChanged: (v) => setState(() => _searchQuery = v.trim()),
+          onFilterChanged: (m) => setState(() => _filterMode = m),
+        ),
         const SizedBox(height: 12),
-        if (async.isLoading && logs.isEmpty)
+        if (async.isLoading && allLogs.isEmpty)
           const Padding(
             padding: EdgeInsets.all(32),
             child: Center(child: CircularProgressIndicator()),
           )
-        else if (logs.isEmpty)
+        else if (allLogs.isEmpty)
           EfbFlatCard(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(28),
             child: Text(
               _isRemoteClient
                   ? 'Flights are logged by the Concorde EFB app on your sim PC and '
@@ -65,17 +122,23 @@ class LogbookTab extends ConsumerWidget {
               style: uiText(context, size: 13, color: colors.textSecondary),
             ),
           )
-        else
+        else if (filteredLogs.isEmpty)
           EfbFlatCard(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Column(
-              children: [
-                for (var i = 0; i < logs.length; i++) ...[
-                  if (i > 0) Divider(height: 1, color: colors.divider),
-                  _LogRow(log: logs[i]),
-                ],
-              ],
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              'No flights match the current search / filter criteria.',
+              textAlign: TextAlign.center,
+              style: uiText(context, size: 12, color: colors.textSecondary),
             ),
+          )
+        else
+          Column(
+            children: [
+              for (var i = 0; i < filteredLogs.length; i++) ...[
+                if (i > 0) const SizedBox(height: 8),
+                _AvionicsFlightCard(log: filteredLogs[i]),
+              ],
+            ],
           ),
       ],
     );
@@ -105,89 +168,1069 @@ class _SyncLine extends ConsumerWidget {
   }
 }
 
-class _Totals extends StatelessWidget {
+/// Flight Deck Career Dossier: comprehensive pilot stats, supersonic ratio gauge,
+/// and butter landing distribution histogram.
+class _CareerDossier extends StatelessWidget {
   final List<FlightLog> logs;
-  const _Totals({required this.logs});
+  const _CareerDossier({required this.logs});
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    var block = Duration.zero;
-    var ss = 0.0;
+    var totalBlock = Duration.zero;
+    var totalSupersonicSec = 0.0;
+    var totalDistanceNm = 0.0;
+    var maxMachAll = 0.0;
+
     for (final l in logs) {
-      block += l.blockTime ?? Duration.zero;
-      ss += l.supersonicSec;
+      totalBlock += l.blockTime ?? Duration.zero;
+      totalSupersonicSec += l.supersonicSec;
+      totalDistanceNm += l.distanceNm;
+      if (l.maxMach > maxMachAll) maxMachAll = l.maxMach;
     }
+
     final landed = logs
         .where((l) => l.touchdown != null && l.touchdownFpm != null)
         .toList();
-    FlightLog? best;
+
+    FlightLog? bestTouchdown;
     for (final l in landed) {
-      if (best == null || l.touchdownFpm!.abs() < best.touchdownFpm!.abs()) {
-        best = l;
+      if (bestTouchdown == null ||
+          l.touchdownFpm!.abs() < bestTouchdown.touchdownFpm!.abs()) {
+        bestTouchdown = l;
       }
     }
-    final avg = landed.isEmpty
+
+    final avgLandingFpm = landed.isEmpty
         ? null
         : landed.fold<double>(0, (s, l) => s + l.touchdownFpm!.abs()) /
               landed.length;
 
-    Widget stat(String label, String value, [String? sub]) => Expanded(
+    final totalBlockSec = totalBlock.inSeconds;
+    final ssRatio = totalBlockSec > 0
+        ? (totalSupersonicSec / totalBlockSec).clamp(0.0, 1.0)
+        : 0.0;
+
+    // Butter distribution counts
+    final butter = landed
+        .where((l) => l.landingRating == LandingRating.butter)
+        .length;
+    final smooth = landed
+        .where((l) => l.landingRating == LandingRating.smooth)
+        .length;
+    final firm = landed.where((l) => l.landingRating == LandingRating.firm).length;
+    final hard = landed.where((l) => l.landingRating == LandingRating.hard).length;
+    final insp = landed
+        .where((l) => l.landingRating == LandingRating.inspection)
+        .length;
+
+    final avgBlock = logs.isEmpty
+        ? Duration.zero
+        : Duration(seconds: totalBlockSec ~/ logs.length);
+
+    return EfbFlatCard(
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: uiText(
-              context,
-              size: 9,
-              weight: FontWeight.w800,
-              color: colors.textDim,
-              letterSpacing: 1,
-            ),
-          ),
-          const SizedBox(height: 4),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              value,
-              maxLines: 1,
-              style: uiText(
-                context,
-                size: 18,
-                weight: FontWeight.w800,
-                color: colors.textPrimary,
+          // Header Bar
+          Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: colors.accent,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: colors.accent.withValues(alpha: 0.5),
+                      blurRadius: 6,
+                    ),
+                  ],
+                ),
               ),
-            ),
+              const SizedBox(width: 8),
+              Text(
+                'FLIGHT DECK CAREER DOSSIER',
+                style: uiText(
+                  context,
+                  size: 11,
+                  weight: FontWeight.w900,
+                  color: colors.accent,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                'DC DESIGNS CONCORDE',
+                style: uiText(
+                  context,
+                  size: 10,
+                  weight: FontWeight.w700,
+                  color: colors.textDim,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
           ),
-          if (sub != null)
-            Text(
-              sub,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: uiText(context, size: 9, color: colors.textDim),
-            ),
+          const SizedBox(height: 12),
+          Divider(
+            height: 1,
+            color: colors.dividerStrong.withValues(alpha: 0.4),
+          ),
+          const SizedBox(height: 12),
+
+          // 6 KPI Metric Cards
+          LayoutBuilder(
+            builder: (context, c) {
+              final wide = c.maxWidth >= 720;
+              final mid = c.maxWidth >= 480;
+
+              Widget tile(
+                String label,
+                String val,
+                String sub, {
+                Color? valColor,
+                Color? subColor,
+              }) => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: colors.resultsBg,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: colors.dividerStrong.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: uiText(
+                        context,
+                        size: 9,
+                        weight: FontWeight.w800,
+                        color: colors.textDim,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        val,
+                        style: uiText(
+                          context,
+                          size: 16,
+                          weight: FontWeight.w900,
+                          color: valColor ?? colors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      sub,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: uiText(
+                        context,
+                        size: 9,
+                        weight: FontWeight.w700,
+                        color: subColor ?? colors.textDim,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+
+              final tiles = [
+                tile(
+                  'FLIGHTS',
+                  '${logs.length}',
+                  '100% DISPATCH',
+                  subColor: colors.success,
+                ),
+                tile(
+                  'BLOCK HOURS',
+                  hm(totalBlock),
+                  'AVG ${hm(avgBlock)} / FLT',
+                ),
+                tile(
+                  'SUPERSONIC',
+                  hm(Duration(seconds: totalSupersonicSec.round())),
+                  '${(ssRatio * 100).round()}% OF CRUISE',
+                  valColor: colors.accent,
+                  subColor: colors.accent,
+                ),
+                tile(
+                  'AVG LANDING',
+                  avgLandingFpm == null
+                      ? '--'
+                      : '${avgLandingFpm.round()} FPM',
+                  avgLandingFpm != null ? 'RATE OF DESCENT' : 'NIL',
+                  valColor: colors.success,
+                ),
+                tile(
+                  'BEST LANDING',
+                  bestTouchdown == null
+                      ? '--'
+                      : '${bestTouchdown.touchdownFpm!.abs().round()} FPM',
+                  bestTouchdown != null
+                      ? '${bestTouchdown.touchdownG?.toStringAsFixed(2) ?? '1.0'} G · ${dateText(bestTouchdown.blockOut)}'
+                      : 'NIL',
+                  valColor: colors.success,
+                  subColor: colors.success,
+                ),
+                tile(
+                  'DISTANCE FLOWN',
+                  '${numFormat.format(totalDistanceNm.round())} NM',
+                  '${(totalDistanceNm / 21600).toStringAsFixed(1)}× GLOBE',
+                ),
+              ];
+
+              if (wide) {
+                return Row(
+                  children: [
+                    for (var i = 0; i < tiles.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 8),
+                      Expanded(child: tiles[i]),
+                    ],
+                  ],
+                );
+              } else if (mid) {
+                return Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(child: tiles[0]),
+                        const SizedBox(width: 8),
+                        Expanded(child: tiles[1]),
+                        const SizedBox(width: 8),
+                        Expanded(child: tiles[2]),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(child: tiles[3]),
+                        const SizedBox(width: 8),
+                        Expanded(child: tiles[4]),
+                        const SizedBox(width: 8),
+                        Expanded(child: tiles[5]),
+                      ],
+                    ),
+                  ],
+                );
+              } else {
+                return Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(child: tiles[0]),
+                        const SizedBox(width: 8),
+                        Expanded(child: tiles[1]),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(child: tiles[2]),
+                        const SizedBox(width: 8),
+                        Expanded(child: tiles[3]),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(child: tiles[4]),
+                        const SizedBox(width: 8),
+                        Expanded(child: tiles[5]),
+                      ],
+                    ),
+                  ],
+                );
+              }
+            },
+          ),
+          const SizedBox(height: 14),
+
+          // Two Visual Telemetry Progress Bars
+          LayoutBuilder(
+            builder: (context, c) {
+              final wide = c.maxWidth >= 720;
+              final supersonicBar = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'SUPERSONIC FLIGHT RATIO',
+                        style: uiText(
+                          context,
+                          size: 9,
+                          weight: FontWeight.w800,
+                          color: colors.textSecondary,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                      Text(
+                        '${hm(Duration(seconds: totalSupersonicSec.round()))} / ${hm(totalBlock)} (${(ssRatio * 100).round()}%)',
+                        style: uiText(
+                          context,
+                          size: 9,
+                          weight: FontWeight.w900,
+                          color: colors.accent,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: Container(
+                      height: 7,
+                      color: colors.resultsBg,
+                      child: Row(
+                        children: [
+                          if (ssRatio > 0)
+                            Expanded(
+                              flex: (ssRatio * 100).round(),
+                              child: Container(color: colors.accent),
+                            ),
+                          if (ssRatio < 1.0)
+                            Expanded(
+                              flex: (100 - ssRatio * 100).round(),
+                              child: Container(
+                                color: colors.dividerStrong.withValues(alpha: 0.6),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'SUBSONIC (${(100 - ssRatio * 100).clamp(0, 100).round()}%)',
+                        style: uiText(context, size: 8, color: colors.textDim),
+                      ),
+                      Text(
+                        'MACH 2.0+ SUPERCRUISE (${(ssRatio * 100).clamp(0, 100).round()}%)',
+                        style: uiText(context, size: 8, color: colors.accent),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+
+              final butterBar = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'LANDING BUTTER DISTRIBUTION (${landed.length} FLIGHTS)',
+                        style: uiText(
+                          context,
+                          size: 9,
+                          weight: FontWeight.w800,
+                          color: colors.textSecondary,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                      Text(
+                        'AVG ${avgLandingFpm != null ? fpmText(avgLandingFpm) : '--'}',
+                        style: uiText(
+                          context,
+                          size: 9,
+                          weight: FontWeight.w900,
+                          color: colors.success,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: Container(
+                      height: 7,
+                      color: colors.resultsBg,
+                      child: landed.isEmpty
+                          ? Container(
+                              color: colors.dividerStrong.withValues(alpha: 0.4),
+                            )
+                          : Row(
+                              children: [
+                                if (butter > 0)
+                                  Expanded(
+                                    flex: butter,
+                                    child: Container(color: colors.success),
+                                  ),
+                                if (smooth > 0)
+                                  Expanded(
+                                    flex: smooth,
+                                    child: Container(
+                                      color: const Color(0xFF059669),
+                                    ),
+                                  ),
+                                if (firm > 0)
+                                  Expanded(
+                                    flex: firm,
+                                    child: Container(color: colors.accent),
+                                  ),
+                                if (hard > 0)
+                                  Expanded(
+                                    flex: hard,
+                                    child: Container(
+                                      color: const Color(0xFFEA580C),
+                                    ),
+                                  ),
+                                if (insp > 0)
+                                  Expanded(
+                                    flex: insp,
+                                    child: Container(color: colors.error),
+                                  ),
+                              ],
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      children: [
+                        Text(
+                          '● BUTTER: $butter  ',
+                          style: uiText(
+                            context,
+                            size: 8,
+                            weight: FontWeight.bold,
+                            color: colors.success,
+                          ),
+                        ),
+                        Text(
+                          '● SMOOTH: $smooth  ',
+                          style: uiText(
+                            context,
+                            size: 8,
+                            weight: FontWeight.bold,
+                            color: const Color(0xFF059669),
+                          ),
+                        ),
+                        Text(
+                          '● FIRM: $firm  ',
+                          style: uiText(
+                            context,
+                            size: 8,
+                            weight: FontWeight.bold,
+                            color: colors.accent,
+                          ),
+                        ),
+                        Text(
+                          '● HARD: $hard  ',
+                          style: uiText(
+                            context,
+                            size: 8,
+                            weight: FontWeight.bold,
+                            color: const Color(0xFFEA580C),
+                          ),
+                        ),
+                        Text(
+                          '● INSPECT: $insp',
+                          style: uiText(
+                            context,
+                            size: 8,
+                            weight: FontWeight.bold,
+                            color: colors.error,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+
+              if (wide) {
+                return Row(
+                  children: [
+                    Expanded(child: supersonicBar),
+                    const SizedBox(width: 24),
+                    Expanded(child: butterBar),
+                  ],
+                );
+              } else {
+                return Column(
+                  children: [
+                    supersonicBar,
+                    const SizedBox(height: 12),
+                    butterBar,
+                  ],
+                );
+              }
+            },
+          ),
         ],
       ),
     );
+  }
+}
 
-    return EfbFlatCard(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-      child: Row(
-        children: [
-          stat('FLIGHTS', '${logs.length}'),
-          stat('BLOCK HOURS', hm(block)),
-          stat('SUPERSONIC', hm(Duration(seconds: ss.round()))),
-          stat('AVG LANDING', avg == null ? '--' : '${avg.round()} FPM'),
-          stat(
-            'BEST LANDING',
-            best == null ? '--' : '${best.touchdownFpm!.abs().round()} FPM',
-            best == null ? null : dateText(best.blockOut),
+/// Toolbar with interactive Search, Filter pills, and Export options.
+class _LogbookToolbar extends StatelessWidget {
+  final List<FlightLog> logs;
+  final int filteredCount;
+  final TextEditingController searchCtrl;
+  final _FilterMode activeFilter;
+  final ValueChanged<String> onSearchChanged;
+  final ValueChanged<_FilterMode> onFilterChanged;
+
+  const _LogbookToolbar({
+    required this.logs,
+    required this.filteredCount,
+    required this.searchCtrl,
+    required this.activeFilter,
+    required this.onSearchChanged,
+    required this.onFilterChanged,
+  });
+
+  Future<void> _export(BuildContext context, String ext, String content) =>
+      _exportText(context, ext, content);
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final empty = logs.isEmpty;
+
+    final ssCount = logs.where((l) => l.maxMach >= 1.0 || l.supersonicSec > 0).length;
+    final butterCount = logs
+        .where(
+          (l) =>
+              l.landingRating == LandingRating.butter ||
+              l.landingRating == LandingRating.smooth,
+        )
+        .length;
+    final firmCount =
+        logs.where((l) => l.landingRating == LandingRating.firm).length;
+
+    Widget chip(String label, _FilterMode mode) {
+      final selected = activeFilter == mode;
+      return Material(
+        color: selected ? colors.accent : colors.resultsBg,
+        borderRadius: BorderRadius.circular(6),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(6),
+          onTap: () => onFilterChanged(mode),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: selected
+                    ? colors.accent
+                    : colors.dividerStrong.withValues(alpha: 0.6),
+              ),
+            ),
+            child: Text(
+              label,
+              style: uiText(
+                context,
+                size: 9,
+                weight: FontWeight.w900,
+                color: selected ? AppColors.dark.bg : colors.textSecondary,
+                letterSpacing: 0.6,
+              ),
+            ),
           ),
-        ],
+        ),
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, c) {
+        final wide = c.maxWidth >= 720;
+        final searchField = Container(
+          height: 36,
+          decoration: BoxDecoration(
+            color: colors.resultsBg,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: colors.dividerStrong.withValues(alpha: 0.6),
+            ),
+          ),
+          child: TextField(
+            controller: searchCtrl,
+            onChanged: onSearchChanged,
+            style: uiText(context, size: 11, color: colors.textPrimary),
+            decoration: InputDecoration(
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 9,
+              ),
+              border: InputBorder.none,
+              prefixIcon: Icon(Icons.search, size: 16, color: colors.textDim),
+              hintText: 'Search ICAO, callsign (e.g. EGLL, BAW001)...',
+              hintStyle: uiText(context, size: 11, color: colors.textDim),
+              suffixIcon: searchCtrl.text.isNotEmpty
+                  ? IconButton(
+                      icon: Icon(Icons.clear, size: 14, color: colors.textDim),
+                      onPressed: () {
+                        searchCtrl.clear();
+                        onSearchChanged('');
+                      },
+                    )
+                  : null,
+            ),
+          ),
+        );
+
+        final filterRow = SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: Row(
+            children: [
+              chip('ALL (${logs.length})', _FilterMode.all),
+              const SizedBox(width: 6),
+              chip('SUPERSONIC ($ssCount)', _FilterMode.supersonic),
+              const SizedBox(width: 6),
+              chip('BUTTER / SMOOTH ($butterCount)', _FilterMode.butterSmooth),
+              const SizedBox(width: 6),
+              chip('FIRM ($firmCount)', _FilterMode.firm),
+            ],
+          ),
+        );
+
+        final exportButtons = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _ToolButton(
+              icon: Icons.table_chart_outlined,
+              label: 'EXPORT CSV',
+              onTap: empty
+                  ? null
+                  : () => _export(
+                        context,
+                        'csv',
+                        LogbookRepository.exportCsv(logs),
+                      ),
+            ),
+            const SizedBox(width: 8),
+            _ToolButton(
+              icon: Icons.data_object,
+              label: 'EXPORT JSON',
+              onTap: empty
+                  ? null
+                  : () => _export(
+                        context,
+                        'json',
+                        LogbookRepository.exportJson(logs),
+                      ),
+            ),
+          ],
+        );
+
+        if (wide) {
+          return Row(
+            children: [
+              Expanded(child: searchField),
+              const SizedBox(width: 10),
+              filterRow,
+              const SizedBox(width: 10),
+              exportButtons,
+            ],
+          );
+        } else {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              searchField,
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(child: filterRow),
+                  const SizedBox(width: 8),
+                  exportButtons,
+                ],
+              ),
+            ],
+          );
+        }
+      },
+    );
+  }
+}
+
+class _ToolButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  const _ToolButton({required this.icon, required this.label, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final fg = onTap == null ? colors.textDim : colors.accent;
+    return Material(
+      color: colors.resultsBg,
+      borderRadius: BorderRadius.circular(6),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(6),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: colors.dividerStrong.withValues(alpha: 0.6),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: fg),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: uiText(
+                  context,
+                  size: 9,
+                  weight: FontWeight.w900,
+                  color: fg,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Upgraded Avionics Flight Tile: prominent callsign, route badge, embedded vector
+/// sparkline altitude profile, flight time, cruise Mach, and high-contrast landing pill.
+class _AvionicsFlightCard extends StatelessWidget {
+  final FlightLog log;
+  const _AvionicsFlightCard({required this.log});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final rating = log.landingRating;
+
+    final isSupersonic = log.maxMach >= 1.0 || log.supersonicSec > 0;
+    final toRunway = log.takeoffPerf?['plan']?['runway'] as String?;
+    final ldgRunway = log.landingPerf?['plan']?['runway'] as String?;
+    final runways = (toRunway != null && ldgRunway != null)
+        ? ' · RWY $toRunway → $ldgRunway'
+        : '';
+
+    Widget statusPill() {
+      if (log.blockIn == null || rating == null) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: colors.resultsBg,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: colors.dividerStrong.withValues(alpha: 0.7),
+            ),
+          ),
+          child: Text(
+            'IN PROGRESS',
+            style: uiText(
+              context,
+              size: 10,
+              weight: FontWeight.w900,
+              color: colors.accent,
+              letterSpacing: 0.8,
+            ),
+          ),
+        );
+      }
+
+      final pillColor = ratingColor(colors, rating);
+      final onColor = onRatingColor(colors, rating);
+
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: pillColor.withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: pillColor.withValues(alpha: 0.5)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              fpmText(log.touchdownFpm!),
+              style: uiText(
+                context,
+                size: 11,
+                weight: FontWeight.w900,
+                color: pillColor,
+              ),
+            ),
+            Text(
+              '${rating.label}${log.touchdownG != null ? ' · ${log.touchdownG!.toStringAsFixed(2)}G' : ''}',
+              style: uiText(
+                context,
+                size: 8,
+                weight: FontWeight.w800,
+                color: onColor == Colors.white ? pillColor : onColor,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Material(
+      color: colors.surface,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => LogDetailScreen(logId: log.id)),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: colors.dividerStrong.withValues(alpha: 0.5),
+            ),
+          ),
+          child: LayoutBuilder(
+            builder: (context, c) {
+              final wide = c.maxWidth >= 720;
+              final mid = c.maxWidth >= 480;
+
+              return Row(
+                children: [
+                  // Callsign Block
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: colors.resultsBg,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: colors.dividerStrong.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      log.callSign.isEmpty ? 'FLT' : log.callSign,
+                      maxLines: 2,
+                      textAlign: TextAlign.center,
+                      style: uiText(
+                        context,
+                        size: 10,
+                        weight: FontWeight.w900,
+                        color: colors.accent,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Route & Meta
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                _route(log),
+                                overflow: TextOverflow.ellipsis,
+                                style: uiText(
+                                  context,
+                                  size: 13,
+                                  weight: FontWeight.w900,
+                                  color: colors.textPrimary,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                            if (isSupersonic) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 5,
+                                  vertical: 1.5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: colors.accent.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(3),
+                                  border: Border.all(
+                                    color: colors.accent.withValues(alpha: 0.4),
+                                  ),
+                                ),
+                                child: Text(
+                                  'SUPERSONIC',
+                                  style: uiText(
+                                    context,
+                                    size: 8,
+                                    weight: FontWeight.w900,
+                                    color: colors.accent,
+                                  ),
+                                ),
+                              ),
+                            ],
+                            if (log.goArounds > 0) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 5,
+                                  vertical: 1.5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: colors.ifrBg,
+                                  borderRadius: BorderRadius.circular(3),
+                                  border: Border.all(
+                                    color: colors.ifr.withValues(alpha: 0.4),
+                                  ),
+                                ),
+                                child: Text(
+                                  '${log.goArounds} GO-AROUND${log.goArounds > 1 ? 'S' : ''}',
+                                  style: uiText(
+                                    context,
+                                    size: 8,
+                                    weight: FontWeight.w900,
+                                    color: colors.ifr,
+                                  ),
+                                ),
+                              ),
+                            ],
+                            if (log.bounces > 0) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 5,
+                                  vertical: 1.5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: colors.errorBg,
+                                  borderRadius: BorderRadius.circular(3),
+                                  border: Border.all(
+                                    color: colors.error.withValues(alpha: 0.4),
+                                  ),
+                                ),
+                                child: Text(
+                                  '${log.bounces} BOUNCE${log.bounces > 1 ? 'S' : ''}',
+                                  style: uiText(
+                                    context,
+                                    size: 8,
+                                    weight: FontWeight.w900,
+                                    color: colors.error,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          '${dateText(log.blockOut)} · REG: ${log.registration.isEmpty ? '--' : log.registration}$runways',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: uiText(
+                            context,
+                            size: 10,
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Vector Sparkline Altitude Profile (Wide / Mid viewports)
+                  if (wide || mid) ...[
+                    const SizedBox(width: 12),
+                    FlightSparkline(
+                      track: log.track,
+                      width: wide ? 130 : 90,
+                      height: 32,
+                      maxAltFt: log.maxAltFt,
+                    ),
+                  ],
+
+                  const SizedBox(width: 14),
+
+                  // Duration & Max Cruise Readout
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '${hm(log.blockTime)} · ${numFormat.format(log.distanceNm.round())} NM',
+                        style: uiText(
+                          context,
+                          size: 11,
+                          weight: FontWeight.w800,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (log.maxMach > 0) ...[
+                            Text(
+                              'M${log.maxMach.toStringAsFixed(2)}',
+                              style: uiText(
+                                context,
+                                size: 10,
+                                weight: FontWeight.w900,
+                                color: colors.accent,
+                              ),
+                            ),
+                            Text(
+                              ' · ',
+                              style: uiText(
+                                context,
+                                size: 10,
+                                color: colors.textDim,
+                              ),
+                            ),
+                          ],
+                          Text(
+                            log.maxAltFt > 0
+                                ? 'FL${(log.maxAltFt / 100).round()}'
+                                : '--',
+                            style: uiText(
+                              context,
+                              size: 10,
+                              color: colors.textDim,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(width: 12),
+                  statusPill(),
+                  const SizedBox(width: 4),
+                  Icon(Icons.chevron_right, size: 18, color: colors.textDim),
+                ],
+              );
+            },
+          ),
+        ),
       ),
     );
   }
@@ -223,183 +1266,6 @@ Future<void> _exportText(
     }
   } catch (e) {
     messenger?.showSnackBar(SnackBar(content: Text('Export failed: $e')));
-  }
-}
-
-class _Toolbar extends StatelessWidget {
-  final List<FlightLog> logs;
-  const _Toolbar({required this.logs});
-
-  Future<void> _export(BuildContext context, String ext, String content) =>
-      _exportText(context, ext, content);
-
-  @override
-  Widget build(BuildContext context) {
-    final empty = logs.isEmpty;
-    return Row(
-      children: [
-        _ToolButton(
-          icon: Icons.table_chart_outlined,
-          label: 'EXPORT CSV',
-          onTap: empty
-              ? null
-              : () =>
-                    _export(context, 'csv', LogbookRepository.exportCsv(logs)),
-        ),
-        const SizedBox(width: 8),
-        _ToolButton(
-          icon: Icons.data_object,
-          label: 'EXPORT JSON',
-          onTap: empty
-              ? null
-              : () => _export(
-                  context,
-                  'json',
-                  LogbookRepository.exportJson(logs),
-                ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ToolButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback? onTap;
-  const _ToolButton({required this.icon, required this.label, this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final fg = onTap == null ? colors.textDim : colors.accent;
-    return Material(
-      color: colors.surface,
-      borderRadius: BorderRadius.circular(6),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(6),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(
-              color: colors.dividerStrong.withValues(alpha: 0.7),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 15, color: fg),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: uiText(
-                  context,
-                  size: 10,
-                  weight: FontWeight.w900,
-                  color: fg,
-                  letterSpacing: 1,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-Widget _pill(BuildContext context, String text, Color bg, Color fg) =>
-    Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        text,
-        maxLines: 1,
-        style: uiText(
-          context,
-          size: 10,
-          weight: FontWeight.w900,
-          color: fg,
-          letterSpacing: 1,
-        ),
-      ),
-    );
-
-class _LogRow extends StatelessWidget {
-  final FlightLog log;
-  const _LogRow({required this.log});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final rating = log.landingRating;
-    TextStyle s(Color c, {FontWeight w = FontWeight.w700}) =>
-        uiText(context, size: 12, weight: w, color: c);
-
-    final Widget status = (log.blockIn == null || rating == null)
-        ? _pill(
-            context,
-            'IN PROGRESS',
-            colors.dividerStrong,
-            colors.textPrimary,
-          )
-        : _pill(
-            context,
-            fpmText(log.touchdownFpm!),
-            ratingColor(colors, rating),
-            onRatingColor(colors, rating),
-          );
-
-    return InkWell(
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => LogDetailScreen(logId: log.id)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 100,
-              child: Text(
-                dateText(log.blockOut),
-                style: s(colors.textSecondary),
-              ),
-            ),
-            SizedBox(
-              width: 84,
-              child: Text(
-                log.callSign.isEmpty ? '--' : log.callSign,
-                overflow: TextOverflow.ellipsis,
-                style: s(colors.accent, w: FontWeight.w900),
-              ),
-            ),
-            Expanded(
-              child: Text(
-                _route(log),
-                overflow: TextOverflow.ellipsis,
-                style: s(colors.textPrimary),
-              ),
-            ),
-            SizedBox(
-              width: 56,
-              child: Text(
-                hm(log.blockTime),
-                textAlign: TextAlign.right,
-                style: s(colors.textSecondary),
-              ),
-            ),
-            const SizedBox(width: 12),
-            status,
-            Icon(Icons.chevron_right, size: 18, color: colors.textDim),
-          ],
-        ),
-      ),
-    );
   }
 }
 
@@ -807,6 +1673,7 @@ class _LogDetailScreenState extends ConsumerState<LogDetailScreen> {
             l.touchdownIas == null ? '--' : '${l.touchdownIas!.round()} KT',
           ),
           _kv(context, 'BOUNCES', '${l.bounces}'),
+          if (l.goArounds > 0) _kv(context, 'GO-AROUNDS', '${l.goArounds}'),
         ],
       ),
     );

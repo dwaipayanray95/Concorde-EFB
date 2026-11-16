@@ -401,6 +401,7 @@ class FlightTracker {
               ])
                 k: null,
               'bounces': 0,
+              'goArounds': _base!.goArounds + 1,
               'perf': {
                 for (final e in _base!.perf.entries)
                   if (e.key != 'landing') e.key: e.value,

@@ -27,7 +27,7 @@ class FlightLog {
 
   /// Rate of descent at touchdown (positive = descending).
   final double? touchdownFpm, touchdownG, touchdownPitch, touchdownIas;
-  final int bounces;
+  final int bounces, goArounds;
 
   /// Alert text -> times it newly appeared during the flight.
   final Map<String, int> alerts;
@@ -76,6 +76,7 @@ class FlightLog {
     this.touchdownPitch,
     this.touchdownIas,
     this.bounces = 0,
+    this.goArounds = 0,
     this.alerts = const {},
     this.track = const [],
     this.perf = const {},
@@ -148,6 +149,7 @@ class FlightLog {
     'touchdownPitch': touchdownPitch,
     'touchdownIas': touchdownIas,
     'bounces': bounces,
+    'goArounds': goArounds,
     'alerts': alerts,
     'track': track,
     'perf': perf,
@@ -190,6 +192,7 @@ class FlightLog {
     touchdownPitch: _d(j['touchdownPitch']),
     touchdownIas: _d(j['touchdownIas']),
     bounces: (j['bounces'] as num?)?.toInt() ?? 0,
+    goArounds: (j['goArounds'] as num?)?.toInt() ?? 0,
     alerts: {
       for (final e in ((j['alerts'] as Map?) ?? const {}).entries)
         e.key as String: (e.value as num).toInt(),

@@ -72,4 +72,67 @@ void main() {
     expect(find.text('OOOI (ZULU)'), findsOneWidget);
     expect(find.text('BUTTER'), findsOneWidget);
   });
+
+  testWidgets('filters flights by search query and filter chips', (tester) async {
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final logs = [
+      _log('a', 2, 100), // BAW2, 100 fpm (butter)
+      _log('b', 1, 300), // BAW1, 300 fpm (firm)
+    ];
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [logbookProvider.overrideWith(() => _FakeLogbook(logs))],
+        child: MaterialApp(
+          theme: ThemeData(extensions: [AppColors.dark]),
+          home: const Scaffold(body: LogbookTab()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Both visible initially
+    expect(find.text('BAW2'), findsOneWidget);
+    expect(find.text('BAW1'), findsOneWidget);
+
+    // Search query for BAW1
+    await tester.enterText(find.byType(TextField), 'BAW1');
+    await tester.pumpAndSettle();
+    expect(find.text('EGLL → KJFK'), findsOneWidget);
+    expect(find.text('BAW2'), findsNothing);
+
+    // Clear search
+    await tester.enterText(find.byType(TextField), '');
+    await tester.pumpAndSettle();
+    expect(find.text('EGLL → KJFK'), findsNWidgets(2));
+    expect(find.text('BAW2'), findsOneWidget);
+    expect(find.text('BAW1'), findsOneWidget);
+
+    // Filter by FIRM
+    await tester.tap(find.text('FIRM (1)'));
+    await tester.pumpAndSettle();
+    expect(find.text('EGLL → KJFK'), findsOneWidget);
+    expect(find.text('BAW1'), findsOneWidget);
+    expect(find.text('BAW2'), findsNothing);
+  });
+
+  test('FlightLog records and preserves goArounds backwards-compatibly', () {
+    final log = FlightLog(
+      id: 'test-1',
+      updatedAt: DateTime.utc(2026, 5, 1),
+      blockOut: DateTime.utc(2026, 5, 1, 10),
+      goArounds: 2,
+    );
+    final json = log.toJson();
+    expect(json['goArounds'], 2);
+
+    final restored = FlightLog.fromJson(json);
+    expect(restored.goArounds, 2);
+
+    // Old log missing 'goArounds' defaults to 0
+    final oldJson = {...json}..remove('goArounds');
+    final fromOld = FlightLog.fromJson(oldJson);
+    expect(fromOld.goArounds, 0);
+  });
 }
