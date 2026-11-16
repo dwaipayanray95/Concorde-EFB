@@ -1,6 +1,17 @@
 [
     {
         "date": "2026-11-16",
+        "title": "v5.28.0 \u2014 Authentic Concorde Landing Speeds (VREF, VTT, and Fixed VAPP)",
+        "items": [
+            "Calibrated VREF Datum: recalculated reference landing speed based on certified BAC/A\u00e9rospatiale Concorde Flight Operations Manual tables (162 kt at MLW scaling with \u221aweight down to ~150 kt at 96 t), eliminating the previous conflation with intermediate glideslope speed",
+            "Concorde Target Threshold Speed (VTT): introduced VTT (Target Threshold Speed across the runway numbers at 50 ft RA) calculated as VREF + 7 kt standard increment + wind/gust correction, matching British Airways / Air France operational procedures",
+            "Fixed VAPP Approach Speed: standardized intermediate approach speed on the glideslope down to 800 ft RA at 190 KIAS, safeguarding the aircraft from falling behind the power curve during glideslope capture in Microsoft Flight Simulator",
+            "Arrival Speed Chips Symmetry: updated the Arrival / Landing card in the Performance Calculator to display 3 speed chips (VAPP, VTT, VREF), mirroring the 3 takeoff speed chips (V1, VR, V2) on the departure card",
+            "Checklist & Dispatch Integration: plumbed VTT and fixed VAPP into the interactive approach/landing checklists and quick dispatch figures"
+        ]
+    },
+    {
+        "date": "2026-11-16",
         "title": "v5.27.0 \u2014 Flight Debrief & Telemetry Analysis Suite with interactive profile chart and CG corridor",
         "items": [
             "Interactive Flight Profile Chart: dual-axis altitude vs Mach/IAS/fuel canvas with milestone flags (Takeoff, M1.0, FL500+, TOD, Touchdown), reheat activation zones, and synchronized touch/mouse scrub telemetry readout bar",
