@@ -1,6 +1,17 @@
 [
     {
         "date": "2026-11-16",
+        "title": "v5.27.0 \u2014 Flight Debrief & Telemetry Analysis Suite with interactive profile chart and CG corridor",
+        "items": [
+            "Interactive Flight Profile Chart: dual-axis altitude vs Mach/IAS/fuel canvas with milestone flags (Takeoff, M1.0, FL500+, TOD, Touchdown), reheat activation zones, and synchronized touch/mouse scrub telemetry readout bar",
+            "Concorde CG Corridor Analysis: plots flown center-of-gravity transfer against Concorde's certified aerodynamic flight envelope polygon (52.0% to 59.1% MAC vs Mach), scoring subsonic, cruise, and approach trim precision",
+            "Runway Performance & Rollout Card: visual runway bar comparing measured takeoff and landing roll to predicted required distance, capturing liftoff speed/pitch and rollout to 30 kt runway turnoff",
+            "ACARS Dispatch Fuel Release: authentic thermal paper ACARS printout with dot-matrix leaders showing plan vs actual burn and reserve margins",
+            "Revamped Debrief Layout: full telemetry overview with hero mission banner, OOOI block timeline, structured weight breakdown, and debrief notes"
+        ]
+    },
+    {
+        "date": "2026-11-16",
         "title": "v5.26.0 \u2014 Avionics Logbook Hub with pilot dossier and flight sparklines",
         "items": [
             "Logbook: upgraded the Log tab into a Pilot Career Hub with a live career dossier strip tracking total block time, supersonic hours, Mach 2.0+ supercruise time, and global distance flown",
