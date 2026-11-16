@@ -22,24 +22,189 @@ class FlightProfileChart extends StatefulWidget {
 class _FlightProfileChartState extends State<FlightProfileChart> {
   ProfileMode _mode = ProfileMode.altMach;
   double? _scrubFrac;
+  late List<double> _fuelCurve;
 
-  double _getFuel(int idx) {
+  @override
+  void initState() {
+    super.initState();
+    _fuelCurve = _computeFuelCurve();
+  }
+
+  @override
+  void didUpdateWidget(covariant FlightProfileChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.log != widget.log) {
+      _fuelCurve = _computeFuelCurve();
+    }
+  }
+
+  /// Calculates the fuel profile across the flight track.
+  /// If track points contain real-time recorded fuel (p[8] > 0), it uses them.
+  /// Otherwise, it performs a realistic physics-based burn rate integration
+  /// (takeoff/transonic reheat = 60-65 t/h, cruise = 19 t/h, idle descent = 8.5 t/h)
+  /// calibrated to the flight's recorded fuelTakeoffKg and fuelLandingKg so the curve
+  /// reflects real aerodynamic fuel consumption instead of a flat linear line.
+  List<double> _computeFuelCurve() {
     final track = widget.log.track;
-    if (idx < 0 || idx >= track.length) return 0.0;
-    final p = track[idx];
-    final f = p.length > 8 ? p[8].toDouble() : 0.0;
-    if (f > 0) return f;
+    if (track.isEmpty) return const [];
 
-    // Fallback: interpolate from flight block/takeoff/landing fuel
+    // Check if track points have recorded fuel (p.length > 8 && p[8] > 0)
+    final hasRealFuel = track.any((p) => p.length > 8 && p[8] > 0);
+    if (hasRealFuel) {
+      return track.map((p) => p.length > 8 ? p[8].toDouble() : 0.0).toList();
+    }
+
+    // Fallback: Phase-aware physics burn rate integration
     final startF = widget.log.fuelTakeoffKg ?? widget.log.fuelBlockOutKg ?? 0.0;
     final endF = widget.log.fuelLandingKg ??
         widget.log.fuelBlockInKg ??
         (startF > 0 ? startF * 0.25 : 0.0);
-    if (startF > 0 && track.length > 1) {
-      final t = idx / (track.length - 1);
-      return startF - (startF - endF) * t;
+
+    if (startF <= 0 || track.length < 2) {
+      return List<double>.filled(track.length, startF);
     }
-    return 0.0;
+
+    final totalBurn = startF - endF;
+    if (totalBurn <= 0) {
+      return List<double>.filled(track.length, startF);
+    }
+
+    final intervalBurns = <double>[];
+    for (var i = 0; i < track.length; i++) {
+      final p = track[i];
+      final alt = p.length > 3 ? p[3].toDouble() : 0.0;
+      final gs = p.length > 4 ? p[4].toDouble() : 0.0;
+      final m = _getMach(i);
+      final vs = _getVs(i);
+
+      final dt = i > 0
+          ? math.max(1.0, (p[0] - track[i - 1][0]).toDouble())
+          : 5.0;
+
+      // Concorde fuel flow rate in kg/s across flight regimes
+      double rateKgPerSec;
+      if (alt < 1000 && gs < 60) {
+        rateKgPerSec = 1500 / 3600.0; // Taxi idle (~1.5 t/h)
+      } else if (alt < 3000 && vs > 1000) {
+        rateKgPerSec = 65000 / 3600.0; // Takeoff reheat (~65 t/h)
+      } else if (alt >= 28000 && alt < 50000 && (m >= 0.95 || vs > 800)) {
+        rateKgPerSec = 60000 / 3600.0; // Transonic reheat (~60 t/h)
+      } else if (alt < 28000 && vs > 500) {
+        rateKgPerSec = 26000 / 3600.0; // Subsonic climb (~26 t/h)
+      } else if (alt >= 45000 && vs > -400) {
+        rateKgPerSec = 19000 / 3600.0; // Supercruise (~19 t/h)
+      } else if (vs < -800) {
+        rateKgPerSec = 8500 / 3600.0; // Idle descent (~8.5 t/h)
+      } else {
+        rateKgPerSec = 14000 / 3600.0; // Approach / enroute (~14 t/h)
+      }
+
+      intervalBurns.add(rateKgPerSec * dt);
+    }
+
+    final totalSimBurn = intervalBurns.fold(0.0, (s, b) => s + b);
+    if (totalSimBurn <= 0) {
+      return List<double>.filled(track.length, startF);
+    }
+
+    var cumBurn = 0.0;
+    final curve = <double>[];
+    for (var i = 0; i < track.length; i++) {
+      cumBurn += intervalBurns[i];
+      final frac = (cumBurn / totalSimBurn).clamp(0.0, 1.0);
+      curve.add(startF - totalBurn * frac);
+    }
+
+    return curve;
+  }
+
+  double _getMach(int idx) {
+    final track = widget.log.track;
+    if (idx < 0 || idx >= track.length) return 0.0;
+    final p = track[idx];
+    if (p.length > 7 && p[7].toDouble() > 0) return p[7].toDouble();
+
+    final alt = p.length > 3 ? p[3].toDouble() : 0.0;
+    final gs = p.length > 4 ? p[4].toDouble() : 0.0;
+    if (gs <= 0) return 0.0;
+
+    // Local speed of sound in knots vs altitude
+    final soundSpeedKt = alt >= 36089
+        ? 573.0
+        : 661.0 - (alt / 36089.0) * (661.0 - 573.0);
+
+    final m = gs / soundSpeedKt;
+    if (widget.log.maxMach > 0 && m > widget.log.maxMach * 1.05) {
+      return widget.log.maxMach;
+    }
+    return m;
+  }
+
+  double _getVs(int idx) {
+    final track = widget.log.track;
+    if (idx < 0 || idx >= track.length) return 0.0;
+    final p = track[idx];
+    if (p.length > 6 && p[6].toDouble() != 0) return p[6].toDouble();
+
+    if (idx == 0) {
+      if (track.length > 1) {
+        final dt = math.max(1.0, (track[1][0] - p[0]).toDouble());
+        return (track[1][3].toDouble() - p[3].toDouble()) / dt * 60.0;
+      }
+      return 0.0;
+    }
+    final prev = track[idx - 1];
+    final dt = math.max(1.0, (p[0] - prev[0]).toDouble());
+    return (p[3].toDouble() - prev[3].toDouble()) / dt * 60.0;
+  }
+
+  double _getIas(int idx) {
+    final track = widget.log.track;
+    if (idx < 0 || idx >= track.length) return 0.0;
+    final p = track[idx];
+    if (p.length > 5 && p[5].toDouble() > 0) return p[5].toDouble();
+
+    final alt = p.length > 3 ? p[3].toDouble() : 0.0;
+    final gs = p.length > 4 ? p[4].toDouble() : 0.0;
+    if (gs <= 0) return 0.0;
+
+    // ISA density ratio sqrt(rho / rho0)
+    final sigma = alt <= 0
+        ? 1.0
+        : (alt >= 36089
+            ? 0.53 * math.exp(-(alt - 36089) / 48000.0)
+            : math.pow(math.max(0.01, 1.0 - 6.875e-6 * alt), 2.128).toDouble());
+
+    return (gs * sigma).clamp(0.0, 530.0);
+  }
+
+  bool _isReheatActive(int idx) {
+    final track = widget.log.track;
+    if (idx < 0 || idx >= track.length) return false;
+    final p = track[idx];
+    final alt = p.length > 3 ? p[3].toDouble() : 0.0;
+    final gs = p.length > 4 ? p[4].toDouble() : 0.0;
+    final m = _getMach(idx);
+    final vs = _getVs(idx);
+
+    // 1. Takeoff Reheat: active during ground roll & initial climb (~90s or up to 3500ft)
+    if (widget.log.reheatSec > 0 && widget.log.takeoff != null) {
+      final epoch = p[0].toInt();
+      final toEpoch = widget.log.takeoff!.millisecondsSinceEpoch ~/ 1000;
+      final reheatEnd = toEpoch + widget.log.reheatSec.round();
+      if (epoch >= toEpoch && epoch <= reheatEnd && alt < 4000) {
+        return true;
+      }
+    } else if (alt < 2500 && gs >= 60 && vs > 200 && idx < track.length * 0.25) {
+      return true;
+    }
+
+    // 2. Transonic Acceleration Reheat: FL280 to FL500 accelerating through M0.95 to M1.70
+    if (alt >= 26000 && alt <= 50000 && m >= 0.95 && m <= 1.70 && vs > 100) {
+      return true;
+    }
+
+    return false;
   }
 
   double _getCg(int idx) {
@@ -49,9 +214,8 @@ class _FlightProfileChartState extends State<FlightProfileChart> {
     final cg = p.length > 9 ? p[9].toDouble() : 0.0;
     if (cg > 0) return cg;
 
-    // Fallback: estimate Concorde standard aerodynamic CG from Mach
-    final m = p.length > 7 ? p[7].toDouble() : 0.0;
-    final vs = p.length > 6 ? p[6].toDouble() : 0.0;
+    final m = _getMach(idx);
+    final vs = _getVs(idx);
     final isDescent = idx > track.length * 0.7 || vs < -1000;
 
     if (m <= 0.93) return 53.5;
@@ -88,14 +252,15 @@ class _FlightProfileChartState extends State<FlightProfileChart> {
         : (_scrubFrac! * (pointCount - 1)).round().clamp(0, pointCount - 1);
     final p = track[selectedIdx];
 
-    // Decode point [epochSec, lat, lon, altFt, gsKt, iasKt, vsFpm, mach, fuelKg, cgPct]
+    // Decode point with reconstructed flight kinematics
     final altFt = p.length > 3 ? p[3].toDouble() : 0.0;
     final gsKt = p.length > 4 ? p[4].toDouble() : 0.0;
-    final iasKt = p.length > 5 ? p[5].toDouble() : 0.0;
-    final vsFpm = p.length > 6 ? p[6].toDouble() : 0.0;
-    final mach = p.length > 7 ? p[7].toDouble() : 0.0;
-    final fuelKg = _getFuel(selectedIdx);
+    final iasKt = _getIas(selectedIdx);
+    final vsFpm = _getVs(selectedIdx);
+    final mach = _getMach(selectedIdx);
+    final fuelKg = selectedIdx < _fuelCurve.length ? _fuelCurve[selectedIdx] : 0.0;
     final cgPct = _getCg(selectedIdx);
+    final isReheat = _isReheatActive(selectedIdx);
 
     // Elapsed time calculation
     final firstEpoch = track.first[0].toInt();
@@ -114,9 +279,11 @@ class _FlightProfileChartState extends State<FlightProfileChart> {
     String phase;
     if (altFt < 1000 && gsKt < 80) {
       phase = 'TAXI / GROUND';
+    } else if (isReheat && altFt < 5000) {
+      phase = 'TAKEOFF REHEAT';
     } else if (altFt < 28000 && mach < 0.95 && vsFpm > 500) {
       phase = 'SUBSONIC CLIMB';
-    } else if (altFt >= 28000 && altFt < 50000 && mach >= 0.95 && mach < 1.70) {
+    } else if (isReheat) {
       phase = 'TRANSONIC REHEAT';
     } else if (altFt >= 45000 && mach >= 1.70 && vsFpm > -500) {
       phase = mach >= 2.0 ? 'M2.0 SUPERCRUISE' : 'SUPERCRUISE';
@@ -125,8 +292,6 @@ class _FlightProfileChartState extends State<FlightProfileChart> {
     } else {
       phase = 'APPROACH / ENROUTE';
     }
-
-    final isReheat = mach >= 0.95 && mach <= 1.70 && vsFpm > 300;
 
     return Container(
       decoration: BoxDecoration(
@@ -299,11 +464,17 @@ class _FlightProfileChartState extends State<FlightProfileChart> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: (mach >= 1.0 ? colors.accent : colors.surface)
+                        color: (isReheat
+                                ? colors.error
+                                : (mach >= 1.0 ? colors.accent : colors.surface))
                             .withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(4),
                         border: Border.all(
-                          color: (mach >= 1.0 ? colors.accent : colors.dividerStrong)
+                          color: (isReheat
+                                  ? colors.error
+                                  : (mach >= 1.0
+                                      ? colors.accent
+                                      : colors.dividerStrong))
                               .withValues(alpha: 0.5),
                         ),
                       ),
@@ -313,7 +484,9 @@ class _FlightProfileChartState extends State<FlightProfileChart> {
                           context,
                           size: 10,
                           weight: FontWeight.w900,
-                          color: mach >= 1.0 ? colors.accent : colors.textPrimary,
+                          color: isReheat
+                              ? colors.error
+                              : (mach >= 1.0 ? colors.accent : colors.textPrimary),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -422,6 +595,11 @@ class _FlightProfileChartState extends State<FlightProfileChart> {
                         'CG',
                         cgPct > 0 ? '${cgPct.toStringAsFixed(1)}%' : '--',
                       ),
+                      cell(
+                        'PROPULSION',
+                        isReheat ? 'REHEAT (4×)' : 'DRY',
+                        isReheat ? colors.error : colors.textDim,
+                      ),
                       phaseBadge,
                     ],
                   );
@@ -454,7 +632,11 @@ class _FlightProfileChartState extends State<FlightProfileChart> {
                           colors: colors,
                           mode: _mode,
                           scrubFrac: _scrubFrac ?? 0.45,
-                          fuelFn: _getFuel,
+                          fuelCurve: _fuelCurve,
+                          machFn: _getMach,
+                          iasFn: _getIas,
+                          vsFn: _getVs,
+                          reheatFn: _isReheatActive,
                           cgFn: _getCg,
                         ),
                       ),
@@ -481,9 +663,9 @@ class _FlightProfileChartState extends State<FlightProfileChart> {
                   if (_mode == ProfileMode.altMach)
                     _legendItem('MACH (M0.0–2.2)', const Color(0xFF06B6D4)),
                   if (_mode == ProfileMode.speeds)
-                    _legendItem('AIRSPEED (0–1200 KT)', const Color(0xFF06B6D4)),
+                    _legendItem('INDICATED AIRSPEED (IAS KT)', const Color(0xFF06B6D4)),
                   if (_mode == ProfileMode.fuel)
-                    _legendItem('FUEL ON BOARD (0–96T)', const Color(0xFF06B6D4)),
+                    _legendItem('FUEL ON BOARD (AUTO-SCALED)', const Color(0xFF06B6D4)),
                   if (_mode == ProfileMode.cg) ...[
                     _legendItem('CG % MAC (52–60%)', const Color(0xFF10B981)),
                     _legendItem(
@@ -497,7 +679,7 @@ class _FlightProfileChartState extends State<FlightProfileChart> {
                     colors.accent.withValues(alpha: 0.6),
                     isDot: true,
                   ),
-                  _legendItem('REHEAT ACTIVE', colors.error, isDot: true),
+                  _legendItem('REHEAT ACTIVE (4×)', colors.error, isDot: true),
                 ],
               ),
               Text(
@@ -580,7 +762,11 @@ class _ProfileChartPainter extends CustomPainter {
   final AppColors colors;
   final ProfileMode mode;
   final double scrubFrac;
-  final double Function(int idx) fuelFn;
+  final List<double> fuelCurve;
+  final double Function(int idx) machFn;
+  final double Function(int idx) iasFn;
+  final double Function(int idx) vsFn;
+  final bool Function(int idx) reheatFn;
   final double Function(int idx) cgFn;
 
   _ProfileChartPainter({
@@ -588,7 +774,11 @@ class _ProfileChartPainter extends CustomPainter {
     required this.colors,
     required this.mode,
     required this.scrubFrac,
-    required this.fuelFn,
+    required this.fuelCurve,
+    required this.machFn,
+    required this.iasFn,
+    required this.vsFn,
+    required this.reheatFn,
     required this.cgFn,
   });
 
@@ -609,6 +799,43 @@ class _ProfileChartPainter extends CustomPainter {
       ..color = colors.dividerStrong.withValues(alpha: 0.3)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
+
+    // Dynamic auto-range for fuel Y-axis
+    double fuelAxisMin = 0.0;
+    double fuelAxisMax = 96000.0;
+
+    if (mode == ProfileMode.fuel && fuelCurve.isNotEmpty) {
+      var minF = double.infinity;
+      var maxF = 0.0;
+      for (final f in fuelCurve) {
+        if (f > maxF) maxF = f;
+        if (f > 0 && f < minF) minF = f;
+      }
+      if (minF == double.infinity) minF = 0.0;
+      if (maxF <= 0) maxF = 96000.0;
+
+      final span = maxF - minF;
+      if (span > 0) {
+        final step = span < 15000 ? 5000.0 : 10000.0;
+        fuelAxisMax = (maxF / step).ceil() * step;
+        fuelAxisMin = math.max(0.0, (minF / step).floor() * step);
+        if (fuelAxisMax <= fuelAxisMin) {
+          fuelAxisMax = minF + step;
+          fuelAxisMin = math.max(0.0, minF - step);
+        }
+      }
+    }
+
+    // Dynamic scale for speeds Y-axis
+    double speedAxisMax = 600.0;
+    if (mode == ProfileMode.speeds) {
+      var maxIas = 0.0;
+      for (var i = 0; i < track.length; i++) {
+        final s = iasFn(i);
+        if (s > maxIas) maxIas = s;
+      }
+      speedAxisMax = maxIas > 450.0 ? 600.0 : math.max(300.0, ((maxIas / 100).ceil() * 100.0));
+    }
 
     for (var i = 0; i <= 4; i++) {
       final y = padT + (plotH / 4) * i;
@@ -637,11 +864,12 @@ class _ProfileChartPainter extends CustomPainter {
           final mVal = (2.2 - i * (2.2 / 4)).toStringAsFixed(1);
           rText = 'M$mVal';
         case ProfileMode.speeds:
-          final sVal = (1200 - i * 300).round();
+          final sVal = (speedAxisMax - (speedAxisMax * i / 4.0)).round();
           rText = '$sVal KT';
         case ProfileMode.fuel:
-          final fVal = (96 - i * 24).round();
-          rText = '${fVal}T';
+          final fVal = fuelAxisMax - (fuelAxisMax - fuelAxisMin) * (i / 4.0);
+          final fTonnes = fVal / 1000.0;
+          rText = '${fTonnes.toStringAsFixed(1)}T';
         case ProfileMode.cg:
           final cgVal = (60.0 - i * 2.0).toStringAsFixed(1);
           rText = '$cgVal%';
@@ -682,14 +910,11 @@ class _ProfileChartPainter extends CustomPainter {
 
     double getX(int idx) => padL + (idx / (track.length - 1)) * plotW;
 
-    // Reheat Highlight Spans
+    // Reheat Highlight Spans (takeoff reheat & transonic climb)
     var inReheat = false;
     var reheatStart = 0;
     for (var i = 0; i < track.length; i++) {
-      final p = track[i];
-      final m = p.length > 7 ? p[7].toDouble() : 0.0;
-      final vs = p.length > 6 ? p[6].toDouble() : 0.0;
-      final active = m >= 0.95 && m <= 1.70 && vs > 200;
+      final active = reheatFn(i);
 
       if (active && !inReheat) {
         inReheat = true;
@@ -699,10 +924,18 @@ class _ProfileChartPainter extends CustomPainter {
         final x1 = getX(reheatStart);
         final x2 = getX(i);
         canvas.drawRect(
-          Rect.fromLTWH(x1, padT, x2 - x1, plotH),
-          Paint()..color = colors.error.withValues(alpha: 0.12),
+          Rect.fromLTWH(x1, padT, math.max(3.0, x2 - x1), plotH),
+          Paint()..color = colors.error.withValues(alpha: 0.16),
         );
       }
+    }
+    if (inReheat) {
+      final x1 = getX(reheatStart);
+      final x2 = getX(track.length - 1);
+      canvas.drawRect(
+        Rect.fromLTWH(x1, padT, math.max(3.0, x2 - x1), plotH),
+        Paint()..color = colors.error.withValues(alpha: 0.16),
+      );
     }
 
     // Curve 1: Altitude Profile (Amber)
@@ -755,20 +988,21 @@ class _ProfileChartPainter extends CustomPainter {
     first = true;
 
     for (var i = 0; i < track.length; i++) {
-      final p = track[i];
       final x = getX(i);
       double normVal;
 
       switch (mode) {
         case ProfileMode.altMach:
-          final m = p.length > 7 ? p[7].toDouble() : 0.0;
+          final m = machFn(i);
           normVal = (m / 2.2).clamp(0.0, 1.0);
         case ProfileMode.speeds:
-          final tas = (p.length > 7 ? p[7].toDouble() : 0.0) * 580;
-          normVal = (tas / 1200).clamp(0.0, 1.0);
+          final ias = iasFn(i);
+          normVal = (ias / speedAxisMax).clamp(0.0, 1.0);
         case ProfileMode.fuel:
-          final f = fuelFn(i);
-          normVal = (f / 96000).clamp(0.0, 1.0);
+          final f = i < fuelCurve.length ? fuelCurve[i] : 0.0;
+          normVal = ((f - fuelAxisMin) /
+                  math.max(1.0, fuelAxisMax - fuelAxisMin))
+              .clamp(0.0, 1.0);
         case ProfileMode.cg:
           final cg = cgFn(i);
           normVal = ((cg - 52.0) / 8.0).clamp(0.0, 1.0);
@@ -830,8 +1064,8 @@ class _ProfileChartPainter extends CustomPainter {
     for (var i = 0; i < track.length; i++) {
       final p = track[i];
       final alt = p.length > 3 ? p[3].toDouble() : 0.0;
-      final m = p.length > 7 ? p[7].toDouble() : 0.0;
-      final vs = p.length > 6 ? p[6].toDouble() : 0.0;
+      final m = machFn(i);
+      final vs = vsFn(i);
 
       if (takeoffIdx == null && alt > 500) takeoffIdx = i;
       if (m1Idx == null && m >= 1.0) m1Idx = i;
@@ -877,6 +1111,7 @@ class _ProfileChartPainter extends CustomPainter {
     return oldDelegate.track.length != track.length ||
         oldDelegate.colors != colors ||
         oldDelegate.mode != mode ||
-        oldDelegate.scrubFrac != scrubFrac;
+        oldDelegate.scrubFrac != scrubFrac ||
+        oldDelegate.fuelCurve != fuelCurve;
   }
 }
