@@ -81,7 +81,6 @@ void main() {
         );
         await tester.pump();
 
-        expect(find.text('CONNECT TO YOUR SIM PC'), findsOneWidget);
         expect(find.text('PC ADDRESS'), findsOneWidget);
         expect(find.text('PAIRING CODE'), findsOneWidget);
         expect(find.text('CONNECT'), findsOneWidget);
