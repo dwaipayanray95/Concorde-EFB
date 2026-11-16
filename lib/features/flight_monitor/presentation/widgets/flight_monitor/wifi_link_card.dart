@@ -295,11 +295,13 @@ class _RemoteLinkState extends ConsumerState<_RemoteLink> {
           ),
           child: MouseRegion(
             cursor: SystemMouseCursors.help,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            child: Container(
+              width: 30,
+              height: 30,
+              alignment: Alignment.center,
               child: Icon(
                 Icons.help_outline_rounded,
-                size: 15,
+                size: 16,
                 color: colors.accent,
               ),
             ),
@@ -312,28 +314,47 @@ class _RemoteLinkState extends ConsumerState<_RemoteLink> {
           for (final b in found)
             Padding(
               padding: const EdgeInsets.only(right: 6),
-              child: ActionChip(
-                visualDensity: VisualDensity.compact,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                label: Text(
-                  '${b.name}  ${b.ip}',
-                  style: uiText(
-                    context,
-                    size: 10,
-                    weight: FontWeight.w800,
-                    color: _hostController.text == b.ip
-                        ? AppColors.dark.bg
-                        : colors.textPrimary,
+              child: SizedBox(
+                height: 30,
+                child: Material(
+                  color: _hostController.text == b.ip
+                      ? colors.accent
+                      : colors.surface,
+                  borderRadius: BorderRadius.circular(6),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(6),
+                    onTap: () {
+                      _hostController.text = b.ip;
+                      setState(() {});
+                    },
+                    child: Container(
+                      height: 30,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: _hostController.text == b.ip
+                              ? colors.accent
+                              : colors.dividerStrong,
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        '${b.name}  ${b.ip}',
+                        style: uiText(
+                          context,
+                          size: 10,
+                          weight: FontWeight.w800,
+                          color: _hostController.text == b.ip
+                              ? AppColors.dark.bg
+                              : colors.textPrimary,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-                backgroundColor: _hostController.text == b.ip
-                    ? colors.accent
-                    : colors.surface,
-                onPressed: () {
-                  _hostController.text = b.ip;
-                  setState(() {});
-                },
               ),
             ),
         ] else ...[
@@ -366,23 +387,25 @@ class _RemoteLinkState extends ConsumerState<_RemoteLink> {
 
         // IP Address input
         SizedBox(
-          width: 125,
+          width: 140,
           height: 30,
           child: TextField(
             controller: _hostController,
+            textAlignVertical: TextAlignVertical.center,
             style: uiText(
               context,
-              size: 10.5,
+              size: 11,
               weight: FontWeight.w700,
               color: colors.textPrimary,
             ),
             cursorColor: colors.accent,
+            cursorHeight: 14,
             keyboardType: TextInputType.url,
             decoration: InputDecoration(
               isDense: true,
               contentPadding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 6,
+                horizontal: 10,
+                vertical: 7,
               ),
               hintText: 'PC ADDRESS',
               hintStyle: uiText(
@@ -421,17 +444,21 @@ class _RemoteLinkState extends ConsumerState<_RemoteLink> {
 
         // Pairing code input
         SizedBox(
-          width: 85,
+          width: 95,
           height: 30,
           child: TextField(
             controller: _codeController,
+            textAlign: TextAlign.center,
+            textAlignVertical: TextAlignVertical.center,
             style: uiText(
               context,
-              size: 10.5,
-              weight: FontWeight.w700,
+              size: 11,
+              weight: FontWeight.w800,
               color: colors.textPrimary,
+              letterSpacing: 1.5,
             ),
             cursorColor: colors.accent,
+            cursorHeight: 14,
             keyboardType: TextInputType.number,
             onChanged: (v) {
               final digits = v.replaceAll(RegExp(r'\D'), '');
@@ -445,15 +472,16 @@ class _RemoteLinkState extends ConsumerState<_RemoteLink> {
             decoration: InputDecoration(
               isDense: true,
               contentPadding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 6,
+                horizontal: 6,
+                vertical: 7,
               ),
               hintText: 'PAIRING CODE',
               hintStyle: uiText(
                 context,
-                size: 9,
+                size: 8.5,
                 weight: FontWeight.w600,
                 color: colors.textDim,
+                letterSpacing: 0.3,
               ),
               filled: true,
               fillColor: colors.resultsBg,
