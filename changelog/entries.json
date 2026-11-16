@@ -1,6 +1,18 @@
 [
     {
         "date": "2026-11-16",
+        "title": "v5.26.0 \u2014 Avionics Logbook Hub with pilot dossier and flight sparklines",
+        "items": [
+            "Logbook: upgraded the Log tab into a Pilot Career Hub with a live career dossier strip tracking total block time, supersonic hours, Mach 2.0+ supercruise time, and global distance flown",
+            "Supersonic flight ratio gauge: visual progress bar comparing supersonic flight duration against subsonic climb and descent phases",
+            "Landing butter distribution bar: 5-tier color-coded histogram showing your landing quality spread across Butter, Smooth, Firm (normal Concorde touchdown), Hard, and Inspection",
+            "Flight sparklines: each flight card now features an embedded custom-painted vector altitude sparkline thumbnail giving instant visual profile recognition",
+            "Search and quick filters: filter flights in real time by ICAO airport, call sign, or registration, with dedicated quick-filter chips for Supersonic, Butter/Smooth, and Firm flights",
+            "Go-around logging: FlightTracker now records and counts go-arounds, displaying a dedicated go-around badge on the flight card and debrief screen while remaining 100% backwards-compatible with existing logs"
+        ]
+    },
+    {
+        "date": "2026-11-16",
         "title": "v5.25.0 \u2014 Wi-Fi telemetry and logbook sync for Mac devices",
         "items": [
             "Flight Monitor: Mac devices can now connect to your Windows sim PC over Wi-Fi, entering the 6-digit pairing code or picking up auto-discovered PCs on the local network",
