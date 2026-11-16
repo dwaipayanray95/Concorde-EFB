@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/concorde_fuel_schematic.dart';
 import '../../features/flight_monitor/presentation/controllers/telemetry_provider.dart';
 import '../../features/flight_monitor/data/models/telemetry_model.dart';
+import '../../features/flight_monitor/data/services/lan_link.dart';
 import '../../features/flight_monitor/presentation/widgets/flight_monitor/fm_toolbar.dart';
+import '../../features/flight_monitor/presentation/widgets/flight_monitor/wifi_link_card.dart';
 import '../../features/flight_monitor/presentation/widgets/flight_monitor/pfd_panel.dart';
 import '../../features/flight_monitor/presentation/widgets/flight_monitor/cockpit_panels.dart';
 import '../../features/flight_monitor/presentation/widgets/flight_monitor/mfd_strip.dart';
@@ -76,6 +78,10 @@ class _FlightMonitorSection extends StatelessWidget {
               ? monitorState.bridge.message
               : null,
         ),
+        if (isWindowsDesktop) ...[
+          const SizedBox(height: 12),
+          const WifiLinkCard(),
+        ],
         const SizedBox(height: 16),
 
         AbsorbPointer(

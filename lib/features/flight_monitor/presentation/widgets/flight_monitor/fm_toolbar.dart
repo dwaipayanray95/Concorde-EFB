@@ -111,29 +111,30 @@ class FmToolbar extends StatelessWidget {
           ],
         ),
 
-        const SizedBox(width: 12),
-
-        // Right side: in line with connection status row!
-        Flexible(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minWidth: constraints.hasBoundedWidth
-                        ? constraints.maxWidth
-                        : 0,
+        // Right side: in line with connection status row (remote clients only: Mac, phone, tablet)
+        if (isRemoteClientPlatform) ...[
+          const SizedBox(width: 12),
+          Flexible(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minWidth: constraints.hasBoundedWidth
+                          ? constraints.maxWidth
+                          : 0,
+                    ),
+                    child: const Align(
+                      alignment: Alignment.centerRight,
+                      child: WifiLinkCard(),
+                    ),
                   ),
-                  child: const Align(
-                    alignment: Alignment.centerRight,
-                    child: WifiLinkCard(),
-                  ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
-        ),
+        ],
       ],
     );
   }

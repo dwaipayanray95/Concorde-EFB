@@ -111,6 +111,65 @@ void main() {
 
         expect(find.text('SHARE TO PHONE / TABLET / MAC'), findsOneWidget);
         expect(find.byType(Switch), findsOneWidget);
+
+        final helpIcon = find.byIcon(Icons.help_outline_rounded);
+        expect(helpIcon, findsOneWidget);
+        final tooltip = tester.widget<Tooltip>(
+          find.ancestor(of: helpIcon, matching: find.byType(Tooltip)),
+        );
+        expect(tooltip.message, contains('HOW TO SHARE'));
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets('Windows sharing card expands and collapses', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      try {
+        await tester.pumpWidget(
+          ProviderScope(
+            child: MaterialApp(
+              theme: ThemeData(extensions: const [AppColors.dark]),
+              home: const Scaffold(body: WifiLinkCard()),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        // Initially collapsed: Android button is not visible
+        expect(
+          find.text('DOWNLOAD FOR ANDROID TABLET / PHONE'),
+          findsNothing,
+        );
+
+        // Tap on the header row to expand
+        await tester.tap(find.text('SHARE TO PHONE / TABLET / MAC'));
+        await tester.pumpAndSettle();
+
+        // Now expanded: Android button is visible on the left
+        expect(
+          find.text('DOWNLOAD FOR ANDROID TABLET / PHONE'),
+          findsOneWidget,
+        );
+
+        // Tap the Android button to verify it triggers the beta dialog
+        await tester.tap(find.text('DOWNLOAD FOR ANDROID TABLET / PHONE'));
+        await tester.pumpAndSettle();
+        expect(find.text('JOIN THE ANDROID TEST'), findsOneWidget);
+
+        // Close the dialog
+        await tester.tap(find.text('CLOSE'));
+        await tester.pumpAndSettle();
+
+        // Tap the header row to collapse again
+        await tester.tap(find.text('SHARE TO PHONE / TABLET / MAC'));
+        await tester.pumpAndSettle();
+
+        // Collapsed again
+        expect(
+          find.text('DOWNLOAD FOR ANDROID TABLET / PHONE'),
+          findsNothing,
+        );
       } finally {
         debugDefaultTargetPlatformOverride = null;
       }

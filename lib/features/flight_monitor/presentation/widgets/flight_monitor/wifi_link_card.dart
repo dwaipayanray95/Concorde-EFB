@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../../core/app_colors.dart';
 import '../../../../../core/ui_text.dart';
+import '../../../../../widgets/efb_flat_card.dart';
 import '../../../data/services/lan_link.dart';
 import '../../controllers/telemetry_provider.dart';
+import 'android_beta_prompt.dart';
 
-/// Inline Wi-Fi link controls for the sim PC link, displayed in line with the
-/// Flight Monitor status toolbar.
-///  - Windows desktop: toggle sharing, show this PC's IP + pairing code.
-///  - Remote clients (Mac, Android, iOS): address & pairing code inputs + connect button.
+/// Wi-Fi link controls for the sim PC link.
+///  - Windows desktop: slim expandable card with toggle sharing, IP, code, and Android button.
+///  - Remote clients (Mac, Android, iOS): address & pairing code inputs + connect button in toolbar.
 class WifiLinkCard extends ConsumerWidget {
   const WifiLinkCard({super.key});
 
@@ -23,11 +25,41 @@ class WifiLinkCard extends ConsumerWidget {
 
 // ---------------------------------------------------------------------------
 
-class _DesktopShare extends ConsumerWidget {
+class _DesktopShare extends ConsumerStatefulWidget {
   const _DesktopShare();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_DesktopShare> createState() => _DesktopShareState();
+}
+
+class _DesktopShareState extends ConsumerState<_DesktopShare> {
+  static const _prefKey = 'lan_share_card_expanded';
+  bool _expanded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExpansionPref();
+  }
+
+  Future<void> _loadExpansionPref() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _expanded = prefs.getBool(_prefKey) ?? false;
+      });
+    }
+  }
+
+  Future<void> _toggleExpanded() async {
+    final next = !_expanded;
+    setState(() => _expanded = next);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_prefKey, next);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final colors = context.colors;
     final share = ref.watch(lanShareProvider);
     final ips = ref.watch(localIpv4Provider).value ?? const [];
@@ -35,126 +67,376 @@ class _DesktopShare extends ConsumerWidget {
         ? '${share.code.substring(0, 3)} ${share.code.substring(3)}'
         : '------';
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        // ? Tutorial Help Tooltip
-        Tooltip(
-          message:
-              'HOW TO SHARE:\n'
-              '1. Turn on sharing to broadcast live sim data over Wi-Fi.\n'
-              '2. On your phone, tablet, or Mac, open Concorde EFB > MONITOR.\n'
-              '3. Enter this PC address and pairing code.\n'
-              '4. Allow msfs_bridge on Private networks if prompted.',
-          triggerMode: TooltipTriggerMode.tap,
-          preferBelow: true,
-          waitDuration: const Duration(milliseconds: 100),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          textStyle: uiText(
-            context,
-            size: 10.5,
-            weight: FontWeight.w600,
-            color: colors.textPrimary,
-            height: 1.4,
-          ),
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: colors.dividerStrong, width: 1.2),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.4),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: MouseRegion(
-            cursor: SystemMouseCursors.help,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              child: Icon(
-                Icons.help_outline_rounded,
-                size: 15,
-                color: colors.accent,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 6),
-        Icon(
-          Icons.wifi_tethering,
-          size: 14,
-          color: share.enabled ? colors.accent : colors.textDim,
-        ),
-        const SizedBox(width: 6),
-        Text(
-          'SHARE TO PHONE / TABLET / MAC',
-          style: uiText(
-            context,
-            size: 10,
-            weight: FontWeight.w800,
-            color: share.enabled ? colors.textPrimary : colors.textDim,
-            letterSpacing: 0.6,
-          ),
-        ),
-        if (share.enabled) ...[
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: colors.resultsBg,
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: colors.dividerStrong, width: 1),
-            ),
+    return EfbFlatCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header / Summary Row: always visible, can be tapped to toggle expansion.
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             child: Row(
-              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  ips.isEmpty ? 'NO NETWORK' : ips.first,
-                  style: uiText(
-                    context,
-                    size: 10.5,
-                    weight: FontWeight.w700,
-                    color: colors.textPrimary,
+                Expanded(
+                  child: InkWell(
+                    onTap: _toggleExpanded,
+                    borderRadius: BorderRadius.circular(6),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _expanded
+                                ? Icons.keyboard_arrow_down
+                                : Icons.keyboard_arrow_right,
+                            size: 18,
+                            color: colors.textDim,
+                          ),
+                          const SizedBox(width: 6),
+                          Icon(
+                            Icons.wifi_tethering,
+                            size: 15,
+                            color:
+                                share.enabled ? colors.accent : colors.textDim,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'SHARE TO PHONE / TABLET / MAC',
+                            style: uiText(
+                              context,
+                              size: 10.5,
+                              weight: FontWeight.w800,
+                              color: share.enabled
+                                  ? colors.textPrimary
+                                  : colors.textDim,
+                              letterSpacing: 0.6,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          // ? Tutorial Help Tooltip: prompts hide cleanly inside here
+                          Tooltip(
+                            message:
+                                'HOW TO SHARE:\n'
+                                '1. Turn on sharing to broadcast live sim data over Wi-Fi.\n'
+                                '2. On your phone, tablet, or Mac, open Concorde EFB > MONITOR.\n'
+                                '3. Enter this PC address and pairing code.\n'
+                                '4. Allow msfs_bridge on Private networks if prompted.\n'
+                                '5. Open MONITOR on your other device and enter the pairing code.',
+                            triggerMode: TooltipTriggerMode.tap,
+                            preferBelow: true,
+                            waitDuration: const Duration(milliseconds: 100),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            textStyle: uiText(
+                              context,
+                              size: 10.5,
+                              weight: FontWeight.w600,
+                              color: colors.textPrimary,
+                              height: 1.4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.surface,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: colors.dividerStrong,
+                                width: 1.2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.4),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: MouseRegion(
+                              cursor: SystemMouseCursors.help,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 2,
+                                ),
+                                child: Icon(
+                                  Icons.help_outline_rounded,
+                                  size: 15,
+                                  color: colors.accent,
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          // If collapsed AND sharing enabled: show compact IP + Code pill
+                          if (!_expanded && share.enabled) ...[
+                            const SizedBox(width: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: colors.resultsBg,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: colors.dividerStrong,
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: colors.accent,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    ips.isEmpty ? 'NO NETWORK' : ips.first,
+                                    style: uiText(
+                                      context,
+                                      size: 10,
+                                      weight: FontWeight.w700,
+                                      color: colors.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'CODE: $code',
+                                    style: uiText(
+                                      context,
+                                      size: 10,
+                                      weight: FontWeight.w900,
+                                      color: colors.accent,
+                                      letterSpacing: 1.1,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
                   ),
                 ),
+
                 const SizedBox(width: 8),
+
                 Text(
-                  'CODE: $code',
+                  share.enabled ? 'ACTIVE' : 'OFF',
                   style: uiText(
                     context,
-                    size: 10.5,
-                    weight: FontWeight.w900,
-                    color: colors.accent,
-                    letterSpacing: 1.2,
+                    size: 9.5,
+                    weight: FontWeight.w800,
+                    color: share.enabled ? colors.accent : colors.textDim,
+                    letterSpacing: 0.8,
                   ),
                 ),
-                const SizedBox(width: 4),
-                InkWell(
-                  onTap: () =>
-                      ref.read(lanShareProvider.notifier).regenerateCode(),
-                  borderRadius: BorderRadius.circular(4),
-                  child: Padding(
-                    padding: const EdgeInsets.all(2),
-                    child: Icon(Icons.refresh, size: 12, color: colors.accent),
+                const SizedBox(width: 6),
+                Transform.scale(
+                  scale: 0.75,
+                  child: Switch(
+                    value: share.enabled,
+                    activeThumbColor: colors.accent,
+                    onChanged: (v) {
+                      ref.read(lanShareProvider.notifier).setEnabled(v);
+                      if (v && !_expanded) {
+                        _toggleExpanded();
+                      }
+                    },
                   ),
                 ),
               ],
             ),
           ),
+
+          // Expanded Content Area: button on the left, telemetry info on the right
+          if (_expanded) ...[
+            Container(
+              height: 1,
+              color: colors.dividerStrong.withValues(alpha: 0.5),
+              margin: const EdgeInsets.symmetric(horizontal: 14),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isNarrow = constraints.maxWidth < 680;
+                  final androidButton = ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colors.accent,
+                      foregroundColor: AppColors.dark.bg,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 9,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    onPressed: () => showAndroidBetaDialog(context),
+                    icon: const Icon(Icons.android, size: 15),
+                    label: Text(
+                      'DOWNLOAD FOR ANDROID TABLET / PHONE',
+                      style: uiText(
+                        context,
+                        size: 10,
+                        weight: FontWeight.w900,
+                        color: AppColors.dark.bg,
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                  );
+
+                  Widget connectionDetails;
+                  if (share.enabled) {
+                    connectionDetails = Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // THIS PC (IP)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'THIS PC (IP)',
+                              style: uiText(
+                                context,
+                                size: 9,
+                                weight: FontWeight.w800,
+                                color: colors.textDim,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            SelectableText(
+                              ips.isEmpty ? 'NO NETWORK' : ips.join('  /  '),
+                              style: uiText(
+                                context,
+                                size: 11.5,
+                                weight: FontWeight.w800,
+                                color: colors.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(width: 24),
+                        // PAIRING CODE
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'PAIRING CODE',
+                              style: uiText(
+                                context,
+                                size: 9,
+                                weight: FontWeight.w800,
+                                color: colors.textDim,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SelectableText(
+                                  code,
+                                  style: uiText(
+                                    context,
+                                    size: 13.5,
+                                    weight: FontWeight.w900,
+                                    color: colors.accent,
+                                    letterSpacing: 1.4,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Tooltip(
+                                  message: 'Generate new pairing code',
+                                  child: InkWell(
+                                    onTap: () => ref
+                                        .read(lanShareProvider.notifier)
+                                        .regenerateCode(),
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(3),
+                                      child: Icon(
+                                        Icons.refresh,
+                                        size: 14,
+                                        color: colors.accent,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  } else {
+                    connectionDetails = Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 14,
+                          color: colors.textDim,
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            'SHARING INACTIVE · TOGGLE SWITCH TO STREAM OVER WI-FI',
+                            style: uiText(
+                              context,
+                              size: 10,
+                              weight: FontWeight.w700,
+                              color: colors.textDim,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+
+                  if (isNarrow) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        androidButton,
+                        const SizedBox(height: 12),
+                        connectionDetails,
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    children: [
+                      androidButton,
+                      const SizedBox(width: 18),
+                      Container(
+                        width: 1,
+                        height: 28,
+                        color: colors.dividerStrong.withValues(alpha: 0.6),
+                      ),
+                      const SizedBox(width: 18),
+                      Expanded(child: connectionDetails),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
         ],
-        const SizedBox(width: 8),
-        Transform.scale(
-          scale: 0.8,
-          child: Switch(
-            value: share.enabled,
-            activeThumbColor: colors.accent,
-            onChanged: (v) => ref.read(lanShareProvider.notifier).setEnabled(v),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

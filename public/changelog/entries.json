@@ -1,6 +1,16 @@
 [
     {
         "date": "2026-11-16",
+        "title": "v5.28.1 — Slim Expandable Wi-Fi Sharing Card on Windows",
+        "items": [
+            "Standalone Windows Connection Card: preserved the full Wi-Fi sharing card as an independent avionics card on Windows desktop rather than merging into the status toolbar, keeping the toolbar clean for flight telemetry",
+            "Collapsible Avionics Chassis: added tap-to-expand/collapse toggle with SharedPreferences persistence, collapsing down to an ultra-slim 36px bar with compact live IP and pairing code status pill when active",
+            "Relocated Android Download Action: moved the Android beta download button to the left side of the telemetry details row instead of stacking on the bottom, drastically reducing vertical card footprint",
+            "Concealed Instruction Prompts: tucked multi-step Wi-Fi setup and msfs_bridge instructions inside the amber help tooltip, eliminating cluttered explanatory paragraph text"
+        ]
+    },
+    {
+        "date": "2026-11-16",
         "title": "v5.28.0 — Authentic Concorde Landing Speeds (VREF, VTT, and Fixed VAPP)",
         "items": [
             "Calibrated VREF Datum: recalculated reference landing speed based on certified BAC/Aérospatiale Concorde Flight Operations Manual tables (162 kt at MLW scaling with √weight down to ~150 kt at 96 t), eliminating the previous conflation with intermediate glideslope speed",
