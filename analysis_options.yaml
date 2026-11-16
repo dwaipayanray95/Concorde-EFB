@@ -10,6 +10,9 @@
 include: package:flutter_lints/flutter.yaml
 
 analyzer:
+  errors:
+    deprecated_member_use: ignore
+    deprecated_member_use_from_same_package: ignore
   exclude:
     # Generated build artifacts (e.g. iOS Swift Package Manager vendors full
     # plugin sources, including their own test suites, under build/ios).
