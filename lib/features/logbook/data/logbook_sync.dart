@@ -71,8 +71,8 @@ class LogbookSyncState {
   const LogbookSyncState({this.connected = false, this.lastSync});
 }
 
-/// Phone/tablet only: mirrors the desktop logbook over the bridge socket.
-/// Idle on desktop. Keep it watched (HomeScreen) so it runs on every tab.
+/// Remote clients (phone/tablet/Mac) only: mirrors the sim PC logbook over the bridge socket.
+/// Idle on the host PC. Keep it watched (HomeScreen) so it runs on every tab.
 class LogbookSyncNotifier extends Notifier<LogbookSyncState> {
   static const _interval = Duration(seconds: 60);
 
@@ -83,7 +83,7 @@ class LogbookSyncNotifier extends Notifier<LogbookSyncState> {
 
   @override
   LogbookSyncState build() {
-    if (!isMobilePlatform) return const LogbookSyncState();
+    if (!isRemoteClientPlatform) return const LogbookSyncState();
     final connected = ref.watch(
       flightMonitorProvider.select((s) => s.bridge.socketConnected),
     );

@@ -32,11 +32,12 @@ class AndroidBetaPromptPolicy {
   @visibleForTesting
   static void resetSession() => _shownThisSession = false;
 
-  /// Desktop only: phones/tablets already run the Android app. Never under
-  /// `flutter test` (a modal would sit over the screens being tested).
+  /// Sim PC only: remote devices (Mac, phones, tablets) already run on a
+  /// companion device. Never under `flutter test` (a modal would sit over the
+  /// screens being tested).
   static bool get platformEligible =>
       !kIsWeb &&
-      !isMobilePlatform &&
+      !isRemoteClientPlatform &&
       !Platform.environment.containsKey('FLUTTER_TEST');
 
   static bool shouldShow(SharedPreferences prefs, {DateTime? now}) {

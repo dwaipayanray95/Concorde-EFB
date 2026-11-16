@@ -25,7 +25,7 @@ class FmToolbar extends StatelessWidget {
     final colors = context.colors;
     final statusColor = isConnected ? colors.arrival : colors.error;
     final statusLabel = isConnected
-        ? (isMobilePlatform ? 'LIVE FROM SIM PC' : 'SIMCONNECT BRIDGE CONNECTED')
+        ? (isRemoteClientPlatform ? 'LIVE FROM SIM PC' : 'SIMCONNECT BRIDGE CONNECTED')
         : 'DISCONNECTED';
 
     return Row(

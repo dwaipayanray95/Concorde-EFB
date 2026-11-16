@@ -14,7 +14,7 @@ no `src/ConcordeEFB.tsx` or `src-tauri/` in this codebase anymore — do not loo
 - Framework: Flutter (Dart), single codebase for Desktop (Windows primary, macOS packaging
   present), Mobile (Android, with AdMob), and Web (GitHub Pages, static marketing/changelog only).
 - State management: `flutter_riverpod` (v3, `Notifier`/`NotifierProvider` style).
-- Current version: `5.24.0+105` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
+- Current version: `5.25.0+106` in `pubspec.yaml` (`version: name+buildNumber`). Keep this and the
   `public/changelog/entries.json` in sync — README no longer carries its own changelog, it just
   links to that page.
 - **Versioning rule (mandatory for every agent):** every change that alters user-visible behavior
@@ -116,15 +116,17 @@ the sim this app targets) gives a number, it wins; the code comments cite it. Co
     the app executable) so users don't need Python installed.
   - The bridge exposes telemetry over `ws://localhost:8082`; the app connects via
     `lib/features/flight_monitor/data/services/websocket_client.dart`.
-  - **Wi-Fi link for phones/tablets (v5.1.0):** SimConnect only works on the sim PC, so mobile
-    gets data from the desktop app's bridge over the LAN. Desktop toggle (`lanShareProvider`,
+  - **Wi-Fi link for secondary devices (v5.1.0, Mac support v5.25.0):** SimConnect
+    only works on the sim PC (Windows), so remote devices (Android, iOS, macOS) get
+    data from the desktop app's bridge over the LAN. Desktop toggle (`lanShareProvider`,
     persisted, loaded into `SimBridgeLauncher.lanEnabled/pairingCode` by
     `loadLanShareIntoLauncher()` in `main.dart` before the first launch) restarts the bridge with
     env `SIMBRIDGE_LAN=1` + `SIMBRIDGE_CODE=<6 digits>`: it binds `0.0.0.0:8082`, lets localhost
     in freely, closes non-local clients without `?code=` with WS close code **4401**, and
-    broadcasts a UDP beacon on **8083** (`{"app":"concorde-efb-bridge",...}`). Mobile:
+    broadcasts a UDP beacon on **8083** (`{"app":"concorde-efb-bridge",...}`). Remote clients:
     `discoveredBridgesProvider` listens for beacons, `remoteBridgeProvider` (persisted host+code)
-    feeds `FlightMonitorNotifier`'s URL; `BridgeStatus.pairingRejected` surfaces 4401. All in
+    feeds `FlightMonitorNotifier`'s URL; `BridgeStatus.pairingRejected` surfaces 4401. Logbook sync
+    (`LogbookSyncNotifier`) automatically mirrors the host PC's flights to the remote client. All in
     `lib/features/flight_monitor/data/services/lan_link.dart`; UI in `wifi_link_card.dart`.
     Verified end-to-end against the real bridge script (Linux, no SimConnect).
   - `SimBridgeLauncher.startWatching()` polls `tasklist` every 5s for MSFS's own process

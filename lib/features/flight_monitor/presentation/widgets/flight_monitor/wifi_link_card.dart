@@ -9,16 +9,15 @@ import '../../../data/services/lan_link.dart';
 import '../../controllers/telemetry_provider.dart';
 import 'android_beta_prompt.dart';
 
-/// Wi-Fi link between the sim PC and a phone/tablet.
+/// Wi-Fi link between the sim PC and a secondary device (phone, tablet, Mac).
 ///  - Windows desktop: toggle sharing, show this PC's IP + pairing code.
-///  - Android/iOS: find/enter the PC and pair with the code.
-/// Shows nothing on other platforms (macOS has no sim bridge).
+///  - Remote clients (Mac, Android, iOS): find/enter the PC and pair with the code.
 class WifiLinkCard extends ConsumerWidget {
   const WifiLinkCard({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (isMobilePlatform) return const _MobileLink();
+    if (isRemoteClientPlatform) return const _RemoteLink();
     if (isWindowsDesktop) return const _DesktopShare();
     return const SizedBox.shrink();
   }
@@ -110,7 +109,7 @@ class _DesktopShare extends ConsumerWidget {
               Expanded(
                 child: _title(
                   context,
-                  'SHARE TO PHONE / TABLET',
+                  'SHARE TO PHONE / TABLET / MAC',
                   Icons.wifi_tethering,
                 ),
               ),
@@ -126,7 +125,7 @@ class _DesktopShare extends ConsumerWidget {
             _note(
               context,
               'Turn on to show this Flight Monitor live on the Concorde EFB '
-              'app on your phone or tablet (same Wi-Fi network).',
+              'app on your phone, tablet, or Mac (same Wi-Fi network).',
             )
           else ...[
             const SizedBox(height: 6),
@@ -160,9 +159,9 @@ class _DesktopShare extends ConsumerWidget {
             const SizedBox(height: 10),
             _note(
               context,
-              'On the phone/tablet open MONITOR -- this PC should appear '
-              'automatically; enter the pairing code. If Windows asks about '
-              'msfs_bridge, allow it on Private networks.',
+              'On the other device (phone, tablet, or Mac) open MONITOR -- '
+              'this PC should appear automatically; enter the pairing code. '
+              'If Windows asks about msfs_bridge, allow it on Private networks.',
             ),
             const SizedBox(height: 12),
             // Android app is in internal testing -- opens the join steps.
@@ -196,14 +195,14 @@ class _DesktopShare extends ConsumerWidget {
 
 // ---------------------------------------------------------------------------
 
-class _MobileLink extends ConsumerStatefulWidget {
-  const _MobileLink();
+class _RemoteLink extends ConsumerStatefulWidget {
+  const _RemoteLink();
 
   @override
-  ConsumerState<_MobileLink> createState() => _MobileLinkState();
+  ConsumerState<_RemoteLink> createState() => _RemoteLinkState();
 }
 
-class _MobileLinkState extends ConsumerState<_MobileLink> {
+class _RemoteLinkState extends ConsumerState<_RemoteLink> {
   String _host = '';
   String _code = '';
   bool _editing = false;
@@ -284,10 +283,10 @@ class _MobileLinkState extends ConsumerState<_MobileLink> {
           const SizedBox(height: 6),
           _note(
             context,
-            'Live sim data comes from the Concorde EFB desktop app on the PC '
+            'Live sim data comes from the Concorde EFB app on the PC '
             'running MSFS. On the PC open MONITOR, turn on "Share to phone / '
-            'tablet", then enter its pairing code here. Both devices must be '
-            'on the same Wi-Fi.',
+            'tablet / Mac", then enter its pairing code here. Both devices '
+            'must be on the same Wi-Fi.',
           ),
           const SizedBox(height: 12),
           if (found.isEmpty)

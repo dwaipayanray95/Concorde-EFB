@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,9 +19,8 @@ import '../../flight_monitor/data/services/lan_link.dart';
 import 'logbook_format.dart';
 import 'logbook_providers.dart';
 
-bool get _isPhone =>
-    defaultTargetPlatform == TargetPlatform.android ||
-    defaultTargetPlatform == TargetPlatform.iOS;
+bool get _isRemoteClient => isRemoteClientPlatform;
+bool get _isPhone => isMobilePlatform;
 
 String _route(FlightLog l) {
   final dep = l.actualDep ?? l.plannedDep;
@@ -44,7 +42,7 @@ class LogbookTab extends ConsumerWidget {
     return ListView(
       physics: const BouncingScrollPhysics(),
       children: [
-        if (_isPhone) ...[const _SyncLine(), const SizedBox(height: 8)],
+        if (_isRemoteClient) ...[const _SyncLine(), const SizedBox(height: 8)],
         _Totals(logs: logs),
         const SizedBox(height: 12),
         _Toolbar(logs: logs),
@@ -58,8 +56,8 @@ class LogbookTab extends ConsumerWidget {
           EfbFlatCard(
             padding: const EdgeInsets.all(24),
             child: Text(
-              _isPhone
-                  ? 'Flights are logged by the Concorde EFB desktop app and '
+              _isRemoteClient
+                  ? 'Flights are logged by the Concorde EFB app on your sim PC and '
                         'appear here when this device connects to it.'
                   : 'No flights logged yet. Flights are recorded '
                         'automatically while the Flight Monitor is connected.',
@@ -101,7 +99,7 @@ class _SyncLine extends ConsumerWidget {
           ? 'Synced with $host · $time'
           : sync.connected
           ? 'Syncing with $host…'
-          : 'Not connected to the desktop app — showing last synced copy',
+          : 'Not connected to the sim PC — showing last synced copy',
       style: uiText(context, size: 11, color: context.colors.textSecondary),
     );
   }

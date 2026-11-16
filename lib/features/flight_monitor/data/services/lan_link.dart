@@ -21,6 +21,15 @@ import '../../../../core/sim_bridge_launcher.dart';
 const int bridgePort = 8082;
 const int beaconPort = 8083;
 
+/// Platforms that act as remote clients connecting over Wi-Fi to the sim PC.
+/// Android, iOS, and macOS (MSFS and SimConnect only run on Windows).
+bool get isRemoteClientPlatform =>
+    !kIsWeb &&
+    (defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS);
+
+/// Mobile platforms (phone / tablet). Kept for mobile-specific behaviors.
 bool get isMobilePlatform =>
     !kIsWeb &&
     (defaultTargetPlatform == TargetPlatform.android ||

@@ -81,10 +81,11 @@ class FlightMonitorNotifier extends Notifier<FlightMonitorState> {
 
   @override
   FlightMonitorState build() {
-    // Desktop: the bridge on this PC. Phone/tablet: the sim PC's bridge
-    // over Wi-Fi (rebuilds -- and reconnects -- when the user pairs).
+    // Windows host: the bridge on this PC. Remote clients (Mac / phone /
+    // tablet): the sim PC's bridge over Wi-Fi (rebuilds -- and reconnects --
+    // when the user pairs).
     final String? url;
-    if (isMobilePlatform) {
+    if (isRemoteClientPlatform) {
       final remote = ref.watch(remoteBridgeProvider);
       url = remote.isConfigured ? remote.url : null;
     } else {

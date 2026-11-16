@@ -17,13 +17,9 @@ import '../domain/flight_tracker.dart';
 
 final logbookRepositoryProvider = Provider((ref) => LogbookRepository());
 
-/// Flight logging runs on desktop only (the sim PC); tests override this.
+/// Flight logging runs on the sim PC only (Windows); remote clients sync via [LogbookSyncNotifier].
 final loggingEnabledProvider = Provider<bool>(
-  (ref) => const {
-    TargetPlatform.windows,
-    TargetPlatform.macOS,
-    TargetPlatform.linux,
-  }.contains(defaultTargetPlatform),
+  (ref) => defaultTargetPlatform == TargetPlatform.windows,
 );
 
 class LogbookNotifier extends AsyncNotifier<List<FlightLog>> {
