@@ -74,6 +74,25 @@ void main() {
     expect(chime.played, isEmpty);
   });
 
+  test('volume defaults to 1.0 (100%) and persists changes', () async {
+    final c = make();
+    addTearDown(c.dispose);
+    expect(c.read(alertChimeVolumeProvider), 1.0);
+
+    final chime = c.read(alertChimeProvider.notifier);
+    await chime.setVolume(0.45);
+    expect(c.read(alertChimeVolumeProvider), 0.45);
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getDouble(AlertChimeVolumeNotifier.prefKey), 0.45);
+
+    // Clamps to [0.0, 1.0]
+    await chime.setVolume(1.5);
+    expect(c.read(alertChimeVolumeProvider), 1.0);
+    await chime.setVolume(-0.2);
+    expect(c.read(alertChimeVolumeProvider), 0.0);
+  });
+
   test('urgent warnings re-chime every 2 s, DESCEND NOW every 12 s', () async {
     final c = make();
     addTearDown(c.dispose);

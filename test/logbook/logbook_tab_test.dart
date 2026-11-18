@@ -59,6 +59,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    // Verify removed heading
+    expect(find.text('FLIGHT DECK CAREER DOSSIER'), findsNothing);
+    expect(find.text('DC DESIGNS CONCORDE'), findsNothing);
+
     expect(find.text('FLIGHTS'), findsOneWidget);
     expect(find.text('2'), findsOneWidget);
     expect(find.text('7:20'), findsOneWidget); // 2 x 3:40 block

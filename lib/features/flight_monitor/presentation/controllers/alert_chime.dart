@@ -72,6 +72,15 @@ class AlertChimeNotifier extends Notifier<bool> {
     await prefs.setBool(_prefKey, enabled);
   }
 
+  /// Sets the chime volume (0.0 to 1.0) and updates the active players.
+  Future<void> setVolume(double volume) async {
+    await ref.read(alertChimeVolumeProvider.notifier).setVolume(volume);
+    try {
+      await _warningPlayer?.setVolume(volume);
+      await _cautionPlayer?.setVolume(volume);
+    } catch (_) {}
+  }
+
   void _onAlerts(List<LiveAlert> alerts) {
     final now = DateTime.now();
     final fresh = <LiveAlert>[];
@@ -152,6 +161,8 @@ class AlertChimeNotifier extends Notifier<bool> {
           ? (_warningPlayer ??= AudioPlayer())
           : (_cautionPlayer ??= AudioPlayer());
       await player.stop();
+      final volume = ref.read(alertChimeVolumeProvider);
+      await player.setVolume(volume);
       await player.play(
         AssetSource(critical ? 'sounds/warning.wav' : 'sounds/caution.wav'),
       );
@@ -164,6 +175,38 @@ class AlertChimeNotifier extends Notifier<bool> {
   /// Plays a chime on demand (used by the settings "test" button).
   Future<void> preview({required bool critical}) => _play(critical: critical);
 }
+
+/// Volume preference for alert chimes (0.0 to 1.0, default 1.0 / 100%).
+class AlertChimeVolumeNotifier extends Notifier<double> {
+  static const prefKey = 'alert_chimes_volume';
+  static const double defaultVolume = 1.0;
+
+  @override
+  double build() {
+    _load();
+    return defaultVolume;
+  }
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getDouble(prefKey);
+    if (saved != null) {
+      state = saved.clamp(0.0, 1.0);
+    }
+  }
+
+  Future<void> setVolume(double volume) async {
+    final clamped = volume.clamp(0.0, 1.0);
+    state = clamped;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(prefKey, clamped);
+  }
+}
+
+final alertChimeVolumeProvider =
+    NotifierProvider<AlertChimeVolumeNotifier, double>(
+  AlertChimeVolumeNotifier.new,
+);
 
 final alertChimeProvider = NotifierProvider<AlertChimeNotifier, bool>(
   AlertChimeNotifier.new,

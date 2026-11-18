@@ -289,21 +289,24 @@ class EfbNavRail extends ConsumerWidget {
             Consumer(
               builder: (context, ref, _) {
                 final on = ref.watch(alertChimeProvider);
+                final volume = ref.watch(alertChimeVolumeProvider);
                 final chime = ref.read(alertChimeProvider.notifier);
                 Widget test(String label, bool critical) => TextButton(
-                  onPressed: () => chime.preview(critical: critical),
+                  onPressed: on ? () => chime.preview(critical: critical) : null,
                   child: Text(
                     label,
                     style: uiText(
                       context,
                       size: 10,
                       weight: FontWeight.w800,
-                      color: colors.accent,
+                      color: on
+                          ? colors.accent
+                          : colors.textDim.withValues(alpha: 0.4),
                     ),
                   ),
                 );
                 return Container(
-                  padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
+                  padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
                   decoration: BoxDecoration(
                     color: colors.inputBg,
                     borderRadius: BorderRadius.circular(8),
@@ -311,33 +314,128 @@ class EfbNavRail extends ConsumerWidget {
                       color: colors.dividerStrong.withValues(alpha: 0.5),
                     ),
                   ),
-                  child: Row(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        on
-                            ? Icons.volume_up_outlined
-                            : Icons.volume_off_outlined,
-                        size: 16,
-                        color: colors.accent,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Alert chimes',
-                          style: uiText(
-                            context,
-                            size: 13,
-                            color: colors.textPrimary,
-                            weight: FontWeight.w600,
+                      Row(
+                        children: [
+                          Icon(
+                            on
+                                ? (volume == 0
+                                    ? Icons.volume_mute_outlined
+                                    : Icons.volume_up_outlined)
+                                : Icons.volume_off_outlined,
+                            size: 16,
+                            color: on ? colors.accent : colors.textDim,
                           ),
-                        ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Alert chimes',
+                              style: uiText(
+                                context,
+                                size: 13,
+                                color: colors.textPrimary,
+                                weight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          test('WARNING', true),
+                          test('CAUTION', false),
+                          Switch(
+                            value: on,
+                            activeThumbColor: colors.accent,
+                            onChanged: chime.setEnabled,
+                          ),
+                        ],
                       ),
-                      test('WARNING', true),
-                      test('CAUTION', false),
-                      Switch(
-                        value: on,
-                        activeThumbColor: colors.accent,
-                        onChanged: chime.setEnabled,
+                      const SizedBox(height: 6),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Row(
+                          children: [
+                            Icon(
+                              volume == 0
+                                  ? Icons.volume_mute
+                                  : volume < 0.5
+                                      ? Icons.volume_down
+                                      : Icons.volume_up,
+                              size: 14,
+                              color: on
+                                  ? colors.textDim
+                                  : colors.textDim.withValues(alpha: 0.3),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'VOLUME',
+                              style: uiText(
+                                context,
+                                size: 10,
+                                weight: FontWeight.w700,
+                                color: on
+                                    ? colors.textDim
+                                    : colors.textDim.withValues(alpha: 0.3),
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: SliderTheme(
+                                data: SliderTheme.of(context).copyWith(
+                                  trackHeight: 3,
+                                  thumbShape: const RoundSliderThumbShape(
+                                    enabledThumbRadius: 6,
+                                  ),
+                                  overlayShape: const RoundSliderOverlayShape(
+                                    overlayRadius: 14,
+                                  ),
+                                  activeTrackColor: on
+                                      ? colors.accent
+                                      : colors.textDim.withValues(alpha: 0.3),
+                                  inactiveTrackColor: colors.dividerStrong
+                                      .withValues(alpha: 0.4),
+                                  thumbColor: on
+                                      ? colors.accent
+                                      : colors.textDim.withValues(alpha: 0.4),
+                                  disabledActiveTrackColor: colors.textDim
+                                      .withValues(alpha: 0.2),
+                                  disabledInactiveTrackColor: colors
+                                      .dividerStrong
+                                      .withValues(alpha: 0.2),
+                                  disabledThumbColor: colors.textDim
+                                      .withValues(alpha: 0.3),
+                                ),
+                                child: Slider(
+                                  value: volume,
+                                  min: 0.0,
+                                  max: 1.0,
+                                  onChanged: on
+                                      ? (v) => chime.setVolume(v)
+                                      : null,
+                                  onChangeEnd: (v) {
+                                    if (on) chime.preview(critical: false);
+                                  },
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            SizedBox(
+                              width: 38,
+                              child: Text(
+                                '${(volume * 100).round()}%',
+                                textAlign: TextAlign.right,
+                                style: uiText(
+                                  context,
+                                  size: 11,
+                                  weight: FontWeight.w700,
+                                  color: on
+                                      ? colors.accent
+                                      : colors.textDim.withValues(alpha: 0.3),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),

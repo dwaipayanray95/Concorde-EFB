@@ -93,8 +93,8 @@ class _LogbookTabState extends ConsumerState<LogbookTab> {
       }
     }).toList();
 
-    return ListView(
-      physics: const BouncingScrollPhysics(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (_isRemoteClient) ...[const _SyncLine(), const SizedBox(height: 8)],
         _CareerDossier(logs: allLogs),
@@ -108,42 +108,54 @@ class _LogbookTabState extends ConsumerState<LogbookTab> {
           onFilterChanged: (m) => setState(() => _filterMode = m),
         ),
         const SizedBox(height: 12),
-        if (async.isLoading && allLogs.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(32),
-            child: Center(child: CircularProgressIndicator()),
-          )
-        else if (allLogs.isEmpty)
-          EfbFlatCard(
-            padding: const EdgeInsets.all(28),
-            child: Text(
-              _isRemoteClient
-                  ? 'Flights are logged by the Concorde EFB app on your sim PC and '
-                        'appear here when this device connects to it.'
-                  : 'No flights logged yet. Flights are recorded '
-                        'automatically while the Flight Monitor is connected.',
-              textAlign: TextAlign.center,
-              style: uiText(context, size: 13, color: colors.textSecondary),
-            ),
-          )
-        else if (filteredLogs.isEmpty)
-          EfbFlatCard(
-            padding: const EdgeInsets.all(24),
-            child: Text(
-              'No flights match the current search / filter criteria.',
-              textAlign: TextAlign.center,
-              style: uiText(context, size: 12, color: colors.textSecondary),
-            ),
-          )
-        else
-          Column(
-            children: [
-              for (var i = 0; i < filteredLogs.length; i++) ...[
-                if (i > 0) const SizedBox(height: 8),
-                _AvionicsFlightCard(log: filteredLogs[i]),
-              ],
-            ],
-          ),
+        Expanded(
+          child: async.isLoading && allLogs.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : allLogs.isEmpty
+              ? Align(
+                  alignment: Alignment.topCenter,
+                  child: EfbFlatCard(
+                    padding: const EdgeInsets.all(28),
+                    child: Text(
+                      _isRemoteClient
+                          ? 'Flights are logged by the Concorde EFB app on your sim PC and '
+                                'appear here when this device connects to it.'
+                          : 'No flights logged yet. Flights are recorded '
+                                'automatically while the Flight Monitor is connected.',
+                      textAlign: TextAlign.center,
+                      style: uiText(
+                        context,
+                        size: 13,
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ),
+                )
+              : filteredLogs.isEmpty
+              ? Align(
+                  alignment: Alignment.topCenter,
+                  child: EfbFlatCard(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      'No flights match the current search / filter criteria.',
+                      textAlign: TextAlign.center,
+                      style: uiText(
+                        context,
+                        size: 12,
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ),
+                )
+              : ListView.separated(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.only(bottom: 12),
+                  itemCount: filteredLogs.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (context, i) =>
+                      _AvionicsFlightCard(log: filteredLogs[i]),
+                ),
+        ),
       ],
     );
   }
@@ -233,58 +245,10 @@ class _CareerDossier extends StatelessWidget {
         : Duration(seconds: totalBlockSec ~/ logs.length);
 
     return EfbFlatCard(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header Bar
-          Row(
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: colors.accent,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: colors.accent.withValues(alpha: 0.5),
-                      blurRadius: 6,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'FLIGHT DECK CAREER DOSSIER',
-                style: uiText(
-                  context,
-                  size: 11,
-                  weight: FontWeight.w900,
-                  color: colors.accent,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                'DC DESIGNS CONCORDE',
-                style: uiText(
-                  context,
-                  size: 10,
-                  weight: FontWeight.w700,
-                  color: colors.textDim,
-                  letterSpacing: 0.8,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Divider(
-            height: 1,
-            color: colors.dividerStrong.withValues(alpha: 0.4),
-          ),
-          const SizedBox(height: 12),
-
           // 6 KPI Metric Cards
           LayoutBuilder(
             builder: (context, c) {
