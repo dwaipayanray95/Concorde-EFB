@@ -1,5 +1,23 @@
 [
     {
+        "date": "2026-11-18",
+        "title": "v6.1.1 \u2014 Dedicated Flight List Scrolling & Streamlined Pilot Stats",
+        "items": [
+            "Pinned Pilot Career Stats: the pilot career statistics and search toolbar now stay fixed at the top of the flight log tab, allowing only the flight history list to scroll independently",
+            "Streamlined Stats Header: removed the redundant 'FLIGHT DECK CAREER DOSSIER' and 'DC DESIGNS CONCORDE' title bars and dividers from the stats card, significantly increasing vertical viewing space for flights",
+            "Virtualized Flight List: upgraded the flight card list to a virtualized scroll view with bottom clearance padding for smoother scrolling and optimal performance"
+        ]
+    },
+    {
+        "date": "2026-11-18",
+        "title": "v6.1.0 \u2014 Alert Chime Volume Slider & Loudness Controls",
+        "items": [
+            "Alert Chime Volume Control: added an authentic cockpit volume slider directly under the Alert Chimes toggle in EFB Settings to adjust warning and caution chime loudness from 0% to 100%",
+            "Persistent Audio Preference: chime volume level is saved locally across app restarts via SharedPreferences",
+            "Interactive Audio Preview: releasing the volume slider or tapping WARNING / CAUTION test buttons previews the chimes at the newly selected volume level"
+        ]
+    },
+    {
         "date": "2026-11-16",
         "title": "v5.28.1 \u2014 Slim Expandable Wi-Fi Sharing Card on Windows",
         "items": [
