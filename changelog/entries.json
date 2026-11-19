@@ -3,6 +3,7 @@
         "date": "2026-11-19",
         "title": "Commits",
         "items": [
+            "acbeb36 build(android): upgrade AGP to 9.3.1 and Gradle wrapper to 9.5.0",
             "513adc6 ci: skip android build dependency validation in flutter build"
         ]
     },
