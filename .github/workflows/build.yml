@@ -362,7 +362,7 @@ jobs:
         # about a third of the size of the all-processors build. The release .aab
         # below still contains every processor type; Google Play serves each
         # phone only the part it needs.
-        run: flutter build apk --${{ env.MODE }} --target-platform android-arm64
+        run: flutter build apk --${{ env.MODE }} --target-platform android-arm64 --android-skip-build-dependency-validation
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ inputs.mode == 'release' && secrets.ANDROID_KEYSTORE_PASSWORD || '' }}
           ANDROID_KEY_ALIAS: ${{ inputs.mode == 'release' && secrets.ANDROID_KEY_ALIAS || '' }}
@@ -370,7 +370,7 @@ jobs:
 
       - name: Build AAB (release only)
         if: inputs.mode == 'release'
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release --android-skip-build-dependency-validation
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}

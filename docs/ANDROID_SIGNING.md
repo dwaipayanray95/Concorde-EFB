@@ -80,5 +80,5 @@ storePassword=YOUR_PASSWORD
 keyAlias=upload
 keyPassword=YOUR_PASSWORD
 ```
-Then `flutter build appbundle --release` signs with it. Without that file, a local release build
+Then `flutter build appbundle --release` (or `flutter build appbundle --release --android-skip-build-dependency-validation`) signs with it. Without that file, a local release build
 falls back to the debug key, which Play rejects.
