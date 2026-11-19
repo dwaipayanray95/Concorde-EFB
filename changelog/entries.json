@@ -1,5 +1,12 @@
 [
     {
+        "date": "2026-11-19",
+        "title": "Commits",
+        "items": [
+            "513adc6 ci: skip android build dependency validation in flutter build"
+        ]
+    },
+    {
         "date": "2026-11-18",
         "title": "v6.1.1 \u2014 Dedicated Flight List Scrolling & Streamlined Pilot Stats",
         "items": [
